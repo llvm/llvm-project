@@ -10,8 +10,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.vy02, ptr %.vy03, ptr %.vy04, ptr %.vy05, ptr %.vy06, ptr %.vy07, ptr %.vy08, ptr %.vy09, ptr %.vy0a, ptr %.vy0b, ptr %.vy0c, ptr %.vy21, ptr %.vy22, ptr %.vy23, ptr %.vy24, ptr %.vy25, ptr %.vy26, ptr %.vy27, ptr %.vy28, ptr %.vy29, ptr %.vy2a, ptr %.vy2b, ptr %.vy2c) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lwz 0, 0(4)
-; CHECK-NEXT:    cmpwi 0, 1
+; CHECK-NEXT:    lwz 4, 0(4)
+; CHECK-NEXT:    cmpwi 4, 1
 ; CHECK-NEXT:    bltlr 0
 ; CHECK-NEXT:  # %bb.1: # %_loop_1_do_.lr.ph
 ; CHECK-NEXT:    lwz 3, 0(3)
@@ -56,185 +56,186 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    .cfi_offset v29, -240
 ; CHECK-NEXT:    .cfi_offset v30, -224
 ; CHECK-NEXT:    .cfi_offset v31, -208
-; CHECK-NEXT:    ld 4, 848(1)
 ; CHECK-NEXT:    std 22, 464(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, 472(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 23, 5
-; CHECK-NEXT:    lwa 5, 0(7)
+; CHECK-NEXT:    mr 22, 5
+; CHECK-NEXT:    ld 5, 848(1)
 ; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    ld 7, 720(1)
-; CHECK-NEXT:    std 24, 480(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 25, 488(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 24, 6
-; CHECK-NEXT:    ld 6, 688(1)
-; CHECK-NEXT:    ld 22, 784(1)
-; CHECK-NEXT:    std 28, 512(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 29, 520(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 28, 816(1)
-; CHECK-NEXT:    ld 25, 792(1)
+; CHECK-NEXT:    mr 11, 7
+; CHECK-NEXT:    ld 23, 688(1)
+; CHECK-NEXT:    ld 7, 728(1)
+; CHECK-NEXT:    std 18, 432(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 19, 440(1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr 18, 6
+; CHECK-NEXT:    li 6, 9
+; CHECK-NEXT:    ld 19, 768(1)
+; CHECK-NEXT:    ld 2, 760(1)
+; CHECK-NEXT:    std 26, 496(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 27, 504(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    cmpldi 3, 9
-; CHECK-NEXT:    std 20, 448(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 21, 456(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 20, 768(1)
-; CHECK-NEXT:    ld 21, 776(1)
+; CHECK-NEXT:    ld 27, 816(1)
+; CHECK-NEXT:    ld 26, 808(1)
 ; CHECK-NEXT:    std 14, 400(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 15, 408(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 12, 728(1)
-; CHECK-NEXT:    ld 2, 712(1)
+; CHECK-NEXT:    ld 15, 736(1)
+; CHECK-NEXT:    lxv 39, 0(8)
 ; CHECK-NEXT:    std 30, 528(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 31, 536(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld 30, 704(1)
-; CHECK-NEXT:    ld 29, 696(1)
+; CHECK-NEXT:    lxv 38, 0(9)
+; CHECK-NEXT:    std 20, 448(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 21, 456(1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld 21, 784(1)
+; CHECK-NEXT:    ld 20, 776(1)
+; CHECK-NEXT:    std 24, 480(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 25, 488(1) # 8-byte Folded Spill
+; CHECK-NEXT:    iselgt 3, 3, 6
+; CHECK-NEXT:    ld 6, 720(1)
+; CHECK-NEXT:    ld 24, 792(1)
+; CHECK-NEXT:    std 10, 72(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 7, 80(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 3, 3, -2
+; CHECK-NEXT:    lxv 6, 0(19)
+; CHECK-NEXT:    lxv 11, 0(7)
+; CHECK-NEXT:    std 5, 200(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 23, 40(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 6, 48(1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld 5, 840(1)
+; CHECK-NEXT:    lxv 12, 0(6)
+; CHECK-NEXT:    rldicl 12, 3, 61, 3
+; CHECK-NEXT:    std 19, 120(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 20, 128(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 21, 136(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 24, 144(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lxv 4, 0(21)
+; CHECK-NEXT:    ld 25, 800(1)
+; CHECK-NEXT:    lxv 33, 0(10)
+; CHECK-NEXT:    lxv 32, 0(23)
+; CHECK-NEXT:    lxv 36, 0(30)
 ; CHECK-NEXT:    std 16, 416(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 17, 424(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 17, 744(1)
-; CHECK-NEXT:    ld 16, 736(1)
-; CHECK-NEXT:    std 18, 432(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 19, 440(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 19, 760(1)
-; CHECK-NEXT:    ld 18, 752(1)
-; CHECK-NEXT:    std 26, 496(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 27, 504(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 27, 808(1)
-; CHECK-NEXT:    ld 26, 800(1)
+; CHECK-NEXT:    ld 17, 752(1)
+; CHECK-NEXT:    ld 16, 744(1)
+; CHECK-NEXT:    std 28, 512(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 29, 520(1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld 29, 712(1)
+; CHECK-NEXT:    ld 28, 696(1)
 ; CHECK-NEXT:    std 8, 56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 9, 64(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 33, 0(8)
-; CHECK-NEXT:    lxv 32, 0(9)
-; CHECK-NEXT:    std 10, 72(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 12, 80(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 36, 0(6)
-; CHECK-NEXT:    extswsli 14, 5, 3
-; CHECK-NEXT:    sldi 15, 5, 4
-; CHECK-NEXT:    lxv 6, 0(20)
-; CHECK-NEXT:    std 4, 200(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 6, 40(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 7, 48(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 4, 840(1)
-; CHECK-NEXT:    mulli 6, 5, 40
-; CHECK-NEXT:    lxv 12, 0(7)
-; CHECK-NEXT:    lxv 4, 0(22)
-; CHECK-NEXT:    std 20, 120(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 21, 128(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 37, 0(10)
-; CHECK-NEXT:    lxv 35, 0(29)
-; CHECK-NEXT:    std 22, 136(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 25, 144(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 34, 0(30)
-; CHECK-NEXT:    lxv 13, 0(2)
-; CHECK-NEXT:    mr 8, 2
+; CHECK-NEXT:    lxv 37, 0(28)
+; CHECK-NEXT:    lxv 13, 0(29)
+; CHECK-NEXT:    mr 8, 29
 ; CHECK-NEXT:    mr 9, 30
-; CHECK-NEXT:    mr 10, 29
-; CHECK-NEXT:    std 26, 152(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 27, 160(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 11, 0(12)
-; CHECK-NEXT:    lxv 10, 0(16)
-; CHECK-NEXT:    li 29, 1
+; CHECK-NEXT:    mr 10, 28
+; CHECK-NEXT:    std 25, 152(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 26, 160(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lxv 10, 0(15)
+; CHECK-NEXT:    lxv 9, 0(16)
+; CHECK-NEXT:    li 28, 1
 ; CHECK-NEXT:    stfd 26, 544(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 27, 552(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 9, 0(17)
-; CHECK-NEXT:    lxv 8, 0(18)
+; CHECK-NEXT:    lxv 8, 0(17)
+; CHECK-NEXT:    lxv 7, 0(2)
 ; CHECK-NEXT:    stfd 28, 560(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 29, 568(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 7, 0(19)
-; CHECK-NEXT:    lxv 5, 0(21)
+; CHECK-NEXT:    lxv 5, 0(20)
+; CHECK-NEXT:    lxv 3, 0(24)
 ; CHECK-NEXT:    stfd 30, 576(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 31, 584(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lxv 3, 0(25)
-; CHECK-NEXT:    lxv 2, 0(26)
+; CHECK-NEXT:    lxv 2, 0(25)
+; CHECK-NEXT:    lxv 1, 0(26)
 ; CHECK-NEXT:    stxv 52, 208(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 53, 224(1) # 16-byte Folded Spill
-; CHECK-NEXT:    lxv 1, 0(27)
-; CHECK-NEXT:    lxv 0, 0(28)
+; CHECK-NEXT:    lxv 0, 0(27)
 ; CHECK-NEXT:    stxv 54, 240(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 55, 256(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 56, 272(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 57, 288(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 58, 304(1) # 16-byte Folded Spill
+; CHECK-NEXT:    std 5, 192(1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld 5, 832(1)
 ; CHECK-NEXT:    stxv 59, 320(1) # 16-byte Folded Spill
-; CHECK-NEXT:    std 4, 192(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 4, 832(1)
 ; CHECK-NEXT:    stxv 60, 336(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 61, 352(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 62, 368(1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv 63, 384(1) # 16-byte Folded Spill
-; CHECK-NEXT:    std 16, 88(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 17, 96(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 18, 104(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 19, 112(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 4, 184(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ld 4, 824(1)
-; CHECK-NEXT:    std 4, 176(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 28, 168(1) # 8-byte Folded Spill
-; CHECK-NEXT:    li 4, 9
-; CHECK-NEXT:    li 28, 0
+; CHECK-NEXT:    std 15, 88(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 16, 96(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 17, 104(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 2, 112(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 5, 184(1) # 8-byte Folded Spill
+; CHECK-NEXT:    ld 5, 824(1)
+; CHECK-NEXT:    std 5, 176(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 27, 168(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lwa 5, 0(11)
+; CHECK-NEXT:    li 27, 0
 ; CHECK-NEXT:    ld 7, 176(1) # 8-byte Folded Reload
-; CHECK-NEXT:    iselgt 3, 3, 4
-; CHECK-NEXT:    add 4, 14, 23
-; CHECK-NEXT:    add 20, 23, 6
-; CHECK-NEXT:    sldi 6, 5, 5
-; CHECK-NEXT:    mr 27, 23
-; CHECK-NEXT:    addi 11, 3, -2
-; CHECK-NEXT:    addi 31, 4, 32
-; CHECK-NEXT:    add 3, 15, 23
-; CHECK-NEXT:    add 21, 23, 6
-; CHECK-NEXT:    rldicl 11, 11, 61, 3
-; CHECK-NEXT:    addi 3, 3, 32
-; CHECK-NEXT:    lxv 38, 0(7)
+; CHECK-NEXT:    mulli 6, 5, 40
+; CHECK-NEXT:    sldi 0, 5, 4
+; CHECK-NEXT:    extswsli 14, 5, 3
+; CHECK-NEXT:    lxv 40, 0(7)
 ; CHECK-NEXT:    ld 7, 184(1) # 8-byte Folded Reload
-; CHECK-NEXT:    addi 4, 11, 1
-; CHECK-NEXT:    mulli 11, 5, 48
+; CHECK-NEXT:    add 31, 14, 22
+; CHECK-NEXT:    add 11, 0, 22
+; CHECK-NEXT:    mr 26, 22
+; CHECK-NEXT:    addi 3, 11, 32
+; CHECK-NEXT:    addi 11, 12, 1
+; CHECK-NEXT:    mulli 12, 5, 48
+; CHECK-NEXT:    addi 31, 31, 32
+; CHECK-NEXT:    add 19, 22, 6
+; CHECK-NEXT:    sldi 6, 5, 5
 ; CHECK-NEXT:    mulli 5, 5, 24
-; CHECK-NEXT:    add 22, 23, 5
+; CHECK-NEXT:    lxv 41, 0(7)
+; CHECK-NEXT:    add 20, 22, 6
+; CHECK-NEXT:    add 21, 22, 5
 ; CHECK-NEXT:    ld 5, 192(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lxv 39, 0(7)
-; CHECK-NEXT:    lxv 41, 0(5)
+; CHECK-NEXT:    lxv 43, 0(5)
 ; CHECK-NEXT:    ld 5, 200(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lxv 40, 0(5)
+; CHECK-NEXT:    lxv 42, 0(5)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %_loop_2_do_.lr.ph
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_4 Depth 2
-; CHECK-NEXT:    maddld 5, 11, 28, 15
-; CHECK-NEXT:    mr 6, 24
-; CHECK-NEXT:    mr 30, 22
-; CHECK-NEXT:    mr 2, 21
-; CHECK-NEXT:    mr 12, 20
-; CHECK-NEXT:    mtctr 4
-; CHECK-NEXT:    add 26, 23, 5
-; CHECK-NEXT:    maddld 5, 11, 28, 14
-; CHECK-NEXT:    add 25, 23, 5
-; CHECK-NEXT:    mr 5, 27
+; CHECK-NEXT:    maddld 5, 12, 27, 0
+; CHECK-NEXT:    mr 6, 18
+; CHECK-NEXT:    mr 29, 21
+; CHECK-NEXT:    mr 30, 20
+; CHECK-NEXT:    mr 2, 19
+; CHECK-NEXT:    mtctr 11
+; CHECK-NEXT:    add 25, 22, 5
+; CHECK-NEXT:    maddld 5, 12, 27, 14
+; CHECK-NEXT:    add 24, 22, 5
+; CHECK-NEXT:    mr 5, 26
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_4: # %_loop_2_do_
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lxvp 42, 0(6)
+; CHECK-NEXT:    lxvp 34, 0(6)
 ; CHECK-NEXT:    lxvp 44, 0(5)
-; CHECK-NEXT:    xvmaddadp 33, 45, 43
-; CHECK-NEXT:    lxvp 46, 0(25)
-; CHECK-NEXT:    xvmaddadp 32, 47, 43
-; CHECK-NEXT:    lxvp 48, 0(26)
-; CHECK-NEXT:    lxvp 50, 0(30)
-; CHECK-NEXT:    lxvp 62, 0(2)
-; CHECK-NEXT:    lxvp 60, 0(12)
+; CHECK-NEXT:    xvmaddadp 39, 45, 35
+; CHECK-NEXT:    lxvp 46, 0(24)
+; CHECK-NEXT:    xvmaddadp 38, 47, 35
+; CHECK-NEXT:    lxvp 48, 0(25)
+; CHECK-NEXT:    lxvp 50, 0(29)
+; CHECK-NEXT:    lxvp 62, 0(30)
+; CHECK-NEXT:    lxvp 60, 0(2)
 ; CHECK-NEXT:    lxvp 58, 32(6)
 ; CHECK-NEXT:    lxvp 56, 32(5)
-; CHECK-NEXT:    lxvp 54, 32(25)
-; CHECK-NEXT:    lxvp 52, 32(26)
-; CHECK-NEXT:    lxvp 30, 32(30)
-; CHECK-NEXT:    lxvp 28, 32(2)
-; CHECK-NEXT:    lxvp 26, 32(12)
-; CHECK-NEXT:    xvmaddadp 37, 49, 43
-; CHECK-NEXT:    xvmaddadp 36, 51, 43
-; CHECK-NEXT:    xvmaddadp 35, 63, 43
-; CHECK-NEXT:    xvmaddadp 34, 61, 43
-; CHECK-NEXT:    xvmaddadp 13, 44, 42
-; CHECK-NEXT:    xvmaddadp 12, 46, 42
-; CHECK-NEXT:    xvmaddadp 11, 48, 42
-; CHECK-NEXT:    xvmaddadp 10, 50, 42
-; CHECK-NEXT:    xvmaddadp 9, 62, 42
-; CHECK-NEXT:    xvmaddadp 8, 60, 42
+; CHECK-NEXT:    lxvp 54, 32(24)
+; CHECK-NEXT:    lxvp 52, 32(25)
+; CHECK-NEXT:    lxvp 30, 32(29)
+; CHECK-NEXT:    lxvp 28, 32(30)
+; CHECK-NEXT:    lxvp 26, 32(2)
+; CHECK-NEXT:    xvmaddadp 33, 49, 35
+; CHECK-NEXT:    xvmaddadp 32, 51, 35
+; CHECK-NEXT:    xvmaddadp 37, 63, 35
+; CHECK-NEXT:    xvmaddadp 36, 61, 35
+; CHECK-NEXT:    xvmaddadp 13, 44, 34
+; CHECK-NEXT:    xvmaddadp 12, 46, 34
+; CHECK-NEXT:    xvmaddadp 11, 48, 34
+; CHECK-NEXT:    xvmaddadp 10, 50, 34
+; CHECK-NEXT:    xvmaddadp 9, 62, 34
+; CHECK-NEXT:    xvmaddadp 8, 60, 34
 ; CHECK-NEXT:    xvmaddadp 7, 57, 59
 ; CHECK-NEXT:    xvmaddadp 6, 55, 59
 ; CHECK-NEXT:    xvmaddadp 5, 53, 59
@@ -243,34 +244,34 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    xvmaddadp 2, 27, 59
 ; CHECK-NEXT:    xvmaddadp 1, 56, 58
 ; CHECK-NEXT:    xvmaddadp 0, 54, 58
-; CHECK-NEXT:    xvmaddadp 38, 52, 58
-; CHECK-NEXT:    xvmaddadp 39, 30, 58
-; CHECK-NEXT:    xvmaddadp 41, 28, 58
-; CHECK-NEXT:    xvmaddadp 40, 26, 58
+; CHECK-NEXT:    xvmaddadp 40, 52, 58
+; CHECK-NEXT:    xvmaddadp 41, 30, 58
+; CHECK-NEXT:    xvmaddadp 43, 28, 58
+; CHECK-NEXT:    xvmaddadp 42, 26, 58
 ; CHECK-NEXT:    addi 6, 6, 64
 ; CHECK-NEXT:    addi 5, 5, 64
+; CHECK-NEXT:    addi 24, 24, 64
 ; CHECK-NEXT:    addi 25, 25, 64
-; CHECK-NEXT:    addi 26, 26, 64
+; CHECK-NEXT:    addi 29, 29, 64
 ; CHECK-NEXT:    addi 30, 30, 64
 ; CHECK-NEXT:    addi 2, 2, 64
-; CHECK-NEXT:    addi 12, 12, 64
 ; CHECK-NEXT:    bdnz .LBB0_4
 ; CHECK-NEXT:  # %bb.5: # %_loop_2_endl_
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi 29, 29, 6
-; CHECK-NEXT:    add 27, 27, 11
-; CHECK-NEXT:    add 31, 31, 11
-; CHECK-NEXT:    add 20, 20, 11
-; CHECK-NEXT:    add 3, 3, 11
-; CHECK-NEXT:    add 21, 21, 11
-; CHECK-NEXT:    add 22, 22, 11
-; CHECK-NEXT:    addi 28, 28, 1
-; CHECK-NEXT:    cmpld 29, 0
+; CHECK-NEXT:    addi 28, 28, 6
+; CHECK-NEXT:    add 26, 26, 12
+; CHECK-NEXT:    add 31, 31, 12
+; CHECK-NEXT:    add 19, 19, 12
+; CHECK-NEXT:    add 3, 3, 12
+; CHECK-NEXT:    add 20, 20, 12
+; CHECK-NEXT:    add 21, 21, 12
+; CHECK-NEXT:    addi 27, 27, 1
+; CHECK-NEXT:    cmpld 28, 4
 ; CHECK-NEXT:    ble 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.6: # %_loop_1_loopHeader_._return_bb_crit_edge.loopexit
 ; CHECK-NEXT:    ld 3, 56(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lxv 63, 384(1) # 16-byte Folded Reload
-; CHECK-NEXT:    stxv 33, 0(3)
+; CHECK-NEXT:    stxv 39, 0(3)
 ; CHECK-NEXT:    ld 3, 64(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lxv 62, 368(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv 61, 352(1) # 16-byte Folded Reload
@@ -283,7 +284,7 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    lxv 54, 240(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv 53, 224(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv 52, 208(1) # 16-byte Folded Reload
-; CHECK-NEXT:    stxv 32, 0(3)
+; CHECK-NEXT:    stxv 38, 0(3)
 ; CHECK-NEXT:    ld 3, 72(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lfd 31, 584(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lfd 30, 576(1) # 8-byte Folded Reload
@@ -296,7 +297,7 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    ld 29, 520(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 28, 512(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 27, 504(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 37, 0(3)
+; CHECK-NEXT:    stxv 33, 0(3)
 ; CHECK-NEXT:    ld 3, 40(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 26, 496(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 25, 488(1) # 8-byte Folded Reload
@@ -309,10 +310,10 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    ld 18, 432(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 17, 424(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 16, 416(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 36, 0(3)
+; CHECK-NEXT:    stxv 32, 0(3)
 ; CHECK-NEXT:    ld 3, 48(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 35, 0(10)
-; CHECK-NEXT:    stxv 34, 0(9)
+; CHECK-NEXT:    stxv 37, 0(10)
+; CHECK-NEXT:    stxv 36, 0(9)
 ; CHECK-NEXT:    stxv 13, 0(8)
 ; CHECK-NEXT:    ld 15, 408(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 14, 400(1) # 8-byte Folded Reload
@@ -342,13 +343,13 @@ define void @foo(ptr %.m, ptr %.n, ptr %.a, ptr %.x, ptr %.l, ptr %.vy01, ptr %.
 ; CHECK-NEXT:    ld 3, 168(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stxv 0, 0(3)
 ; CHECK-NEXT:    ld 3, 176(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 38, 0(3)
-; CHECK-NEXT:    ld 3, 184(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 39, 0(3)
-; CHECK-NEXT:    ld 3, 192(1) # 8-byte Folded Reload
-; CHECK-NEXT:    stxv 41, 0(3)
-; CHECK-NEXT:    ld 3, 200(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stxv 40, 0(3)
+; CHECK-NEXT:    ld 3, 184(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 41, 0(3)
+; CHECK-NEXT:    ld 3, 192(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 43, 0(3)
+; CHECK-NEXT:    ld 3, 200(1) # 8-byte Folded Reload
+; CHECK-NEXT:    stxv 42, 0(3)
 ; CHECK-NEXT:    addi 1, 1, 592
 ; CHECK-NEXT:    blr
 entry:

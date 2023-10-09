@@ -72,14 +72,14 @@ define ptr @vld2_v2i64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov r2, r12, d1
 ; CHECK-NEXT:    vmov r3, lr, d0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #32
-; CHECK-NEXT:    vmov r4, r5, d1
-; CHECK-NEXT:    adds r7, r3, r2
+; CHECK-NEXT:    vmov r4, r7, d1
+; CHECK-NEXT:    adds r2, r2, r3
 ; CHECK-NEXT:    vmov r3, r6, d0
-; CHECK-NEXT:    adc.w r2, lr, r12
+; CHECK-NEXT:    adc.w r5, lr, r12
 ; CHECK-NEXT:    adds r3, r3, r4
-; CHECK-NEXT:    adcs r6, r5
-; CHECK-NEXT:    vmov q0[2], q0[0], r3, r7
-; CHECK-NEXT:    vmov q0[3], q0[1], r6, r2
+; CHECK-NEXT:    adcs r7, r6
+; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
+; CHECK-NEXT:    vmov q0[3], q0[1], r7, r5
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:

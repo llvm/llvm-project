@@ -325,15 +325,15 @@ define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 define ptr @func_r(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-LABEL: func_r:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl (%ecx), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl (%edx), %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    jl .LBB15_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %edx, (%ecx)
-; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    movl %ecx, (%edx)
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:  .LBB15_2: # %return
 ; CHECK-NEXT:    retl
 entry:

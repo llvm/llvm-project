@@ -24,38 +24,38 @@ define void @_Z1nv() local_unnamed_addr {
 ; CHECK-LABEL: _Z1nv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq k@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl 4(%rax), %eax
-; CHECK-NEXT:    movq c@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movswl (%rcx), %ecx
-; CHECK-NEXT:    movq b@GOTPCREL(%rip), %rdx
-; CHECK-NEXT:    movswl (%rdx), %esi
-; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rdi
-; CHECK-NEXT:    movl (%rdi), %edi
+; CHECK-NEXT:    movl 4(%rax), %edx
+; CHECK-NEXT:    movq c@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movswl (%rax), %ecx
+; CHECK-NEXT:    movq b@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movswl (%rax), %edi
+; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rsi
+; CHECK-NEXT:    movl (%rsi), %esi
 ; CHECK-NEXT:    movq l@GOTPCREL(%rip), %r8
 ; CHECK-NEXT:    movl (%r8), %r8d
 ; CHECK-NEXT:    movl %r8d, %r9d
 ; CHECK-NEXT:    shll $7, %r9d
 ; CHECK-NEXT:    sarl $7, %r9d
 ; CHECK-NEXT:    negl %r9d
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovel %edi, %r9d
-; CHECK-NEXT:    movzwl %ax, %r10d
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    cmovel %esi, %r9d
+; CHECK-NEXT:    movzwl %dx, %r10d
 ; CHECK-NEXT:    leal (%rcx,%r10,2), %ecx
-; CHECK-NEXT:    addl %esi, %ecx
+; CHECK-NEXT:    addl %edi, %ecx
 ; CHECK-NEXT:    cmpl %r9d, %ecx
-; CHECK-NEXT:    sete %sil
+; CHECK-NEXT:    sete %dil
 ; CHECK-NEXT:    testl $33554431, %r8d # imm = 0x1FFFFFF
 ; CHECK-NEXT:    sete %r8b
-; CHECK-NEXT:    orb %sil, %r8b
-; CHECK-NEXT:    movzbl %r8b, %esi
+; CHECK-NEXT:    orb %dil, %r8b
+; CHECK-NEXT:    movzbl %r8b, %edi
 ; CHECK-NEXT:    movq e@GOTPCREL(%rip), %r8
-; CHECK-NEXT:    movw %si, (%r8)
+; CHECK-NEXT:    movw %di, (%r8)
 ; CHECK-NEXT:    notl %ecx
 ; CHECK-NEXT:    shrl $31, %ecx
-; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %edi
-; CHECK-NEXT:    movw %di, (%rdx)
+; CHECK-NEXT:    sarl %cl, %esi
+; CHECK-NEXT:    movw %si, (%rax)
 ; CHECK-NEXT:    retq
 entry:
   %bf.load = load i32, ptr getelementptr inbounds (%struct.m, ptr @k, i64 0, i32 0, i32 1), align 4
@@ -117,20 +117,20 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %ebx
 ; CHECK-NEXT:    andl $511, %ebx # imm = 0x1FF
-; CHECK-NEXT:    leaq 1(%rbx), %rdx
-; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl %edx, (%rax)
-; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl (%rax), %ecx
+; CHECK-NEXT:    leaq 1(%rbx), %rax
+; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movl (%rcx), %ecx
 ; CHECK-NEXT:    testl %ecx, %ecx
 ; CHECK-NEXT:    je .LBB1_18
 ; CHECK-NEXT:  # %bb.1: # %for.cond1thread-pre-split.lr.ph
-; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movq (%rax), %rsi
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    leaq 8(,%rax,8), %rdi
-; CHECK-NEXT:    imulq %rdx, %rdi
+; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    movq (%rdx), %rsi
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    notl %edx
+; CHECK-NEXT:    leaq 8(,%rdx,8), %rdi
+; CHECK-NEXT:    imulq %rax, %rdi
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    movq x2@GOTPCREL(%rip), %r8
 ; CHECK-NEXT:    movl (%r8), %edx

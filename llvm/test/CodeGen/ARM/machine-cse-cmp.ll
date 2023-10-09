@@ -70,18 +70,18 @@ declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 define ptr @f3(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-LABEL: f3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldr r9, [r1]
-; CHECK-NEXT:    mov r3, #0
-; CHECK-NEXT:    cmp r9, r2
+; CHECK-NEXT:    ldr r3, [r1]
+; CHECK-NEXT:    mov r9, #0
+; CHECK-NEXT:    cmp r3, r2
 ; CHECK-NEXT:    blt LBB2_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
-; CHECK-NEXT:    sub r3, r9, r2
+; CHECK-NEXT:    sub r3, r3, r2
+; CHECK-NEXT:    add r9, r0, r3
 ; CHECK-NEXT:    sub r2, r2, r3
 ; CHECK-NEXT:    add r2, r3, r2
-; CHECK-NEXT:    add r3, r0, r3
 ; CHECK-NEXT:    str r2, [r1]
 ; CHECK-NEXT:  LBB2_2: @ %return
-; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    bx lr
 entry:
 %0 = load i32, ptr %offset, align 4

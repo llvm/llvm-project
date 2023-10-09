@@ -128,29 +128,29 @@ entry:
 define arm_aapcs_vfpcc <32 x half> @complex_mul_v32f16(<32 x half> %a, <32 x half> %b) {
 ; CHECK-LABEL: complex_mul_v32f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vldrw.u32 q5, [r0]
 ; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vcmul.f16 q0, q0, q5, #0
+; CHECK-NEXT:    vcmla.f16 q0, q4, q5, #90
 ; CHECK-NEXT:    vldrw.u32 q5, [r0]
 ; CHECK-NEXT:    add r0, sp, #80
-; CHECK-NEXT:    vcmul.f16 q4, q0, q5, #0
-; CHECK-NEXT:    vcmla.f16 q4, q0, q5, #90
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vcmul.f16 q4, q1, q5, #0
+; CHECK-NEXT:    vcmla.f16 q4, q1, q5, #90
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    add r0, sp, #96
-; CHECK-NEXT:    vcmul.f16 q5, q1, q0, #0
-; CHECK-NEXT:    vcmla.f16 q5, q1, q0, #90
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add r0, sp, #112
-; CHECK-NEXT:    vmov q1, q5
-; CHECK-NEXT:    vcmul.f16 q6, q2, q0, #0
-; CHECK-NEXT:    vcmla.f16 q6, q2, q0, #90
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov q2, q6
-; CHECK-NEXT:    vcmul.f16 q7, q3, q0, #0
-; CHECK-NEXT:    vcmla.f16 q7, q3, q0, #90
-; CHECK-NEXT:    vmov q0, q4
-; CHECK-NEXT:    vmov q3, q7
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vcmul.f16 q5, q2, q1, #0
+; CHECK-NEXT:    vcmla.f16 q5, q2, q1, #90
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov q2, q5
+; CHECK-NEXT:    vcmul.f16 q6, q3, q1, #0
+; CHECK-NEXT:    vcmla.f16 q6, q3, q1, #90
+; CHECK-NEXT:    vmov q1, q4
+; CHECK-NEXT:    vmov q3, q6
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    bx lr
 entry:
   %a.real   = shufflevector <32 x half> %a, <32 x half> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>

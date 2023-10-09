@@ -18,20 +18,20 @@ define void @mul_2xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 
 ; X86-SSE-LABEL: mul_2xi8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl c, %esi
-; X86-SSE-NEXT:    movzwl (%edx,%ecx), %edx
+; X86-SSE-NEXT:    movzwl (%edx,%eax), %edx
 ; X86-SSE-NEXT:    movd %edx, %xmm0
-; X86-SSE-NEXT:    movzwl (%eax,%ecx), %eax
-; X86-SSE-NEXT:    movd %eax, %xmm1
+; X86-SSE-NEXT:    movzwl (%ecx,%eax), %ecx
+; X86-SSE-NEXT:    movd %ecx, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; X86-SSE-NEXT:    pmullw %xmm0, %xmm1
 ; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X86-SSE-NEXT:    movq %xmm1, (%esi,%ecx,4)
+; X86-SSE-NEXT:    movq %xmm1, (%esi,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -178,10 +178,10 @@ define void @mul_8xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 
 ; X86-SSE-LABEL: mul_8xi8:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl c, %esi
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl c, %ecx
 ; X86-SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm2
@@ -191,8 +191,8 @@ define void @mul_8xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; X86-SSE-NEXT:    movdqu %xmm1, 16(%esi,%ecx,4)
-; X86-SSE-NEXT:    movdqu %xmm0, (%esi,%ecx,4)
+; X86-SSE-NEXT:    movdqu %xmm1, 16(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm0, (%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -295,27 +295,27 @@ define void @mul_16xi8(ptr nocapture readonly %a, ptr nocapture readonly %b, i64
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movl c, %ecx
-; X86-SSE-NEXT:    movdqu (%esi,%eax), %xmm0
-; X86-SSE-NEXT:    movdqu (%edx,%eax), %xmm1
-; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    movdqu (%esi,%eax), %xmm3
+; X86-SSE-NEXT:    movdqu (%edx,%eax), %xmm0
+; X86-SSE-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
+; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3],xmm4[4],xmm1[4],xmm4[5],xmm1[5],xmm4[6],xmm1[6],xmm4[7],xmm1[7]
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; X86-SSE-NEXT:    pmullw %xmm4, %xmm2
+; X86-SSE-NEXT:    movdqa %xmm2, %xmm4
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; X86-SSE-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
+; X86-SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; X86-SSE-NEXT:    pmullw %xmm3, %xmm0
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm3
-; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm4
-; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3],xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
-; X86-SSE-NEXT:    pmullw %xmm3, %xmm4
-; X86-SSE-NEXT:    movdqa %xmm4, %xmm3
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
-; X86-SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm2[8],xmm0[9],xmm2[9],xmm0[10],xmm2[10],xmm0[11],xmm2[11],xmm0[12],xmm2[12],xmm0[13],xmm2[13],xmm0[14],xmm2[14],xmm0[15],xmm2[15]
-; X86-SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; X86-SSE-NEXT:    pmullw %xmm0, %xmm1
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
-; X86-SSE-NEXT:    movdqu %xmm1, 48(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm0, 32(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm4, 16(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm3, (%ecx,%eax,4)
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; X86-SSE-NEXT:    movdqu %xmm0, 48(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm3, 32(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm2, 16(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm4, (%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -711,26 +711,26 @@ define void @mul_16xi16(ptr nocapture readonly %a, ptr nocapture readonly %b, i6
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movl c, %ecx
-; X86-SSE-NEXT:    movdqu (%esi,%eax), %xmm0
-; X86-SSE-NEXT:    movdqu 16(%esi,%eax), %xmm1
-; X86-SSE-NEXT:    movdqu (%edx,%eax), %xmm2
-; X86-SSE-NEXT:    movdqu 16(%edx,%eax), %xmm3
-; X86-SSE-NEXT:    movdqa %xmm2, %xmm4
-; X86-SSE-NEXT:    pmulhuw %xmm0, %xmm4
-; X86-SSE-NEXT:    pmullw %xmm0, %xmm2
-; X86-SSE-NEXT:    movdqa %xmm2, %xmm0
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
-; X86-SSE-NEXT:    pmulhuw %xmm1, %xmm4
-; X86-SSE-NEXT:    pmullw %xmm1, %xmm3
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm1
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
-; X86-SSE-NEXT:    movdqu %xmm3, 32(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm1, 48(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm2, (%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm0, 16(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu (%esi,%eax), %xmm2
+; X86-SSE-NEXT:    movdqu 16(%esi,%eax), %xmm3
+; X86-SSE-NEXT:    movdqu (%edx,%eax), %xmm0
+; X86-SSE-NEXT:    movdqu 16(%edx,%eax), %xmm1
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm4
+; X86-SSE-NEXT:    pmulhuw %xmm2, %xmm4
+; X86-SSE-NEXT:    pmullw %xmm2, %xmm0
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm4
+; X86-SSE-NEXT:    pmulhuw %xmm3, %xmm4
+; X86-SSE-NEXT:    pmullw %xmm3, %xmm1
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3]
+; X86-SSE-NEXT:    movdqu %xmm1, 32(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm3, 48(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm0, (%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm2, 16(%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -862,14 +862,14 @@ define void @mul_2xi8_sext(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; X86-SSE-LABEL: mul_2xi8_sext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl c, %esi
-; X86-SSE-NEXT:    movzwl (%edx,%ecx), %edx
-; X86-SSE-NEXT:    movd %edx, %xmm0
-; X86-SSE-NEXT:    movzwl (%eax,%ecx), %eax
-; X86-SSE-NEXT:    movd %eax, %xmm1
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl c, %ecx
+; X86-SSE-NEXT:    movzwl (%esi,%eax), %esi
+; X86-SSE-NEXT:    movd %esi, %xmm0
+; X86-SSE-NEXT:    movzwl (%edx,%eax), %edx
+; X86-SSE-NEXT:    movd %edx, %xmm1
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    psraw $8, %xmm0
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -877,7 +877,7 @@ define void @mul_2xi8_sext(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; X86-SSE-NEXT:    pmullw %xmm0, %xmm1
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,0,2,1,4,5,6,7]
 ; X86-SSE-NEXT:    psrad $16, %xmm0
-; X86-SSE-NEXT:    movq %xmm0, (%esi,%ecx,4)
+; X86-SSE-NEXT:    movq %xmm0, (%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -952,14 +952,14 @@ define void @mul_2xi8_sext_zext(ptr nocapture readonly %a, ptr nocapture readonl
 ; X86-SSE-LABEL: mul_2xi8_sext_zext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl c, %esi
-; X86-SSE-NEXT:    movzwl (%edx,%ecx), %edx
-; X86-SSE-NEXT:    movd %edx, %xmm0
-; X86-SSE-NEXT:    movzwl (%eax,%ecx), %eax
-; X86-SSE-NEXT:    movd %eax, %xmm1
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl c, %ecx
+; X86-SSE-NEXT:    movzwl (%esi,%eax), %esi
+; X86-SSE-NEXT:    movd %esi, %xmm0
+; X86-SSE-NEXT:    movzwl (%edx,%eax), %edx
+; X86-SSE-NEXT:    movd %edx, %xmm1
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,1,3,4,5,6,7]
@@ -967,7 +967,7 @@ define void @mul_2xi8_sext_zext(ptr nocapture readonly %a, ptr nocapture readonl
 ; X86-SSE-NEXT:    psraw $8, %xmm0
 ; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X86-SSE-NEXT:    pmaddwd %xmm1, %xmm0
-; X86-SSE-NEXT:    movq %xmm0, (%esi,%ecx,4)
+; X86-SSE-NEXT:    movq %xmm0, (%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -1118,10 +1118,10 @@ define void @mul_2xi16_sext_zext(ptr nocapture readonly %a, ptr nocapture readon
 ; X86-SSE-LABEL: mul_2xi16_sext_zext:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl c, %esi
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl c, %ecx
 ; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; X86-SSE-NEXT:    psrad $16, %xmm0
@@ -1133,7 +1133,7 @@ define void @mul_2xi16_sext_zext(ptr nocapture readonly %a, ptr nocapture readon
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X86-SSE-NEXT:    pmuludq %xmm2, %xmm0
 ; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE-NEXT:    movq %xmm1, (%esi,%ecx,4)
+; X86-SSE-NEXT:    movq %xmm1, (%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -1208,26 +1208,26 @@ define void @mul_16xi16_sext(ptr nocapture readonly %a, ptr nocapture readonly %
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movl c, %ecx
-; X86-SSE-NEXT:    movdqu (%esi,%eax), %xmm0
-; X86-SSE-NEXT:    movdqu 16(%esi,%eax), %xmm1
-; X86-SSE-NEXT:    movdqu (%edx,%eax), %xmm2
-; X86-SSE-NEXT:    movdqu 16(%edx,%eax), %xmm3
-; X86-SSE-NEXT:    movdqa %xmm2, %xmm4
-; X86-SSE-NEXT:    pmulhw %xmm0, %xmm4
-; X86-SSE-NEXT:    pmullw %xmm0, %xmm2
-; X86-SSE-NEXT:    movdqa %xmm2, %xmm0
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
-; X86-SSE-NEXT:    pmulhw %xmm1, %xmm4
-; X86-SSE-NEXT:    pmullw %xmm1, %xmm3
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm1
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
-; X86-SSE-NEXT:    movdqu %xmm3, 32(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm1, 48(%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm2, (%ecx,%eax,4)
-; X86-SSE-NEXT:    movdqu %xmm0, 16(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu (%esi,%eax), %xmm2
+; X86-SSE-NEXT:    movdqu 16(%esi,%eax), %xmm3
+; X86-SSE-NEXT:    movdqu (%edx,%eax), %xmm0
+; X86-SSE-NEXT:    movdqu 16(%edx,%eax), %xmm1
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm4
+; X86-SSE-NEXT:    pmulhw %xmm2, %xmm4
+; X86-SSE-NEXT:    pmullw %xmm2, %xmm0
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm4
+; X86-SSE-NEXT:    pmulhw %xmm3, %xmm4
+; X86-SSE-NEXT:    pmullw %xmm3, %xmm1
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3]
+; X86-SSE-NEXT:    movdqu %xmm1, 32(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm3, 48(%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm0, (%ecx,%eax,4)
+; X86-SSE-NEXT:    movdqu %xmm2, 16(%ecx,%eax,4)
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    retl
 ;
@@ -1978,97 +1978,98 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-SSE-NEXT:    pushl %ebx
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    subl $8, %esp
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movzwl 16(%eax), %ecx
-; X86-SSE-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE-NEXT:    movdqa (%eax), %xmm1
-; X86-SSE-NEXT:    movdqa (%esi), %xmm0
-; X86-SSE-NEXT:    movdqa 16(%esi), %xmm3
-; X86-SSE-NEXT:    pxor %xmm2, %xmm2
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm4
-; X86-SSE-NEXT:    pextrw $7, %xmm1, %eax
-; X86-SSE-NEXT:    pextrw $4, %xmm1, %ebp
-; X86-SSE-NEXT:    pextrw $0, %xmm1, %ebx
-; X86-SSE-NEXT:    pextrw $1, %xmm1, %edi
-; X86-SSE-NEXT:    pextrw $3, %xmm1, %ecx
-; X86-SSE-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[3,3,3,3]
-; X86-SSE-NEXT:    movd %xmm2, %ecx
-; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    divl %ecx
-; X86-SSE-NEXT:    movd %edx, %xmm2
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; X86-SSE-NEXT:    movd %xmm5, %eax
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[2,3,2,3]
-; X86-SSE-NEXT:    movd %xmm5, %ecx
-; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    divl %ecx
-; X86-SSE-NEXT:    movd %edx, %xmm5
-; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1]
-; X86-SSE-NEXT:    movl %ebp, %eax
-; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    divl 16(%esi)
-; X86-SSE-NEXT:    movd %edx, %xmm2
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
-; X86-SSE-NEXT:    movd %xmm4, %eax
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; X86-SSE-NEXT:    movzwl 16(%eax), %edx
+; X86-SSE-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X86-SSE-NEXT:    movdqa (%eax), %xmm3
+; X86-SSE-NEXT:    movdqa (%ecx), %xmm0
+; X86-SSE-NEXT:    movdqa 16(%ecx), %xmm1
+; X86-SSE-NEXT:    pxor %xmm4, %xmm4
+; X86-SSE-NEXT:    movdqa %xmm3, %xmm2
+; X86-SSE-NEXT:    pextrw $7, %xmm3, %eax
+; X86-SSE-NEXT:    pextrw $4, %xmm3, %edi
+; X86-SSE-NEXT:    pextrw $0, %xmm3, %ebp
+; X86-SSE-NEXT:    pextrw $1, %xmm3, %esi
+; X86-SSE-NEXT:    pextrw $3, %xmm3, %ebx
+; X86-SSE-NEXT:    movdqa %xmm3, %xmm5
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; X86-SSE-NEXT:    movd %xmm3, %ecx
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %ecx
 ; X86-SSE-NEXT:    movd %edx, %xmm3
-; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X86-SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm5[0]
-; X86-SSE-NEXT:    movl %ebx, %eax
-; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    divl (%esi)
-; X86-SSE-NEXT:    movd %edx, %xmm3
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
+; X86-SSE-NEXT:    movd %xmm4, %eax
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm4, %ecx
+; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    divl %ecx
+; X86-SSE-NEXT:    movd %edx, %xmm4
+; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; X86-SSE-NEXT:    movl %edi, %eax
 ; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    divl %ecx
-; X86-SSE-NEXT:    movd %edx, %xmm4
-; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X86-SSE-NEXT:    movd %xmm4, %ecx
-; X86-SSE-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    divl 16(%edi)
+; X86-SSE-NEXT:    movd %edx, %xmm3
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; X86-SSE-NEXT:    movd %xmm2, %eax
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X86-SSE-NEXT:    movd %xmm1, %ecx
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %ecx
-; X86-SSE-NEXT:    movd %edx, %xmm4
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; X86-SSE-NEXT:    movd %xmm1, %eax
+; X86-SSE-NEXT:    movd %edx, %xmm1
+; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; X86-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; X86-SSE-NEXT:    movl %ebp, %eax
+; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    divl (%edi)
+; X86-SSE-NEXT:    movd %edx, %xmm1
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X86-SSE-NEXT:    movd %xmm2, %ecx
+; X86-SSE-NEXT:    movl %esi, %eax
+; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    divl %ecx
+; X86-SSE-NEXT:    movd %edx, %xmm2
+; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X86-SSE-NEXT:    movd %xmm2, %ecx
+; X86-SSE-NEXT:    movl %ebx, %eax
+; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    divl %ecx
+; X86-SSE-NEXT:    movd %edx, %xmm2
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[2,3,2,3]
+; X86-SSE-NEXT:    movd %xmm4, %eax
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm0, %ecx
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %ecx
 ; X86-SSE-NEXT:    movd %edx, %xmm0
-; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
-; X86-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
-; X86-SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X86-SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X86-SSE-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-SSE-NEXT:    xorl %edx, %edx
-; X86-SSE-NEXT:    divl 32(%esi)
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [8199,8199,8199,8199]
+; X86-SSE-NEXT:    divl 32(%edi)
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [8199,8199,8199,8199]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,3,3]
+; X86-SSE-NEXT:    pmuludq %xmm2, %xmm1
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; X86-SSE-NEXT:    pmuludq %xmm2, %xmm4
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[0,2,2,3]
+; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; X86-SSE-NEXT:    pmuludq %xmm0, %xmm3
+; X86-SSE-NEXT:    pmuludq %xmm2, %xmm3
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
-; X86-SSE-NEXT:    pmuludq %xmm0, %xmm1
+; X86-SSE-NEXT:    pmuludq %xmm2, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; X86-SSE-NEXT:    pmuludq %xmm0, %xmm2
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X86-SSE-NEXT:    pmuludq %xmm0, %xmm1
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; X86-SSE-NEXT:    imull $8199, %edx, %eax # imm = 0x2007
 ; X86-SSE-NEXT:    movl %eax, (%eax)
-; X86-SSE-NEXT:    movdqa %xmm2, (%eax)
 ; X86-SSE-NEXT:    movdqa %xmm3, (%eax)
-; X86-SSE-NEXT:    addl $8, %esp
+; X86-SSE-NEXT:    movdqa %xmm0, (%eax)
+; X86-SSE-NEXT:    addl $4, %esp
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    popl %edi
 ; X86-SSE-NEXT:    popl %ebx
@@ -2203,90 +2204,91 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X64-SSE-LABEL: PR34947:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movzwl 16(%rdi), %ecx
-; X64-SSE-NEXT:    movdqa (%rdi), %xmm1
+; X64-SSE-NEXT:    movdqa (%rdi), %xmm3
 ; X64-SSE-NEXT:    movdqa (%rsi), %xmm0
-; X64-SSE-NEXT:    movdqa 16(%rsi), %xmm3
-; X64-SSE-NEXT:    pxor %xmm2, %xmm2
-; X64-SSE-NEXT:    movdqa %xmm1, %xmm4
-; X64-SSE-NEXT:    pextrw $7, %xmm1, %eax
-; X64-SSE-NEXT:    pextrw $4, %xmm1, %r10d
-; X64-SSE-NEXT:    pextrw $0, %xmm1, %r9d
-; X64-SSE-NEXT:    pextrw $1, %xmm1, %r8d
-; X64-SSE-NEXT:    pextrw $3, %xmm1, %edi
-; X64-SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X64-SSE-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[3,3,3,3]
-; X64-SSE-NEXT:    movd %xmm2, %r11d
+; X64-SSE-NEXT:    movdqa 16(%rsi), %xmm1
+; X64-SSE-NEXT:    pxor %xmm4, %xmm4
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm2
+; X64-SSE-NEXT:    pextrw $7, %xmm3, %eax
+; X64-SSE-NEXT:    pextrw $4, %xmm3, %r8d
+; X64-SSE-NEXT:    pextrw $0, %xmm3, %r10d
+; X64-SSE-NEXT:    pextrw $1, %xmm3, %edi
+; X64-SSE-NEXT:    pextrw $3, %xmm3, %r9d
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm5
+; X64-SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; X64-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; X64-SSE-NEXT:    movd %xmm3, %r11d
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %r11d
-; X64-SSE-NEXT:    movd %edx, %xmm2
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm5, %eax
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm5, %r11d
-; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl %r11d
-; X64-SSE-NEXT:    movd %edx, %xmm5
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1]
-; X64-SSE-NEXT:    movl %r10d, %eax
-; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl 16(%rsi)
-; X64-SSE-NEXT:    movd %edx, %xmm2
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; X64-SSE-NEXT:    movd %edx, %xmm3
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm4, %eax
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,1,1]
-; X64-SSE-NEXT:    movd %xmm3, %r10d
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
+; X64-SSE-NEXT:    movd %xmm4, %r11d
 ; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl %r10d
-; X64-SSE-NEXT:    movd %edx, %xmm3
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm5[0]
-; X64-SSE-NEXT:    movl %r9d, %eax
-; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl (%rsi)
-; X64-SSE-NEXT:    movd %edx, %xmm3
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
-; X64-SSE-NEXT:    movd %xmm4, %r9d
+; X64-SSE-NEXT:    divl %r11d
+; X64-SSE-NEXT:    movd %edx, %xmm4
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; X64-SSE-NEXT:    movl %r8d, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
-; X64-SSE-NEXT:    divl %r9d
-; X64-SSE-NEXT:    movd %edx, %xmm4
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; X64-SSE-NEXT:    movd %xmm4, %r8d
+; X64-SSE-NEXT:    divl 16(%rsi)
+; X64-SSE-NEXT:    movd %edx, %xmm3
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; X64-SSE-NEXT:    movd %xmm2, %eax
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; X64-SSE-NEXT:    movd %xmm1, %r8d
+; X64-SSE-NEXT:    xorl %edx, %edx
+; X64-SSE-NEXT:    divl %r8d
+; X64-SSE-NEXT:    movd %edx, %xmm1
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; X64-SSE-NEXT:    movl %r10d, %eax
+; X64-SSE-NEXT:    xorl %edx, %edx
+; X64-SSE-NEXT:    divl (%rsi)
+; X64-SSE-NEXT:    movd %edx, %xmm1
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; X64-SSE-NEXT:    movd %xmm2, %r8d
 ; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %r8d
-; X64-SSE-NEXT:    movd %edx, %xmm4
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm1, %eax
+; X64-SSE-NEXT:    movd %edx, %xmm2
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; X64-SSE-NEXT:    movd %xmm2, %edi
+; X64-SSE-NEXT:    movl %r9d, %eax
+; X64-SSE-NEXT:    xorl %edx, %edx
+; X64-SSE-NEXT:    divl %edi
+; X64-SSE-NEXT:    movd %edx, %xmm2
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[2,3,2,3]
+; X64-SSE-NEXT:    movd %xmm4, %eax
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm0, %edi
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %edi
 ; X64-SSE-NEXT:    movd %edx, %xmm0
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
-; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; X64-SSE-NEXT:    movl %ecx, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl 32(%rsi)
 ; X64-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [8199,8199,8199,8199]
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; X64-SSE-NEXT:    pmuludq %xmm0, %xmm3
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; X64-SSE-NEXT:    pmuludq %xmm0, %xmm1
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; X64-SSE-NEXT:    pmuludq %xmm0, %xmm2
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X64-SSE-NEXT:    pmuludq %xmm0, %xmm1
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; X64-SSE-NEXT:    pmuludq %xmm0, %xmm3
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
+; X64-SSE-NEXT:    pmuludq %xmm0, %xmm2
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
 ; X64-SSE-NEXT:    imull $8199, %edx, %eax # imm = 0x2007
 ; X64-SSE-NEXT:    movl %eax, (%rax)
-; X64-SSE-NEXT:    movdqa %xmm2, (%rax)
 ; X64-SSE-NEXT:    movdqa %xmm3, (%rax)
+; X64-SSE-NEXT:    movdqa %xmm1, (%rax)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: PR34947:

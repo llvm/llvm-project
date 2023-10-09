@@ -8,14 +8,14 @@ define arm_aapcs_vfpcc <4 x i32> @udiv_i32(<4 x i32> %in1, <4 x i32> %in2) {
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vmov r0, r12, d3
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    vmov r1, lr, d2
+; CHECK-NEXT:    vmov r2, lr, d1
+; CHECK-NEXT:    vmov r1, r3, d2
 ; CHECK-NEXT:    udiv r0, r2, r0
 ; CHECK-NEXT:    vmov r4, r5, d0
 ; CHECK-NEXT:    udiv r1, r4, r1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    udiv r0, r3, r12
-; CHECK-NEXT:    udiv r1, r5, lr
+; CHECK-NEXT:    udiv r0, lr, r12
+; CHECK-NEXT:    udiv r1, r5, r3
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -29,14 +29,14 @@ define arm_aapcs_vfpcc <4 x i32> @sdiv_i32(<4 x i32> %in1, <4 x i32> %in2) {
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vmov r0, r12, d3
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    vmov r1, lr, d2
+; CHECK-NEXT:    vmov r2, lr, d1
+; CHECK-NEXT:    vmov r1, r3, d2
 ; CHECK-NEXT:    sdiv r0, r2, r0
 ; CHECK-NEXT:    vmov r4, r5, d0
 ; CHECK-NEXT:    sdiv r1, r4, r1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    sdiv r0, r3, r12
-; CHECK-NEXT:    sdiv r1, r5, lr
+; CHECK-NEXT:    sdiv r0, lr, r12
+; CHECK-NEXT:    sdiv r1, r5, r3
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -195,15 +195,15 @@ define arm_aapcs_vfpcc <8 x i16> @urem_i16(<8 x i16> %in1, <8 x i16> %in2) {
 ; CHECK-NEXT:    vmov.u16 r2, q1[4]
 ; CHECK-NEXT:    vmov.u16 r3, q0[4]
 ; CHECK-NEXT:    udiv r0, r3, r2
-; CHECK-NEXT:    mls r0, r0, r2, r3
-; CHECK-NEXT:    vmov.u16 r2, q1[5]
+; CHECK-NEXT:    mls r2, r0, r2, r3
+; CHECK-NEXT:    vmov.u16 r0, q1[5]
 ; CHECK-NEXT:    vmov.u16 r3, q0[5]
-; CHECK-NEXT:    udiv r1, r3, r2
-; CHECK-NEXT:    mls r1, r1, r2, r3
-; CHECK-NEXT:    vmov.u16 r2, q1[2]
+; CHECK-NEXT:    udiv r1, r3, r0
+; CHECK-NEXT:    mls r0, r1, r0, r3
+; CHECK-NEXT:    vmov.u16 r1, q1[2]
 ; CHECK-NEXT:    vmov.u16 r3, q0[2]
-; CHECK-NEXT:    udiv r4, r3, r2
-; CHECK-NEXT:    mls r2, r4, r2, r3
+; CHECK-NEXT:    udiv r4, r3, r1
+; CHECK-NEXT:    mls r1, r4, r1, r3
 ; CHECK-NEXT:    vmov.u16 r3, q1[3]
 ; CHECK-NEXT:    vmov.u16 r4, q0[3]
 ; CHECK-NEXT:    udiv r5, r4, r3
@@ -218,10 +218,10 @@ define arm_aapcs_vfpcc <8 x i16> @urem_i16(<8 x i16> %in1, <8 x i16> %in2) {
 ; CHECK-NEXT:    vmov.16 q0[0], r4
 ; CHECK-NEXT:    mls r5, r7, r5, r6
 ; CHECK-NEXT:    vmov.16 q0[1], r5
-; CHECK-NEXT:    vmov.16 q0[2], r2
+; CHECK-NEXT:    vmov.16 q0[2], r1
 ; CHECK-NEXT:    vmov.16 q0[3], r3
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
+; CHECK-NEXT:    vmov.16 q0[4], r2
+; CHECK-NEXT:    vmov.16 q0[5], r0
 ; CHECK-NEXT:    vmov.16 q0[6], r12
 ; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
@@ -246,15 +246,15 @@ define arm_aapcs_vfpcc <8 x i16> @srem_i16(<8 x i16> %in1, <8 x i16> %in2) {
 ; CHECK-NEXT:    vmov.s16 r2, q1[4]
 ; CHECK-NEXT:    vmov.s16 r3, q0[4]
 ; CHECK-NEXT:    sdiv r0, r3, r2
-; CHECK-NEXT:    mls r0, r0, r2, r3
-; CHECK-NEXT:    vmov.s16 r2, q1[5]
+; CHECK-NEXT:    mls r2, r0, r2, r3
+; CHECK-NEXT:    vmov.s16 r0, q1[5]
 ; CHECK-NEXT:    vmov.s16 r3, q0[5]
-; CHECK-NEXT:    sdiv r1, r3, r2
-; CHECK-NEXT:    mls r1, r1, r2, r3
-; CHECK-NEXT:    vmov.s16 r2, q1[2]
+; CHECK-NEXT:    sdiv r1, r3, r0
+; CHECK-NEXT:    mls r0, r1, r0, r3
+; CHECK-NEXT:    vmov.s16 r1, q1[2]
 ; CHECK-NEXT:    vmov.s16 r3, q0[2]
-; CHECK-NEXT:    sdiv r4, r3, r2
-; CHECK-NEXT:    mls r2, r4, r2, r3
+; CHECK-NEXT:    sdiv r4, r3, r1
+; CHECK-NEXT:    mls r1, r4, r1, r3
 ; CHECK-NEXT:    vmov.s16 r3, q1[3]
 ; CHECK-NEXT:    vmov.s16 r4, q0[3]
 ; CHECK-NEXT:    sdiv r5, r4, r3
@@ -269,10 +269,10 @@ define arm_aapcs_vfpcc <8 x i16> @srem_i16(<8 x i16> %in1, <8 x i16> %in2) {
 ; CHECK-NEXT:    vmov.16 q0[0], r4
 ; CHECK-NEXT:    mls r5, r7, r5, r6
 ; CHECK-NEXT:    vmov.16 q0[1], r5
-; CHECK-NEXT:    vmov.16 q0[2], r2
+; CHECK-NEXT:    vmov.16 q0[2], r1
 ; CHECK-NEXT:    vmov.16 q0[3], r3
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
+; CHECK-NEXT:    vmov.16 q0[4], r2
+; CHECK-NEXT:    vmov.16 q0[5], r0
 ; CHECK-NEXT:    vmov.16 q0[6], r12
 ; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}

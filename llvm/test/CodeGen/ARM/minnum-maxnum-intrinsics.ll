@@ -499,23 +499,23 @@ define <4 x float> @fminnumv432_intrinsic(<4 x float> %x, <4 x float> %y) {
 ; ARMV7-LABEL: fminnumv432_intrinsic:
 ; ARMV7:       @ %bb.0:
 ; ARMV7-NEXT:    mov r12, sp
-; ARMV7-NEXT:    vld1.64 {d2, d3}, [r12]
-; ARMV7-NEXT:    vmov d1, r2, r3
-; ARMV7-NEXT:    vmov d0, r0, r1
-; ARMV7-NEXT:    vcmp.f32 s3, s7
+; ARMV7-NEXT:    vld1.64 {d0, d1}, [r12]
+; ARMV7-NEXT:    vmov d3, r2, r3
+; ARMV7-NEXT:    vmov d2, r0, r1
+; ARMV7-NEXT:    vcmp.f32 s7, s3
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vcmp.f32 s2, s6
-; ARMV7-NEXT:    vmovlt.f32 s7, s3
+; ARMV7-NEXT:    vcmp.f32 s6, s2
+; ARMV7-NEXT:    vmovlt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vcmp.f32 s1, s5
-; ARMV7-NEXT:    vmovlt.f32 s6, s2
+; ARMV7-NEXT:    vcmp.f32 s5, s1
+; ARMV7-NEXT:    vmovlt.f32 s2, s6
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vcmp.f32 s0, s4
-; ARMV7-NEXT:    vmovlt.f32 s5, s1
+; ARMV7-NEXT:    vcmp.f32 s4, s0
+; ARMV7-NEXT:    vmovlt.f32 s1, s5
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmovlt.f32 s4, s0
-; ARMV7-NEXT:    vmov r2, r3, d3
-; ARMV7-NEXT:    vmov r0, r1, d2
+; ARMV7-NEXT:    vmovlt.f32 s0, s4
+; ARMV7-NEXT:    vmov r2, r3, d1
+; ARMV7-NEXT:    vmov r0, r1, d0
 ; ARMV7-NEXT:    bx lr
 ;
 ; ARMV8-LABEL: fminnumv432_intrinsic:
@@ -686,23 +686,23 @@ define <4 x float> @fmaxnumv432_intrinsic(<4 x float> %x, <4 x float> %y) {
 ; ARMV7-LABEL: fmaxnumv432_intrinsic:
 ; ARMV7:       @ %bb.0:
 ; ARMV7-NEXT:    mov r12, sp
-; ARMV7-NEXT:    vld1.64 {d2, d3}, [r12]
-; ARMV7-NEXT:    vmov d1, r2, r3
-; ARMV7-NEXT:    vmov d0, r0, r1
-; ARMV7-NEXT:    vcmp.f32 s3, s7
+; ARMV7-NEXT:    vld1.64 {d0, d1}, [r12]
+; ARMV7-NEXT:    vmov d3, r2, r3
+; ARMV7-NEXT:    vmov d2, r0, r1
+; ARMV7-NEXT:    vcmp.f32 s7, s3
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vcmp.f32 s2, s6
-; ARMV7-NEXT:    vmovgt.f32 s7, s3
+; ARMV7-NEXT:    vcmp.f32 s6, s2
+; ARMV7-NEXT:    vmovgt.f32 s3, s7
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vcmp.f32 s1, s5
-; ARMV7-NEXT:    vmovgt.f32 s6, s2
+; ARMV7-NEXT:    vcmp.f32 s5, s1
+; ARMV7-NEXT:    vmovgt.f32 s2, s6
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vcmp.f32 s0, s4
-; ARMV7-NEXT:    vmovgt.f32 s5, s1
+; ARMV7-NEXT:    vcmp.f32 s4, s0
+; ARMV7-NEXT:    vmovgt.f32 s1, s5
 ; ARMV7-NEXT:    vmrs APSR_nzcv, fpscr
-; ARMV7-NEXT:    vmovgt.f32 s4, s0
-; ARMV7-NEXT:    vmov r2, r3, d3
-; ARMV7-NEXT:    vmov r0, r1, d2
+; ARMV7-NEXT:    vmovgt.f32 s0, s4
+; ARMV7-NEXT:    vmov r2, r3, d1
+; ARMV7-NEXT:    vmov r0, r1, d0
 ; ARMV7-NEXT:    bx lr
 ;
 ; ARMV8-LABEL: fmaxnumv432_intrinsic:

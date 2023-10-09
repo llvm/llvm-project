@@ -2529,14 +2529,15 @@ define <4 x float> @uitofp_4i64_to_4f32(<4 x i64> %a) {
 ;
 ; SSE41-LABEL: uitofp_4i64_to_4f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    movdqa %xmm1, %xmm2
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
-; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm1, %xmm3
 ; SSE41-NEXT:    psrlq $1, %xmm3
 ; SSE41-NEXT:    por %xmm0, %xmm3
-; SSE41-NEXT:    movdqa %xmm2, %xmm5
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm1, %xmm5
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm5
 ; SSE41-NEXT:    pextrq $1, %xmm5, %rax
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
@@ -2545,25 +2546,25 @@ define <4 x float> @uitofp_4i64_to_4f32(<4 x i64> %a) {
 ; SSE41-NEXT:    xorps %xmm3, %xmm3
 ; SSE41-NEXT:    cvtsi2ss %rax, %xmm3
 ; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[2,3]
-; SSE41-NEXT:    pand %xmm1, %xmm4
-; SSE41-NEXT:    movdqa %xmm1, %xmm5
+; SSE41-NEXT:    pand %xmm2, %xmm4
+; SSE41-NEXT:    movdqa %xmm2, %xmm5
 ; SSE41-NEXT:    psrlq $1, %xmm5
 ; SSE41-NEXT:    por %xmm4, %xmm5
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm1[1,3]
-; SSE41-NEXT:    movaps %xmm1, %xmm0
-; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm1
-; SSE41-NEXT:    movq %xmm1, %rax
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
+; SSE41-NEXT:    movaps %xmm2, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm2
+; SSE41-NEXT:    movq %xmm2, %rax
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
 ; SSE41-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1],xmm0[0],xmm3[3]
-; SSE41-NEXT:    pextrq $1, %xmm1, %rax
+; SSE41-NEXT:    pextrq $1, %xmm2, %rax
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
 ; SSE41-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm0[0]
-; SSE41-NEXT:    movaps %xmm3, %xmm1
-; SSE41-NEXT:    addps %xmm3, %xmm1
-; SSE41-NEXT:    movaps %xmm2, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm3
+; SSE41-NEXT:    movaps %xmm3, %xmm2
+; SSE41-NEXT:    addps %xmm3, %xmm2
+; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm3
 ; SSE41-NEXT:    movaps %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;

@@ -459,56 +459,56 @@ define <20 x i32> @v20(<20 x i8> %s0, <20 x i8> %s1) {
 ; CHECK-NEXT:    mov v0.b[1], w1
 ; CHECK-NEXT:    ld1 { v3.b }[1], [x11]
 ; CHECK-NEXT:    ld1 { v1.b }[1], [x9]
-; CHECK-NEXT:    add x12, sp, #16
+; CHECK-NEXT:    add x11, sp, #16
 ; CHECK-NEXT:    add x9, sp, #112
-; CHECK-NEXT:    add x11, sp, #120
+; CHECK-NEXT:    add x13, sp, #184
 ; CHECK-NEXT:    ld1 { v2.b }[2], [x10]
+; CHECK-NEXT:    add x12, sp, #120
 ; CHECK-NEXT:    add x14, sp, #32
-; CHECK-NEXT:    ldr b5, [sp, #64]
-; CHECK-NEXT:    ld1 { v3.b }[2], [x12]
-; CHECK-NEXT:    add x12, sp, #184
+; CHECK-NEXT:    ld1 { v3.b }[2], [x11]
 ; CHECK-NEXT:    ld1 { v1.b }[2], [x9]
+; CHECK-NEXT:    ldr b5, [sp, #64]
 ; CHECK-NEXT:    mov v0.b[2], w2
 ; CHECK-NEXT:    ldr b4, [sp, #224]
-; CHECK-NEXT:    add x9, sp, #128
-; CHECK-NEXT:    ld1 { v2.b }[3], [x12]
-; CHECK-NEXT:    add x12, sp, #24
+; CHECK-NEXT:    add x11, sp, #128
+; CHECK-NEXT:    ld1 { v2.b }[3], [x13]
+; CHECK-NEXT:    add x13, sp, #24
 ; CHECK-NEXT:    add x10, sp, #136
-; CHECK-NEXT:    ld1 { v3.b }[3], [x12]
-; CHECK-NEXT:    ld1 { v1.b }[3], [x11]
-; CHECK-NEXT:    add x11, sp, #192
-; CHECK-NEXT:    add x12, sp, #200
+; CHECK-NEXT:    ld1 { v3.b }[3], [x13]
+; CHECK-NEXT:    ld1 { v1.b }[3], [x12]
+; CHECK-NEXT:    add x12, sp, #192
+; CHECK-NEXT:    add x13, sp, #200
 ; CHECK-NEXT:    add x15, sp, #80
-; CHECK-NEXT:    add x13, sp, #144
+; CHECK-NEXT:    add x9, sp, #144
 ; CHECK-NEXT:    mov v0.b[3], w3
-; CHECK-NEXT:    ld1 { v2.b }[4], [x11]
-; CHECK-NEXT:    add x11, sp, #232
+; CHECK-NEXT:    ld1 { v2.b }[4], [x12]
+; CHECK-NEXT:    add x12, sp, #232
 ; CHECK-NEXT:    ld1 { v3.b }[4], [x14]
 ; CHECK-NEXT:    add x14, sp, #72
-; CHECK-NEXT:    ld1 { v4.b }[1], [x11]
+; CHECK-NEXT:    ld1 { v4.b }[1], [x12]
 ; CHECK-NEXT:    ld1 { v5.b }[1], [x14]
 ; CHECK-NEXT:    add x14, sp, #40
-; CHECK-NEXT:    ld1 { v1.b }[4], [x9]
-; CHECK-NEXT:    ld1 { v2.b }[5], [x12]
-; CHECK-NEXT:    add x11, sp, #208
-; CHECK-NEXT:    add x12, sp, #48
+; CHECK-NEXT:    ld1 { v1.b }[4], [x11]
+; CHECK-NEXT:    ld1 { v2.b }[5], [x13]
+; CHECK-NEXT:    add x12, sp, #208
+; CHECK-NEXT:    add x13, sp, #48
 ; CHECK-NEXT:    mov v0.b[4], w4
 ; CHECK-NEXT:    ld1 { v3.b }[5], [x14]
 ; CHECK-NEXT:    add x14, sp, #240
 ; CHECK-NEXT:    ld1 { v4.b }[2], [x14]
 ; CHECK-NEXT:    ld1 { v5.b }[2], [x15]
 ; CHECK-NEXT:    ld1 { v1.b }[5], [x10]
-; CHECK-NEXT:    ld1 { v2.b }[6], [x11]
-; CHECK-NEXT:    add x9, sp, #216
+; CHECK-NEXT:    ld1 { v2.b }[6], [x12]
+; CHECK-NEXT:    add x11, sp, #216
 ; CHECK-NEXT:    add x10, sp, #56
-; CHECK-NEXT:    ld1 { v3.b }[6], [x12]
-; CHECK-NEXT:    add x11, sp, #248
-; CHECK-NEXT:    add x12, sp, #88
+; CHECK-NEXT:    ld1 { v3.b }[6], [x13]
+; CHECK-NEXT:    add x12, sp, #248
+; CHECK-NEXT:    add x13, sp, #88
 ; CHECK-NEXT:    mov v0.b[5], w5
-; CHECK-NEXT:    ld1 { v4.b }[3], [x11]
-; CHECK-NEXT:    ld1 { v5.b }[3], [x12]
-; CHECK-NEXT:    ld1 { v1.b }[6], [x13]
-; CHECK-NEXT:    ld1 { v2.b }[7], [x9]
+; CHECK-NEXT:    ld1 { v4.b }[3], [x12]
+; CHECK-NEXT:    ld1 { v5.b }[3], [x13]
+; CHECK-NEXT:    ld1 { v1.b }[6], [x9]
+; CHECK-NEXT:    ld1 { v2.b }[7], [x11]
 ; CHECK-NEXT:    add x9, sp, #152
 ; CHECK-NEXT:    ld1 { v3.b }[7], [x10]
 ; CHECK-NEXT:    uaddl v4.8h, v5.8b, v4.8b
@@ -545,48 +545,48 @@ define <16 x i32> @i12(<16 x i12> %s0, <16 x i12> %s1) {
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w22, -32
 ; CHECK-NEXT:    .cfi_offset w23, -48
-; CHECK-NEXT:    ldr w10, [sp, #112]
-; CHECK-NEXT:    ldr w13, [sp, #144]
+; CHECK-NEXT:    ldr w13, [sp, #112]
+; CHECK-NEXT:    ldr w14, [sp, #144]
 ; CHECK-NEXT:    fmov s2, w4
-; CHECK-NEXT:    ldr w15, [sp, #176]
-; CHECK-NEXT:    ldr w17, [sp, #208]
+; CHECK-NEXT:    ldr w17, [sp, #176]
+; CHECK-NEXT:    ldr w19, [sp, #208]
 ; CHECK-NEXT:    fmov s3, w0
-; CHECK-NEXT:    ldr w18, [sp, #80]
-; CHECK-NEXT:    ldr w20, [sp, #48]
-; CHECK-NEXT:    fmov s5, w10
-; CHECK-NEXT:    fmov s4, w17
-; CHECK-NEXT:    fmov s6, w15
-; CHECK-NEXT:    fmov s7, w13
-; CHECK-NEXT:    fmov s0, w18
-; CHECK-NEXT:    fmov s1, w20
-; CHECK-NEXT:    ldr w9, [sp, #120]
-; CHECK-NEXT:    ldr w12, [sp, #152]
-; CHECK-NEXT:    ldr w14, [sp, #184]
-; CHECK-NEXT:    ldr w16, [sp, #216]
-; CHECK-NEXT:    ldr w21, [sp, #88]
-; CHECK-NEXT:    ldr w22, [sp, #56]
+; CHECK-NEXT:    ldr w20, [sp, #80]
+; CHECK-NEXT:    ldr w21, [sp, #48]
+; CHECK-NEXT:    fmov s5, w13
+; CHECK-NEXT:    fmov s4, w19
+; CHECK-NEXT:    fmov s6, w17
+; CHECK-NEXT:    fmov s7, w14
+; CHECK-NEXT:    fmov s0, w20
+; CHECK-NEXT:    fmov s1, w21
+; CHECK-NEXT:    ldr w10, [sp, #120]
+; CHECK-NEXT:    ldr w11, [sp, #152]
+; CHECK-NEXT:    ldr w12, [sp, #184]
+; CHECK-NEXT:    ldr w15, [sp, #216]
+; CHECK-NEXT:    ldr w22, [sp, #88]
+; CHECK-NEXT:    ldr w23, [sp, #56]
 ; CHECK-NEXT:    mov v2.h[1], w5
 ; CHECK-NEXT:    mov v3.h[1], w1
-; CHECK-NEXT:    mov v5.h[1], w9
-; CHECK-NEXT:    mov v4.h[1], w16
-; CHECK-NEXT:    mov v0.h[1], w21
-; CHECK-NEXT:    mov v1.h[1], w22
-; CHECK-NEXT:    mov v6.h[1], w14
-; CHECK-NEXT:    mov v7.h[1], w12
+; CHECK-NEXT:    mov v5.h[1], w10
+; CHECK-NEXT:    mov v4.h[1], w15
+; CHECK-NEXT:    mov v0.h[1], w22
+; CHECK-NEXT:    mov v1.h[1], w23
+; CHECK-NEXT:    mov v6.h[1], w12
+; CHECK-NEXT:    mov v7.h[1], w11
 ; CHECK-NEXT:    ldr w8, [sp, #128]
-; CHECK-NEXT:    ldr w11, [sp, #160]
-; CHECK-NEXT:    ldr w19, [sp, #64]
-; CHECK-NEXT:    ldr w23, [sp, #96]
-; CHECK-NEXT:    ldr w9, [sp, #192]
-; CHECK-NEXT:    ldr w10, [sp, #224]
+; CHECK-NEXT:    ldr w9, [sp, #160]
+; CHECK-NEXT:    ldr w16, [sp, #64]
+; CHECK-NEXT:    ldr w18, [sp, #96]
+; CHECK-NEXT:    ldr w10, [sp, #192]
+; CHECK-NEXT:    ldr w11, [sp, #224]
 ; CHECK-NEXT:    mov v2.h[2], w6
 ; CHECK-NEXT:    mov v3.h[2], w2
-; CHECK-NEXT:    mov v0.h[2], w23
-; CHECK-NEXT:    mov v1.h[2], w19
+; CHECK-NEXT:    mov v0.h[2], w18
+; CHECK-NEXT:    mov v1.h[2], w16
 ; CHECK-NEXT:    mov v5.h[2], w8
-; CHECK-NEXT:    mov v4.h[2], w10
-; CHECK-NEXT:    mov v6.h[2], w9
-; CHECK-NEXT:    mov v7.h[2], w11
+; CHECK-NEXT:    mov v4.h[2], w11
+; CHECK-NEXT:    mov v6.h[2], w10
+; CHECK-NEXT:    mov v7.h[2], w9
 ; CHECK-NEXT:    ldr w12, [sp, #72]
 ; CHECK-NEXT:    ldr w13, [sp, #104]
 ; CHECK-NEXT:    ldr w8, [sp, #136]

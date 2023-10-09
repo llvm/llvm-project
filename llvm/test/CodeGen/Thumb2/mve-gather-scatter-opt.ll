@@ -47,15 +47,15 @@ define arm_aapcs_vfpcc void @unscaled_i32_i8_scatter(ptr %base, ptr %offptr, <4 
 ; NOGATSCAT-NEXT:    .save {r4, r5, r7, lr}
 ; NOGATSCAT-NEXT:    push {r4, r5, r7, lr}
 ; NOGATSCAT-NEXT:    vldrb.u32 q1, [r1]
-; NOGATSCAT-NEXT:    vmov r3, r1, d0
+; NOGATSCAT-NEXT:    vmov r1, r3, d0
 ; NOGATSCAT-NEXT:    vmov r4, r5, d1
 ; NOGATSCAT-NEXT:    vadd.i32 q1, q1, r0
-; NOGATSCAT-NEXT:    vmov r0, lr, d2
-; NOGATSCAT-NEXT:    vmov r2, r12, d3
-; NOGATSCAT-NEXT:    str r3, [r0]
-; NOGATSCAT-NEXT:    str.w r1, [lr]
+; NOGATSCAT-NEXT:    vmov r0, r12, d2
+; NOGATSCAT-NEXT:    vmov r2, lr, d3
+; NOGATSCAT-NEXT:    str r1, [r0]
+; NOGATSCAT-NEXT:    str.w r3, [r12]
 ; NOGATSCAT-NEXT:    str r4, [r2]
-; NOGATSCAT-NEXT:    str.w r5, [r12]
+; NOGATSCAT-NEXT:    str.w r5, [lr]
 ; NOGATSCAT-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; NOMVE-LABEL: unscaled_i32_i8_scatter:

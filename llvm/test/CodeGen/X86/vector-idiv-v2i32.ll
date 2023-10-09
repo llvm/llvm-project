@@ -131,27 +131,27 @@ define void @test_sdiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,2454267027,2454267027]
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pmuludq %xmm1, %xmm2
-; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,2454267027,2454267027]
+; X86-NEXT:    movdqa %xmm1, %xmm0
+; X86-NEXT:    pmuludq %xmm2, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X86-NEXT:    movdqa %xmm1, %xmm3
 ; X86-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
-; X86-NEXT:    pmuludq %xmm1, %xmm3
+; X86-NEXT:    pmuludq %xmm2, %xmm3
 ; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; X86-NEXT:    pxor %xmm3, %xmm3
-; X86-NEXT:    pcmpgtd %xmm0, %xmm3
-; X86-NEXT:    pand %xmm1, %xmm3
-; X86-NEXT:    paddd %xmm0, %xmm3
-; X86-NEXT:    psubd %xmm3, %xmm2
-; X86-NEXT:    paddd %xmm0, %xmm2
-; X86-NEXT:    movdqa %xmm2, %xmm0
-; X86-NEXT:    psrld $31, %xmm0
-; X86-NEXT:    psrad $2, %xmm2
-; X86-NEXT:    paddd %xmm0, %xmm2
-; X86-NEXT:    movq %xmm2, (%eax)
+; X86-NEXT:    pcmpgtd %xmm1, %xmm3
+; X86-NEXT:    pand %xmm2, %xmm3
+; X86-NEXT:    paddd %xmm1, %xmm3
+; X86-NEXT:    psubd %xmm3, %xmm0
+; X86-NEXT:    paddd %xmm1, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrld $31, %xmm1
+; X86-NEXT:    psrad $2, %xmm0
+; X86-NEXT:    paddd %xmm1, %xmm0
+; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
   %a = load <2 x i32>, ptr %x
   %b = sdiv <2 x i32> %a, <i32 7, i32 7>

@@ -97,7 +97,7 @@ body: |
     ; CHECK-NEXT: renamable $g8p4 = LQARX $x5, $x6
     ; CHECK-NEXT: STD killed $x8, -160, $x1
     ; CHECK-NEXT: STD killed $x9, -152, $x1
-    ; CHECK-NEXT: renamable $g8p11 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p13 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p4 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: STD killed $x8, -176, $x1
     ; CHECK-NEXT: STD killed $x9, -168, $x1
@@ -115,17 +115,17 @@ body: |
     ; CHECK-NEXT: renamable $g8p8 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p7 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p15 = LQARX $x3, renamable $x4
+    ; CHECK-NEXT: renamable $g8p11 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p12 = LQARX $x3, renamable $x4
-    ; CHECK-NEXT: renamable $g8p13 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p14 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p5 = LQARX $x3, renamable $x4
     ; CHECK-NEXT: renamable $g8p4 = LQARX $x3, renamable $x4
-    ; CHECK-NEXT: $x3 = OR8 $x23, $x23
+    ; CHECK-NEXT: $x3 = OR8 $x27, $x27
     ; CHECK-NEXT: STQCX killed renamable $g8p4, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p5, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p14, renamable $x7, renamable $x4, implicit-def dead $cr0
-    ; CHECK-NEXT: STQCX killed renamable $g8p13, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p12, renamable $x7, renamable $x4, implicit-def dead $cr0
+    ; CHECK-NEXT: STQCX killed renamable $g8p11, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p15, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p7, renamable $x7, renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: STQCX killed renamable $g8p8, renamable $x7, renamable $x4, implicit-def dead $cr0
@@ -143,7 +143,7 @@ body: |
     ; CHECK-NEXT: $x8 = LD -176, $x1
     ; CHECK-NEXT: $x9 = LD -168, $x1
     ; CHECK-NEXT: STQCX killed renamable $g8p4, renamable $x7, renamable $x4, implicit-def dead $cr0
-    ; CHECK-NEXT: STQCX killed renamable $g8p11, killed renamable $x7, killed renamable $x4, implicit-def dead $cr0
+    ; CHECK-NEXT: STQCX killed renamable $g8p13, killed renamable $x7, killed renamable $x4, implicit-def dead $cr0
     ; CHECK-NEXT: $x8 = LD -160, $x1
     ; CHECK-NEXT: $x9 = LD -152, $x1
     ; CHECK-NEXT: STQCX killed renamable $g8p4, $x5, $x6, implicit-def dead $cr0

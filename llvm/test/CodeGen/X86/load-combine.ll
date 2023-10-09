@@ -472,19 +472,19 @@ define i32 @load_i32_by_i8_bswap_store_in_between(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %esi, -8
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movzbl (%ecx), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzbl (%eax), %edx
 ; CHECK-NEXT:    shll $24, %edx
-; CHECK-NEXT:    movzbl 1(%ecx), %esi
-; CHECK-NEXT:    movl $0, (%eax)
+; CHECK-NEXT:    movzbl 1(%eax), %esi
+; CHECK-NEXT:    movl $0, (%ecx)
 ; CHECK-NEXT:    shll $16, %esi
 ; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movzbl 2(%ecx), %edx
-; CHECK-NEXT:    shll $8, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movzbl 3(%ecx), %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movzbl 2(%eax), %ecx
+; CHECK-NEXT:    shll $8, %ecx
+; CHECK-NEXT:    orl %esi, %ecx
+; CHECK-NEXT:    movzbl 3(%eax), %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl

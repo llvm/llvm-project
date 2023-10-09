@@ -245,25 +245,25 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_sminmax(<2 x i64> %so) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, r1, d0
+; CHECK-NEXT:    vmov r2, r1, d0
 ; CHECK-NEXT:    mov.w r12, #-1
-; CHECK-NEXT:    asrl r0, r1, #3
+; CHECK-NEXT:    asrl r2, r1, #3
 ; CHECK-NEXT:    vmov r4, r5, d1
-; CHECK-NEXT:    rsbs.w r3, r0, #-2147483648
+; CHECK-NEXT:    rsbs.w r0, r2, #-2147483648
 ; CHECK-NEXT:    asrl r4, r5, #3
-; CHECK-NEXT:    sbcs.w r3, r12, r1
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
-; CHECK-NEXT:    csetm lr, lt
-; CHECK-NEXT:    rsbs.w r2, r4, #-2147483648
+; CHECK-NEXT:    sbcs.w r0, r12, r1
 ; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    sbcs.w r2, r12, r5
-; CHECK-NEXT:    adr r0, .LCPI13_0
+; CHECK-NEXT:    csetm lr, lt
+; CHECK-NEXT:    rsbs.w r0, r4, #-2147483648
+; CHECK-NEXT:    sbcs.w r0, r12, r5
 ; CHECK-NEXT:    bfi r3, lr, #0, #8
-; CHECK-NEXT:    csetm r2, lt
+; CHECK-NEXT:    csetm r0, lt
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r4
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    adr r0, .LCPI13_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
 ; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
 ; CHECK-NEXT:    mvn r2, #-2147483648
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    movs r6, #0

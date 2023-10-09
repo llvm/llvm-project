@@ -200,23 +200,23 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ;
 ; RV32C-LABEL: add_wide_operand:
 ; RV32C:       # %bb.0:
-; RV32C-NEXT:    c.lw a4, 4(a1)
+; RV32C-NEXT:    lw a6, 4(a1)
 ; RV32C-NEXT:    c.lw a3, 12(a1)
-; RV32C-NEXT:    lw a6, 0(a1)
+; RV32C-NEXT:    c.lw a4, 0(a1)
 ; RV32C-NEXT:    c.lw a1, 8(a1)
 ; RV32C-NEXT:    c.lui a5, 16
 ; RV32C-NEXT:    c.add a3, a5
 ; RV32C-NEXT:    c.slli a3, 3
 ; RV32C-NEXT:    srli a5, a1, 29
 ; RV32C-NEXT:    c.or a3, a5
-; RV32C-NEXT:    srli a5, a6, 29
-; RV32C-NEXT:    slli a2, a4, 3
+; RV32C-NEXT:    srli a5, a4, 29
+; RV32C-NEXT:    slli a2, a6, 3
 ; RV32C-NEXT:    c.or a2, a5
-; RV32C-NEXT:    c.srli a4, 29
+; RV32C-NEXT:    srli a5, a6, 29
 ; RV32C-NEXT:    c.slli a1, 3
-; RV32C-NEXT:    c.or a1, a4
-; RV32C-NEXT:    c.slli a6, 3
-; RV32C-NEXT:    sw a6, 0(a0)
+; RV32C-NEXT:    c.or a1, a5
+; RV32C-NEXT:    c.slli a4, 3
+; RV32C-NEXT:    c.sw a4, 0(a0)
 ; RV32C-NEXT:    c.sw a1, 8(a0)
 ; RV32C-NEXT:    c.sw a2, 4(a0)
 ; RV32C-NEXT:    c.sw a3, 12(a0)

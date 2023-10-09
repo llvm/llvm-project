@@ -13,26 +13,26 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define i64 @bfis_in_loop_zero() {
 ; CHECK-LABEL: bfis_in_loop_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, :got:global
-; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:    ldr x8, [x8, :got_lo12:global]
-; CHECK-NEXT:    ldr x9, [x8]
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:  .LBB0_1: // %midblock
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrh w10, [x9, #72]
-; CHECK-NEXT:    ldr x13, [x9, #8]
-; CHECK-NEXT:    ubfx x11, x10, #8, #24
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    and x10, x10, #0xff
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    ldr x9, [x13, #16]
-; CHECK-NEXT:    csel w8, w8, w11, eq
-; CHECK-NEXT:    and x11, x0, #0xffffffff00000000
-; CHECK-NEXT:    orr x10, x10, x8, lsl #8
-; CHECK-NEXT:    orr x11, x11, x12, lsl #16
-; CHECK-NEXT:    orr x0, x11, x10
-; CHECK-NEXT:    cbnz x13, .LBB0_1
+; CHECK-NEXT: 	adrp	x8, :got:global
+; CHECK-NEXT: 	mov	x0, xzr
+; CHECK-NEXT: 	mov	w9, wzr
+; CHECK-NEXT: 	ldr	x8, [x8, :got_lo12:global]
+; CHECK-NEXT: 	ldr	x8, [x8]
+; CHECK-NEXT: .LBB0_1:                                // %midblock
+; CHECK-NEXT:   // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT: 	ldrh	w10, [x8, #72]
+; CHECK-NEXT: 	ldr	x13, [x8, #8]
+; CHECK-NEXT: 	ubfx	x11, x10, #8, #24
+; CHECK-NEXT: 	cmp	w10, #0
+; CHECK-NEXT: 	and	x10, x10, #0xff
+; CHECK-NEXT: 	cset	w12, ne
+; CHECK-NEXT: 	ldr	x8, [x13, #16]
+; CHECK-NEXT: 	csel	w9, w9, w11, eq
+; CHECK-NEXT: 	and	x11, x0, #0xffffffff00000000
+; CHECK-NEXT: 	orr	x10, x10, x9, lsl #8
+; CHECK-NEXT: 	orr	x11, x11, x12, lsl #16
+; CHECK-NEXT: 	orr	x0, x11, x10
+; CHECK-NEXT: 	cbnz	x13, .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -81,26 +81,26 @@ exit:
 define i64 @bfis_in_loop_undef() {
 ; CHECK-LABEL: bfis_in_loop_undef:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x9, :got:global
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    // implicit-def: $x0
-; CHECK-NEXT:    ldr x9, [x9, :got_lo12:global]
-; CHECK-NEXT:    ldr x9, [x9]
-; CHECK-NEXT:  .LBB1_1: // %midblock
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrh w10, [x9, #72]
-; CHECK-NEXT:    ldr x13, [x9, #8]
-; CHECK-NEXT:    ubfx x11, x10, #8, #24
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    and x10, x10, #0xff
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    ldr x9, [x13, #16]
-; CHECK-NEXT:    csel w8, w8, w11, eq
-; CHECK-NEXT:    and x11, x0, #0xffffffff00000000
-; CHECK-NEXT:    orr x10, x10, x8, lsl #8
-; CHECK-NEXT:    orr x11, x11, x12, lsl #16
-; CHECK-NEXT:    orr x0, x11, x10
-; CHECK-NEXT:    cbnz x13, .LBB1_1
+; CHECK-NEXT: 	adrp	x9, :got:global
+; CHECK-NEXT: 	mov	w8, wzr
+; CHECK-NEXT:                                         // implicit-def: $x0
+; CHECK-NEXT: 	ldr	x9, [x9, :got_lo12:global]
+; CHECK-NEXT: 	ldr	x9, [x9]
+; CHECK-NEXT: .LBB1_1:                                // %midblock
+; CHECK-NEXT:                                         // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT: 	ldrh	w10, [x9, #72]
+; CHECK-NEXT: 	ldr	x13, [x9, #8]
+; CHECK-NEXT: 	ubfx	x11, x10, #8, #24
+; CHECK-NEXT: 	cmp	w10, #0
+; CHECK-NEXT: 	and	x10, x10, #0xff
+; CHECK-NEXT: 	cset	w12, ne
+; CHECK-NEXT: 	ldr	x9, [x13, #16]
+; CHECK-NEXT: 	csel	w8, w8, w11, eq
+; CHECK-NEXT: 	and	x11, x0, #0xffffffff00000000
+; CHECK-NEXT: 	orr	x10, x10, x8, lsl #8
+; CHECK-NEXT: 	orr	x11, x11, x12, lsl #16
+; CHECK-NEXT: 	orr	x0, x11, x10
+; CHECK-NEXT: 	cbnz	x13, .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
 entry:

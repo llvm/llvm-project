@@ -310,11 +310,11 @@ define <4 x float> @test_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #
 ; FMACALL64:       ## %bb.0: ## %entry
 ; FMACALL64-NEXT:    subq $88, %rsp ## encoding: [0x48,0x83,0xec,0x58]
 ; FMACALL64-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x54,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x54,0x24,0x30]
 ; FMACALL64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x4c,0x24,0x20]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x30]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x20]
 ; FMACALL64-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; FMACALL64-NEXT:    shufps $255, %xmm1, %xmm1 ## encoding: [0x0f,0xc6,0xc9,0xff]
@@ -326,15 +326,15 @@ define <4 x float> @test_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #
 ; FMACALL64-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x04,0x24]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x30]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x20]
 ; FMACALL64-NEXT:    movhlps %xmm0, %xmm0 ## encoding: [0x0f,0x12,0xc0]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x20]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    movhlps %xmm1, %xmm1 ## encoding: [0x0f,0x12,0xc9]
 ; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x30]
 ; FMACALL64-NEXT:    movhlps %xmm2, %xmm2 ## encoding: [0x0f,0x12,0xd2]
 ; FMACALL64-NEXT:    ## xmm2 = xmm2[1,1]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -345,25 +345,25 @@ define <4 x float> @test_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #
 ; FMACALL64-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x04,0x24]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x30]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x20]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x20]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x30]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: reloc_branch_4byte_pcrel
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x40]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x30]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x20]
 ; FMACALL64-NEXT:    shufps $85, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0x55]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1,1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x20]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    shufps $85, %xmm1, %xmm1 ## encoding: [0x0f,0xc6,0xc9,0x55]
 ; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1,1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x30]
 ; FMACALL64-NEXT:    shufps $85, %xmm2, %xmm2 ## encoding: [0x0f,0xc6,0xd2,0x55]
 ; FMACALL64-NEXT:    ## xmm2 = xmm2[1,1,1,1]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -483,16 +483,16 @@ define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c) #
 ; FMACALL64-NEXT:    subq $136, %rsp ## encoding: [0x48,0x81,0xec,0x88,0x00,0x00,0x00]
 ; FMACALL64-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x6c,0x24,0x50]
-; FMACALL64-NEXT:    movaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x64,0x24,0x60]
+; FMACALL64-NEXT:    movaps %xmm4, (%rsp) ## 16-byte Spill
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x24,0x24]
 ; FMACALL64-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x5c,0x24,0x40]
 ; FMACALL64-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x54,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x54,0x24,0x60]
 ; FMACALL64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x4c,0x24,0x30]
-; FMACALL64-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x04,0x24]
+; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x10]
 ; FMACALL64-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; FMACALL64-NEXT:    movaps %xmm2, %xmm1 ## encoding: [0x0f,0x28,0xca]
@@ -505,16 +505,16 @@ define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c) #
 ; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: reloc_branch_4byte_pcrel
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x20]
-; FMACALL64-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x04,0x24]
+; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x10]
 ; FMACALL64-NEXT:    movhlps %xmm0, %xmm0 ## encoding: [0x0f,0x12,0xc0]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x60]
 ; FMACALL64-NEXT:    movhlps %xmm1, %xmm1 ## encoding: [0x0f,0x12,0xc9]
 ; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1]
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x60]
+; FMACALL64-NEXT:    movaps (%rsp), %xmm2 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x14,0x24]
 ; FMACALL64-NEXT:    movhlps %xmm2, %xmm2 ## encoding: [0x0f,0x12,0xd2]
 ; FMACALL64-NEXT:    ## xmm2 = xmm2[1,1]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -524,26 +524,26 @@ define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c) #
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x70]
-; FMACALL64-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x04,0x24]
+; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x10]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x60]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x60]
+; FMACALL64-NEXT:    movaps (%rsp), %xmm2 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x14,0x24]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: reloc_branch_4byte_pcrel
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x20]
-; FMACALL64-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x04,0x24]
+; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x10]
 ; FMACALL64-NEXT:    shufps $85, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0x55]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1,1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x60]
 ; FMACALL64-NEXT:    shufps $85, %xmm1, %xmm1 ## encoding: [0x0f,0xc6,0xc9,0x55]
 ; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1,1,1]
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x54,0x24,0x60]
+; FMACALL64-NEXT:    movaps (%rsp), %xmm2 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x14,0x24]
 ; FMACALL64-NEXT:    shufps $85, %xmm2, %xmm2 ## encoding: [0x0f,0xc6,0xd2,0x55]
 ; FMACALL64-NEXT:    ## xmm2 = xmm2[1,1,1,1]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -836,7 +836,7 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL64-NEXT:    movaps %xmm5, (%rsp) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x2c,0x24]
 ; FMACALL64-NEXT:    movaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x64,0x24,0x50]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x64,0x24,0x10]
 ; FMACALL64-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x5c,0x24,0x70]
 ; FMACALL64-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
@@ -844,7 +844,7 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x4c,0x24,0x30]
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x50]
 ; FMACALL64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2 ## encoding: [0x0f,0x28,0x94,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL64-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[3,3,3,3]
@@ -858,11 +858,11 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x60]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x50]
 ; FMACALL64-NEXT:    movhlps %xmm0, %xmm0 ## encoding: [0x0f,0x12,0xc0]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x50]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    movhlps %xmm1, %xmm1 ## encoding: [0x0f,0x12,0xc9]
 ; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1]
 ; FMACALL64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2 ## encoding: [0x0f,0x28,0x94,0x24,0xb0,0x00,0x00,0x00]
@@ -876,20 +876,20 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x84,0x24,0x90,0x00,0x00,0x00]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x50]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x50]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2 ## encoding: [0x0f,0x28,0x94,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: reloc_branch_4byte_pcrel
 ; FMACALL64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x29,0x44,0x24,0x60]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x10]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x50]
 ; FMACALL64-NEXT:    shufps $85, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0x55]
 ; FMACALL64-NEXT:    ## xmm0 = xmm0[1,1,1,1]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x50]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x10]
 ; FMACALL64-NEXT:    shufps $85, %xmm1, %xmm1 ## encoding: [0x0f,0xc6,0xc9,0x55]
 ; FMACALL64-NEXT:    ## xmm1 = xmm1[1,1,1,1]
 ; FMACALL64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2 ## encoding: [0x0f,0x28,0x94,0x24,0xb0,0x00,0x00,0x00]
@@ -1126,7 +1126,7 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    ## imm = 0x1C0
 ; FMACALL32_BDVER2-NEXT:    vmovaps 56(%ebp), %xmm4 ## encoding: [0xc5,0xf8,0x28,0x65,0x38]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %ymm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x94,0x24,0x80,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x94,0x24,0x60,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm3, %xmm2 ## encoding: [0xc4,0xe3,0x7d,0x19,0xda,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x4c,0x24,0x60]
@@ -1134,7 +1134,7 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    vmovaps %ymm3, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x9c,0x24,0x80,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x84,0x24,0x60,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x29,0x84,0x24,0x80,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x94,0x24,0xc0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm2, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x54,0x24,0x04,0x02]
@@ -1226,13 +1226,13 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x0c,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x03]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm0, %xmm0 ## encoding: [0xc4,0xe3,0x7d,0x19,0xc0,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x84,0x24,0x80,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x03]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm0, %xmm0 ## encoding: [0xc4,0xe3,0x7d,0x19,0xc0,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x44,0x24,0x60]
@@ -1281,10 +1281,10 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x80,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x03]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x03]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x04,0x24,0x03]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -1294,10 +1294,10 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x7c,0x24,0x60]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x02]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x02]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm0, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x04,0x24,0x02]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -1307,10 +1307,10 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0xdc,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x04,0x24,0x01]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
@@ -1320,10 +1320,10 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0xd0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x08]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x04]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x60,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x28,0x84,0x24,0x80,0x01,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, (%esp) ## encoding: [0xc5,0xfa,0x11,0x04,0x24]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]

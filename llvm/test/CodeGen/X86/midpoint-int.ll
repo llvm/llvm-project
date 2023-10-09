@@ -303,42 +303,41 @@ define i64 @scalar_i64_signed_reg_reg(i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    sbbl %ebp, %edx
 ; X86-NEXT:    setl %dl
 ; X86-NEXT:    movzbl %dl, %ebx
 ; X86-NEXT:    jl .LBB5_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl %ecx, %ebp
+; X86-NEXT:    movl %ebp, %ecx
+; X86-NEXT:    movl %ebp, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    jmp .LBB5_3
 ; X86-NEXT:  .LBB5_1:
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %ebp, %ecx
+; X86-NEXT:    movl %ebp, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:  .LBB5_3:
 ; X86-NEXT:    negl %ebx
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    orl $1, %ecx
-; X86-NEXT:    subl %ebp, %eax
+; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    orl $1, %ebp
+; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %edx, %edi
 ; X86-NEXT:    shrdl $1, %edi, %eax
 ; X86-NEXT:    imull %eax, %ebx
-; X86-NEXT:    mull %ecx
+; X86-NEXT:    mull %ebp
 ; X86-NEXT:    addl %ebx, %edx
 ; X86-NEXT:    shrl %edi
-; X86-NEXT:    imull %ecx, %edi
+; X86-NEXT:    imull %ebp, %edi
 ; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -377,43 +376,42 @@ define i64 @scalar_i64_unsigned_reg_reg(i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl %ebx, %eax
+; X86-NEXT:    xorl %ebx, %ebx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    sbbl %ebp, %edx
 ; X86-NEXT:    setb %dl
-; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    sbbl %ebx, %ebx
 ; X86-NEXT:    testb %dl, %dl
 ; X86-NEXT:    jne .LBB6_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    movl %ebx, %esi
-; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    movl %ebp, %ecx
+; X86-NEXT:    movl %ebp, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    jmp .LBB6_3
 ; X86-NEXT:  .LBB6_1:
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl %ebx, %esi
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %ebp, %ecx
+; X86-NEXT:    movl %ebp, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:  .LBB6_3:
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    orl $1, %ebx
-; X86-NEXT:    subl %ebp, %eax
+; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    orl $1, %ebp
+; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %edx, %edi
 ; X86-NEXT:    shrdl $1, %edi, %eax
-; X86-NEXT:    imull %eax, %ecx
-; X86-NEXT:    mull %ebx
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    imull %eax, %ebx
+; X86-NEXT:    mull %ebp
+; X86-NEXT:    addl %ebx, %edx
 ; X86-NEXT:    shrl %edi
-; X86-NEXT:    imull %ebx, %edi
+; X86-NEXT:    imull %ebp, %edi
 ; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -458,24 +456,24 @@ define i64 @scalar_i64_signed_mem_reg(ptr %a1_addr, i64 %a2) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %ecx
-; X86-NEXT:    movl 4(%edx), %esi
-; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %esi
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    cmpl %esi, %eax
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    setl %dl
 ; X86-NEXT:    movzbl %dl, %ebx
 ; X86-NEXT:    jl .LBB7_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    jmp .LBB7_3
 ; X86-NEXT:  .LBB7_1:
 ; X86-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:  .LBB7_3:
 ; X86-NEXT:    negl %ebx
 ; X86-NEXT:    movl %ebx, %ebp
@@ -489,8 +487,8 @@ define i64 @scalar_i64_signed_mem_reg(ptr %a1_addr, i64 %a2) nounwind {
 ; X86-NEXT:    shrl %edi
 ; X86-NEXT:    imull %ebp, %edi
 ; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    adcl %esi, %edx
+; X86-NEXT:    addl %esi, %eax
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -532,43 +530,42 @@ define i64 @scalar_i64_signed_reg_mem(i64 %a1, ptr %a2_addr) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%edx), %eax
 ; X86-NEXT:    movl 4(%edx), %edi
-; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    sbbl %ebp, %edx
 ; X86-NEXT:    setl %dl
 ; X86-NEXT:    movzbl %dl, %ebx
 ; X86-NEXT:    jl .LBB8_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl %ecx, %ebp
+; X86-NEXT:    movl %ebp, %ecx
+; X86-NEXT:    movl %ebp, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    jmp .LBB8_3
 ; X86-NEXT:  .LBB8_1:
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    movl %eax, %ebp
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %ebp, %ecx
+; X86-NEXT:    movl %ebp, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:  .LBB8_3:
 ; X86-NEXT:    negl %ebx
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    orl $1, %ecx
-; X86-NEXT:    subl %ebp, %eax
+; X86-NEXT:    movl %ebx, %ebp
+; X86-NEXT:    orl $1, %ebp
+; X86-NEXT:    subl %esi, %eax
 ; X86-NEXT:    sbbl %edx, %edi
 ; X86-NEXT:    shrdl $1, %edi, %eax
 ; X86-NEXT:    imull %eax, %ebx
-; X86-NEXT:    mull %ecx
+; X86-NEXT:    mull %ebp
 ; X86-NEXT:    addl %ebx, %edx
 ; X86-NEXT:    shrl %edi
-; X86-NEXT:    imull %ecx, %edi
+; X86-NEXT:    imull %ebp, %edi
 ; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -613,25 +610,25 @@ define i64 @scalar_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %ecx
-; X86-NEXT:    movl 4(%eax), %esi
+; X86-NEXT:    movl (%eax), %esi
+; X86-NEXT:    movl 4(%eax), %ecx
 ; X86-NEXT:    movl (%edx), %eax
 ; X86-NEXT:    movl 4(%edx), %edi
-; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    cmpl %esi, %eax
 ; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    setl %dl
 ; X86-NEXT:    movzbl %dl, %ebx
 ; X86-NEXT:    jl .LBB9_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    jmp .LBB9_3
 ; X86-NEXT:  .LBB9_1:
 ; X86-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:  .LBB9_3:
 ; X86-NEXT:    negl %ebx
 ; X86-NEXT:    movl %ebx, %ebp
@@ -645,8 +642,8 @@ define i64 @scalar_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X86-NEXT:    shrl %edi
 ; X86-NEXT:    imull %ebp, %edi
 ; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %ecx, %eax
-; X86-NEXT:    adcl %esi, %edx
+; X86-NEXT:    addl %esi, %eax
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

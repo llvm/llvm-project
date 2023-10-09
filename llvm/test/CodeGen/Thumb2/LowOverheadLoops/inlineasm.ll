@@ -4,23 +4,26 @@
 define i32 @test(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    itt lt
+; CHECK-NEXT:    movlt r0, #0
+; CHECK-NEXT:    bxlt lr
+; CHECK-NEXT:  .LBB0_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    mov.w lr, #0
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    blt .LBB0_2
-; CHECK-NEXT:  .LBB0_1: @ %for.body
+; CHECK-NEXT:    mov lr, r0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrh r3, [r1], #2
 ; CHECK-NEXT:    subs r2, #1
-; CHECK-NEXT:    ldrh r12, [r0], #2
+; CHECK-NEXT:    ldrh r12, [lr], #2
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    add r3, r12
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    add lr, r3
-; CHECK-NEXT:    bne .LBB0_1
-; CHECK-NEXT:  .LBB0_2: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, lr
+; CHECK-NEXT:    add r0, r3
+; CHECK-NEXT:    bne .LBB0_2
+; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp9 = icmp sgt i32 %n, 0
@@ -54,21 +57,20 @@ define i32 @testlr(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n)
 ; CHECK-NEXT:  .LBB1_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrh r4, [r1], #2
 ; CHECK-NEXT:    subs r2, #1
-; CHECK-NEXT:    ldrh r12, [r0], #2
+; CHECK-NEXT:    ldrh r12, [r3], #2
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    add r4, r12
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    add r3, r4
+; CHECK-NEXT:    add r0, r4
 ; CHECK-NEXT:    bne .LBB1_2
 ; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:    pop.w {r4, lr}
-; CHECK-NEXT:    mov r0, r3
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup

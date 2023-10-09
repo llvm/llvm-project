@@ -238,28 +238,28 @@ define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocaptur
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrb.u32 q3, [r0, q0]
-; CHECK-NEXT:    vldrb.u32 q4, [r0, q1]
-; CHECK-NEXT:    vldrb.u32 q6, [r0, q2]
+; CHECK-NEXT:    vldrb.u32 q4, [r0, q0]
+; CHECK-NEXT:    vldrb.u32 q3, [r0, q1]
+; CHECK-NEXT:    vldrb.u32 q5, [r0, q2]
 ; CHECK-NEXT:    adds r0, #12
-; CHECK-NEXT:    vmul.i32 q5, q3, r11
-; CHECK-NEXT:    vmla.i32 q5, q4, r8
-; CHECK-NEXT:    vmla.i32 q5, q6, r12
-; CHECK-NEXT:    vadd.i32 q5, q5, r3
-; CHECK-NEXT:    vshr.u32 q5, q5, #16
-; CHECK-NEXT:    vstrb.32 q5, [r1, q1]
-; CHECK-NEXT:    vmul.i32 q5, q3, r4
-; CHECK-NEXT:    vmul.i32 q3, q3, r10
-; CHECK-NEXT:    vmla.i32 q5, q4, r5
-; CHECK-NEXT:    vmla.i32 q3, q4, r7
-; CHECK-NEXT:    vmla.i32 q5, q6, r6
-; CHECK-NEXT:    vmla.i32 q3, q6, r9
-; CHECK-NEXT:    vadd.i32 q5, q5, r3
-; CHECK-NEXT:    vadd.i32 q3, q3, r3
-; CHECK-NEXT:    vshr.u32 q5, q5, #16
+; CHECK-NEXT:    vmul.i32 q6, q4, r11
+; CHECK-NEXT:    vmla.i32 q6, q3, r8
+; CHECK-NEXT:    vmla.i32 q6, q5, r12
+; CHECK-NEXT:    vadd.i32 q6, q6, r3
+; CHECK-NEXT:    vshr.u32 q6, q6, #16
+; CHECK-NEXT:    vstrb.32 q6, [r1, q1]
+; CHECK-NEXT:    vmul.i32 q6, q4, r4
+; CHECK-NEXT:    vmul.i32 q4, q4, r10
+; CHECK-NEXT:    vmla.i32 q6, q3, r5
+; CHECK-NEXT:    vmla.i32 q4, q3, r7
+; CHECK-NEXT:    vmla.i32 q6, q5, r6
+; CHECK-NEXT:    vmla.i32 q4, q5, r9
+; CHECK-NEXT:    vadd.i32 q6, q6, r3
+; CHECK-NEXT:    vadd.i32 q3, q4, r3
+; CHECK-NEXT:    vshr.u32 q6, q6, #16
 ; CHECK-NEXT:    vshr.u32 q3, q3, #16
 ; CHECK-NEXT:    vstrb.32 q3, [r1, q0]
-; CHECK-NEXT:    vstrb.32 q5, [r1, q2]
+; CHECK-NEXT:    vstrb.32 q6, [r1, q2]
 ; CHECK-NEXT:    adds r1, #12
 ; CHECK-NEXT:    letp lr, .LBB3_2
 ; CHECK-NEXT:  .LBB3_3: @ %for.cond.cleanup

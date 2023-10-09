@@ -333,21 +333,21 @@ define void @masked_scatter_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ptrue p1.d, vl4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p1/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p1/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
+; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    uunpklo z2.d, z0.s
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    punpklo p2.h, p0.b
-; VBITS_GE_256-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    punpklo p2.h, p1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    and p0.b, p2/z, p2.b, p1.b
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1w { z2.d }, p0, [z4.d]
-; VBITS_GE_256-NEXT:    cmpne p0.d, p1/z, z1.d, #0
+; VBITS_GE_256-NEXT:    and p1.b, p2/z, p2.b, p0.b
+; VBITS_GE_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; VBITS_GE_256-NEXT:    st1w { z2.d }, p1, [z4.d]
 ; VBITS_GE_256-NEXT:    st1w { z0.d }, p0, [z3.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -711,21 +711,21 @@ define void @masked_scatter_v8f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ptrue p1.d, vl4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p1/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p1/z, [x1]
-; VBITS_GE_256-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
+; VBITS_GE_256-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    uunpklo z2.d, z0.s
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
+; VBITS_GE_256-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    punpklo p2.h, p1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    punpklo p2.h, p0.b
-; VBITS_GE_256-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    and p0.b, p2/z, p2.b, p1.b
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    st1w { z2.d }, p0, [z4.d]
-; VBITS_GE_256-NEXT:    cmpne p0.d, p1/z, z1.d, #0
+; VBITS_GE_256-NEXT:    and p1.b, p2/z, p2.b, p0.b
+; VBITS_GE_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; VBITS_GE_256-NEXT:    st1w { z2.d }, p1, [z4.d]
 ; VBITS_GE_256-NEXT:    st1w { z0.d }, p0, [z3.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
