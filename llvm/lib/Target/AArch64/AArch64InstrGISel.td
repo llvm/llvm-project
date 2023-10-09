@@ -274,6 +274,11 @@ def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
 def : GINodeEquiv<G_PREFETCH, AArch64Prefetch>;
 
+def : GINodeEquiv<G_VECREDUCE_UMIN, vecreduce_umin>;
+def : GINodeEquiv<G_VECREDUCE_UMAX, vecreduce_umax>;
+def : GINodeEquiv<G_VECREDUCE_SMIN, vecreduce_smin>;
+def : GINodeEquiv<G_VECREDUCE_SMAX, vecreduce_smax>;
+
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
                      (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),
