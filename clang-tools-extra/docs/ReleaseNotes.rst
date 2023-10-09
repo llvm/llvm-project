@@ -312,6 +312,10 @@ Changes in existing checks
   detect comparison between string and empty string literals and support
   ``length()`` method as an alternative to ``size()``.
 
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check configuration to use
+  `none` rather than `-1` to disable some parameters.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to issue accurate
   warnings when a type's forward declaration precedes its definition.
@@ -333,7 +337,6 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
-
 
 Removed checks
 ^^^^^^^^^^^^^^
