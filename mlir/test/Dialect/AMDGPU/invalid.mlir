@@ -1,5 +1,19 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+func.func @mixing_packed_trunc_types(%arg0: f32, %arg1: vector<4xf8E5M2FNUZ>) -> vector<4xf8E4M3FNUZ> {
+  // expected-error@+1 {{'amdgpu.packed_trunc_2xfp8' op existing values must have same type as result}}
+  %ret = amdgpu.packed_trunc_2xfp8 %arg0, undef into %arg1[word 0] : f32 to vector<4xf8E4M3FNUZ> into vector<4xf8E5M2FNUZ>
+  func.return %ret : vector<4xf8E4M3FNUZ>
+}
+
+// -----
+
+func.func @mixing_packed_stoch_round_types(%arg0: f32, %arg1: i32, %arg2: vector<4xf8E5M2FNUZ>) -> vector<4xf8E4M3FNUZ> {
+  // expected-error@+1 {{'amdgpu.packed_stoch_round_fp8' op existing values must have same type as result}}
+  %ret = amdgpu.packed_stoch_round_fp8 %arg0 + %arg1 into %arg2[0] : f32 to vector<4xf8E4M3FNUZ> into vector<4xf8E5M2FNUZ>
+  func.return %ret : vector<4xf8E4M3FNUZ>
+}
+
 // -----
 
 func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,

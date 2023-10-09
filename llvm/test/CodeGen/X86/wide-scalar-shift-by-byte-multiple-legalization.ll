@@ -200,24 +200,24 @@ define void @lshr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl (%ecx), %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl (%ecx), %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl 4(%ecx), %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movzbl (%eax), %eax
 ; X86-NO-SHLD-NO-BMI2-NEXT:    shlb $3, %al
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %eax, %ecx
-; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %ebx
-; X86-NO-SHLD-NO-BMI2-NEXT:    leal (%esi,%esi), %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    leal (%esi,%esi), %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    notb %cl
-; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %edi
-; X86-NO-SHLD-NO-BMI2-NEXT:    orl %ebx, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    orl %edi, %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %eax, %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    xorl %ecx, %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    testb $32, %al
-; X86-NO-SHLD-NO-BMI2-NEXT:    cmovnel %esi, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    cmovnel %esi, %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    cmovel %esi, %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %ecx, 4(%edx)
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl %edi, (%edx)
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl %ebx, (%edx)
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %ebx
@@ -229,20 +229,20 @@ define void @lshr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    pushl %esi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl (%esi), %edx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl 4(%esi), %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl (%edx), %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl 4(%edx), %edx
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    movzbl (%ecx), %ecx
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    shlb $3, %cl
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %esi, %edi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %edx, %edi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    shrl %cl, %edi
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    shrdl %cl, %esi, %edx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    xorl %esi, %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    shrdl %cl, %edx, %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    xorl %edx, %edx
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    testb $32, %cl
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovnel %edi, %edx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovel %edi, %esi
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %esi, 4(%eax)
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %edx, (%eax)
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovnel %edi, %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovel %edi, %edx
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %edx, 4(%eax)
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %esi, (%eax)
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    popl %esi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    popl %edi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    retl
@@ -282,19 +282,19 @@ define void @lshr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    pushl %esi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl (%esi), %edx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl 4(%esi), %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl (%edx), %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl 4(%edx), %edx
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movzbl (%ecx), %ecx
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shlb $3, %cl
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shrdl %cl, %esi, %edx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shrxl %ecx, %esi, %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shrdl %cl, %edx, %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shrxl %ecx, %edx, %edx
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    xorl %edi, %edi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    testb $32, %cl
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovnel %esi, %edx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovel %esi, %edi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovnel %edx, %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovel %edx, %edi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %edi, 4(%eax)
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %edx, (%eax)
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %esi, (%eax)
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    popl %esi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    popl %edi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    retl
@@ -332,24 +332,24 @@ define void @shl_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl (%ecx), %esi
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl 4(%ecx), %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl 4(%ecx), %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movzbl (%eax), %eax
 ; X86-NO-SHLD-NO-BMI2-NEXT:    shlb $3, %al
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %eax, %ecx
-; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %ebx
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl %esi, %edi
-; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl %esi, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    notb %cl
-; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %edi
-; X86-NO-SHLD-NO-BMI2-NEXT:    orl %ebx, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    orl %edi, %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %eax, %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    xorl %ecx, %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    testb $32, %al
-; X86-NO-SHLD-NO-BMI2-NEXT:    cmovnel %esi, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    cmovnel %esi, %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    cmovel %esi, %ecx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %ecx, (%edx)
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl %edi, 4(%edx)
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl %ebx, 4(%edx)
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %ebx
@@ -463,25 +463,25 @@ define void @ashr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl (%ecx), %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl (%ecx), %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl 4(%ecx), %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movzbl (%eax), %eax
 ; X86-NO-SHLD-NO-BMI2-NEXT:    shlb $3, %al
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %eax, %ecx
-; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %ebx
-; X86-NO-SHLD-NO-BMI2-NEXT:    leal (%esi,%esi), %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    shrl %cl, %edi
+; X86-NO-SHLD-NO-BMI2-NEXT:    leal (%esi,%esi), %ebx
 ; X86-NO-SHLD-NO-BMI2-NEXT:    notb %cl
-; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %edi
-; X86-NO-SHLD-NO-BMI2-NEXT:    orl %ebx, %edi
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl %esi, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    shll %cl, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    orl %edi, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl %esi, %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %eax, %ecx
-; X86-NO-SHLD-NO-BMI2-NEXT:    sarl %cl, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    sarl %cl, %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    sarl $31, %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    testb $32, %al
-; X86-NO-SHLD-NO-BMI2-NEXT:    cmovnel %ebx, %edi
-; X86-NO-SHLD-NO-BMI2-NEXT:    cmovel %ebx, %esi
+; X86-NO-SHLD-NO-BMI2-NEXT:    cmovnel %edi, %ebx
+; X86-NO-SHLD-NO-BMI2-NEXT:    cmovel %edi, %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    movl %esi, 4(%edx)
-; X86-NO-SHLD-NO-BMI2-NEXT:    movl %edi, (%edx)
+; X86-NO-SHLD-NO-BMI2-NEXT:    movl %ebx, (%edx)
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %esi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %edi
 ; X86-NO-SHLD-NO-BMI2-NEXT:    popl %ebx
@@ -493,20 +493,20 @@ define void @ashr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    pushl %esi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl (%esi), %edx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl 4(%esi), %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl (%edx), %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl 4(%edx), %edx
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    movzbl (%ecx), %ecx
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    shlb $3, %cl
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %esi, %edi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %edx, %edi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    sarl %cl, %edi
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    shrdl %cl, %esi, %edx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    sarl $31, %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    shrdl %cl, %edx, %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    sarl $31, %edx
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    testb $32, %cl
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovnel %edi, %edx
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovel %edi, %esi
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %esi, 4(%eax)
-; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %edx, (%eax)
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovnel %edi, %esi
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    cmovel %edi, %edx
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %edx, 4(%eax)
+; X86-HAVE-SHLD-NO-BMI2-NEXT:    movl %esi, (%eax)
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    popl %esi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    popl %edi
 ; X86-HAVE-SHLD-NO-BMI2-NEXT:    retl
@@ -517,23 +517,23 @@ define void @ashr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    pushl %edi
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    pushl %esi
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl 4(%esi), %ecx
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    movzbl (%edx), %edx
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    shlb $3, %dl
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    shrxl %edx, (%esi), %esi
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl %edx, %ebx
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl 4(%edx), %esi
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    movzbl (%ecx), %ecx
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    shlb $3, %cl
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    shrxl %ecx, (%edx), %edx
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl %ecx, %ebx
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    notb %bl
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    leal (%ecx,%ecx), %edi
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    leal (%esi,%esi), %edi
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    shlxl %ebx, %edi, %edi
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    orl %esi, %edi
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    sarxl %edx, %ecx, %esi
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    sarl $31, %ecx
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    testb $32, %dl
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    cmovnel %esi, %edi
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    cmovel %esi, %ecx
-; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl %ecx, 4(%eax)
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    orl %edx, %edi
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    sarxl %ecx, %esi, %edx
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    sarl $31, %esi
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    testb $32, %cl
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    cmovnel %edx, %edi
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    cmovel %edx, %esi
+; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl %esi, 4(%eax)
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    movl %edi, (%eax)
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    popl %esi
 ; X86-NO-SHLD-HAVE-BMI2-NEXT:    popl %edi
@@ -546,19 +546,19 @@ define void @ashr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    pushl %esi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl (%esi), %edx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl 4(%esi), %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl (%edx), %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl 4(%edx), %edx
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movzbl (%ecx), %ecx
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shlb $3, %cl
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shrdl %cl, %esi, %edx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    sarxl %ecx, %esi, %edi
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    sarl $31, %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    shrdl %cl, %edx, %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    sarxl %ecx, %edx, %edi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    sarl $31, %edx
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    testb $32, %cl
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovnel %edi, %edx
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovel %edi, %esi
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %esi, 4(%eax)
-; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %edx, (%eax)
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovnel %edi, %esi
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    cmovel %edi, %edx
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %edx, 4(%eax)
+; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    movl %esi, (%eax)
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    popl %esi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    popl %edi
 ; X86-HAVE-SHLD-HAVE-BMI2-NEXT:    retl
@@ -1316,24 +1316,24 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    subl $72, %esp
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    movl (%edi), %ecx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl (%edx), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 4(%edi), %ecx
+; X86-SSE2-NEXT:    movl 4(%edx), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 8(%edi), %esi
-; X86-SSE2-NEXT:    movl 12(%edi), %ebx
-; X86-SSE2-NEXT:    movl 16(%edi), %ebp
+; X86-SSE2-NEXT:    movl 8(%edx), %edi
+; X86-SSE2-NEXT:    movl 12(%edx), %ebx
+; X86-SSE2-NEXT:    movl 16(%edx), %ebp
 ; X86-SSE2-NEXT:    movzbl (%eax), %eax
-; X86-SSE2-NEXT:    movl 20(%edi), %edx
-; X86-SSE2-NEXT:    movl 24(%edi), %ecx
-; X86-SSE2-NEXT:    movl 28(%edi), %edi
-; X86-SSE2-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl 20(%edx), %esi
+; X86-SSE2-NEXT:    movl 24(%edx), %ecx
+; X86-SSE2-NEXT:    movl 28(%edx), %edx
 ; X86-SSE2-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -2229,13 +2229,13 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl 40(%ecx), %ebx
 ; X86-SSE2-NEXT:    movl 52(%ecx), %edi
 ; X86-SSE2-NEXT:    movl 60(%ecx), %esi
-; X86-SSE2-NEXT:    movl 56(%ecx), %edx
+; X86-SSE2-NEXT:    movl 56(%ecx), %ecx
 ; X86-SSE2-NEXT:    negl %eax
-; X86-SSE2-NEXT:    movl 152(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 152(%esp,%eax), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %edx, 56(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 56(%eax)
 ; X86-SSE2-NEXT:    movl %esi, 60(%eax)
-; X86-SSE2-NEXT:    movl %ecx, 48(%eax)
+; X86-SSE2-NEXT:    movl %edx, 48(%eax)
 ; X86-SSE2-NEXT:    movl %edi, 52(%eax)
 ; X86-SSE2-NEXT:    movl %ebx, 40(%eax)
 ; X86-SSE2-NEXT:    movl %ebp, 44(%eax)
@@ -2367,25 +2367,24 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-LABEL: ashr_64bytes:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pushq %r14
 ; X64-SSE2-NEXT:    pushq %rbx
-; X64-SSE2-NEXT:    movq (%rdi), %rcx
-; X64-SSE2-NEXT:    movq 8(%rdi), %r8
-; X64-SSE2-NEXT:    movq 16(%rdi), %r9
-; X64-SSE2-NEXT:    movq 24(%rdi), %r10
-; X64-SSE2-NEXT:    movq 32(%rdi), %r11
-; X64-SSE2-NEXT:    movq 40(%rdi), %rbx
-; X64-SSE2-NEXT:    movq 48(%rdi), %r14
+; X64-SSE2-NEXT:    movq (%rdi), %rax
+; X64-SSE2-NEXT:    movq 8(%rdi), %rcx
+; X64-SSE2-NEXT:    movq 16(%rdi), %r8
+; X64-SSE2-NEXT:    movq 24(%rdi), %r9
+; X64-SSE2-NEXT:    movq 32(%rdi), %r10
+; X64-SSE2-NEXT:    movq 40(%rdi), %r11
+; X64-SSE2-NEXT:    movq 48(%rdi), %rbx
 ; X64-SSE2-NEXT:    movq 56(%rdi), %rdi
-; X64-SSE2-NEXT:    movl (%rsi), %eax
+; X64-SSE2-NEXT:    movl (%rsi), %esi
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    movq %r14, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rbx, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r11, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-SSE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    sarq $63, %rdi
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
@@ -2395,25 +2394,24 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    andl $63, %eax
-; X64-SSE2-NEXT:    movq -128(%rsp,%rax), %rcx
-; X64-SSE2-NEXT:    movq -120(%rsp,%rax), %rsi
-; X64-SSE2-NEXT:    movq -104(%rsp,%rax), %rdi
-; X64-SSE2-NEXT:    movq -112(%rsp,%rax), %r8
-; X64-SSE2-NEXT:    movq -88(%rsp,%rax), %r9
-; X64-SSE2-NEXT:    movq -96(%rsp,%rax), %r10
-; X64-SSE2-NEXT:    movq -72(%rsp,%rax), %r11
-; X64-SSE2-NEXT:    movq -80(%rsp,%rax), %rax
-; X64-SSE2-NEXT:    movq %rax, 48(%rdx)
+; X64-SSE2-NEXT:    andl $63, %esi
+; X64-SSE2-NEXT:    movq -128(%rsp,%rsi), %rax
+; X64-SSE2-NEXT:    movq -120(%rsp,%rsi), %rcx
+; X64-SSE2-NEXT:    movq -104(%rsp,%rsi), %rdi
+; X64-SSE2-NEXT:    movq -112(%rsp,%rsi), %r8
+; X64-SSE2-NEXT:    movq -88(%rsp,%rsi), %r9
+; X64-SSE2-NEXT:    movq -96(%rsp,%rsi), %r10
+; X64-SSE2-NEXT:    movq -72(%rsp,%rsi), %r11
+; X64-SSE2-NEXT:    movq -80(%rsp,%rsi), %rsi
+; X64-SSE2-NEXT:    movq %rsi, 48(%rdx)
 ; X64-SSE2-NEXT:    movq %r11, 56(%rdx)
 ; X64-SSE2-NEXT:    movq %r10, 32(%rdx)
 ; X64-SSE2-NEXT:    movq %r9, 40(%rdx)
 ; X64-SSE2-NEXT:    movq %r8, 16(%rdx)
 ; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rcx, (%rdx)
-; X64-SSE2-NEXT:    movq %rsi, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rax, (%rdx)
+; X64-SSE2-NEXT:    movq %rcx, 8(%rdx)
 ; X64-SSE2-NEXT:    popq %rbx
-; X64-SSE2-NEXT:    popq %r14
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: ashr_64bytes:
@@ -2772,5 +2770,5 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; FALLBACK7: {{.*}}
 ; FALLBACK8: {{.*}}
 ; FALLBACK9: {{.*}}
-; X86: {{.*}}
 ; X64: {{.*}}
+; X86: {{.*}}

@@ -935,31 +935,35 @@ public:
                                               ArrayRef<int> Mask,
                                               VectorType *Ty, int &Index,
                                               VectorType *&SubTy) const {
-    int Limit = Mask.size() * 2;
-    if (Mask.empty() ||
-        // Extra check required by isSingleSourceMaskImpl function (called by
-        // ShuffleVectorInst::isSingleSourceMask).
-        any_of(Mask, [Limit](int I) { return I >= Limit; }))
+    if (Mask.empty())
       return Kind;
+    int NumSrcElts = Ty->getElementCount().getKnownMinValue();
     switch (Kind) {
     case TTI::SK_PermuteSingleSrc:
-      if (ShuffleVectorInst::isReverseMask(Mask))
+      if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
         return TTI::SK_Reverse;
-      if (ShuffleVectorInst::isZeroEltSplatMask(Mask))
+      if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
         return TTI::SK_Broadcast;
+      if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
+          (Index + Mask.size()) <= (size_t)NumSrcElts) {
+        SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());
+        return TTI::SK_ExtractSubvector;
+      }
       break;
     case TTI::SK_PermuteTwoSrc: {
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
-                                 Mask, Mask.size(), NumSubElts, Index)) {
+                                 Mask, NumSrcElts, NumSubElts, Index)) {
+        if (Index + NumSubElts > NumSrcElts)
+          return Kind;
         SubTy = FixedVectorType::get(Ty->getElementType(), NumSubElts);
         return TTI::SK_InsertSubvector;
       }
-      if (ShuffleVectorInst::isSelectMask(Mask))
+      if (ShuffleVectorInst::isSelectMask(Mask, NumSrcElts))
         return TTI::SK_Select;
-      if (ShuffleVectorInst::isTransposeMask(Mask))
+      if (ShuffleVectorInst::isTransposeMask(Mask, NumSrcElts))
         return TTI::SK_Transpose;
-      if (ShuffleVectorInst::isSpliceMask(Mask, Index))
+      if (ShuffleVectorInst::isSpliceMask(Mask, NumSrcElts, Index))
         return TTI::SK_Splice;
       break;
     }

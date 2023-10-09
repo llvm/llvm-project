@@ -403,32 +403,35 @@ struct TypeBuilderImpl {
       cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
     }
 
+    mlir::Location loc = converter.genLocation(typeSymbol.name());
     // (2) The LEN type parameters.
     for (const auto &param :
          Fortran::semantics::OrderParameterDeclarations(typeSymbol))
       if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
-          Fortran::common::TypeParamAttr::Len)
+          Fortran::common::TypeParamAttr::Len) {
+        TODO(loc, "parameterized derived types");
+        // TODO: emplace in ps. Beware that param is the symbol in the type
+        // declaration, not instantiation: its kind may not be a constant.
+        // The instantiated symbol in tySpec.scope should be used instead.
         ps.emplace_back(param->name().ToString(), genSymbolType(*param));
+      }
 
     rec.finalize(ps, cs);
     popDerivedTypeInConstruction();
 
-    mlir::Location loc = converter.genLocation(typeSymbol.name());
     if (!ps.empty()) {
-      // This type is a PDT (parametric derived type). Create the functions to
-      // use for allocation, dereferencing, and address arithmetic here.
-      TODO(loc, "parameterized derived types");
+      // TODO: this type is a PDT (parametric derived type) with length
+      // parameter. Create the functions to use for allocation, dereferencing,
+      // and address arithmetic here.
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
-
-    converter.registerDispatchTableInfo(loc, &tySpec);
 
     // Generate the type descriptor object if any
     if (const Fortran::semantics::Scope *derivedScope =
             tySpec.scope() ? tySpec.scope() : tySpec.typeSymbol().scope())
       if (const Fortran::semantics::Symbol *typeInfoSym =
               derivedScope->runtimeDerivedTypeDescription())
-        converter.registerRuntimeTypeInfo(loc, *typeInfoSym);
+        converter.registerTypeInfo(loc, *typeInfoSym, tySpec, rec);
     return rec;
   }
 

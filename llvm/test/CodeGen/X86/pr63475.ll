@@ -44,14 +44,14 @@ define void @callee(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, <7 x i
 ; CHECK-NEXT:    movl 112(%rsp), %ebp
 ; CHECK-NEXT:    movd %ebp, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    movl 104(%rsp), %r15d
-; CHECK-NEXT:    movd %r15d, %xmm0
+; CHECK-NEXT:    movl 104(%rsp), %r14d
+; CHECK-NEXT:    movd %r14d, %xmm0
 ; CHECK-NEXT:    movl 96(%rsp), %edi
 ; CHECK-NEXT:    movd %edi, %xmm2
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; CHECK-NEXT:    movl 136(%rsp), %r14d
-; CHECK-NEXT:    movd %r14d, %xmm0
+; CHECK-NEXT:    movl 136(%rsp), %r15d
+; CHECK-NEXT:    movd %r15d, %xmm0
 ; CHECK-NEXT:    movl 128(%rsp), %r12d
 ; CHECK-NEXT:    movd %r12d, %xmm1
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -60,7 +60,7 @@ define void @callee(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, <7 x i
 ; CHECK-NEXT:    movq %xmm1, 28(%rsp)
 ; CHECK-NEXT:    movdqu %xmm2, 12(%rsp)
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    movl %r15d, %edi
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq use@PLT
@@ -68,7 +68,7 @@ define void @callee(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, <7 x i
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %r12d, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    movl %r15d, %edi
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %r13d, %edi
 ; CHECK-NEXT:    callq use@PLT

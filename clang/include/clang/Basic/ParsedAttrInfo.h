@@ -116,6 +116,14 @@ public:
 
   /// Check if this attribute is allowed when compiling for the given target.
   virtual bool existsInTarget(const TargetInfo &Target) const { return true; }
+
+  /// Check if this attribute's spelling is allowed when compiling for the given
+  /// target.
+  virtual bool spellingExistsInTarget(const TargetInfo &Target,
+                                      const unsigned SpellingListIndex) const {
+    return true;
+  }
+
   /// Convert the spelling index of Attr to a semantic spelling enum value.
   virtual unsigned
   spellingIndexToSemanticSpelling(const ParsedAttr &Attr) const {

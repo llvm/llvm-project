@@ -278,7 +278,7 @@
 // CHECK335-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/G0/fini.o"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// -nostdlib, -nostartfiles, -nodefaultlibs
+// -nostdlib, -nostartfiles, -nodefaultlibs, -nolibc
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUN: %clangxx -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -336,6 +336,27 @@
 // CHECK338-NOT: "-lgcc"
 // CHECK338-NOT: "--end-group"
 // CHECK338: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/fini.o"
+
+// RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin -mcpu=hexagonv60 \
+// RUN:   -fuse-ld=lld -nolibc %s 2>&1 | FileCheck -check-prefix=CHECK-NOLIBC %s
+// CHECK-NOLIBC: "-cc1"
+// CHECK-NOLIBC: ld.lld
+// CHECK-NOLIBC-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
+// CHECK-NOLIBC-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0.o"
+// CHECK-NOLIBC-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/init.o"
+// CHECK-NOLIBC-SAME: "-L{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60"
+// CHECK-NOLIBC-SAME: "-L{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib"
+// CHECK-NOLIBC-SAME: "{{[^"]+}}.o"
+// CHECK-NOLIBC-SAME: "-lstdc++"
+// CHECK-NOLIBC-SAME: "-lm"
+// CHECK-NOLIBC-SAME: "--start-group"
+// CHECK-NOLIBC-SAME: "-lstandalone"
+// CHECK-NOLIBC-NOT: "-lc"
+// CHECK-NOLIBC-SAME: "-lgcc"
+// CHECK-NOLIBC-SAME: "--end-group"
+// CHECK-NOLIBC-SAME: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/fini.o"
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // -moslib

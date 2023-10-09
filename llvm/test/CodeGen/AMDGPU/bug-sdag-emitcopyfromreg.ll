@@ -10,7 +10,7 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    s_mov_b64 s[4:5], 0
 ; ISA-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 1, v0
 ; ISA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; ISA-NEXT:    v_mov_b32_e32 v6, 0
+; ISA-NEXT:    v_mov_b32_e32 v7, 0
 ; ISA-NEXT:    s_waitcnt lgkmcnt(0)
 ; ISA-NEXT:    s_lshr_b32 s6, s5, 1
 ; ISA-NEXT:    s_lshr_b32 s7, 1, s4
@@ -27,18 +27,18 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    s_mov_b32 s4, 0
 ; ISA-NEXT:  .LBB0_1: ; %bb14
 ; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
-; ISA-NEXT:    v_mov_b32_e32 v7, v6
+; ISA-NEXT:    v_mov_b32_e32 v6, v7
 ; ISA-NEXT:    s_and_b32 s5, exec_lo, vcc_lo
 ; ISA-NEXT:    s_or_b32 s4, s5, s4
-; ISA-NEXT:    v_add_f32_e32 v6, v7, v0
-; ISA-NEXT:    v_add_f32_e64 v6, v6, |v3|
-; ISA-NEXT:    v_add_f32_e32 v6, v6, v4
-; ISA-NEXT:    v_add_f32_e32 v6, v6, v5
+; ISA-NEXT:    v_add_f32_e32 v7, v6, v0
+; ISA-NEXT:    v_add_f32_e64 v7, v7, |v3|
+; ISA-NEXT:    v_add_f32_e32 v7, v7, v4
+; ISA-NEXT:    v_add_f32_e32 v7, v7, v5
 ; ISA-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; ISA-NEXT:    s_cbranch_execnz .LBB0_1
 ; ISA-NEXT:  ; %bb.2: ; %bb21
 ; ISA-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; ISA-NEXT:    flat_store_dword v[1:2], v7
+; ISA-NEXT:    flat_store_dword v[1:2], v6
 ; ISA-NEXT:    s_waitcnt lgkmcnt(0)
 ; ISA-NEXT:    s_setpc_b64 s[30:31]
   ; MIR-LABEL: name: f

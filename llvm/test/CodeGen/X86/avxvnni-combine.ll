@@ -47,18 +47,18 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    testl %edi, %edi
 ; AVX-NEXT:    jle .LBB1_6
 ; AVX-NEXT:  # %bb.1:
-; AVX-NEXT:    movl %edi, %edx
-; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    movl %edi, %ecx
+; AVX-NEXT:    movl %ecx, %eax
 ; AVX-NEXT:    andl $3, %eax
 ; AVX-NEXT:    cmpl $4, %edi
 ; AVX-NEXT:    jae .LBB1_7
 ; AVX-NEXT:  # %bb.2:
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    jmp .LBB1_3
 ; AVX-NEXT:  .LBB1_7:
-; AVX-NEXT:    andl $-4, %edx
+; AVX-NEXT:    andl $-4, %ecx
 ; AVX-NEXT:    leaq 48(%rsi), %rdi
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    {vex} vpdpwssd -48(%rdi), %xmm1, %xmm0
@@ -68,16 +68,16 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm2
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    addq $4, %rcx
+; AVX-NEXT:    addq $4, %rdx
 ; AVX-NEXT:    addq $64, %rdi
-; AVX-NEXT:    cmpq %rcx, %rdx
+; AVX-NEXT:    cmpq %rdx, %rcx
 ; AVX-NEXT:    jne .LBB1_8
 ; AVX-NEXT:  .LBB1_3:
 ; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    je .LBB1_6
 ; AVX-NEXT:  # %bb.4: # %.preheader
-; AVX-NEXT:    shlq $4, %rcx
-; AVX-NEXT:    addq %rcx, %rsi
+; AVX-NEXT:    shlq $4, %rdx
+; AVX-NEXT:    addq %rdx, %rsi
 ; AVX-NEXT:    shlq $4, %rax
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
@@ -94,18 +94,18 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    testl %edi, %edi
 ; AVX512-NEXT:    jle .LBB1_6
 ; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    movl %edi, %edx
-; AVX512-NEXT:    movl %edx, %eax
+; AVX512-NEXT:    movl %edi, %ecx
+; AVX512-NEXT:    movl %ecx, %eax
 ; AVX512-NEXT:    andl $3, %eax
 ; AVX512-NEXT:    cmpl $4, %edi
 ; AVX512-NEXT:    jae .LBB1_7
 ; AVX512-NEXT:  # %bb.2:
-; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    xorl %edx, %edx
 ; AVX512-NEXT:    jmp .LBB1_3
 ; AVX512-NEXT:  .LBB1_7:
-; AVX512-NEXT:    andl $-4, %edx
+; AVX512-NEXT:    andl $-4, %ecx
 ; AVX512-NEXT:    leaq 48(%rsi), %rdi
-; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    xorl %edx, %edx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpdpwssd -48(%rdi), %xmm1, %xmm0
@@ -115,16 +115,16 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm2
 ; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    addq $4, %rcx
+; AVX512-NEXT:    addq $4, %rdx
 ; AVX512-NEXT:    addq $64, %rdi
-; AVX512-NEXT:    cmpq %rcx, %rdx
+; AVX512-NEXT:    cmpq %rdx, %rcx
 ; AVX512-NEXT:    jne .LBB1_8
 ; AVX512-NEXT:  .LBB1_3:
 ; AVX512-NEXT:    testq %rax, %rax
 ; AVX512-NEXT:    je .LBB1_6
 ; AVX512-NEXT:  # %bb.4: # %.preheader
-; AVX512-NEXT:    shlq $4, %rcx
-; AVX512-NEXT:    addq %rcx, %rsi
+; AVX512-NEXT:    shlq $4, %rdx
+; AVX512-NEXT:    addq %rdx, %rsi
 ; AVX512-NEXT:    shlq $4, %rax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
@@ -394,18 +394,18 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    testl %edi, %edi
 ; AVX-NEXT:    jle .LBB4_6
 ; AVX-NEXT:  # %bb.1:
-; AVX-NEXT:    movl %edi, %edx
-; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    movl %edi, %ecx
+; AVX-NEXT:    movl %ecx, %eax
 ; AVX-NEXT:    andl $3, %eax
 ; AVX-NEXT:    cmpl $4, %edi
 ; AVX-NEXT:    jae .LBB4_7
 ; AVX-NEXT:  # %bb.2:
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    jmp .LBB4_3
 ; AVX-NEXT:  .LBB4_7:
-; AVX-NEXT:    andl $-4, %edx
+; AVX-NEXT:    andl $-4, %ecx
 ; AVX-NEXT:    leaq 96(%rsi), %rdi
-; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    {vex} vpdpwssd -96(%rdi), %ymm1, %ymm0
@@ -415,16 +415,16 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm2
 ; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    addq $4, %rcx
+; AVX-NEXT:    addq $4, %rdx
 ; AVX-NEXT:    subq $-128, %rdi
-; AVX-NEXT:    cmpq %rcx, %rdx
+; AVX-NEXT:    cmpq %rdx, %rcx
 ; AVX-NEXT:    jne .LBB4_8
 ; AVX-NEXT:  .LBB4_3:
 ; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    je .LBB4_6
 ; AVX-NEXT:  # %bb.4: # %.preheader
-; AVX-NEXT:    shlq $5, %rcx
-; AVX-NEXT:    addq %rcx, %rsi
+; AVX-NEXT:    shlq $5, %rdx
+; AVX-NEXT:    addq %rdx, %rsi
 ; AVX-NEXT:    shlq $5, %rax
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
@@ -441,18 +441,18 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    testl %edi, %edi
 ; AVX512-NEXT:    jle .LBB4_6
 ; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    movl %edi, %edx
-; AVX512-NEXT:    movl %edx, %eax
+; AVX512-NEXT:    movl %edi, %ecx
+; AVX512-NEXT:    movl %ecx, %eax
 ; AVX512-NEXT:    andl $3, %eax
 ; AVX512-NEXT:    cmpl $4, %edi
 ; AVX512-NEXT:    jae .LBB4_7
 ; AVX512-NEXT:  # %bb.2:
-; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    xorl %edx, %edx
 ; AVX512-NEXT:    jmp .LBB4_3
 ; AVX512-NEXT:  .LBB4_7:
-; AVX512-NEXT:    andl $-4, %edx
+; AVX512-NEXT:    andl $-4, %ecx
 ; AVX512-NEXT:    leaq 96(%rsi), %rdi
-; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    xorl %edx, %edx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
 ; AVX512-NEXT:    vpdpwssd -96(%rdi), %ymm1, %ymm0
@@ -462,16 +462,16 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm2
 ; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; AVX512-NEXT:    addq $4, %rcx
+; AVX512-NEXT:    addq $4, %rdx
 ; AVX512-NEXT:    subq $-128, %rdi
-; AVX512-NEXT:    cmpq %rcx, %rdx
+; AVX512-NEXT:    cmpq %rdx, %rcx
 ; AVX512-NEXT:    jne .LBB4_8
 ; AVX512-NEXT:  .LBB4_3:
 ; AVX512-NEXT:    testq %rax, %rax
 ; AVX512-NEXT:    je .LBB4_6
 ; AVX512-NEXT:  # %bb.4: # %.preheader
-; AVX512-NEXT:    shlq $5, %rcx
-; AVX512-NEXT:    addq %rcx, %rsi
+; AVX512-NEXT:    shlq $5, %rdx
+; AVX512-NEXT:    addq %rdx, %rsi
 ; AVX512-NEXT:    shlq $5, %rax
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90

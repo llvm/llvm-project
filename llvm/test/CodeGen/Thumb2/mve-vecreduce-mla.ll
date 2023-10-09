@@ -919,12 +919,12 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_acc_zext(<2 x i32> %x, <2 x i32> %y,
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmullb.u32 q2, q0, q1
-; CHECK-NEXT:    vmov lr, r12, d5
-; CHECK-NEXT:    vmov r3, r2, d4
-; CHECK-NEXT:    adds.w r3, r3, lr
-; CHECK-NEXT:    adc.w r2, r2, r12
-; CHECK-NEXT:    adds r0, r0, r3
-; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    vmov r2, r12, d5
+; CHECK-NEXT:    vmov r3, lr, d4
+; CHECK-NEXT:    adds r2, r2, r3
+; CHECK-NEXT:    adc.w r3, lr, r12
+; CHECK-NEXT:    adds r0, r0, r2
+; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %xx = zext <2 x i32> %x to <2 x i64>
@@ -941,12 +941,12 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_acc_sext(<2 x i32> %x, <2 x i32> %y,
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmullb.s32 q2, q0, q1
-; CHECK-NEXT:    vmov lr, r12, d5
-; CHECK-NEXT:    vmov r3, r2, d4
-; CHECK-NEXT:    adds.w r3, r3, lr
-; CHECK-NEXT:    adc.w r2, r2, r12
-; CHECK-NEXT:    adds r0, r0, r3
-; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    vmov r2, r12, d5
+; CHECK-NEXT:    vmov r3, lr, d4
+; CHECK-NEXT:    adds r2, r2, r3
+; CHECK-NEXT:    adc.w r3, lr, r12
+; CHECK-NEXT:    adds r0, r0, r2
+; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %xx = sext <2 x i32> %x to <2 x i64>

@@ -234,6 +234,49 @@ entry:
   ret void
 }
 
+declare signext i1 @signext_return_i1()
+
+; Check that the generated code takes the zeroext and signext return attributes
+; on the GC result into account. The attribute in the return position allows the
+; caller to assume that the callee did the extension already.
+
+define i8 @test_signext_return(ptr) gc "statepoint-example" {
+; CHECK-LABEL: test_signext_return:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq signext_return_i1@PLT
+; CHECK-NEXT:  .Ltmp10:
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @signext_return_i1, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call signext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  %ext = sext i1 %call1 to i8
+  ret i8 %ext
+}
+
+define i8 @test_zeroext_return() gc "statepoint-example" {
+; CHECK-LABEL: test_zeroext_return:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq return_i1@PLT
+; CHECK-NEXT:  .Ltmp11:
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
+  %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
+  %ext = zext i1 %call1 to i8
+  ret i8 %ext
+}
+
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 declare i1 @llvm.experimental.gc.result.i1(token)
 

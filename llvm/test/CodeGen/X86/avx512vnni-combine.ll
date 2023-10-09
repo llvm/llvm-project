@@ -42,18 +42,18 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jle .LBB1_6
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    andl $3, %eax
 ; CHECK-NEXT:    cmpl $4, %edi
 ; CHECK-NEXT:    jae .LBB1_7
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    jmp .LBB1_3
 ; CHECK-NEXT:  .LBB1_7:
-; CHECK-NEXT:    andl $-4, %edx
+; CHECK-NEXT:    andl $-4, %ecx
 ; CHECK-NEXT:    leaq 192(%rsi), %rdi
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd -192(%rdi), %zmm1, %zmm0
@@ -63,16 +63,16 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmaddwd (%rdi), %zmm1, %zmm2
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
-; CHECK-NEXT:    addq $4, %rcx
+; CHECK-NEXT:    addq $4, %rdx
 ; CHECK-NEXT:    addq $256, %rdi # imm = 0x100
-; CHECK-NEXT:    cmpq %rcx, %rdx
+; CHECK-NEXT:    cmpq %rdx, %rcx
 ; CHECK-NEXT:    jne .LBB1_8
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    je .LBB1_6
 ; CHECK-NEXT:  # %bb.4: # %.preheader
-; CHECK-NEXT:    shlq $6, %rcx
-; CHECK-NEXT:    addq %rcx, %rsi
+; CHECK-NEXT:    shlq $6, %rdx
+; CHECK-NEXT:    addq %rdx, %rsi
 ; CHECK-NEXT:    shlq $6, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90

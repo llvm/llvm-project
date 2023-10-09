@@ -25,7 +25,7 @@ define signext i32 @add_small_const(i32 signext %a) nounwind {
 ;
 ; RV64I-LABEL: add_small_const:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 1
+; RV64I-NEXT:    addi a0, a0, 1
 ; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    jalr zero, 0(ra)
@@ -39,7 +39,7 @@ define signext i32 @add_small_const(i32 signext %a) nounwind {
 ;
 ; RV64C-LABEL: add_small_const:
 ; RV64C:       # %bb.0:
-; RV64C-NEXT:    c.addiw a0, 1
+; RV64C-NEXT:    c.addi a0, 1
 ; RV64C-NEXT:    c.slli a0, 56
 ; RV64C-NEXT:    c.srai a0, 56
 ; RV64C-NEXT:    c.jr ra
@@ -78,7 +78,7 @@ define signext i32 @add_large_const(i32 signext %a) nounwind {
 ; RV64C-LABEL: add_large_const:
 ; RV64C:       # %bb.0:
 ; RV64C-NEXT:    c.lui a1, 1
-; RV64C-NEXT:    c.addiw a1, -1
+; RV64C-NEXT:    c.addi a1, -1
 ; RV64C-NEXT:    c.add a0, a1
 ; RV64C-NEXT:    c.slli a0, 48
 ; RV64C-NEXT:    c.srai a0, 48
@@ -118,7 +118,7 @@ define signext i32 @add_huge_const(i32 signext %a) nounwind {
 ; RV64C-LABEL: add_huge_const:
 ; RV64C:       # %bb.0:
 ; RV64C-NEXT:    c.lui a1, 8
-; RV64C-NEXT:    c.addiw a1, -1
+; RV64C-NEXT:    c.addi a1, -1
 ; RV64C-NEXT:    c.add a0, a1
 ; RV64C-NEXT:    c.slli a0, 48
 ; RV64C-NEXT:    c.srai a0, 48
@@ -139,7 +139,7 @@ define signext i24 @add_non_machine_type(i24 signext %a) nounwind {
 ;
 ; RV64I-LABEL: add_non_machine_type:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addiw a0, a0, 256
+; RV64I-NEXT:    addi a0, a0, 256
 ; RV64I-NEXT:    slli a0, a0, 52
 ; RV64I-NEXT:    srai a0, a0, 40
 ; RV64I-NEXT:    jalr zero, 0(ra)
@@ -153,7 +153,7 @@ define signext i24 @add_non_machine_type(i24 signext %a) nounwind {
 ;
 ; RV64C-LABEL: add_non_machine_type:
 ; RV64C:       # %bb.0:
-; RV64C-NEXT:    addiw a0, a0, 256
+; RV64C-NEXT:    addi a0, a0, 256
 ; RV64C-NEXT:    c.slli a0, 52
 ; RV64C-NEXT:    c.srai a0, 40
 ; RV64C-NEXT:    c.jr ra
@@ -200,23 +200,23 @@ define i128 @add_wide_operand(i128 %a) nounwind {
 ;
 ; RV32C-LABEL: add_wide_operand:
 ; RV32C:       # %bb.0:
-; RV32C-NEXT:    lw a6, 4(a1)
+; RV32C-NEXT:    c.lw a4, 4(a1)
 ; RV32C-NEXT:    c.lw a3, 12(a1)
-; RV32C-NEXT:    c.lw a4, 0(a1)
+; RV32C-NEXT:    lw a6, 0(a1)
 ; RV32C-NEXT:    c.lw a1, 8(a1)
 ; RV32C-NEXT:    c.lui a5, 16
 ; RV32C-NEXT:    c.add a3, a5
 ; RV32C-NEXT:    c.slli a3, 3
 ; RV32C-NEXT:    srli a5, a1, 29
 ; RV32C-NEXT:    c.or a3, a5
-; RV32C-NEXT:    srli a5, a4, 29
-; RV32C-NEXT:    slli a2, a6, 3
-; RV32C-NEXT:    c.or a2, a5
 ; RV32C-NEXT:    srli a5, a6, 29
+; RV32C-NEXT:    slli a2, a4, 3
+; RV32C-NEXT:    c.or a2, a5
+; RV32C-NEXT:    c.srli a4, 29
 ; RV32C-NEXT:    c.slli a1, 3
-; RV32C-NEXT:    c.or a1, a5
-; RV32C-NEXT:    c.slli a4, 3
-; RV32C-NEXT:    c.sw a4, 0(a0)
+; RV32C-NEXT:    c.or a1, a4
+; RV32C-NEXT:    c.slli a6, 3
+; RV32C-NEXT:    sw a6, 0(a0)
 ; RV32C-NEXT:    c.sw a1, 8(a0)
 ; RV32C-NEXT:    c.sw a2, 4(a0)
 ; RV32C-NEXT:    c.sw a3, 12(a0)

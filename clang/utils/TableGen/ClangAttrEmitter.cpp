@@ -2690,7 +2690,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         emitFormInitializer(OS, Spellings[0], "0");
       } else {
-        OS << ", (\n";
+        OS << ", [&]() {\n";
+        OS << "    switch (S) {\n";
         std::set<std::string> Uniques;
         unsigned Idx = 0;
         for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
@@ -2698,15 +2699,19 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           const FlattenedSpelling &S = *I;
           const auto &Name = SemanticToSyntacticMap[Idx];
           if (Uniques.insert(Name).second) {
-            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            OS << "    case " << Name << ":\n";
+            OS << "      return AttributeCommonInfo::Form";
             emitFormInitializer(OS, S, Name);
-            OS << " :\n";
+            OS << ";\n";
           }
         }
-        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
-           << " AttributeCommonInfo::Form";
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Unknown attribute spelling!\");\n"
+           << "      return AttributeCommonInfo::Form";
         emitFormInitializer(OS, Spellings[0], "0");
-        OS << "))";
+        OS << ";\n"
+           << "    }\n"
+           << "  }()";
       }
 
       OS << ");\n";
@@ -3451,9 +3456,11 @@ static void GenerateHasAttrSpellingStringSwitch(
     int Version = 1;
 
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    std::string Name = "";
     for (const auto &Spelling : Spellings) {
       if (Spelling.variety() == Variety &&
           (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace())) {
+        Name = Spelling.name();
         Version = static_cast<int>(
             Spelling.getSpellingRecord().getValueAsInt("Version"));
         // Verify that explicitly specified CXX11 and C23 spellings (i.e.
@@ -3477,6 +3484,26 @@ static void GenerateHasAttrSpellingStringSwitch(
       GenerateTargetSpecificAttrChecks(R, Arches, Test, nullptr);
 
       // If this is the C++11 variety, also add in the LangOpts test.
+      if (Variety == "CXX11")
+        Test += " && LangOpts.CPlusPlus11";
+    } else if (!Attr->getValueAsListOfDefs("TargetSpecificSpellings").empty()) {
+      // Add target checks if this spelling is target-specific.
+      const std::vector<Record *> TargetSpellings =
+          Attr->getValueAsListOfDefs("TargetSpecificSpellings");
+      for (const auto &TargetSpelling : TargetSpellings) {
+        // Find spelling that matches current scope and name.
+        for (const auto &Spelling : GetFlattenedSpellings(*TargetSpelling)) {
+          if (Scope == Spelling.nameSpace() && Name == Spelling.name()) {
+            const Record *Target = TargetSpelling->getValueAsDef("Target");
+            std::vector<StringRef> Arches =
+                Target->getValueAsListOfStrings("Arches");
+            GenerateTargetSpecificAttrChecks(Target, Arches, Test,
+                                             /*FnName=*/nullptr);
+            break;
+          }
+        }
+      }
+
       if (Variety == "CXX11")
         Test += " && LangOpts.CPlusPlus11";
     } else if (Variety == "CXX11")
@@ -4267,6 +4294,51 @@ static void GenerateTargetRequirements(const Record &Attr,
   OS << "}\n\n";
 }
 
+static void
+GenerateSpellingTargetRequirements(const Record &Attr,
+                                   const std::vector<Record *> &TargetSpellings,
+                                   raw_ostream &OS) {
+  // If there are no target specific spellings, use the default target handler.
+  if (TargetSpellings.empty())
+    return;
+
+  std::string Test;
+  bool UsesT = false;
+  const std::vector<FlattenedSpelling> SpellingList =
+      GetFlattenedSpellings(Attr);
+  for (unsigned TargetIndex = 0; TargetIndex < TargetSpellings.size();
+       ++TargetIndex) {
+    const auto &TargetSpelling = TargetSpellings[TargetIndex];
+    std::vector<FlattenedSpelling> Spellings =
+        GetFlattenedSpellings(*TargetSpelling);
+
+    Test += "((SpellingListIndex == ";
+    for (unsigned Index = 0; Index < Spellings.size(); ++Index) {
+      Test +=
+          llvm::itostr(getSpellingListIndex(SpellingList, Spellings[Index]));
+      if (Index != Spellings.size() - 1)
+        Test += " ||\n    SpellingListIndex == ";
+      else
+        Test += ") && ";
+    }
+
+    const Record *Target = TargetSpelling->getValueAsDef("Target");
+    std::vector<StringRef> Arches = Target->getValueAsListOfStrings("Arches");
+    std::string FnName = "isTargetSpelling";
+    UsesT |= GenerateTargetSpecificAttrChecks(Target, Arches, Test, &FnName);
+    Test += ")";
+    if (TargetIndex != TargetSpellings.size() - 1)
+      Test += " || ";
+  }
+
+  OS << "bool spellingExistsInTarget(const TargetInfo &Target,\n";
+  OS << "                            const unsigned SpellingListIndex) const "
+        "override {\n";
+  if (UsesT)
+    OS << "  const llvm::Triple &T = Target.getTriple(); (void)T;\n";
+  OS << "  return " << Test << ";\n", OS << "}\n\n";
+}
+
 static void GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
                                                     raw_ostream &OS) {
   // If the attribute does not have a semantic form, we can bail out early.
@@ -4481,6 +4553,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     GenerateMutualExclusionsChecks(Attr, Records, OS, MergeDeclOS, MergeStmtOS);
     GenerateLangOptRequirements(Attr, OS);
     GenerateTargetRequirements(Attr, Dupes, OS);
+    GenerateSpellingTargetRequirements(
+        Attr, Attr.getValueAsListOfDefs("TargetSpecificSpellings"), OS);
     GenerateSpellingIndexToSemanticSpelling(Attr, OS);
     PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
     GenerateHandleDeclAttribute(Attr, OS);

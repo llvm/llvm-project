@@ -549,33 +549,32 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; SSE-LABEL: v16f32_estimate:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtps %xmm0, %xmm5
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    mulps %xmm5, %xmm0
-; SSE-NEXT:    movaps %xmm5, %xmm6
-; SSE-NEXT:    mulps %xmm4, %xmm6
-; SSE-NEXT:    movaps {{.*#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; SSE-NEXT:    addps %xmm5, %xmm0
-; SSE-NEXT:    mulps %xmm6, %xmm0
-; SSE-NEXT:    rsqrtps %xmm1, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm1
-; SSE-NEXT:    mulps %xmm6, %xmm1
-; SSE-NEXT:    mulps %xmm4, %xmm6
-; SSE-NEXT:    addps %xmm5, %xmm1
-; SSE-NEXT:    mulps %xmm6, %xmm1
-; SSE-NEXT:    rsqrtps %xmm2, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm2
-; SSE-NEXT:    mulps %xmm6, %xmm2
-; SSE-NEXT:    mulps %xmm4, %xmm6
-; SSE-NEXT:    addps %xmm5, %xmm2
-; SSE-NEXT:    mulps %xmm6, %xmm2
-; SSE-NEXT:    rsqrtps %xmm3, %xmm6
-; SSE-NEXT:    mulps %xmm6, %xmm4
-; SSE-NEXT:    mulps %xmm6, %xmm3
-; SSE-NEXT:    mulps %xmm6, %xmm3
-; SSE-NEXT:    addps %xmm5, %xmm3
+; SSE-NEXT:    rsqrtps %xmm0, %xmm4
+; SSE-NEXT:    movaps {{.*#+}} xmm5 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; SSE-NEXT:    mulps %xmm4, %xmm0
+; SSE-NEXT:    mulps %xmm4, %xmm0
+; SSE-NEXT:    mulps %xmm5, %xmm4
+; SSE-NEXT:    movaps {{.*#+}} xmm6 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; SSE-NEXT:    addps %xmm6, %xmm0
+; SSE-NEXT:    mulps %xmm4, %xmm0
+; SSE-NEXT:    rsqrtps %xmm1, %xmm4
+; SSE-NEXT:    mulps %xmm4, %xmm1
+; SSE-NEXT:    mulps %xmm4, %xmm1
+; SSE-NEXT:    mulps %xmm5, %xmm4
+; SSE-NEXT:    addps %xmm6, %xmm1
+; SSE-NEXT:    mulps %xmm4, %xmm1
+; SSE-NEXT:    rsqrtps %xmm2, %xmm4
+; SSE-NEXT:    mulps %xmm4, %xmm2
+; SSE-NEXT:    mulps %xmm4, %xmm2
+; SSE-NEXT:    mulps %xmm5, %xmm4
+; SSE-NEXT:    addps %xmm6, %xmm2
+; SSE-NEXT:    mulps %xmm4, %xmm2
+; SSE-NEXT:    rsqrtps %xmm3, %xmm4
+; SSE-NEXT:    mulps %xmm4, %xmm5
 ; SSE-NEXT:    mulps %xmm4, %xmm3
+; SSE-NEXT:    mulps %xmm4, %xmm3
+; SSE-NEXT:    addps %xmm6, %xmm3
+; SSE-NEXT:    mulps %xmm5, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: v16f32_estimate:

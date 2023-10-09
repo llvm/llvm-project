@@ -997,7 +997,7 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64NOM-NEXT:    vand.vv v8, v8, v11
 ; RV64NOM-NEXT:    vadd.vv v8, v9, v8
 ; RV64NOM-NEXT:    lui a0, 12320
-; RV64NOM-NEXT:    addiw a0, a0, 257
+; RV64NOM-NEXT:    addi a0, a0, 257
 ; RV64NOM-NEXT:    vmv.s.x v9, a0
 ; RV64NOM-NEXT:    vsext.vf4 v10, v9
 ; RV64NOM-NEXT:    vsra.vv v8, v8, v10
@@ -1053,7 +1053,7 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64NOM-NEXT:    vsrl.vi v8, v8, 0
 ; RV64NOM-NEXT:    lui a0, 322639
-; RV64NOM-NEXT:    addiw a0, a0, -945
+; RV64NOM-NEXT:    addi a0, a0, -945
 ; RV64NOM-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64NOM-NEXT:    vmv.x.s a0, v8
@@ -1064,7 +1064,7 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV64M-LABEL: extractelt_udiv_v4i32:
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a0, 322639
-; RV64M-NEXT:    addiw a0, a0, -945
+; RV64M-NEXT:    addi a0, a0, -945
 ; RV64M-NEXT:    slli a0, a0, 32
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vslidedown.vi v8, v8, 2

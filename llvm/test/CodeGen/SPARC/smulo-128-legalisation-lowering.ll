@@ -11,27 +11,27 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    .cfi_window_save
 ; SPARC-NEXT:    .cfi_register %o7, %i7
 ; SPARC-NEXT:    ld [%fp+96], %l1
-; SPARC-NEXT:    mov %i3, %g4
+; SPARC-NEXT:    mov %i3, %l0
 ; SPARC-NEXT:    mov %i2, %g2
 ; SPARC-NEXT:    umul %i3, %l1, %i3
 ; SPARC-NEXT:    rd %y, %i2
 ; SPARC-NEXT:    ld [%fp+92], %l2
 ; SPARC-NEXT:    umul %g2, %l1, %g3
-; SPARC-NEXT:    rd %y, %l0
+; SPARC-NEXT:    rd %y, %g4
 ; SPARC-NEXT:    addcc %g3, %i2, %i2
-; SPARC-NEXT:    addxcc %l0, 0, %g3
-; SPARC-NEXT:    umul %g4, %l2, %l0
+; SPARC-NEXT:    addxcc %g4, 0, %g3
+; SPARC-NEXT:    umul %l0, %l2, %g4
 ; SPARC-NEXT:    rd %y, %l3
-; SPARC-NEXT:    addcc %l0, %i2, %i2
-; SPARC-NEXT:    addxcc %l3, 0, %l0
-; SPARC-NEXT:    addcc %g3, %l0, %g3
-; SPARC-NEXT:    addxcc %g0, 0, %l0
+; SPARC-NEXT:    addcc %g4, %i2, %i2
+; SPARC-NEXT:    addxcc %l3, 0, %g4
+; SPARC-NEXT:    addcc %g3, %g4, %g3
+; SPARC-NEXT:    addxcc %g0, 0, %g4
 ; SPARC-NEXT:    umul %g2, %l2, %l3
 ; SPARC-NEXT:    rd %y, %l4
 ; SPARC-NEXT:    addcc %l3, %g3, %g3
 ; SPARC-NEXT:    umul %i1, %l1, %l3
 ; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    addxcc %l4, %l0, %l0
+; SPARC-NEXT:    addxcc %l4, %g4, %g4
 ; SPARC-NEXT:    umul %i0, %l1, %l4
 ; SPARC-NEXT:    rd %y, %l6
 ; SPARC-NEXT:    addcc %l4, %l5, %l4
@@ -47,16 +47,16 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    addcc %l7, %l5, %l5
 ; SPARC-NEXT:    addxcc %o0, %l6, %l6
 ; SPARC-NEXT:    addcc %l3, %g3, %g3
-; SPARC-NEXT:    addxcc %l4, %l0, %l0
+; SPARC-NEXT:    addxcc %l4, %g4, %g4
 ; SPARC-NEXT:    addxcc %l5, 0, %l3
-; SPARC-NEXT:    umul %g4, %i5, %l4
+; SPARC-NEXT:    umul %l0, %i5, %l4
 ; SPARC-NEXT:    rd %y, %l5
 ; SPARC-NEXT:    addxcc %l6, 0, %l6
 ; SPARC-NEXT:    umul %g2, %i5, %l7
 ; SPARC-NEXT:    rd %y, %o0
 ; SPARC-NEXT:    addcc %l7, %l5, %l5
 ; SPARC-NEXT:    addxcc %o0, 0, %l7
-; SPARC-NEXT:    umul %g4, %i4, %o0
+; SPARC-NEXT:    umul %l0, %i4, %o0
 ; SPARC-NEXT:    rd %y, %o1
 ; SPARC-NEXT:    addcc %o0, %l5, %l5
 ; SPARC-NEXT:    addxcc %o1, 0, %o0
@@ -67,7 +67,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    addcc %o1, %l7, %l7
 ; SPARC-NEXT:    addxcc %o2, %o0, %o0
 ; SPARC-NEXT:    addcc %l4, %g3, %g3
-; SPARC-NEXT:    addxcc %l5, %l0, %l0
+; SPARC-NEXT:    addxcc %l5, %g4, %g4
 ; SPARC-NEXT:    addxcc %l7, 0, %l4
 ; SPARC-NEXT:    addxcc %o0, 0, %l5
 ; SPARC-NEXT:    addcc %l3, %l4, %l3
@@ -118,21 +118,21 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    addxcc %o0, %o3, %l6
 ; SPARC-NEXT:    addcc %l2, %o1, %l2
 ; SPARC-NEXT:    sra %i4, 31, %i4
-; SPARC-NEXT:    umul %g4, %i4, %g4
+; SPARC-NEXT:    umul %l0, %i4, %l0
 ; SPARC-NEXT:    rd %y, %o0
 ; SPARC-NEXT:    addxcc %l6, %l7, %l6
 ; SPARC-NEXT:    umul %i4, %g2, %g2
 ; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    add %o0, %g4, %o1
+; SPARC-NEXT:    add %o0, %l0, %o1
 ; SPARC-NEXT:    smul %i0, %i4, %i0
 ; SPARC-NEXT:    umul %i1, %i4, %i1
 ; SPARC-NEXT:    rd %y, %i4
 ; SPARC-NEXT:    add %o1, %g2, %o1
 ; SPARC-NEXT:    add %i4, %i1, %i4
 ; SPARC-NEXT:    add %i4, %i0, %i0
-; SPARC-NEXT:    addcc %i1, %g4, %i1
+; SPARC-NEXT:    addcc %i1, %l0, %i1
 ; SPARC-NEXT:    addxcc %i0, %o1, %i0
-; SPARC-NEXT:    addcc %g4, %o0, %i4
+; SPARC-NEXT:    addcc %l0, %o0, %i4
 ; SPARC-NEXT:    addxcc %o0, 0, %o0
 ; SPARC-NEXT:    addcc %g2, %i4, %i4
 ; SPARC-NEXT:    addxcc %l7, 0, %o1
@@ -142,7 +142,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    addxcc %l7, %o1, %l7
 ; SPARC-NEXT:    addcc %g2, %i1, %i1
 ; SPARC-NEXT:    addxcc %l7, %i0, %i0
-; SPARC-NEXT:    addcc %g4, %l1, %g2
+; SPARC-NEXT:    addcc %l0, %l1, %g2
 ; SPARC-NEXT:    addxcc %i4, %o2, %i4
 ; SPARC-NEXT:    addxcc %i1, %l2, %i1
 ; SPARC-NEXT:    addxcc %i0, %l6, %i0
@@ -150,7 +150,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:    addxcc %l4, %i4, %i4
 ; SPARC-NEXT:    addxcc %l5, %i1, %i1
 ; SPARC-NEXT:    addxcc %i5, %i0, %i0
-; SPARC-NEXT:    sra %l0, 31, %i5
+; SPARC-NEXT:    sra %g4, 31, %i5
 ; SPARC-NEXT:    xor %i0, %i5, %i0
 ; SPARC-NEXT:    xor %i4, %i5, %i4
 ; SPARC-NEXT:    or %i4, %i0, %i0
@@ -167,7 +167,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-NEXT:  .LBB0_2:
 ; SPARC-NEXT:    mov 1, %i4
 ; SPARC-NEXT:  .LBB0_3: ! %start
-; SPARC-NEXT:    mov %l0, %i0
+; SPARC-NEXT:    mov %g4, %i0
 ; SPARC-NEXT:    ret
 ; SPARC-NEXT:    restore %g0, %g3, %o1
 ;
@@ -226,13 +226,13 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i2, %o3
-; SPARC64-NEXT:    srlx %o1, 32, %g2
-; SPARC64-NEXT:    srlx %o0, 32, %g3
-; SPARC64-NEXT:    addcc %o1, %i5, %i3
-; SPARC64-NEXT:    addxcc %g2, %i4, %i4
-; SPARC64-NEXT:    addxcc %o0, 0, %i5
-; SPARC64-NEXT:    addxcc %g3, 0, %g2
-; SPARC64-NEXT:    addcc %l4, %i5, %i5
+; SPARC64-NEXT:    srlx %o1, 32, %i3
+; SPARC64-NEXT:    srlx %o0, 32, %g2
+; SPARC64-NEXT:    addcc %o1, %i5, %i5
+; SPARC64-NEXT:    addxcc %i3, %i4, %i3
+; SPARC64-NEXT:    addxcc %o0, 0, %i4
+; SPARC64-NEXT:    addxcc %g2, 0, %g2
+; SPARC64-NEXT:    addcc %l4, %i4, %i4
 ; SPARC64-NEXT:    addxcc %l5, %g2, %l4
 ; SPARC64-NEXT:    addxcc %g0, 0, %l5
 ; SPARC64-NEXT:    addxcc %g0, 0, %l6
@@ -243,29 +243,29 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC64-NEXT:    mov %i2, %o3
 ; SPARC64-NEXT:    mov %g0, %i2
 ; SPARC64-NEXT:    srlx %o1, 32, %i0
-; SPARC64-NEXT:    addcc %o1, %i5, %i5
+; SPARC64-NEXT:    addcc %o1, %i4, %i4
 ; SPARC64-NEXT:    srlx %o0, 32, %g2
 ; SPARC64-NEXT:    addxcc %i0, %l4, %i0
 ; SPARC64-NEXT:    addxcc %o0, %l5, %g3
 ; SPARC64-NEXT:    addxcc %g2, %l6, %g2
-; SPARC64-NEXT:    addcc %i5, %l0, %i5
+; SPARC64-NEXT:    addcc %i4, %l0, %i4
 ; SPARC64-NEXT:    addxcc %i0, %l1, %i0
 ; SPARC64-NEXT:    addxcc %g3, %l2, %g3
 ; SPARC64-NEXT:    addxcc %g2, %l3, %g2
 ; SPARC64-NEXT:    srl %g3, 0, %g3
 ; SPARC64-NEXT:    sllx %g2, 32, %g2
 ; SPARC64-NEXT:    or %g2, %g3, %g2
-; SPARC64-NEXT:    sllx %i4, 32, %i4
-; SPARC64-NEXT:    srax %i4, 63, %g3
+; SPARC64-NEXT:    sllx %i3, 32, %i3
+; SPARC64-NEXT:    srax %i3, 63, %g3
 ; SPARC64-NEXT:    xor %g2, %g3, %g2
-; SPARC64-NEXT:    srl %i5, 0, %i5
+; SPARC64-NEXT:    srl %i4, 0, %i4
 ; SPARC64-NEXT:    sllx %i0, 32, %i0
-; SPARC64-NEXT:    or %i0, %i5, %i0
+; SPARC64-NEXT:    or %i0, %i4, %i0
 ; SPARC64-NEXT:    xor %i0, %g3, %i0
 ; SPARC64-NEXT:    or %i0, %g2, %i0
 ; SPARC64-NEXT:    movrnz %i0, 1, %i2
-; SPARC64-NEXT:    srl %i3, 0, %i0
-; SPARC64-NEXT:    or %i4, %i0, %i0
+; SPARC64-NEXT:    srl %i5, 0, %i0
+; SPARC64-NEXT:    or %i3, %i0, %i0
 ; SPARC64-NEXT:    srl %i2, 0, %i2
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
