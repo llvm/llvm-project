@@ -221,7 +221,6 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
-  isConstantEvaluatedOverride = false;
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
@@ -1250,20 +1249,21 @@ void Sema::ActOnEndOfTranslationUnit() {
         CurrentModule && CurrentModule->isInterfaceOrPartition()) {
       auto DoesModNeedInit = [this](Module *M) {
         if (!getASTContext().getModuleInitializers(M).empty())
-          return false;
+          return true;
         for (auto [Exported, _] : M->Exports)
-          if (!Exported->isNamedModuleInterfaceHasNoInit())
-            return false;
+          if (Exported->isNamedModuleInterfaceHasInit())
+            return true;
         for (Module *I : M->Imports)
-          if (!I->isNamedModuleInterfaceHasNoInit())
-            return false;
+          if (I->isNamedModuleInterfaceHasInit())
+            return true;
 
-        return true;
+        return false;
       };
 
-      CurrentModule->NamedModuleHasNoInit = DoesModNeedInit(CurrentModule);
-      for (Module *SubModules : CurrentModule->submodules())
-        CurrentModule->NamedModuleHasNoInit &= DoesModNeedInit(SubModules);
+      CurrentModule->NamedModuleHasInit =
+          DoesModNeedInit(CurrentModule) ||
+          llvm::any_of(CurrentModule->submodules(),
+                       [&](auto *SubM) { return DoesModNeedInit(SubM); });
     }
 
     // Warnings emitted in ActOnEndOfTranslationUnit() should be emitted for
@@ -2071,7 +2071,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
-    if (Ty->isRVVType())
+    if (TI.hasRISCVVTypes() && Ty->isRVVType())
       checkRVVTypeSupport(Ty, Loc, D);
 
     // Don't allow SVE types in functions without a SVE target.

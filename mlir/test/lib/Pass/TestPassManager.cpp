@@ -53,7 +53,7 @@ struct TestOptionsPass
     : public PassWrapper<TestOptionsPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPass)
 
-  enum Enum {};
+  enum Enum { One, Two };
 
   struct Options : public PassPipelineOptions<Options> {
     ListOption<int> listOption{*this, "list",

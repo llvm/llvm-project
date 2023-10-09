@@ -2136,10 +2136,10 @@ static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
   return UsesLHS || UsesRHS;
 }
 
-bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask) {
+bool ShuffleVectorInst::isSingleSourceMask(ArrayRef<int> Mask, int NumSrcElts) {
   // We don't have vector operand size information, so assume operands are the
   // same size as the mask.
-  return isSingleSourceMaskImpl(Mask, Mask.size());
+  return isSingleSourceMaskImpl(Mask, NumSrcElts);
 }
 
 static bool isIdentityMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
@@ -2154,65 +2154,75 @@ static bool isIdentityMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
   return true;
 }
 
-bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask) {
+bool ShuffleVectorInst::isIdentityMask(ArrayRef<int> Mask, int NumSrcElts) {
+  if (Mask.size() != static_cast<unsigned>(NumSrcElts))
+    return false;
   // We don't have vector operand size information, so assume operands are the
   // same size as the mask.
-  return isIdentityMaskImpl(Mask, Mask.size());
+  return isIdentityMaskImpl(Mask, NumSrcElts);
 }
 
-bool ShuffleVectorInst::isReverseMask(ArrayRef<int> Mask) {
-  if (!isSingleSourceMask(Mask))
+bool ShuffleVectorInst::isReverseMask(ArrayRef<int> Mask, int NumSrcElts) {
+  if (Mask.size() != static_cast<unsigned>(NumSrcElts))
+    return false;
+  if (!isSingleSourceMask(Mask, NumSrcElts))
     return false;
 
   // The number of elements in the mask must be at least 2.
-  int NumElts = Mask.size();
-  if (NumElts < 2)
+  if (NumSrcElts < 2)
     return false;
 
-  for (int i = 0; i < NumElts; ++i) {
-    if (Mask[i] == -1)
+  for (int I = 0, E = Mask.size(); I < E; ++I) {
+    if (Mask[I] == -1)
       continue;
-    if (Mask[i] != (NumElts - 1 - i) && Mask[i] != (NumElts + NumElts - 1 - i))
+    if (Mask[I] != (NumSrcElts - 1 - I) &&
+        Mask[I] != (NumSrcElts + NumSrcElts - 1 - I))
       return false;
   }
   return true;
 }
 
-bool ShuffleVectorInst::isZeroEltSplatMask(ArrayRef<int> Mask) {
-  if (!isSingleSourceMask(Mask))
+bool ShuffleVectorInst::isZeroEltSplatMask(ArrayRef<int> Mask, int NumSrcElts) {
+  if (Mask.size() != static_cast<unsigned>(NumSrcElts))
     return false;
-  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
-    if (Mask[i] == -1)
+  if (!isSingleSourceMask(Mask, NumSrcElts))
+    return false;
+  for (int I = 0, E = Mask.size(); I < E; ++I) {
+    if (Mask[I] == -1)
       continue;
-    if (Mask[i] != 0 && Mask[i] != NumElts)
+    if (Mask[I] != 0 && Mask[I] != NumSrcElts)
       return false;
   }
   return true;
 }
 
-bool ShuffleVectorInst::isSelectMask(ArrayRef<int> Mask) {
+bool ShuffleVectorInst::isSelectMask(ArrayRef<int> Mask, int NumSrcElts) {
+  if (Mask.size() != static_cast<unsigned>(NumSrcElts))
+    return false;
   // Select is differentiated from identity. It requires using both sources.
-  if (isSingleSourceMask(Mask))
+  if (isSingleSourceMask(Mask, NumSrcElts))
     return false;
-  for (int i = 0, NumElts = Mask.size(); i < NumElts; ++i) {
-    if (Mask[i] == -1)
+  for (int I = 0, E = Mask.size(); I < E; ++I) {
+    if (Mask[I] == -1)
       continue;
-    if (Mask[i] != i && Mask[i] != (NumElts + i))
+    if (Mask[I] != I && Mask[I] != (NumSrcElts + I))
       return false;
   }
   return true;
 }
 
-bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask) {
+bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask, int NumSrcElts) {
   // Example masks that will return true:
   // v1 = <a, b, c, d>
   // v2 = <e, f, g, h>
   // trn1 = shufflevector v1, v2 <0, 4, 2, 6> = <a, e, c, g>
   // trn2 = shufflevector v1, v2 <1, 5, 3, 7> = <b, f, d, h>
 
+  if (Mask.size() != static_cast<unsigned>(NumSrcElts))
+    return false;
   // 1. The number of elements in the mask must be a power-of-2 and at least 2.
-  int NumElts = Mask.size();
-  if (NumElts < 2 || !isPowerOf2_32(NumElts))
+  int Sz = Mask.size();
+  if (Sz < 2 || !isPowerOf2_32(Sz))
     return false;
 
   // 2. The first element of the mask must be either a 0 or a 1.
@@ -2221,23 +2231,26 @@ bool ShuffleVectorInst::isTransposeMask(ArrayRef<int> Mask) {
 
   // 3. The difference between the first 2 elements must be equal to the
   // number of elements in the mask.
-  if ((Mask[1] - Mask[0]) != NumElts)
+  if ((Mask[1] - Mask[0]) != NumSrcElts)
     return false;
 
   // 4. The difference between consecutive even-numbered and odd-numbered
   // elements must be equal to 2.
-  for (int i = 2; i < NumElts; ++i) {
-    int MaskEltVal = Mask[i];
+  for (int I = 2; I < Sz; ++I) {
+    int MaskEltVal = Mask[I];
     if (MaskEltVal == -1)
       return false;
-    int MaskEltPrevVal = Mask[i - 2];
+    int MaskEltPrevVal = Mask[I - 2];
     if (MaskEltVal - MaskEltPrevVal != 2)
       return false;
   }
   return true;
 }
 
-bool ShuffleVectorInst::isSpliceMask(ArrayRef<int> Mask, int &Index) {
+bool ShuffleVectorInst::isSpliceMask(ArrayRef<int> Mask, int NumSrcElts,
+                                     int &Index) {
+  if (Mask.size() != static_cast<unsigned>(NumSrcElts))
+    return false;
   // Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   int StartIndex = -1;
   for (int I = 0, E = Mask.size(); I != E; ++I) {
@@ -2248,7 +2261,7 @@ bool ShuffleVectorInst::isSpliceMask(ArrayRef<int> Mask, int &Index) {
     if (StartIndex == -1) {
       // Don't support a StartIndex that begins in the second input, or if the
       // first non-undef index would access below the StartIndex.
-      if (MaskEltVal < I || E <= (MaskEltVal - I))
+      if (MaskEltVal < I || NumSrcElts <= (MaskEltVal - I))
         return false;
 
       StartIndex = MaskEltVal - I;
@@ -2543,7 +2556,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
   // case.
   if (isa<ScalableVectorType>(getType()))
     return false;
-  if (!isSingleSourceMask(ShuffleMask))
+  if (!isSingleSourceMask(ShuffleMask, VF))
     return false;
 
   return isOneUseSingleSourceMask(ShuffleMask, VF);

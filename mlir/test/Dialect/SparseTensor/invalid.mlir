@@ -794,7 +794,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
   // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
-  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1 {perm_map = #MAP} : memref<?xf32>
+  sparse_tensor.sort insertion_sort_stable %arg0, %arg1 {perm_map = #MAP} : memref<?xf32>
   return
 }
 
@@ -805,7 +805,7 @@ func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
 func.func @sparse_sort_coo_x_too_small(%arg0: memref<50xindex>) {
   %i20 = arith.constant 20 : index
   // expected-error@+1 {{Expected dimension(xy) >= n * (rank(perm_map) + ny) got 50 < 60}}
-  sparse_tensor.sort_coo hybrid_quick_sort %i20, %arg0 {perm_map = #MAP, ny = 1 : index} : memref<50xindex>
+  sparse_tensor.sort hybrid_quick_sort %i20, %arg0 {perm_map = #MAP, ny = 1 : index} : memref<50xindex>
   return
 }
 
@@ -816,7 +816,7 @@ func.func @sparse_sort_coo_x_too_small(%arg0: memref<50xindex>) {
 func.func @sparse_sort_coo_y_too_small(%arg0: memref<60xindex>, %arg1: memref<10xf32>) {
   %i20 = arith.constant 20 : index
   // expected-error@+1 {{Expected dimension(y) >= n got 10 < 20}}
-  sparse_tensor.sort_coo insertion_sort_stable %i20, %arg0 jointly %arg1 {perm_map = #MAP, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
+  sparse_tensor.sort insertion_sort_stable %i20, %arg0 jointly %arg1 {perm_map = #MAP, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
   return
 }
 
@@ -826,7 +826,7 @@ func.func @sparse_sort_coo_y_too_small(%arg0: memref<60xindex>, %arg1: memref<10
 
 func.func @sparse_sort_coo_no_perm(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
   // expected-error@+1 {{Expected a permutation map, got (d0, d1) -> (d0, d0)}}
-  sparse_tensor.sort_coo hybrid_quick_sort %arg0, %arg1 {perm_map = #NON_PERM_MAP, ny = 1 : index}: memref<?xindex>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 {perm_map = #NON_PERM_MAP, ny = 1 : index}: memref<?xindex>
   return %arg1 : memref<?xindex>
 }
 

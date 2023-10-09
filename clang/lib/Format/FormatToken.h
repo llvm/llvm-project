@@ -61,6 +61,7 @@ namespace format {
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CtorInitializerColon)                                                   \
   TYPE(CtorInitializerComma)                                                   \
+  TYPE(CtorDtorDeclName)                                                       \
   TYPE(DesignatedInitializerLSquare)                                           \
   TYPE(DesignatedInitializerPeriod)                                            \
   TYPE(DictLiteral)                                                            \
@@ -618,6 +619,10 @@ public:
 
   bool isStringLiteral() const { return tok::isStringLiteral(Tok.getKind()); }
 
+  bool isAttribute() const {
+    return isOneOf(tok::kw___attribute, tok::kw___declspec, TT_AttributeMacro);
+  }
+
   bool isObjCAtKeyword(tok::ObjCKeywordKind Kind) const {
     return Tok.isObjCAtKeyword(Kind);
   }
@@ -633,9 +638,10 @@ public:
 
   bool canBePointerOrReferenceQualifier() const {
     return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile,
-                   tok::kw___attribute, tok::kw__Nonnull, tok::kw__Nullable,
+                   tok::kw__Nonnull, tok::kw__Nullable,
                    tok::kw__Null_unspecified, tok::kw___ptr32, tok::kw___ptr64,
-                   tok::kw___funcref, TT_AttributeMacro);
+                   tok::kw___funcref) ||
+           isAttribute();
   }
 
   /// Determine whether the token is a simple-type-specifier.
@@ -708,25 +714,16 @@ public:
   /// Returns \c true if this is a keyword that can be used
   /// like a function call (e.g. sizeof, typeid, ...).
   bool isFunctionLikeKeyword() const {
-    switch (Tok.getKind()) {
-    case tok::kw_throw:
-    case tok::kw_typeid:
-    case tok::kw_return:
-    case tok::kw_sizeof:
-    case tok::kw_alignof:
-    case tok::kw_alignas:
-    case tok::kw_decltype:
-    case tok::kw_noexcept:
-    case tok::kw_static_assert:
-    case tok::kw__Atomic:
-    case tok::kw___attribute:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-    case tok::kw_requires:
+    if (isAttribute())
       return true;
-    default:
-      return false;
-    }
+
+    return isOneOf(tok::kw_throw, tok::kw_typeid, tok::kw_return,
+                   tok::kw_sizeof, tok::kw_alignof, tok::kw_alignas,
+                   tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
+                   tok::kw__Atomic,
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
+#include "clang/Basic/TransformTypeTraits.def"
+                   tok::kw_requires);
   }
 
   /// Returns \c true if this is a string literal that's like a label,

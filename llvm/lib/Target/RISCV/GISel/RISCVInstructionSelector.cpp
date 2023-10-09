@@ -44,11 +44,17 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  // tblgen-erated 'select' implementation, used as the initial selector for
+  // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+
+  // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
+                    MachineRegisterInfo &MRI) const;
 
   bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
                         const MachineRegisterInfo &MRI);
@@ -239,6 +245,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
+  case TargetOpcode::G_SELECT:
+    return selectSelect(MI, MIB, MRI);
   default:
     return false;
   }
@@ -374,6 +382,27 @@ bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
+                                            MachineIRBuilder &MIB,
+                                            MachineRegisterInfo &MRI) const {
+  // TODO: Currently we check that the conditional code passed to G_SELECT is
+  // not equal to zero; however, in the future, we might want to try and check
+  // if the conditional code comes from a G_ICMP. If it does, we can directly
+  // use G_ICMP to get the first three input operands of the
+  // Select_GPR_Using_CC_GPR. This might be done here, or in the appropriate
+  // combiner.
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
+                             .addDef(MI.getOperand(0).getReg())
+                             .addReg(MI.getOperand(1).getReg())
+                             .addReg(RISCV::X0)
+                             .addImm(RISCVCC::COND_NE)
+                             .addReg(MI.getOperand(2).getReg())
+                             .addReg(MI.getOperand(3).getReg());
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 }
 
 namespace llvm {

@@ -25,114 +25,6 @@
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 
-namespace mlir {
-namespace sparse_tensor {
-
-namespace detail {
-
-/// Checks whether the `perm` array is a permutation of `[0 .. size)`.
-inline bool isPermutation(uint64_t size, const uint64_t *perm) {
-  assert(perm && "Got nullptr for permutation");
-  std::vector<bool> seen(size, false);
-  for (uint64_t i = 0; i < size; ++i) {
-    const uint64_t j = perm[i];
-    if (j >= size || seen[j])
-      return false;
-    seen[j] = true;
-  }
-  for (uint64_t i = 0; i < size; ++i)
-    if (!seen[i])
-      return false;
-  return true;
-}
-
-/// Wrapper around `isPermutation` to ensure consistent error messages.
-inline void assertIsPermutation(uint64_t size, const uint64_t *perm) {
-#ifndef NDEBUG
-  if (!isPermutation(size, perm))
-    MLIR_SPARSETENSOR_FATAL("Not a permutation of [0..%" PRIu64 ")\n", size);
-#endif
-}
-
-/// A class for capturing the knowledge that `isPermutation` is true.
-class PermutationRef final {
-public:
-  /// Asserts `isPermutation` and returns the witness to that being true.
-  explicit PermutationRef(uint64_t size, const uint64_t *perm)
-      : permSize(size), perm(perm) {
-    assertIsPermutation(size, perm);
-  }
-
-  uint64_t size() const { return permSize; }
-
-  const uint64_t *data() const { return perm; }
-
-  const uint64_t &operator[](uint64_t i) const {
-    assert(i < permSize && "index is out of bounds");
-    return perm[i];
-  }
-
-  /// Constructs a pushforward array of values.  This method is the inverse
-  /// of `permute` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> pushforward(const std::vector<T> &values) const {
-    return pushforward(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> pushforward(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    pushforward(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void pushforward(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[perm[i]] = values[i];
-  }
-
-  /// Constructs a permuted array of values.  This method is the inverse
-  /// of `pushforward` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> permute(const std::vector<T> &values) const {
-    return permute(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> permute(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    permute(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void permute(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[i] = values[perm[i]];
-  }
-
-private:
-  const uint64_t permSize;
-  const uint64_t *const perm; // non-owning pointer.
-};
-
-} // namespace detail
-
-//===----------------------------------------------------------------------===//
-// This forward decl is sufficient to split `SparseTensorStorageBase` into
-// its own header, but isn't sufficient for `SparseTensorStorage` to join it.
-template <typename V>
-class SparseTensorEnumeratorBase;
-
-// These macros ensure consistent error messages, without risk of incuring
-// an additional method call to do so.
 #define ASSERT_VALID_DIM(d)                                                    \
   assert(d < getDimRank() && "Dimension is out of bounds");
 #define ASSERT_VALID_LVL(l)                                                    \
@@ -146,11 +38,16 @@ class SparseTensorEnumeratorBase;
     assert((isCompressedDLT(dlt) || isSingletonDLT(dlt)) &&                    \
            "Level is neither compressed nor singleton");                       \
   } while (false)
-// Because the `SparseTensorStorageBase` ctor uses `MLIR_SPARSETENSOR_FATAL`
-// (rather than `assert`) when validating level-types, all the uses of
-// `ASSERT_DENSE_DLT` are technically unnecessary.  However, they are
-// retained for the sake of future-proofing.
 #define ASSERT_DENSE_DLT(dlt) assert(isDenseDLT(dlt) && "Level is not dense");
+
+namespace mlir {
+namespace sparse_tensor {
+
+// Forward references.
+template <typename V>
+class SparseTensorEnumeratorBase;
+template <typename P, typename C, typename V>
+class SparseTensorEnumerator;
 
 /// Abstract base class for `SparseTensorStorage<P,C,V>`.  This class
 /// takes responsibility for all the `<P,C,V>`-independent aspects
@@ -185,23 +82,9 @@ class SparseTensorEnumeratorBase;
 /// specified.  Thus, dynamic cardinalities always have an "immutable but
 /// unknown" value; so the term "dynamic" should not be taken to indicate
 /// run-time mutability.
-//
-// TODO: we'd like to factor out a class akin to `PermutationRef` for
-// capturing known-valid sizes to avoid redundant validity assertions.
-// But calling that class "SizesRef" would be a terrible name (and
-// "ValidSizesRef" isn't much better).  Whereas, calling it "ShapeRef"
-// would be a lot nicer, but then that conflicts with the terminology
-// introduced above.  So we need to come up with some new terminology
-// for distinguishing things, which allows a reasonable class name too.
 class SparseTensorStorageBase {
 protected:
-  // Since this class is virtual, we must disallow public copying in
-  // order to avoid "slicing".  Since this class has data members,
-  // that means making copying protected.
-  // <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rc-copy-virtual>
   SparseTensorStorageBase(const SparseTensorStorageBase &) = default;
-  // Copy-assignment would be implicitly deleted (because our fields
-  // are const), so we explicitly delete it for clarity.
   SparseTensorStorageBase &operator=(const SparseTensorStorageBase &) = delete;
 
 public:
@@ -283,7 +166,7 @@ public:
   bool isUniqueLvl(uint64_t l) const { return isUniqueDLT(getLvlType(l)); }
 
   /// Allocates a new enumerator.  Callers must make sure to delete
-  /// the enumerator when they're done with it.  The first argument
+  /// the enumerator when they're done with it. The first argument
   /// is the out-parameter for storing the newly allocated enumerator;
   /// all other arguments are passed along to the `SparseTensorEnumerator`
   /// ctor and must satisfy the preconditions/assertions thereof.
@@ -313,10 +196,8 @@ public:
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
 
-  /// Element-wise insertion in lexicographic coordinate order.  The first
+  /// Element-wise insertion in lexicographic coordinate order. The first
   /// argument is the level-coordinates for the value being inserted.
-  // TODO: For better safety, this should take a parameter for the
-  // length of `lvlCoords` and check that against `getLvlRank()`.
 #define DECL_LEXINSERT(VNAME, V) virtual void lexInsert(const uint64_t *, V);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
@@ -347,12 +228,6 @@ private:
   const std::vector<DimLevelType> lvlTypes;
   const std::vector<uint64_t> lvl2dim;
 };
-
-//===----------------------------------------------------------------------===//
-// This forward decl is necessary for defining `SparseTensorStorage`,
-// but isn't sufficient for splitting it off.
-template <typename P, typename C, typename V>
-class SparseTensorEnumerator;
 
 /// A memory-resident sparse tensor using a storage scheme based on
 /// per-level sparse/dense annotations.  This data structure provides
@@ -429,7 +304,7 @@ public:
                       const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
                       const intptr_t *lvlBufs);
 
-  /// Allocates a new empty sparse tensor.  The preconditions/assertions
+  /// Allocates a new empty sparse tensor. The preconditions/assertions
   /// are as per the `SparseTensorStorageBase` ctor; which is to say,
   /// the `dimSizes` and `lvlSizes` must both be "sizes" not "shapes",
   /// since there's nowhere to reconstruct dynamic sizes from.
@@ -605,6 +480,7 @@ public:
   SparseTensorCOO<V> *toCOO(uint64_t trgRank, const uint64_t *trgSizes,
                             uint64_t srcRank, const uint64_t *src2trg) const {
     // We inline `newEnumerator` to avoid virtual dispatch and allocation.
+    // TODO: use MapRef here too for the translation
     SparseTensorEnumerator<P, C, V> enumerator(*this, trgRank, trgSizes,
                                                srcRank, src2trg);
     auto *coo = new SparseTensorCOO<V>(trgRank, trgSizes, values.size());
@@ -612,7 +488,7 @@ public:
         [&coo](const auto &trgCoords, V val) { coo->add(trgCoords, val); });
     // TODO: This assertion assumes there are no stored zeros,
     // or if there are then that we don't filter them out.
-    // Cf., <https://github.com/llvm/llvm-project/issues/54179>
+    // <https://github.com/llvm/llvm-project/issues/54179>
     assert(coo->getElements().size() == values.size());
     return coo;
   }
@@ -761,7 +637,7 @@ private:
     }
   }
 
-  /// Continues a single insertion path, outer to inner.  The first
+  /// Continues a single insertion path, outer to inner. The first
   /// argument is the level-coordinates for the value being inserted.
   void insPath(const uint64_t *lvlCoords, uint64_t diffLvl, uint64_t full,
                V val) {
@@ -783,8 +659,11 @@ private:
     for (uint64_t l = 0; l < lvlRank; ++l) {
       const auto crd = lvlCoords[l];
       const auto cur = lvlCursor[l];
-      if (crd > cur || (crd == cur && !isUniqueLvl(l)))
+      if (crd > cur || (crd == cur && !isUniqueLvl(l)) ||
+          (crd < cur && !isOrderedLvl(l))) {
         return l;
+      }
+
       if (crd < cur) {
         assert(false && "non-lexicographic insertion");
         return -1u;
@@ -900,8 +779,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 template <typename P, typename C, typename V>
-class SparseTensorEnumerator final
-    : public SparseTensorEnumeratorBase<V> {
+class SparseTensorEnumerator final : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
   using StorageImpl = SparseTensorStorage<P, C, V>;
 

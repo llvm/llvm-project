@@ -3916,12 +3916,14 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
           // is non-negative then LHS <s RHS.
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
-            return ConstantExpr::getICmp(ICmpInst::ICMP_SLT, C,
-                                         Constant::getNullValue(C->getType()));
+            return ConstantFoldCompareInstOperands(
+                ICmpInst::ICMP_SLT, C, Constant::getNullValue(C->getType()),
+                Q.DL);
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
-            return ConstantExpr::getICmp(ICmpInst::ICMP_SGE, C,
-                                         Constant::getNullValue(C->getType()));
+            return ConstantFoldCompareInstOperands(
+                ICmpInst::ICMP_SGE, C, Constant::getNullValue(C->getType()),
+                Q.DL);
           }
         }
       }
@@ -3949,8 +3951,7 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       // Turn icmp (sext X), Cst into a compare of X and Cst if Cst is extended
       // too.  If not, then try to deduce the result of the comparison.
       else if (match(RHS, m_ImmConstant())) {
-        Constant *C = dyn_cast<Constant>(RHS);
-        assert(C != nullptr);
+        Constant *C = cast<Constant>(RHS);
 
         // Compute the constant that would happen if we truncated to SrcTy then
         // reextended to DstTy.

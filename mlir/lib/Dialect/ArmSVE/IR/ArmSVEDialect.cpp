@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -38,17 +38,17 @@ static Type getI1SameShape(Type type) {
 // Tablegen Definitions
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/ArmSVE/ArmSVEDialect.cpp.inc"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVETypes.cpp.inc"
 
 void ArmSVEDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/ArmSVE/ArmSVE.cpp.inc"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc"
       >();
 }
