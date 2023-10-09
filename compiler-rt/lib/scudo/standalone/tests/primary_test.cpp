@@ -207,7 +207,7 @@ struct SmallRegionsConfig {
 // For the 32-bit one, it requires actually exhausting memory, so we skip it.
 TEST(ScudoPrimaryTest, Primary64OOM) {
   using Primary = scudo::SizeClassAllocator64<SmallRegionsConfig>;
-  using TransferBatch = Primary::TransferBatch;
+  using TransferBatch = Primary::CacheT::TransferBatch;
   Primary Allocator;
   Allocator.init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
@@ -233,9 +233,8 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   while (!Batches.empty()) {
     TransferBatch *B = Batches.back();
     Batches.pop_back();
-    const scudo::u16 Count = B->getCount();
-    B->moveToArray(Blocks);
-    Allocator.pushBlocks(&Cache, ClassId, Blocks, Count);
+    B->copyToArray(Blocks);
+    Allocator.pushBlocks(&Cache, ClassId, Blocks, B->getCount());
     Cache.deallocate(Primary::SizeClassMap::BatchClassId, B);
   }
   Cache.destroy(nullptr);
