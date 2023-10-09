@@ -102,6 +102,7 @@ static bool hasNoSimpleLoops(const LegalizeRule &Rule, const LegalityQuery &Q,
   case Lower:
   case MoreElements:
   case FewerElements:
+  case Libcall:
     break;
   default:
     return Q.Types[Mutation.first] != Mutation.second;
@@ -116,6 +117,10 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   // If the user wants a custom mutation, then we can't really say much about
   // it. Return true, and trust that they're doing the right thing.
   if (Rule.getAction() == Custom || Rule.getAction() == Legal)
+    return true;
+
+  // Skip null mutation.
+  if (!Mutation.second.isValid())
     return true;
 
   const unsigned TypeIdx = Mutation.first;
