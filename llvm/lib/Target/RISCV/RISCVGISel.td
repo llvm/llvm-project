@@ -137,12 +137,19 @@ def : Pat<(XLenVT (setle (Ty GPR:$rs1), (Ty GPR:$rs2))),
           (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
 }
 
-// Define pattern expansions for load/extload operations for ptr return type
-def : LdPat<load, LW, PtrVT>, Requires<[IsRV32]>;
-def : LdPat<load, LD, PtrVT>, Requires<[IsRV64]>;
+// Define pattern expansions for load/extload and store/truncstore operations
+// for ptr return type
+let Predicates = [IsRV32] in {
+def : LdPat<load, LW, PtrVT>;
+def : StPat<store, SW, GPR, PtrVT>;
+}
 
-// Define pattern expansions for rv64 load/extloads for i32 return type
 let Predicates = [IsRV64] in {
+def : LdPat<load, LD, PtrVT>;
+def : StPat<store, SD, GPR, PtrVT>;
+
+// Define pattern expansions for rv64 load/extloads and store/truncstore
+// operations for i32 return type
 def : LdPat<sextloadi8, LB, i32>;
 def : LdPat<extloadi8, LBU, i32>;
 def : LdPat<zextloadi8, LBU, i32>;

@@ -105,9 +105,9 @@ body:            |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: SD [[COPY]], [[COPY1]], 0 :: (store (p0))
     ; CHECK-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    G_STORE %0(s64), %1(p0) :: (store (p0))
+    G_STORE %0(p0), %1(p0) :: (store (p0))
     PseudoRET
 
 ...
