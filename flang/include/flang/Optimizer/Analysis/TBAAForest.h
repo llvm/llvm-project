@@ -55,6 +55,7 @@ struct TBAATree {
   SubtreeState globalDataTree;
   SubtreeState allocatedDataTree;
   SubtreeState dummyArgDataTree;
+  SubtreeState directDataTree;
   mlir::LLVM::TBAATypeDescriptorAttr anyAccessDesc;
   mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc;
   mlir::LLVM::TBAATypeDescriptorAttr anyDataTypeDesc;
