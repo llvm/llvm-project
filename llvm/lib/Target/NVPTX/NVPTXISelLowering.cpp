@@ -2318,7 +2318,7 @@ SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
   SDValue V2 = Op.getOperand(1);
   uint32_t Selector = 0;
-  for (auto I: llvm::enumerate(SVN->getMask()))
+  for (auto I : llvm::enumerate(SVN->getMask()))
     Selector |= (I.value() << (I.index() * 4));
 
   SDLoc DL(Op);
