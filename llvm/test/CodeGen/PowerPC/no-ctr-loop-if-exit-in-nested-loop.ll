@@ -6,18 +6,18 @@ define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi 6, 3, 4
 ; CHECK-NEXT:    addi 4, 4, -4
-; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    li 8, 0
+; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:  .LBB0_1: # %block3
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_2 Depth 2
-; CHECK-NEXT:    extsw 9, 7
-; CHECK-NEXT:    addi 7, 7, 1
-; CHECK-NEXT:    extsw 8, 8
-; CHECK-NEXT:    cmpw 7, 5
-; CHECK-NEXT:    sldi 10, 8, 2
-; CHECK-NEXT:    sldi 9, 9, 2
+; CHECK-NEXT:    extsw 9, 8
 ; CHECK-NEXT:    addi 8, 8, 1
+; CHECK-NEXT:    extsw 7, 7
+; CHECK-NEXT:    cmpw 8, 5
+; CHECK-NEXT:    sldi 10, 7, 2
+; CHECK-NEXT:    sldi 9, 9, 2
+; CHECK-NEXT:    addi 7, 7, 1
 ; CHECK-NEXT:    add 10, 4, 10
 ; CHECK-NEXT:    crnot 20, 0
 ; CHECK-NEXT:    bc 12, 20, .LBB0_5
@@ -32,7 +32,7 @@ define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA
 ; CHECK-NEXT:  # %bb.3: # %if.then4
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwzx 12, 6, 9
-; CHECK-NEXT:    addi 8, 8, 1
+; CHECK-NEXT:    addi 7, 7, 1
 ; CHECK-NEXT:    stw 12, 8(10)
 ; CHECK-NEXT:    mr 10, 11
 ; CHECK-NEXT:    bc 4, 20, .LBB0_2

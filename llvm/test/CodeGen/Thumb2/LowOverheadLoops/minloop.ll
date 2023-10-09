@@ -7,11 +7,11 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    ldr.w r12, [r0]
-; CHECK-NEXT:    subs.w r10, r1, #1
+; CHECK-NEXT:    subs.w r9, r1, #1
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    subs r7, r1, #2
-; CHECK-NEXT:    and r8, r10, #3
+; CHECK-NEXT:    and r8, r9, #3
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB0_4
 ; CHECK-NEXT:  @ %bb.2:
@@ -21,7 +21,7 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    b .LBB0_10
 ; CHECK-NEXT:  .LBB0_4: @ %while.body.preheader.new
-; CHECK-NEXT:    bic r7, r10, #3
+; CHECK-NEXT:    bic r7, r9, #3
 ; CHECK-NEXT:    movs r6, #1
 ; CHECK-NEXT:    subs r7, #4
 ; CHECK-NEXT:    add.w lr, r6, r7, lsr #2
@@ -29,32 +29,33 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    movs r7, #4
 ; CHECK-NEXT:  .LBB0_5: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r9, [r0, #16]!
-; CHECK-NEXT:    sub.w r10, r10, #4
-; CHECK-NEXT:    ldmdb r0, {r4, r5, r11}
-; CHECK-NEXT:    cmp r12, r4
+; CHECK-NEXT:    ldr r10, [r0, #16]!
+; CHECK-NEXT:    sub.w r9, r9, #4
+; CHECK-NEXT:    ldrd r5, r4, [r0, #-12]
+; CHECK-NEXT:    ldr r11, [r0, #-4]
+; CHECK-NEXT:    cmp r12, r5
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    subgt r6, r7, #3
-; CHECK-NEXT:    csel r4, r4, r12, gt
-; CHECK-NEXT:    cmp r4, r5
+; CHECK-NEXT:    csel r5, r5, r12, gt
+; CHECK-NEXT:    cmp r5, r4
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    subgt r6, r7, #2
-; CHECK-NEXT:    csel r5, r5, r4, gt
+; CHECK-NEXT:    csel r5, r4, r5, gt
 ; CHECK-NEXT:    cmp r5, r11
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    subgt r6, r7, #1
 ; CHECK-NEXT:    csel r5, r11, r5, gt
-; CHECK-NEXT:    cmp r5, r9
+; CHECK-NEXT:    cmp r5, r10
 ; CHECK-NEXT:    csel r6, r7, r6, gt
 ; CHECK-NEXT:    add.w r7, r7, #4
-; CHECK-NEXT:    csel r12, r9, r5, gt
+; CHECK-NEXT:    csel r12, r10, r5, gt
 ; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  .LBB0_6: @ %while.end.loopexit.unr-lcssa
 ; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    beq .LBB0_10
 ; CHECK-NEXT:  @ %bb.7: @ %while.body.epil
 ; CHECK-NEXT:    ldr r7, [r0, #4]
-; CHECK-NEXT:    sub.w r1, r1, r10
+; CHECK-NEXT:    sub.w r1, r1, r9
 ; CHECK-NEXT:    cmp r12, r7
 ; CHECK-NEXT:    csel r6, r1, r6, gt
 ; CHECK-NEXT:    csel r12, r7, r12, gt

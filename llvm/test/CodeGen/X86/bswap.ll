@@ -300,52 +300,51 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %ebp
 ; CHECK-NEXT:    shrdl $16, %ebp, %ecx
 ; CHECK-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    bswapl %edi
-; CHECK-NEXT:    shrdl $16, %edi, %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    bswapl %ebx
+; CHECK-NEXT:    shrdl $16, %ebx, %ebp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    bswapl %esi
-; CHECK-NEXT:    shrdl $16, %esi, %edi
+; CHECK-NEXT:    shrdl $16, %esi, %ebx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    bswapl %edx
 ; CHECK-NEXT:    shrdl $16, %edx, %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrdl $16, %eax, %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; CHECK-NEXT:    bswapl %ebx
-; CHECK-NEXT:    shrdl $16, %ebx, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %eax, 60(%ecx)
-; CHECK-NEXT:    movl %edx, 56(%ecx)
-; CHECK-NEXT:    movl %esi, 52(%ecx)
-; CHECK-NEXT:    movl %edi, 48(%ecx)
-; CHECK-NEXT:    movl %ebp, 44(%ecx)
-; CHECK-NEXT:    movl (%esp), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 40(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 36(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 32(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 28(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 24(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 20(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 16(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 12(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 8(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, 4(%ecx)
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movl %eax, (%ecx)
-; CHECK-NEXT:    shrl $16, %ebx
-; CHECK-NEXT:    movw %bx, 64(%ecx)
-; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    bswapl %edi
+; CHECK-NEXT:    shrdl $16, %edi, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %ecx, 60(%eax)
+; CHECK-NEXT:    movl %edx, 56(%eax)
+; CHECK-NEXT:    movl %esi, 52(%eax)
+; CHECK-NEXT:    movl %ebx, 48(%eax)
+; CHECK-NEXT:    movl %ebp, 44(%eax)
+; CHECK-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 40(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 36(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 32(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 28(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 24(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 20(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 16(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 8(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 4(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 64(%eax)
 ; CHECK-NEXT:    addl $44, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
@@ -357,19 +356,19 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    pushq %rbx
 ; CHECK64-NEXT:    movq %rdi, %rax
-; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; CHECK64-NEXT:    bswapq %rbx
-; CHECK64-NEXT:    bswapq %r11
-; CHECK64-NEXT:    shrdq $48, %r11, %rbx
-; CHECK64-NEXT:    bswapq %r10
-; CHECK64-NEXT:    shrdq $48, %r10, %r11
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK64-NEXT:    bswapq %rdi
-; CHECK64-NEXT:    shrdq $48, %rdi, %r10
+; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    shrdq $48, %r10, %rdi
+; CHECK64-NEXT:    bswapq %r11
+; CHECK64-NEXT:    shrdq $48, %r11, %r10
+; CHECK64-NEXT:    bswapq %rbx
+; CHECK64-NEXT:    shrdq $48, %rbx, %r11
 ; CHECK64-NEXT:    bswapq %r9
-; CHECK64-NEXT:    shrdq $48, %r9, %rdi
+; CHECK64-NEXT:    shrdq $48, %r9, %rbx
 ; CHECK64-NEXT:    bswapq %r8
 ; CHECK64-NEXT:    shrdq $48, %r8, %r9
 ; CHECK64-NEXT:    bswapq %rcx
@@ -383,10 +382,10 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    movq %rcx, 48(%rax)
 ; CHECK64-NEXT:    movq %r8, 40(%rax)
 ; CHECK64-NEXT:    movq %r9, 32(%rax)
-; CHECK64-NEXT:    movq %rdi, 24(%rax)
-; CHECK64-NEXT:    movq %r10, 16(%rax)
-; CHECK64-NEXT:    movq %r11, 8(%rax)
-; CHECK64-NEXT:    movq %rbx, (%rax)
+; CHECK64-NEXT:    movq %rbx, 24(%rax)
+; CHECK64-NEXT:    movq %r11, 16(%rax)
+; CHECK64-NEXT:    movq %r10, 8(%rax)
+; CHECK64-NEXT:    movq %rdi, (%rax)
 ; CHECK64-NEXT:    movw %si, 64(%rax)
 ; CHECK64-NEXT:    popq %rbx
 ; CHECK64-NEXT:    retq

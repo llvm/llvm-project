@@ -136,16 +136,16 @@ define dso_local i32 @test_atomic_load_sub_i32(i32 %offset) nounwind {
 define dso_local i64 @test_atomic_load_sub_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    adrp x9, var64
 ; CHECK-NEXT:    add x9, x9, :lo12:var64
 ; CHECK-NEXT:  .LBB7_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr x8, [x9]
-; CHECK-NEXT:    sub x10, x8, x0
+; CHECK-NEXT:    ldaxr x0, [x9]
+; CHECK-NEXT:    sub x10, x0, x8
 ; CHECK-NEXT:    stlxr w11, x10, [x9]
 ; CHECK-NEXT:    cbnz w11, .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    dmb ish
 ; CHECK-NEXT:    ret
    %old = atomicrmw sub ptr @var64, i64 %offset seq_cst
@@ -411,15 +411,16 @@ define dso_local i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 define dso_local i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    adrp x9, var32
 ; CHECK-NEXT:    add x9, x9, :lo12:var32
 ; CHECK-NEXT:  .LBB22_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldxr w8, [x9]
-; CHECK-NEXT:    stlxr w10, w0, [x9]
+; CHECK-NEXT:    ldxr w0, [x9]
+; CHECK-NEXT:    stlxr w10, w8, [x9]
 ; CHECK-NEXT:    cbnz w10, .LBB22_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
    %old = atomicrmw xchg ptr @var32, i32 %offset release
    ret i32 %old
@@ -505,17 +506,17 @@ define dso_local i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
 define dso_local i64 @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    adrp x9, var64
 ; CHECK-NEXT:    add x9, x9, :lo12:var64
 ; CHECK-NEXT:  .LBB27_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr x8, [x9]
-; CHECK-NEXT:    cmp x8, x0
-; CHECK-NEXT:    csel x10, x8, x0, le
+; CHECK-NEXT:    ldaxr x0, [x9]
+; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    csel x10, x0, x8, le
 ; CHECK-NEXT:    stlxr w11, x10, [x9]
 ; CHECK-NEXT:    cbnz w11, .LBB27_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    dmb ish
 ; CHECK-NEXT:    ret
    %old = atomicrmw min ptr @var64, i64 %offset seq_cst

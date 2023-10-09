@@ -3380,20 +3380,20 @@ define <4 x i64> @test_pr28312(<4 x ptr> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64
 ; KNL_32-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; KNL_32-NEXT:  .LBB42_2: # %else
 ; KNL_32-NEXT:    testb $2, %bl
-; KNL_32-NEXT:    vpextrd $1, %xmm0, %edx
+; KNL_32-NEXT:    vpextrd $1, %xmm0, %ecx
 ; KNL_32-NEXT:    je .LBB42_4
 ; KNL_32-NEXT:  # %bb.3: # %cond.load1
-; KNL_32-NEXT:    vpinsrd $2, (%edx), %xmm1, %xmm2
-; KNL_32-NEXT:    vpinsrd $3, 4(%edx), %xmm2, %xmm2
+; KNL_32-NEXT:    vpinsrd $2, (%ecx), %xmm1, %xmm2
+; KNL_32-NEXT:    vpinsrd $3, 4(%ecx), %xmm2, %xmm2
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
 ; KNL_32-NEXT:  .LBB42_4: # %else2
 ; KNL_32-NEXT:    testb $4, %bl
-; KNL_32-NEXT:    vpextrd $2, %xmm0, %ecx
+; KNL_32-NEXT:    vpextrd $2, %xmm0, %edx
 ; KNL_32-NEXT:    je .LBB42_6
 ; KNL_32-NEXT:  # %bb.5: # %cond.load4
-; KNL_32-NEXT:    vpbroadcastd (%ecx), %ymm2
+; KNL_32-NEXT:    vpbroadcastd (%edx), %ymm2
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4],ymm1[5,6,7]
-; KNL_32-NEXT:    vpbroadcastd 4(%ecx), %ymm2
+; KNL_32-NEXT:    vpbroadcastd 4(%edx), %ymm2
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4],ymm2[5],ymm1[6,7]
 ; KNL_32-NEXT:  .LBB42_6: # %else5
 ; KNL_32-NEXT:    testb $8, %bl
@@ -3457,15 +3457,15 @@ define <4 x i64> @test_pr28312(<4 x ptr> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64
 ; KNL_32-NEXT:    testb $2, %bl
 ; KNL_32-NEXT:    je .LBB42_12
 ; KNL_32-NEXT:  .LBB42_11: # %cond.load17
-; KNL_32-NEXT:    vpinsrd $2, (%edx), %xmm0, %xmm2
-; KNL_32-NEXT:    vpinsrd $3, 4(%edx), %xmm2, %xmm2
+; KNL_32-NEXT:    vpinsrd $2, (%ecx), %xmm0, %xmm2
+; KNL_32-NEXT:    vpinsrd $3, 4(%ecx), %xmm2, %xmm2
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; KNL_32-NEXT:    testb $4, %bl
 ; KNL_32-NEXT:    je .LBB42_14
 ; KNL_32-NEXT:  .LBB42_13: # %cond.load23
-; KNL_32-NEXT:    vpbroadcastd (%ecx), %ymm2
+; KNL_32-NEXT:    vpbroadcastd (%edx), %ymm2
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4],ymm0[5,6,7]
-; KNL_32-NEXT:    vpbroadcastd 4(%ecx), %ymm2
+; KNL_32-NEXT:    vpbroadcastd 4(%edx), %ymm2
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm2[5],ymm0[6,7]
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    jne .LBB42_15
@@ -3475,15 +3475,15 @@ define <4 x i64> @test_pr28312(<4 x ptr> %p1, <4 x i1> %k, <4 x i1> %k2,<4 x i64
 ; KNL_32-NEXT:    testb $2, %bl
 ; KNL_32-NEXT:    je .LBB42_20
 ; KNL_32-NEXT:  .LBB42_19: # %cond.load42
-; KNL_32-NEXT:    vpinsrd $2, (%edx), %xmm2, %xmm3
-; KNL_32-NEXT:    vpinsrd $3, 4(%edx), %xmm3, %xmm3
+; KNL_32-NEXT:    vpinsrd $2, (%ecx), %xmm2, %xmm3
+; KNL_32-NEXT:    vpinsrd $3, 4(%ecx), %xmm3, %xmm3
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5,6,7]
 ; KNL_32-NEXT:    testb $4, %bl
 ; KNL_32-NEXT:    je .LBB42_22
 ; KNL_32-NEXT:  .LBB42_21: # %cond.load48
-; KNL_32-NEXT:    vpbroadcastd (%ecx), %ymm3
+; KNL_32-NEXT:    vpbroadcastd (%edx), %ymm3
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm3[4],ymm2[5,6,7]
-; KNL_32-NEXT:    vpbroadcastd 4(%ecx), %ymm3
+; KNL_32-NEXT:    vpbroadcastd 4(%edx), %ymm3
 ; KNL_32-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3,4],ymm3[5],ymm2[6,7]
 ; KNL_32-NEXT:    testb $8, %bl
 ; KNL_32-NEXT:    jne .LBB42_23
@@ -4191,16 +4191,16 @@ define <16 x double> @test_gather_setcc_split(ptr %base, <16 x i32> %ind, <16 x 
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
-; KNL_32-NEXT:    vmovapd 72(%ebp), %zmm3
+; KNL_32-NEXT:    vmovdqa64 %zmm1, %zmm3
+; KNL_32-NEXT:    vmovapd 72(%ebp), %zmm1
 ; KNL_32-NEXT:    movl 8(%ebp), %eax
-; KNL_32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; KNL_32-NEXT:    vextracti64x4 $1, %zmm3, %ymm4
 ; KNL_32-NEXT:    vptestnmd %zmm4, %zmm4, %k1
-; KNL_32-NEXT:    vptestnmd %zmm1, %zmm1, %k2
+; KNL_32-NEXT:    vptestnmd %zmm3, %zmm3, %k2
 ; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm2 {%k2}
 ; KNL_32-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm3 {%k1}
+; KNL_32-NEXT:    vgatherdpd (%eax,%ymm0,8), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovapd %zmm2, %zmm0
-; KNL_32-NEXT:    vmovapd %zmm3, %zmm1
 ; KNL_32-NEXT:    movl %ebp, %esp
 ; KNL_32-NEXT:    popl %ebp
 ; KNL_32-NEXT:    .cfi_def_cfa %esp, 4

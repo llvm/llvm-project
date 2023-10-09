@@ -1021,23 +1021,23 @@ define void @infiniteloop3() {
 ; ENABLE-NEXT:    jne LBB12_7
 ; ENABLE-NEXT:  LBB12_2: ## %loop2a.preheader
 ; ENABLE-NEXT:    xorl %eax, %eax
-; ENABLE-NEXT:    xorl %edx, %edx
+; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    movq %rax, %rsi
 ; ENABLE-NEXT:    jmp LBB12_4
 ; ENABLE-NEXT:    .p2align 4, 0x90
 ; ENABLE-NEXT:  LBB12_3: ## %loop2b
 ; ENABLE-NEXT:    ## in Loop: Header=BB12_4 Depth=1
-; ENABLE-NEXT:    movq %rcx, (%rsi)
-; ENABLE-NEXT:    movq %rcx, %rsi
+; ENABLE-NEXT:    movq %rdx, (%rsi)
+; ENABLE-NEXT:    movq %rdx, %rsi
 ; ENABLE-NEXT:  LBB12_4: ## %loop1
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    movq %rdx, %rcx
+; ENABLE-NEXT:    movq %rcx, %rdx
 ; ENABLE-NEXT:    testq %rax, %rax
-; ENABLE-NEXT:    movq (%rax), %rdx
+; ENABLE-NEXT:    movq (%rax), %rcx
 ; ENABLE-NEXT:    jne LBB12_3
 ; ENABLE-NEXT:  ## %bb.5: ## in Loop: Header=BB12_4 Depth=1
-; ENABLE-NEXT:    movq %rcx, %rax
-; ENABLE-NEXT:    movq %rcx, %rsi
+; ENABLE-NEXT:    movq %rdx, %rax
+; ENABLE-NEXT:    movq %rdx, %rsi
 ; ENABLE-NEXT:    jmp LBB12_4
 ; ENABLE-NEXT:  LBB12_7: ## %end
 ; ENABLE-NEXT:    retq
@@ -1053,23 +1053,23 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:    jne LBB12_7
 ; DISABLE-NEXT:  LBB12_2: ## %loop2a.preheader
 ; DISABLE-NEXT:    xorl %eax, %eax
-; DISABLE-NEXT:    xorl %edx, %edx
+; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    movq %rax, %rsi
 ; DISABLE-NEXT:    jmp LBB12_4
 ; DISABLE-NEXT:    .p2align 4, 0x90
 ; DISABLE-NEXT:  LBB12_3: ## %loop2b
 ; DISABLE-NEXT:    ## in Loop: Header=BB12_4 Depth=1
-; DISABLE-NEXT:    movq %rcx, (%rsi)
-; DISABLE-NEXT:    movq %rcx, %rsi
+; DISABLE-NEXT:    movq %rdx, (%rsi)
+; DISABLE-NEXT:    movq %rdx, %rsi
 ; DISABLE-NEXT:  LBB12_4: ## %loop1
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    movq %rdx, %rcx
+; DISABLE-NEXT:    movq %rcx, %rdx
 ; DISABLE-NEXT:    testq %rax, %rax
-; DISABLE-NEXT:    movq (%rax), %rdx
+; DISABLE-NEXT:    movq (%rax), %rcx
 ; DISABLE-NEXT:    jne LBB12_3
 ; DISABLE-NEXT:  ## %bb.5: ## in Loop: Header=BB12_4 Depth=1
-; DISABLE-NEXT:    movq %rcx, %rax
-; DISABLE-NEXT:    movq %rcx, %rsi
+; DISABLE-NEXT:    movq %rdx, %rax
+; DISABLE-NEXT:    movq %rdx, %rsi
 ; DISABLE-NEXT:    jmp LBB12_4
 ; DISABLE-NEXT:  LBB12_7: ## %end
 ; DISABLE-NEXT:    retq

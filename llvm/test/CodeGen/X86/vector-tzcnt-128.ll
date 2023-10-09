@@ -637,22 +637,22 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; X86-SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-SSE-NEXT:    paddd %xmm0, %xmm1
 ; X86-SSE-NEXT:    pandn %xmm1, %xmm0
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE-NEXT:    pand %xmm1, %xmm2
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
-; X86-SSE-NEXT:    pshufb %xmm2, %xmm4
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm3
+; X86-SSE-NEXT:    pand %xmm2, %xmm3
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm4
+; X86-SSE-NEXT:    pshufb %xmm3, %xmm4
 ; X86-SSE-NEXT:    psrlw $4, %xmm0
-; X86-SSE-NEXT:    pand %xmm1, %xmm0
-; X86-SSE-NEXT:    pshufb %xmm0, %xmm3
-; X86-SSE-NEXT:    paddb %xmm4, %xmm3
-; X86-SSE-NEXT:    pxor %xmm1, %xmm1
-; X86-SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm3[0],zero,xmm3[1],zero
-; X86-SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm1[2],xmm3[3],xmm1[3]
-; X86-SSE-NEXT:    psadbw %xmm1, %xmm3
-; X86-SSE-NEXT:    psadbw %xmm1, %xmm0
-; X86-SSE-NEXT:    packuswb %xmm3, %xmm0
+; X86-SSE-NEXT:    pand %xmm2, %xmm0
+; X86-SSE-NEXT:    pshufb %xmm0, %xmm1
+; X86-SSE-NEXT:    paddb %xmm4, %xmm1
+; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
+; X86-SSE-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-SSE-NEXT:    psadbw %xmm2, %xmm1
+; X86-SSE-NEXT:    psadbw %xmm2, %xmm0
+; X86-SSE-NEXT:    packuswb %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %out = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %in, i1 0)
   ret <4 x i32> %out
@@ -878,22 +878,22 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; X86-SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-SSE-NEXT:    paddd %xmm0, %xmm1
 ; X86-SSE-NEXT:    pandn %xmm1, %xmm0
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE-NEXT:    pand %xmm1, %xmm2
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
-; X86-SSE-NEXT:    pshufb %xmm2, %xmm4
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm3
+; X86-SSE-NEXT:    pand %xmm2, %xmm3
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm4
+; X86-SSE-NEXT:    pshufb %xmm3, %xmm4
 ; X86-SSE-NEXT:    psrlw $4, %xmm0
-; X86-SSE-NEXT:    pand %xmm1, %xmm0
-; X86-SSE-NEXT:    pshufb %xmm0, %xmm3
-; X86-SSE-NEXT:    paddb %xmm4, %xmm3
-; X86-SSE-NEXT:    pxor %xmm1, %xmm1
-; X86-SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm3[0],zero,xmm3[1],zero
-; X86-SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm1[2],xmm3[3],xmm1[3]
-; X86-SSE-NEXT:    psadbw %xmm1, %xmm3
-; X86-SSE-NEXT:    psadbw %xmm1, %xmm0
-; X86-SSE-NEXT:    packuswb %xmm3, %xmm0
+; X86-SSE-NEXT:    pand %xmm2, %xmm0
+; X86-SSE-NEXT:    pshufb %xmm0, %xmm1
+; X86-SSE-NEXT:    paddb %xmm4, %xmm1
+; X86-SSE-NEXT:    pxor %xmm2, %xmm2
+; X86-SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
+; X86-SSE-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; X86-SSE-NEXT:    psadbw %xmm2, %xmm1
+; X86-SSE-NEXT:    psadbw %xmm2, %xmm0
+; X86-SSE-NEXT:    packuswb %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %out = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %in, i1 -1)
   ret <4 x i32> %out

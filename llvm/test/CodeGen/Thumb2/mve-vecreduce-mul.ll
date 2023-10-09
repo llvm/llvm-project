@@ -166,11 +166,11 @@ define arm_aapcs_vfpcc i64 @mul_v2i64(<2 x i64> %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r1, lr, d1
-; CHECK-NEXT:    vmov r3, r12, d0
+; CHECK-NEXT:    vmov r1, r12, d1
+; CHECK-NEXT:    vmov r3, lr, d0
 ; CHECK-NEXT:    umull r0, r2, r3, r1
-; CHECK-NEXT:    mla r2, r3, lr, r2
-; CHECK-NEXT:    mla r1, r12, r1, r2
+; CHECK-NEXT:    mla r2, r3, r12, r2
+; CHECK-NEXT:    mla r1, lr, r1, r2
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %z = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> %x)
@@ -182,14 +182,14 @@ define arm_aapcs_vfpcc i64 @mul_v4i64(<4 x i64> %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK-NEXT:    vmov r1, lr, d1
-; CHECK-NEXT:    vmov r3, r12, d0
+; CHECK-NEXT:    vmov r1, r12, d1
+; CHECK-NEXT:    vmov r3, lr, d0
 ; CHECK-NEXT:    vmov r5, r9, d2
 ; CHECK-NEXT:    vmov r6, r11, d3
 ; CHECK-NEXT:    umull r2, r8, r3, r1
-; CHECK-NEXT:    mla r3, r3, lr, r8
+; CHECK-NEXT:    mla r3, r3, r12, r8
 ; CHECK-NEXT:    umull r7, r10, r2, r5
-; CHECK-NEXT:    mla r1, r12, r1, r3
+; CHECK-NEXT:    mla r1, lr, r1, r3
 ; CHECK-NEXT:    mla r2, r2, r9, r10
 ; CHECK-NEXT:    umull r0, r4, r7, r6
 ; CHECK-NEXT:    mla r1, r1, r5, r2
@@ -412,31 +412,33 @@ define arm_aapcs_vfpcc i64 @mul_v4i64_acc(<4 x i64> %x, i64 %y) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    .pad #12
+; CHECK-NEXT:    sub sp, #12
+; CHECK-NEXT:    mov lr, r0
 ; CHECK-NEXT:    vmov r2, r0, d1
-; CHECK-NEXT:    vmov r3, lr, d0
 ; CHECK-NEXT:    vmov r6, r9, d2
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    vmov r7, r11, d3
+; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vmov r3, r0, d0
+; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    umull r4, r8, r3, r2
+; CHECK-NEXT:    mla r3, r3, r1, r8
+; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    umull r5, r10, r4, r6
+; CHECK-NEXT:    mla r2, r1, r2, r3
 ; CHECK-NEXT:    mla r4, r4, r9, r10
 ; CHECK-NEXT:    umull r0, r12, r5, r7
-; CHECK-NEXT:    mla r12, r5, r11, r12
-; CHECK-NEXT:    ldr r5, [sp] @ 4-byte Reload
-; CHECK-NEXT:    mla r3, r3, r5, r8
-; CHECK-NEXT:    mla r2, lr, r2, r3
 ; CHECK-NEXT:    mla r2, r2, r6, r4
-; CHECK-NEXT:    mla r3, r2, r7, r12
-; CHECK-NEXT:    umull r2, r7, r1, r0
-; CHECK-NEXT:    mla r1, r1, r3, r7
-; CHECK-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    mla r5, r5, r11, r12
+; CHECK-NEXT:    mla r3, r2, r7, r5
+; CHECK-NEXT:    umull r2, r7, lr, r0
+; CHECK-NEXT:    mla r1, lr, r3, r7
+; CHECK-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mla r1, r3, r0, r1
 ; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    add sp, #12
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
   %z = call i64 @llvm.vector.reduce.mul.v4i64(<4 x i64> %x)

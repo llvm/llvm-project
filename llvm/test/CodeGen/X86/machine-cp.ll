@@ -99,21 +99,20 @@ while.end:                                        ; preds = %while.body, %entry
 define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    xorps %xmm6, %xmm6
-; CHECK-NEXT:    cvttps2dq %xmm3, %xmm4
-; CHECK-NEXT:    movaps %xmm3, %xmm7
-; CHECK-NEXT:    cmpltps %xmm6, %xmm7
-; CHECK-NEXT:    movaps {{.*#+}} xmm5 = [13,14,15,16]
-; CHECK-NEXT:    movaps %xmm7, %xmm8
-; CHECK-NEXT:    orps %xmm5, %xmm8
-; CHECK-NEXT:    cvtdq2ps %xmm4, %xmm3
-; CHECK-NEXT:    andps %xmm5, %xmm3
-; CHECK-NEXT:    andps %xmm8, %xmm3
-; CHECK-NEXT:    movaps %xmm8, %xmm5
-; CHECK-NEXT:    andnps %xmm7, %xmm5
+; CHECK-NEXT:    xorps %xmm5, %xmm5
+; CHECK-NEXT:    cvttps2dq %xmm3, %xmm8
+; CHECK-NEXT:    movaps %xmm3, %xmm4
+; CHECK-NEXT:    cmpltps %xmm5, %xmm4
+; CHECK-NEXT:    movaps {{.*#+}} xmm7 = [13,14,15,16]
+; CHECK-NEXT:    movaps %xmm4, %xmm6
+; CHECK-NEXT:    orps %xmm7, %xmm6
+; CHECK-NEXT:    cvtdq2ps %xmm8, %xmm3
+; CHECK-NEXT:    andps %xmm7, %xmm3
+; CHECK-NEXT:    andps %xmm6, %xmm3
+; CHECK-NEXT:    andnps %xmm4, %xmm6
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm4
 ; CHECK-NEXT:    movaps %xmm2, %xmm7
-; CHECK-NEXT:    cmpltps %xmm6, %xmm7
+; CHECK-NEXT:    cmpltps %xmm5, %xmm7
 ; CHECK-NEXT:    movaps {{.*#+}} xmm8 = [9,10,11,12]
 ; CHECK-NEXT:    movaps %xmm7, %xmm9
 ; CHECK-NEXT:    orps %xmm8, %xmm9
@@ -122,7 +121,7 @@ define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-NEXT:    andps %xmm9, %xmm2
 ; CHECK-NEXT:    andnps %xmm7, %xmm9
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm4
-; CHECK-NEXT:    cmpltps %xmm6, %xmm1
+; CHECK-NEXT:    cmpltps %xmm5, %xmm1
 ; CHECK-NEXT:    movaps {{.*#+}} xmm7 = [5,6,7,8]
 ; CHECK-NEXT:    movaps %xmm1, %xmm8
 ; CHECK-NEXT:    orps %xmm7, %xmm8
@@ -131,12 +130,12 @@ define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-NEXT:    andps %xmm8, %xmm4
 ; CHECK-NEXT:    andnps %xmm1, %xmm8
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm1
-; CHECK-NEXT:    cmpltps %xmm6, %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm6 = [1,2,3,4]
+; CHECK-NEXT:    cmpltps %xmm5, %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm5 = [1,2,3,4]
 ; CHECK-NEXT:    movaps %xmm0, %xmm7
-; CHECK-NEXT:    orps %xmm6, %xmm7
+; CHECK-NEXT:    orps %xmm5, %xmm7
 ; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
-; CHECK-NEXT:    andps %xmm6, %xmm1
+; CHECK-NEXT:    andps %xmm5, %xmm1
 ; CHECK-NEXT:    andps %xmm7, %xmm1
 ; CHECK-NEXT:    andnps %xmm0, %xmm7
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
@@ -146,8 +145,8 @@ define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-NEXT:    orps %xmm8, %xmm4
 ; CHECK-NEXT:    andps %xmm0, %xmm9
 ; CHECK-NEXT:    orps %xmm9, %xmm2
-; CHECK-NEXT:    andps %xmm0, %xmm5
-; CHECK-NEXT:    orps %xmm5, %xmm3
+; CHECK-NEXT:    andps %xmm0, %xmm6
+; CHECK-NEXT:    orps %xmm6, %xmm3
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    movaps %xmm4, %xmm1
 ; CHECK-NEXT:    retq

@@ -66,12 +66,12 @@ return:                                           ; preds = %entry
 define void @and(ptr %A, i32 %IA, i32 %N, ptr %p) nounwind {
 ; CHECK-LABEL: and:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    xorl $1, %ecx
-; CHECK-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    andl $3, %ecx
-; CHECK-NEXT:    movb %cl, (%eax)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    xorl $1, %eax
+; CHECK-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    andl $3, %eax
+; CHECK-NEXT:    movb %al, (%ecx)
 ; CHECK-NEXT:    je .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    movl $0, 0

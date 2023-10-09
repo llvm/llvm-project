@@ -9,8 +9,8 @@ define amdgpu_ps float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    s_branch .LBB0_2
 ; GCN-NEXT:  .LBB0_1: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GCN-NEXT:    s_and_b32 s2, exec_lo, s4
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GCN-NEXT:    s_and_b32 s2, exec_lo, s3
 ; GCN-NEXT:    s_or_b32 s0, s2, s0
 ; GCN-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_execz .LBB0_8
@@ -35,13 +35,13 @@ define amdgpu_ps float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:  ; %bb.6: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GCN-NEXT:    s_mov_b32 s4, -1
-; GCN-NEXT:    s_and_saveexec_b32 s3, s2
+; GCN-NEXT:    s_mov_b32 s3, -1
+; GCN-NEXT:    s_and_saveexec_b32 s4, s2
 ; GCN-NEXT:    s_cbranch_execz .LBB0_1
 ; GCN-NEXT:  ; %bb.7: ; %latch
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, s1, v0
-; GCN-NEXT:    s_orn2_b32 s4, vcc_lo, exec_lo
+; GCN-NEXT:    s_orn2_b32 s3, vcc_lo, exec_lo
 ; GCN-NEXT:    s_branch .LBB0_1
 ; GCN-NEXT:  .LBB0_8: ; %end
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -84,8 +84,8 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    s_branch .LBB1_2
 ; GCN-NEXT:  .LBB1_1: ; %Flow2
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GCN-NEXT:    s_and_b32 s2, exec_lo, s4
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GCN-NEXT:    s_and_b32 s2, exec_lo, s3
 ; GCN-NEXT:    s_or_b32 s0, s2, s0
 ; GCN-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_execz .LBB1_8
@@ -112,13 +112,13 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:  ; %bb.6: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; GCN-NEXT:    s_mov_b32 s4, -1
-; GCN-NEXT:    s_and_saveexec_b32 s3, s2
+; GCN-NEXT:    s_mov_b32 s3, -1
+; GCN-NEXT:    s_and_saveexec_b32 s4, s2
 ; GCN-NEXT:    s_cbranch_execz .LBB1_1
 ; GCN-NEXT:  ; %bb.7: ; %latch
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, s1, v0
-; GCN-NEXT:    s_orn2_b32 s4, vcc_lo, exec_lo
+; GCN-NEXT:    s_orn2_b32 s3, vcc_lo, exec_lo
 ; GCN-NEXT:    s_branch .LBB1_1
 ; GCN-NEXT:  .LBB1_8: ; %end
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0

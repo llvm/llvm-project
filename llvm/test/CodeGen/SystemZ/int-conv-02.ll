@@ -118,7 +118,7 @@ define i32 @f10(i64 %src, i64 %index) {
 ; to use LLC if possible.
 define void @f11(ptr %ptr) {
 ; CHECK-LABEL: f11:
-; CHECK: llc {{%r[0-9]+}}, 175(%r15)
+; CHECK: llc {{%r[0-9]+}}, 179(%r15)
 ; CHECK: br %r14
   %val0 = load volatile i32, ptr %ptr
   %val1 = load volatile i32, ptr %ptr

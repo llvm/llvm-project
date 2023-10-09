@@ -243,8 +243,8 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    vfmin.vv v24, v8, v24
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vfmin.vv v24, v8, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v24
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
@@ -271,8 +271,8 @@ define <vscale x 32 x half> @vfmin_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v24, (a0) # Unknown-size Folded Reload
-; ZVFHMIN-NEXT:    vfmin.vv v16, v16, v24
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vfmin.vv v16, v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
 ; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
