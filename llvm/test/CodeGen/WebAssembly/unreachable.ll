@@ -80,11 +80,10 @@ define i32 @missing_ret_unreachable() {
   unreachable
 }
 
-; This is similar to the above test, but ensures wasm unreachable is emitted
-; This is similar to the above test, but the callee has a 'noreturn' attribute.    
-; There is an optimization that removes an 'unreachable' after a noreturn call,  
-; but Wasm backend doesn't use it and ignore `--no-trap-after-noreturn`, if      
-; given, to generate valid code. 
+; This is similar to the above test, but the callee has a 'noreturn' attribute.
+; There is an optimization that removes an 'unreachable' after a noreturn call,
+; but Wasm backend doesn't use it and ignore `--no-trap-after-noreturn`, if
+; given, to generate valid code.
 define i32 @missing_ret_noreturn_unreachable() {
 ; CHECK-LABEL: missing_ret_noreturn_unreachable:
 ; CHECK:         .functype missing_ret_noreturn_unreachable () -> (i32)
@@ -93,5 +92,21 @@ define i32 @missing_ret_noreturn_unreachable() {
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    end_function
   call void @ext_never_return()
+  unreachable
+}
+
+; This is a test for the wasm peephole optimization that erases unnecessary
+; code before and after a wasm unreachable instruction.
+; It creates an unused stack variable by calling ext_func_i32() that would
+; otherwise require a drop instruction before the wasm unreachable instruction.
+define i64 @drop_unreachable() {
+; CHECK-LABEL: drop_unreachable:
+; CHECK:         .functype drop_unreachable () -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    call ext_func_i32
+; CHECK-NEXT:    drop
+; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    end_function
+  call i32 @ext_func_i32()
   unreachable
 }
