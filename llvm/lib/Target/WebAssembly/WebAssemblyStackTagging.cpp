@@ -18,21 +18,20 @@ struct WebAssemblyStackTaggingPass : public FunctionPass {
   static char ID;
   WebAssemblyStackTaggingPass() : FunctionPass(ID) {}
 
-  bool runOnFunction(Function &F) override {
-#if 0
-    errs() << "Hello: ";
-    errs().write_escaped(F.getName()) << '\n';
-#endif
-    return false;
-  }
+  bool runOnFunction(Function &) override;
 }; // end of struct Hello
 
 }
 
+bool WebAssemblyStackTaggingPass::runOnFunction(Function & Fn) {
+  if (!Fn.hasFnAttribute(Attribute::SanitizeMemTag))
+    return false;
+  return true;
+}
+
 char WebAssemblyStackTaggingPass::ID = 0;
 
-void llvm::initializeWebAssemblyStackTaggingPass(PassRegistry &)
-{
+void llvm::initializeWebAssemblyStackTaggingPass(PassRegistry &) {
 
 }
 
