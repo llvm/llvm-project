@@ -840,7 +840,9 @@ populateBuilderRegions(const Operator &op,
 }
 
 /// Emits a default builder constructing an operation from the list of its
-/// result types, followed by a list of its operands.
+/// result types, followed by a list of its operands. Returns fully vector
+/// of fully built functionArgs for downstream users (to save having to
+/// rebuild anew).
 static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
                                                            raw_ostream &os) {
   // If we are asked to skip default builders, comply.
@@ -984,34 +986,30 @@ static void emitValueBuilder(const Operator &op,
     return;
   auto name = sanitizeName(op.getOperationName());
   iterator_range<llvm::SplittingIterator> splitName = llvm::split(name, ".");
+  // Params with (possibly) default args.
+  auto valueBuilderParams =
+      llvm::map_range(functionArgs, [](const std::string &argAndMaybeDefault) {
+        llvm::SmallVector<llvm::StringRef> argMaybeDefault =
+            llvm::to_vector<2>(llvm::split(argAndMaybeDefault, "="));
+        auto arg = llvm::convertToSnakeFromCamelCase(argMaybeDefault[0]);
+        if (argMaybeDefault.size() == 2)
+          return arg + "=" + argMaybeDefault[1].str();
+        return arg;
+      });
+  // Actual args passed to op builder (e.g., opParam=op_param).
+  auto opBuilderArgs = llvm::map_range(
+      llvm::make_filter_range(functionArgs,
+                              [](const std::string &s) { return s != "*"; }),
+      [](const std::string &arg) {
+        auto lhs = *llvm::split(arg, "=").begin();
+        return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
+      });
   os << llvm::formatv(
       valueBuilderTemplate,
       // Drop dialect name and then sanitize again (to catch e.g. func.return).
       sanitizeName(llvm::join(++splitName.begin(), splitName.end(), "_")),
-      op.getCppClassName(),
-      llvm::join(
-          llvm::map_range(functionArgs,
-                          [](const std::string &argAndMaybeDefault) {
-                            llvm::SmallVector<llvm::StringRef> argMaybeDefault =
-                                llvm::to_vector<2>(
-                                    llvm::split(argAndMaybeDefault, "="));
-                            auto arg = llvm::convertToSnakeFromCamelCase(
-                                argMaybeDefault[0]);
-                            if (argMaybeDefault.size() == 2)
-                              return arg + "=" + argMaybeDefault[1].str();
-                            return arg;
-                          }),
-          ", "),
-      llvm::join(
-          llvm::map_range(
-              llvm::make_filter_range(
-                  functionArgs, [](const std::string &s) { return s != "*"; }),
-              [](const std::string &arg) {
-                auto lhs = *llvm::split(arg, "=").begin();
-                return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs))
-                    .str();
-              }),
-          ", "),
+      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
+      llvm::join(opBuilderArgs, ", "),
       (op.getNumResults() > 1
            ? "_Sequence[_ods_ir.OpResult]"
            : (op.getNumResults() > 0 ? "_ods_ir.OpResult"
