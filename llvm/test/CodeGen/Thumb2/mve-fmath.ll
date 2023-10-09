@@ -1092,15 +1092,15 @@ define arm_aapcs_vfpcc <2 x double> @copysign_float64_t(<2 x double> %src1, <2 x
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vmov r0, lr, d2
-; CHECK-NEXT:    vmov r0, r3, d1
-; CHECK-NEXT:    vmov r12, r2, d0
+; CHECK-NEXT:    vmov r0, r2, d2
+; CHECK-NEXT:    vmov lr, r3, d1
+; CHECK-NEXT:    vmov r12, r0, d0
 ; CHECK-NEXT:    lsrs r1, r1, #31
 ; CHECK-NEXT:    bfi r3, r1, #31, #1
-; CHECK-NEXT:    lsr.w r1, lr, #31
-; CHECK-NEXT:    bfi r2, r1, #31, #1
-; CHECK-NEXT:    vmov d1, r0, r3
-; CHECK-NEXT:    vmov d0, r12, r2
+; CHECK-NEXT:    lsrs r1, r2, #31
+; CHECK-NEXT:    bfi r0, r1, #31, #1
+; CHECK-NEXT:    vmov d1, lr, r3
+; CHECK-NEXT:    vmov d0, r12, r0
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = call fast <2 x double> @llvm.copysign.v2f64(<2 x double> %src1, <2 x double> %src2)

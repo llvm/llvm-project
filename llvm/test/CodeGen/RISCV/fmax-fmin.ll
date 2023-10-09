@@ -31,14 +31,14 @@ define float @maxnum_f32_fast(float %x, float %y) nounwind {
 ; R32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; R32-NEXT:    mv s1, a1
-; R32-NEXT:    mv s0, a0
+; R32-NEXT:    mv s0, a1
+; R32-NEXT:    mv s1, a0
 ; R32-NEXT:    call __gtsf2@plt
 ; R32-NEXT:    bgtz a0, .LBB1_2
 ; R32-NEXT:  # %bb.1:
-; R32-NEXT:    mv s0, s1
+; R32-NEXT:    mv s1, s0
 ; R32-NEXT:  .LBB1_2:
-; R32-NEXT:    mv a0, s0
+; R32-NEXT:    mv a0, s1
 ; R32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -51,14 +51,14 @@ define float @maxnum_f32_fast(float %x, float %y) nounwind {
 ; R64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; R64-NEXT:    mv s1, a1
-; R64-NEXT:    mv s0, a0
+; R64-NEXT:    mv s0, a1
+; R64-NEXT:    mv s1, a0
 ; R64-NEXT:    call __gtsf2@plt
 ; R64-NEXT:    bgtz a0, .LBB1_2
 ; R64-NEXT:  # %bb.1:
-; R64-NEXT:    mv s0, s1
+; R64-NEXT:    mv s1, s0
 ; R64-NEXT:  .LBB1_2:
-; R64-NEXT:    mv a0, s0
+; R64-NEXT:    mv a0, s1
 ; R64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -99,9 +99,9 @@ define double @maxnum_f64_nnan(double %x, double %y) nounwind {
 ; R32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; R32-NEXT:    mv s1, a3
+; R32-NEXT:    mv s0, a3
 ; R32-NEXT:    mv s2, a2
-; R32-NEXT:    mv s0, a1
+; R32-NEXT:    mv s1, a1
 ; R32-NEXT:    mv s3, a0
 ; R32-NEXT:    call __gtdf2@plt
 ; R32-NEXT:    mv a1, a0
@@ -110,16 +110,16 @@ define double @maxnum_f64_nnan(double %x, double %y) nounwind {
 ; R32-NEXT:  # %bb.1:
 ; R32-NEXT:    mv s3, s2
 ; R32-NEXT:  .LBB3_2:
-; R32-NEXT:    mv a1, s0
+; R32-NEXT:    mv a1, s1
 ; R32-NEXT:    mv a2, s2
-; R32-NEXT:    mv a3, s1
+; R32-NEXT:    mv a3, s0
 ; R32-NEXT:    call __gtdf2@plt
 ; R32-NEXT:    bgtz a0, .LBB3_4
 ; R32-NEXT:  # %bb.3:
-; R32-NEXT:    mv s0, s1
+; R32-NEXT:    mv s1, s0
 ; R32-NEXT:  .LBB3_4:
 ; R32-NEXT:    mv a0, s3
-; R32-NEXT:    mv a1, s0
+; R32-NEXT:    mv a1, s1
 ; R32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -134,14 +134,14 @@ define double @maxnum_f64_nnan(double %x, double %y) nounwind {
 ; R64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; R64-NEXT:    mv s1, a1
-; R64-NEXT:    mv s0, a0
+; R64-NEXT:    mv s0, a1
+; R64-NEXT:    mv s1, a0
 ; R64-NEXT:    call __gtdf2@plt
 ; R64-NEXT:    bgtz a0, .LBB3_2
 ; R64-NEXT:  # %bb.1:
-; R64-NEXT:    mv s0, s1
+; R64-NEXT:    mv s1, s0
 ; R64-NEXT:  .LBB3_2:
-; R64-NEXT:    mv a0, s0
+; R64-NEXT:    mv a0, s1
 ; R64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -180,14 +180,14 @@ define float @minnum_f32_nnan(float %x, float %y) nounwind {
 ; R32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; R32-NEXT:    mv s1, a1
-; R32-NEXT:    mv s0, a0
+; R32-NEXT:    mv s0, a1
+; R32-NEXT:    mv s1, a0
 ; R32-NEXT:    call __ltsf2@plt
 ; R32-NEXT:    bltz a0, .LBB5_2
 ; R32-NEXT:  # %bb.1:
-; R32-NEXT:    mv s0, s1
+; R32-NEXT:    mv s1, s0
 ; R32-NEXT:  .LBB5_2:
-; R32-NEXT:    mv a0, s0
+; R32-NEXT:    mv a0, s1
 ; R32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -200,14 +200,14 @@ define float @minnum_f32_nnan(float %x, float %y) nounwind {
 ; R64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; R64-NEXT:    mv s1, a1
-; R64-NEXT:    mv s0, a0
+; R64-NEXT:    mv s0, a1
+; R64-NEXT:    mv s1, a0
 ; R64-NEXT:    call __ltsf2@plt
 ; R64-NEXT:    bltz a0, .LBB5_2
 ; R64-NEXT:  # %bb.1:
-; R64-NEXT:    mv s0, s1
+; R64-NEXT:    mv s1, s0
 ; R64-NEXT:  .LBB5_2:
-; R64-NEXT:    mv a0, s0
+; R64-NEXT:    mv a0, s1
 ; R64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -248,9 +248,9 @@ define double @minnum_f64_fast(double %x, double %y) nounwind {
 ; R32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; R32-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; R32-NEXT:    mv s1, a3
+; R32-NEXT:    mv s0, a3
 ; R32-NEXT:    mv s2, a2
-; R32-NEXT:    mv s0, a1
+; R32-NEXT:    mv s1, a1
 ; R32-NEXT:    mv s3, a0
 ; R32-NEXT:    call __ltdf2@plt
 ; R32-NEXT:    mv a1, a0
@@ -259,16 +259,16 @@ define double @minnum_f64_fast(double %x, double %y) nounwind {
 ; R32-NEXT:  # %bb.1:
 ; R32-NEXT:    mv s3, s2
 ; R32-NEXT:  .LBB7_2:
-; R32-NEXT:    mv a1, s0
+; R32-NEXT:    mv a1, s1
 ; R32-NEXT:    mv a2, s2
-; R32-NEXT:    mv a3, s1
+; R32-NEXT:    mv a3, s0
 ; R32-NEXT:    call __ltdf2@plt
 ; R32-NEXT:    bltz a0, .LBB7_4
 ; R32-NEXT:  # %bb.3:
-; R32-NEXT:    mv s0, s1
+; R32-NEXT:    mv s1, s0
 ; R32-NEXT:  .LBB7_4:
 ; R32-NEXT:    mv a0, s3
-; R32-NEXT:    mv a1, s0
+; R32-NEXT:    mv a1, s1
 ; R32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; R32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -283,14 +283,14 @@ define double @minnum_f64_fast(double %x, double %y) nounwind {
 ; R64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; R64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; R64-NEXT:    mv s1, a1
-; R64-NEXT:    mv s0, a0
+; R64-NEXT:    mv s0, a1
+; R64-NEXT:    mv s1, a0
 ; R64-NEXT:    call __ltdf2@plt
 ; R64-NEXT:    bltz a0, .LBB7_2
 ; R64-NEXT:  # %bb.1:
-; R64-NEXT:    mv s0, s1
+; R64-NEXT:    mv s1, s0
 ; R64-NEXT:  .LBB7_2:
-; R64-NEXT:    mv a0, s0
+; R64-NEXT:    mv a0, s1
 ; R64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; R64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

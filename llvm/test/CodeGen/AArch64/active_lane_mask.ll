@@ -218,72 +218,72 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i64(i64 %index, i64 %TC) {
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    mov z0.d, x0
+; CHECK-NEXT:    index z0.d, #0, #1
+; CHECK-NEXT:    mov z2.d, x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z3.d, x1
-; CHECK-NEXT:    mov z2.d, z1.d
-; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    mov z6.d, z1.d
-; CHECK-NEXT:    uqadd z25.d, z1.d, z0.d
-; CHECK-NEXT:    incd z1.d, all, mul #8
-; CHECK-NEXT:    incd z2.d
-; CHECK-NEXT:    incd z4.d, all, mul #2
+; CHECK-NEXT:    mov z7.d, x1
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    mov z6.d, z0.d
+; CHECK-NEXT:    uqadd z5.d, z0.d, z2.d
+; CHECK-NEXT:    incd z0.d, all, mul #8
+; CHECK-NEXT:    incd z1.d
+; CHECK-NEXT:    incd z3.d, all, mul #2
 ; CHECK-NEXT:    incd z6.d, all, mul #4
-; CHECK-NEXT:    cmphi p1.d, p0/z, z3.d, z25.d
-; CHECK-NEXT:    uqadd z1.d, z1.d, z0.d
-; CHECK-NEXT:    mov z5.d, z2.d
-; CHECK-NEXT:    uqadd z26.d, z2.d, z0.d
-; CHECK-NEXT:    mov z7.d, z2.d
-; CHECK-NEXT:    mov z24.d, z4.d
-; CHECK-NEXT:    uqadd z27.d, z4.d, z0.d
-; CHECK-NEXT:    uqadd z28.d, z6.d, z0.d
-; CHECK-NEXT:    incd z2.d, all, mul #8
-; CHECK-NEXT:    incd z4.d, all, mul #8
+; CHECK-NEXT:    cmphi p1.d, p0/z, z7.d, z5.d
+; CHECK-NEXT:    uqadd z0.d, z0.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    uqadd z24.d, z1.d, z2.d
+; CHECK-NEXT:    mov z25.d, z1.d
+; CHECK-NEXT:    mov z27.d, z3.d
+; CHECK-NEXT:    uqadd z26.d, z3.d, z2.d
+; CHECK-NEXT:    uqadd z28.d, z6.d, z2.d
+; CHECK-NEXT:    incd z1.d, all, mul #8
+; CHECK-NEXT:    incd z3.d, all, mul #8
 ; CHECK-NEXT:    incd z6.d, all, mul #8
-; CHECK-NEXT:    incd z5.d, all, mul #2
-; CHECK-NEXT:    incd z7.d, all, mul #4
-; CHECK-NEXT:    cmphi p2.d, p0/z, z3.d, z26.d
-; CHECK-NEXT:    incd z24.d, all, mul #4
-; CHECK-NEXT:    cmphi p3.d, p0/z, z3.d, z27.d
-; CHECK-NEXT:    cmphi p5.d, p0/z, z3.d, z28.d
-; CHECK-NEXT:    uqadd z2.d, z2.d, z0.d
-; CHECK-NEXT:    uqadd z4.d, z4.d, z0.d
-; CHECK-NEXT:    uqadd z6.d, z6.d, z0.d
-; CHECK-NEXT:    mov z26.d, z5.d
-; CHECK-NEXT:    uqadd z25.d, z5.d, z0.d
-; CHECK-NEXT:    uqadd z27.d, z7.d, z0.d
-; CHECK-NEXT:    incd z5.d, all, mul #8
-; CHECK-NEXT:    incd z7.d, all, mul #8
+; CHECK-NEXT:    incd z4.d, all, mul #2
+; CHECK-NEXT:    incd z25.d, all, mul #4
+; CHECK-NEXT:    cmphi p2.d, p0/z, z7.d, z24.d
+; CHECK-NEXT:    incd z27.d, all, mul #4
+; CHECK-NEXT:    cmphi p3.d, p0/z, z7.d, z26.d
+; CHECK-NEXT:    cmphi p5.d, p0/z, z7.d, z28.d
+; CHECK-NEXT:    uqadd z1.d, z1.d, z2.d
+; CHECK-NEXT:    uqadd z3.d, z3.d, z2.d
+; CHECK-NEXT:    mov z24.d, z4.d
+; CHECK-NEXT:    uqadd z5.d, z4.d, z2.d
+; CHECK-NEXT:    uqadd z26.d, z25.d, z2.d
+; CHECK-NEXT:    incd z4.d, all, mul #8
+; CHECK-NEXT:    incd z25.d, all, mul #8
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p2.s
-; CHECK-NEXT:    incd z26.d, all, mul #4
-; CHECK-NEXT:    cmphi p8.d, p0/z, z3.d, z2.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z3.d, z25.d
-; CHECK-NEXT:    uqadd z25.d, z24.d, z0.d
+; CHECK-NEXT:    incd z24.d, all, mul #4
+; CHECK-NEXT:    cmphi p8.d, p0/z, z7.d, z1.d
+; CHECK-NEXT:    cmphi p4.d, p0/z, z7.d, z5.d
+; CHECK-NEXT:    uqadd z5.d, z27.d, z2.d
+; CHECK-NEXT:    incd z27.d, all, mul #8
+; CHECK-NEXT:    uqadd z4.d, z4.d, z2.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z7.d, z26.d
+; CHECK-NEXT:    uqadd z28.d, z24.d, z2.d
 ; CHECK-NEXT:    incd z24.d, all, mul #8
-; CHECK-NEXT:    uqadd z5.d, z5.d, z0.d
-; CHECK-NEXT:    uqadd z7.d, z7.d, z0.d
-; CHECK-NEXT:    cmphi p6.d, p0/z, z3.d, z27.d
-; CHECK-NEXT:    uqadd z28.d, z26.d, z0.d
-; CHECK-NEXT:    incd z26.d, all, mul #8
 ; CHECK-NEXT:    uzp1 p3.s, p3.s, p4.s
-; CHECK-NEXT:    uqadd z24.d, z24.d, z0.d
-; CHECK-NEXT:    cmphi p7.d, p0/z, z3.d, z25.d
-; CHECK-NEXT:    cmphi p4.d, p0/z, z3.d, z1.d
+; CHECK-NEXT:    cmphi p7.d, p0/z, z7.d, z5.d
+; CHECK-NEXT:    uqadd z5.d, z6.d, z2.d
+; CHECK-NEXT:    uqadd z6.d, z25.d, z2.d
+; CHECK-NEXT:    uqadd z25.d, z27.d, z2.d
+; CHECK-NEXT:    cmphi p4.d, p0/z, z7.d, z0.d
 ; CHECK-NEXT:    uzp1 p5.s, p5.s, p6.s
-; CHECK-NEXT:    cmphi p6.d, p0/z, z3.d, z4.d
-; CHECK-NEXT:    cmphi p9.d, p0/z, z3.d, z5.d
-; CHECK-NEXT:    cmphi p10.d, p0/z, z3.d, z7.d
-; CHECK-NEXT:    uqadd z0.d, z26.d, z0.d
-; CHECK-NEXT:    cmphi p2.d, p0/z, z3.d, z28.d
+; CHECK-NEXT:    cmphi p6.d, p0/z, z7.d, z3.d
+; CHECK-NEXT:    cmphi p9.d, p0/z, z7.d, z4.d
+; CHECK-NEXT:    uqadd z2.d, z24.d, z2.d
+; CHECK-NEXT:    cmphi p2.d, p0/z, z7.d, z28.d
+; CHECK-NEXT:    cmphi p10.d, p0/z, z7.d, z6.d
 ; CHECK-NEXT:    uzp1 p4.s, p4.s, p8.s
-; CHECK-NEXT:    cmphi p8.d, p0/z, z3.d, z24.d
+; CHECK-NEXT:    cmphi p8.d, p0/z, z7.d, z25.d
 ; CHECK-NEXT:    uzp1 p6.s, p6.s, p9.s
 ; CHECK-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    uzp1 p1.h, p1.h, p3.h
 ; CHECK-NEXT:    uzp1 p2.s, p7.s, p2.s
-; CHECK-NEXT:    cmphi p7.d, p0/z, z3.d, z6.d
-; CHECK-NEXT:    cmphi p0.d, p0/z, z3.d, z0.d
+; CHECK-NEXT:    cmphi p7.d, p0/z, z7.d, z5.d
+; CHECK-NEXT:    cmphi p0.d, p0/z, z7.d, z2.d
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p3.h
 ; CHECK-NEXT:    uzp1 p7.s, p7.s, p10.s
 ; CHECK-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p0.s, p8.s, p0.s

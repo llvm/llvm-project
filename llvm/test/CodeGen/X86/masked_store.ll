@@ -5891,9 +5891,9 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 ; SSE4-NEXT:    .cfi_offset %r14, -32
 ; SSE4-NEXT:    .cfi_offset %r15, -24
 ; SSE4-NEXT:    .cfi_offset %rbp, -16
-; SSE4-NEXT:    movdqa (%rdi), %xmm1
-; SSE4-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE4-NEXT:    movdqa 64(%rdi), %xmm0
+; SSE4-NEXT:    movdqa (%rdi), %xmm0
+; SSE4-NEXT:    movdqa 32(%rdi), %xmm1
+; SSE4-NEXT:    movdqa 64(%rdi), %xmm2
 ; SSE4-NEXT:    movl 92(%rsi), %eax
 ; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE4-NEXT:    movl 88(%rsi), %eax
@@ -5916,14 +5916,14 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 ; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE4-NEXT:    movl 52(%rsi), %eax
 ; SSE4-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; SSE4-NEXT:    packssdw 48(%rdi), %xmm2
-; SSE4-NEXT:    packssdw 16(%rdi), %xmm1
-; SSE4-NEXT:    packsswb %xmm2, %xmm1
-; SSE4-NEXT:    packssdw 80(%rdi), %xmm0
-; SSE4-NEXT:    packsswb %xmm0, %xmm0
-; SSE4-NEXT:    pmovmskb %xmm1, %eax
+; SSE4-NEXT:    packssdw 48(%rdi), %xmm1
+; SSE4-NEXT:    packssdw 16(%rdi), %xmm0
+; SSE4-NEXT:    packsswb %xmm1, %xmm0
+; SSE4-NEXT:    packssdw 80(%rdi), %xmm2
+; SSE4-NEXT:    packsswb %xmm2, %xmm2
+; SSE4-NEXT:    pmovmskb %xmm0, %eax
 ; SSE4-NEXT:    andl $21845, %eax ## imm = 0x5555
-; SSE4-NEXT:    pmovmskb %xmm0, %edi
+; SSE4-NEXT:    pmovmskb %xmm2, %edi
 ; SSE4-NEXT:    andl $85, %edi
 ; SSE4-NEXT:    shll $16, %edi
 ; SSE4-NEXT:    orl %eax, %edi

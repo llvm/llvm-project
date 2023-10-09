@@ -41,26 +41,27 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    .save {r4, lr}
 ; CHECK-T1-NEXT:    push {r4, lr}
-; CHECK-T1-NEXT:    mov r4, r1
-; CHECK-T1-NEXT:    movs r1, #0
+; CHECK-T1-NEXT:    movs r4, #0
 ; CHECK-T1-NEXT:    subs r2, r0, r2
-; CHECK-T1-NEXT:    sbcs r4, r3
-; CHECK-T1-NEXT:    mov r0, r1
-; CHECK-T1-NEXT:    adcs r0, r1
+; CHECK-T1-NEXT:    sbcs r1, r3
+; CHECK-T1-NEXT:    mov r0, r4
+; CHECK-T1-NEXT:    adcs r0, r4
 ; CHECK-T1-NEXT:    movs r3, #1
 ; CHECK-T1-NEXT:    eors r3, r0
-; CHECK-T1-NEXT:    mov r0, r1
+; CHECK-T1-NEXT:    mov r0, r4
 ; CHECK-T1-NEXT:    beq .LBB1_3
 ; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:    cmp r3, #0
 ; CHECK-T1-NEXT:    beq .LBB1_4
 ; CHECK-T1-NEXT:  .LBB1_2:
+; CHECK-T1-NEXT:    mov r1, r4
 ; CHECK-T1-NEXT:    pop {r4, pc}
 ; CHECK-T1-NEXT:  .LBB1_3:
 ; CHECK-T1-NEXT:    mov r0, r2
 ; CHECK-T1-NEXT:    cmp r3, #0
 ; CHECK-T1-NEXT:    bne .LBB1_2
 ; CHECK-T1-NEXT:  .LBB1_4:
+; CHECK-T1-NEXT:    mov r4, r1
 ; CHECK-T1-NEXT:    mov r1, r4
 ; CHECK-T1-NEXT:    pop {r4, pc}
 ;
