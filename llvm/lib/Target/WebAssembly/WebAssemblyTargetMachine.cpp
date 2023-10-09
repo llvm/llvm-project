@@ -80,6 +80,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyRegNumberingPass(PR);
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
+  initializeWebAssemblyStackTaggingPass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
   initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
@@ -426,9 +427,13 @@ void WebAssemblyPassConfig::addIRPasses() {
   // to match.
   addPass(createWebAssemblyFixFunctionBitcasts());
 
+  auto optlevel = this->getOptLevel();
+
   // Optimize "returned" function attributes.
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (optlevel != CodeGenOptLevel::None)
     addPass(createWebAssemblyOptimizeReturned());
+
+  addPass(createWebAssemblyStackTaggingPass());
 
   basicCheckForEHAndSjLj(TM);
 
