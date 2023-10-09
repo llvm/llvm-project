@@ -50,6 +50,10 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (za_data.GetByteSize() >= sizeof(sve::user_za_header))
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZA);
 
+  DataExtractor mte_data = getRegset(notes, arch.GetTriple(), AARCH64_MTE_Desc);
+  if (mte_data.GetByteSize() >= sizeof(uint64_t))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -90,6 +94,9 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsZAEnabled())
     m_za_data = getRegset(notes, target_triple, AARCH64_ZA_Desc);
+
+  if (m_register_info_up->IsMTEEnabled())
+    m_mte_data = getRegset(notes, target_triple, AARCH64_MTE_Desc);
 
   ConfigureRegisterContext();
 }
@@ -281,6 +288,11 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     offset = reg_info->byte_offset - m_register_info_up->GetTLSOffset();
     assert(offset < m_tls_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_tls_data.GetDataStart() + offset,
+                            reg_info->byte_size, lldb::eByteOrderLittle, error);
+  } else if (IsMTE(reg)) {
+    offset = reg_info->byte_offset - m_register_info_up->GetMTEOffset();
+    assert(offset < m_mte_data.GetByteSize());
+    value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsSME(reg)) {
     // If you had SME in the process, active or otherwise, there will at least
