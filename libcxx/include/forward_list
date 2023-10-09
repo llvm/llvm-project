@@ -736,7 +736,7 @@ public:
 #endif
     _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v);
 
-    template <class = __enable_if_t<__is_allocator<_Alloc>::value> >
+    template <class = __enable_if_t<__is_allocator<_Alloc> > >
     _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v, const allocator_type& __a) : base(__a)
     {
         insert_after(cbefore_begin(), __n, __v);
@@ -982,7 +982,7 @@ private:
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc> >
          >
 forward_list(_InputIterator, _InputIterator)
   -> forward_list<__iter_value_type<_InputIterator>, _Alloc>;
@@ -990,7 +990,7 @@ forward_list(_InputIterator, _InputIterator)
 template<class _InputIterator,
          class _Alloc,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc> >
          >
 forward_list(_InputIterator, _InputIterator, _Alloc)
   -> forward_list<__iter_value_type<_InputIterator>, _Alloc>;
@@ -999,7 +999,7 @@ forward_list(_InputIterator, _InputIterator, _Alloc)
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<__is_allocator<_Alloc>::value>
+          class = enable_if_t<__is_allocator<_Alloc> >
           >
 forward_list(from_range_t, _Range&&, _Alloc = _Alloc())
   -> forward_list<ranges::range_value_t<_Range>, _Alloc>;

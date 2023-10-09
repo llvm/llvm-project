@@ -317,14 +317,14 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
 template<class _Container,
-         class = enable_if_t<!__is_allocator<_Container>::value>
+         class = enable_if_t<!__is_allocator<_Container> >
 >
 stack(_Container)
     -> stack<typename _Container::value_type, _Container>;
 
 template<class _Container,
          class _Alloc,
-         class = enable_if_t<!__is_allocator<_Container>::value>,
+         class = enable_if_t<!__is_allocator<_Container> >,
          class = enable_if_t<uses_allocator<_Container, _Alloc>::value>
          >
 stack(_Container, _Alloc)
@@ -343,13 +343,13 @@ stack(from_range_t, _Range&&) -> stack<ranges::range_value_t<_Range>>;
 template<class _InputIterator,
          class _Alloc,
          class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = __enable_if_t<__is_allocator<_Alloc>::value>>
+         class = __enable_if_t<__is_allocator<_Alloc> >>
 stack(_InputIterator, _InputIterator, _Alloc)
     -> stack<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
 
 template <ranges::input_range _Range,
           class _Alloc,
-          class = __enable_if_t<__is_allocator<_Alloc>::value>>
+          class = __enable_if_t<__is_allocator<_Alloc> >>
 stack(from_range_t, _Range&&, _Alloc)
   -> stack<ranges::range_value_t<_Range>, deque<ranges::range_value_t<_Range>, _Alloc>>;
 

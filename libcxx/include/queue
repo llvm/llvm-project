@@ -468,14 +468,14 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
 template<class _Container,
-         class = enable_if_t<!__is_allocator<_Container>::value>
+         class = enable_if_t<!__is_allocator<_Container> >
 >
 queue(_Container)
     -> queue<typename _Container::value_type, _Container>;
 
 template<class _Container,
          class _Alloc,
-         class = enable_if_t<!__is_allocator<_Container>::value>,
+         class = enable_if_t<!__is_allocator<_Container> >,
          class = enable_if_t<uses_allocator<_Container, _Alloc>::value>
 >
 queue(_Container, _Alloc)
@@ -495,13 +495,13 @@ queue(from_range_t, _Range&&)
 template <class _InputIterator,
           class _Alloc,
           class = __enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = __enable_if_t<__is_allocator<_Alloc>::value>>
+          class = __enable_if_t<__is_allocator<_Alloc> >>
 queue(_InputIterator, _InputIterator, _Alloc)
     -> queue<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
 
 template <ranges::input_range _Range,
           class _Alloc,
-          class = __enable_if_t<__is_allocator<_Alloc>::value>>
+          class = __enable_if_t<__is_allocator<_Alloc> >>
 queue(from_range_t, _Range&&, _Alloc)
     -> queue<ranges::range_value_t<_Range>, deque<ranges::range_value_t<_Range>, _Alloc>>;
 #endif
@@ -784,8 +784,8 @@ public:
 #if _LIBCPP_STD_VER >= 17
 template <class _Compare,
           class _Container,
-          class = enable_if_t<!__is_allocator<_Compare>::value>,
-          class = enable_if_t<!__is_allocator<_Container>::value>
+          class = enable_if_t<!__is_allocator<_Compare> >,
+          class = enable_if_t<!__is_allocator<_Container> >
 >
 priority_queue(_Compare, _Container)
     -> priority_queue<typename _Container::value_type, _Container, _Compare>;
@@ -794,8 +794,8 @@ template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Container = vector<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Compare>::value>,
-         class = enable_if_t<!__is_allocator<_Container>::value>
+         class = enable_if_t<!__is_allocator<_Compare> >,
+         class = enable_if_t<!__is_allocator<_Container> >
 >
 priority_queue(_InputIterator, _InputIterator, _Compare = _Compare(), _Container = _Container())
     -> priority_queue<__iter_value_type<_InputIterator>, _Container, _Compare>;
@@ -803,8 +803,8 @@ priority_queue(_InputIterator, _InputIterator, _Compare = _Compare(), _Container
 template<class _Compare,
          class _Container,
          class _Alloc,
-         class = enable_if_t<!__is_allocator<_Compare>::value>,
-         class = enable_if_t<!__is_allocator<_Container>::value>,
+         class = enable_if_t<!__is_allocator<_Compare> >,
+         class = enable_if_t<!__is_allocator<_Container> >,
          class = enable_if_t<uses_allocator<_Container, _Alloc>::value>
 >
 priority_queue(_Compare, _Container, _Alloc)
@@ -812,7 +812,7 @@ priority_queue(_Compare, _Container, _Alloc)
 
 template<class _InputIterator, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>
+         class = enable_if_t<__is_allocator<_Allocator> >
 >
 priority_queue(_InputIterator, _InputIterator, _Allocator)
     -> priority_queue<__iter_value_type<_InputIterator>,
@@ -821,8 +821,8 @@ priority_queue(_InputIterator, _InputIterator, _Allocator)
 
 template<class _InputIterator, class _Compare, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Compare>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>
+         class = enable_if_t<!__is_allocator<_Compare> >,
+         class = enable_if_t<__is_allocator<_Allocator> >
 >
 priority_queue(_InputIterator, _InputIterator, _Compare, _Allocator)
     -> priority_queue<__iter_value_type<_InputIterator>,
@@ -830,8 +830,8 @@ priority_queue(_InputIterator, _InputIterator, _Compare, _Allocator)
 
 template<class _InputIterator, class _Compare, class _Container, class _Alloc,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Compare>::value>,
-         class = enable_if_t<!__is_allocator<_Container>::value>,
+         class = enable_if_t<!__is_allocator<_Compare> >,
+         class = enable_if_t<!__is_allocator<_Container> >,
          class = enable_if_t<uses_allocator<_Container, _Alloc>::value>
 >
 priority_queue(_InputIterator, _InputIterator, _Compare, _Container, _Alloc)
@@ -842,22 +842,22 @@ priority_queue(_InputIterator, _InputIterator, _Compare, _Container, _Alloc)
 
 template <ranges::input_range _Range,
           class _Compare = less<ranges::range_value_t<_Range>>,
-          class = enable_if_t<!__is_allocator<_Compare>::value>>
+          class = enable_if_t<!__is_allocator<_Compare> >>
 priority_queue(from_range_t, _Range&&, _Compare = _Compare())
     -> priority_queue<ranges::range_value_t<_Range>, vector<ranges::range_value_t<_Range>>, _Compare>;
 
 template <ranges::input_range _Range,
           class _Compare,
           class _Alloc,
-          class = enable_if_t<!__is_allocator<_Compare>::value>,
-          class = enable_if_t<__is_allocator<_Alloc>::value>>
+          class = enable_if_t<!__is_allocator<_Compare> >,
+          class = enable_if_t<__is_allocator<_Alloc> >>
 priority_queue(from_range_t, _Range&&, _Compare, _Alloc)
     -> priority_queue<ranges::range_value_t<_Range>, vector<ranges::range_value_t<_Range>, _Alloc>,
                         _Compare>;
 
 template <ranges::input_range _Range,
           class _Alloc,
-          class = enable_if_t<__is_allocator<_Alloc>::value>>
+          class = enable_if_t<__is_allocator<_Alloc> >>
 priority_queue(from_range_t, _Range&&, _Alloc)
     -> priority_queue<ranges::range_value_t<_Range>, vector<ranges::range_value_t<_Range>, _Alloc>>;
 

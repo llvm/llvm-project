@@ -21,13 +21,21 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 20
+template <class _Alloc>
+concept __is_allocator = requires(_Alloc __a) {
+  typename _Alloc::value_type;
+  __a.allocate(size_t(0));
+};
+#else
 template <typename _Alloc, typename = void, typename = void>
-struct __is_allocator : false_type {};
+inline static const bool __is_allocator = false;
 
 template <typename _Alloc>
-struct __is_allocator<_Alloc,
-                      __void_t<typename _Alloc::value_type>,
-                      __void_t<decltype(std::declval<_Alloc&>().allocate(size_t(0)))> > : true_type {};
+inline static const bool __is_allocator<_Alloc,
+                                        __void_t<typename _Alloc::value_type>,
+                                        __void_t<decltype(std::declval<_Alloc&>().allocate(size_t(0)))> > = true;
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

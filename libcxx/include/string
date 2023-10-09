@@ -933,14 +933,14 @@ public:
   }
 #endif // _LIBCPP_CXX03_LANG
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator<_Allocator> , int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s)
       : __r_(__default_init_tag(), __default_init_tag()) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "basic_string(const char*) detected nullptr");
     __init(__s, traits_type::length(__s));
   }
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator<_Allocator> , int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, const _Allocator& __a)
       : __r_(__default_init_tag(), __a) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
@@ -996,7 +996,7 @@ public:
   }
 #endif
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator<_Allocator> , int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a)
       : __r_(__default_init_tag(), __a) {
     __init(__n, __c);
@@ -2081,7 +2081,7 @@ template<class _InputIterator,
          class _CharT = __iter_value_type<_InputIterator>,
          class _Allocator = allocator<_CharT>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>
+         class = enable_if_t<__is_allocator<_Allocator> >
          >
 basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
   -> basic_string<_CharT, char_traits<_CharT>, _Allocator>;
@@ -2089,7 +2089,7 @@ basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
 template<class _CharT,
          class _Traits,
          class _Allocator = allocator<_CharT>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>
+         class = enable_if_t<__is_allocator<_Allocator> >
          >
 explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
   -> basic_string<_CharT, _Traits, _Allocator>;
@@ -2097,7 +2097,7 @@ explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _A
 template<class _CharT,
          class _Traits,
          class _Allocator = allocator<_CharT>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>,
+         class = enable_if_t<__is_allocator<_Allocator> >,
          class _Sz = typename allocator_traits<_Allocator>::size_type
          >
 basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _Allocator())
@@ -2107,7 +2107,7 @@ basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>
+          class = enable_if_t<__is_allocator<_Allocator> >
           >
 basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
   -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;

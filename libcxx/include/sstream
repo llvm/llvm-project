@@ -413,7 +413,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
     template <class _SAlloc>
-      requires __is_allocator<_SAlloc>::value
+      requires __is_allocator<_SAlloc>
     _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
         return basic_string<_CharT, _Traits, _SAlloc>(view(), __sa);
     }
@@ -914,7 +914,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
     template <class _SAlloc>
-      requires __is_allocator<_SAlloc>::value
+      requires __is_allocator<_SAlloc>
     _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
         return __sb_.str(__sa);
     }
@@ -1039,7 +1039,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
     template <class _SAlloc>
-      requires __is_allocator<_SAlloc>::value
+      requires __is_allocator<_SAlloc>
     _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
         return __sb_.str(__sa);
     }
@@ -1163,7 +1163,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
     template <class _SAlloc>
-      requires __is_allocator<_SAlloc>::value
+      requires __is_allocator<_SAlloc>
     _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
         return __sb_.str(__sa);
     }

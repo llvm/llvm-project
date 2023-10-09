@@ -427,7 +427,7 @@ public:
 #endif
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x);
 
-    template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+    template <class = __enable_if_t<__is_allocator<_Allocator> > >
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     vector(size_type __n, const value_type& __x, const allocator_type& __a)
         : __end_cap_(nullptr, __a)
@@ -1002,7 +1002,7 @@ private:
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc> >
          >
 vector(_InputIterator, _InputIterator)
   -> vector<__iter_value_type<_InputIterator>, _Alloc>;
@@ -1010,7 +1010,7 @@ vector(_InputIterator, _InputIterator)
 template<class _InputIterator,
          class _Alloc,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc> >
          >
 vector(_InputIterator, _InputIterator, _Alloc)
   -> vector<__iter_value_type<_InputIterator>, _Alloc>;
@@ -1019,7 +1019,7 @@ vector(_InputIterator, _InputIterator, _Alloc)
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<__is_allocator<_Alloc>::value>
+          class = enable_if_t<__is_allocator<_Alloc> >
           >
 vector(from_range_t, _Range&&, _Alloc = _Alloc())
   -> vector<ranges::range_value_t<_Range>, _Alloc>;

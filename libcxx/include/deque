@@ -604,7 +604,7 @@ public:
 #endif
     _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
-    template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+    template <class = __enable_if_t<__is_allocator<_Allocator> > >
     _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v, const allocator_type& __a)
         : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a)
     {
@@ -1314,7 +1314,7 @@ _LIBCPP_CONSTEXPR const typename allocator_traits<_Alloc>::difference_type deque
 template<class _InputIterator,
          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc> >
          >
 deque(_InputIterator, _InputIterator)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
@@ -1322,7 +1322,7 @@ deque(_InputIterator, _InputIterator)
 template<class _InputIterator,
          class _Alloc,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Alloc>::value>
+         class = enable_if_t<__is_allocator<_Alloc> >
          >
 deque(_InputIterator, _InputIterator, _Alloc)
   -> deque<__iter_value_type<_InputIterator>, _Alloc>;
@@ -1331,7 +1331,7 @@ deque(_InputIterator, _InputIterator, _Alloc)
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<__is_allocator<_Alloc>::value>
+          class = enable_if_t<__is_allocator<_Alloc> >
           >
 deque(from_range_t, _Range&&, _Alloc = _Alloc())
   -> deque<ranges::range_value_t<_Range>, _Alloc>;

@@ -1007,43 +1007,43 @@ template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>,
-         class = enable_if_t<!__is_allocator<_Compare>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>,
+         class = enable_if_t<!__is_allocator<_Compare> , void>>
 set(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
   -> set<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range, class _Compare = less<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class = enable_if_t<!__is_allocator<_Compare>::value, void>>
+          class = enable_if_t<__is_allocator<_Allocator> , void>,
+          class = enable_if_t<!__is_allocator<_Compare> , void>>
 set(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
   -> set<ranges::range_value_t<_Range>, _Compare, _Allocator>;
 #endif
 
 template<class _Key, class _Compare = less<_Key>,
          class _Allocator = allocator<_Key>,
-         class = enable_if_t<!__is_allocator<_Compare>::value, void>,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+         class = enable_if_t<!__is_allocator<_Compare> , void>,
+         class = enable_if_t<__is_allocator<_Allocator> , void>>
 set(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
   -> set<_Key, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>>
 set(_InputIterator, _InputIterator, _Allocator)
   -> set<__iter_value_type<_InputIterator>,
          less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range, class _Allocator,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class = enable_if_t<__is_allocator<_Allocator> , void>>
 set(from_range_t, _Range&&, _Allocator)
   -> set<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
 #endif
 
 template<class _Key, class _Allocator,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>>
 set(initializer_list<_Key>, _Allocator)
   -> set<_Key, less<_Key>, _Allocator>;
 #endif
@@ -1598,43 +1598,43 @@ template<class _InputIterator,
          class _Compare = less<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>,
-         class = enable_if_t<!__is_allocator<_Compare>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>,
+         class = enable_if_t<!__is_allocator<_Compare> , void>>
 multiset(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
   -> multiset<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range, class _Compare = less<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class = enable_if_t<!__is_allocator<_Compare>::value, void>>
+          class = enable_if_t<__is_allocator<_Allocator> , void>,
+          class = enable_if_t<!__is_allocator<_Compare> , void>>
 multiset(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
   -> multiset<ranges::range_value_t<_Range>, _Compare, _Allocator>;
 #endif
 
 template<class _Key, class _Compare = less<_Key>,
          class _Allocator = allocator<_Key>,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>,
-         class = enable_if_t<!__is_allocator<_Compare>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>,
+         class = enable_if_t<!__is_allocator<_Compare> , void>>
 multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
   -> multiset<_Key, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>>
 multiset(_InputIterator, _InputIterator, _Allocator)
   -> multiset<__iter_value_type<_InputIterator>,
          less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range, class _Allocator,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class = enable_if_t<__is_allocator<_Allocator> , void>>
 multiset(from_range_t, _Range&&, _Allocator)
   -> multiset<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
 #endif
 
 template<class _Key, class _Allocator,
-         class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+         class = enable_if_t<__is_allocator<_Allocator> , void>>
 multiset(initializer_list<_Key>, _Allocator)
   -> multiset<_Key, less<_Key>, _Allocator>;
 #endif

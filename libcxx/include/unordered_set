@@ -968,10 +968,10 @@ template<class _InputIterator,
          class _Pred = equal_to<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<!__is_allocator<_Pred>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<!__is_allocator<_Pred> >,
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type = 0,
               _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
   -> unordered_set<__iter_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
@@ -981,10 +981,10 @@ template <ranges::input_range _Range,
           class _Hash = hash<ranges::range_value_t<_Range>>,
           class _Pred = equal_to<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator<_Hash> >,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<!__is_allocator<_Pred>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<!__is_allocator<_Pred> >,
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type = 0,
               _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
   -> unordered_set<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
@@ -993,17 +993,17 @@ unordered_set(from_range_t, _Range&&, typename allocator_traits<_Allocator>::siz
 template<class _Tp, class _Hash = hash<_Tp>,
          class _Pred = equal_to<_Tp>,
          class _Allocator = allocator<_Tp>,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<!__is_allocator<_Pred>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<!__is_allocator<_Pred> >,
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type = 0,
               _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
   -> unordered_set<_Tp, _Hash, _Pred, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(_InputIterator, _InputIterator,
               typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_set<__iter_value_type<_InputIterator>,
@@ -1013,9 +1013,9 @@ unordered_set(_InputIterator, _InputIterator,
 
 template<class _InputIterator, class _Hash, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(_InputIterator, _InputIterator,
               typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
   -> unordered_set<__iter_value_type<_InputIterator>, _Hash,
@@ -1025,35 +1025,35 @@ unordered_set(_InputIterator, _InputIterator,
 #if _LIBCPP_STD_VER >= 23
 
 template <ranges::input_range _Range, class _Allocator,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_set<ranges::range_value_t<_Range>, hash<ranges::range_value_t<_Range>>,
                    equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 template <ranges::input_range _Range, class _Allocator,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(from_range_t, _Range&&, _Allocator)
   -> unordered_set<ranges::range_value_t<_Range>, hash<ranges::range_value_t<_Range>>,
                    equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 template <ranges::input_range _Range, class _Hash, class _Allocator,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator<_Hash> >,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
   -> unordered_set<ranges::range_value_t<_Range>, _Hash, equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 #endif
 
 template<class _Tp, class _Allocator,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_set<_Tp, hash<_Tp>, equal_to<_Tp>, _Allocator>;
 
 template<class _Tp, class _Hash, class _Allocator,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_set(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
   -> unordered_set<_Tp, _Hash, equal_to<_Tp>, _Allocator>;
 #endif
@@ -1654,10 +1654,10 @@ template<class _InputIterator,
          class _Pred = equal_to<__iter_value_type<_InputIterator>>,
          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<!__is_allocator<_Pred>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<!__is_allocator<_Pred> >,
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type = 0,
               _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
   -> unordered_multiset<__iter_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
@@ -1667,10 +1667,10 @@ template <ranges::input_range _Range,
           class _Hash = hash<ranges::range_value_t<_Range>>,
           class _Pred = equal_to<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator<_Hash> >,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<!__is_allocator<_Pred>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<!__is_allocator<_Pred> >,
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type = 0,
               _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
   -> unordered_multiset<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
@@ -1678,17 +1678,17 @@ unordered_multiset(from_range_t, _Range&&, typename allocator_traits<_Allocator>
 
 template<class _Tp, class _Hash = hash<_Tp>,
          class _Pred = equal_to<_Tp>, class _Allocator = allocator<_Tp>,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<!__is_allocator<_Pred>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<!__is_allocator<_Pred> >,
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type = 0,
               _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
   -> unordered_multiset<_Tp, _Hash, _Pred, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_multiset<__iter_value_type<_InputIterator>,
                    hash<__iter_value_type<_InputIterator>>,
@@ -1697,9 +1697,9 @@ unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Al
 
 template<class _InputIterator, class _Hash, class _Allocator,
          class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type,
               _Hash, _Allocator)
   -> unordered_multiset<__iter_value_type<_InputIterator>, _Hash,
@@ -1709,35 +1709,35 @@ unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Al
 #if _LIBCPP_STD_VER >= 23
 
 template <ranges::input_range _Range, class _Allocator,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_multiset<ranges::range_value_t<_Range>, hash<ranges::range_value_t<_Range>>,
                    equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 template <ranges::input_range _Range, class _Allocator,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(from_range_t, _Range&&, _Allocator)
   -> unordered_multiset<ranges::range_value_t<_Range>, hash<ranges::range_value_t<_Range>>,
                    equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 template <ranges::input_range _Range, class _Hash, class _Allocator,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator<_Hash> >,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
   -> unordered_multiset<ranges::range_value_t<_Range>, _Hash, equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 #endif
 
 template<class _Tp, class _Allocator,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Allocator)
   -> unordered_multiset<_Tp, hash<_Tp>, equal_to<_Tp>, _Allocator>;
 
 template<class _Tp, class _Hash, class _Allocator,
-         class = enable_if_t<!__is_allocator<_Hash>::value>,
+         class = enable_if_t<!__is_allocator<_Hash> >,
          class = enable_if_t<!is_integral<_Hash>::value>,
-         class = enable_if_t<__is_allocator<_Allocator>::value>>
+         class = enable_if_t<__is_allocator<_Allocator> >>
 unordered_multiset(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
   -> unordered_multiset<_Tp, _Hash, equal_to<_Tp>, _Allocator>;
 #endif
