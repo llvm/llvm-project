@@ -3,7 +3,7 @@
 llvm.func @foo()
 
 // CHECK-LABEL: @omp_teams_simple
-// CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr [[WRAPPER_FN:.+]])
+// CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr [[OUTLINED_FN:.+]])
 // CHECK: ret void
 llvm.func @omp_teams_simple() {
     omp.teams {
@@ -13,11 +13,8 @@ llvm.func @omp_teams_simple() {
     llvm.return
 }
 
-// CHECK: define internal void @[[OUTLINED_FN:.+]]()
+// CHECK: define internal void @[[OUTLINED_FN:.+]](ptr {{.+}}, ptr {{.+}})
 // CHECK:   call void @foo()
-// CHECK:   ret void
-// CHECK: define void [[WRAPPER_FN]](ptr {{.+}}, ptr {{.+}})
-// CHECK:   call void @[[OUTLINED_FN]]
 // CHECK:   ret void
 
 // -----
@@ -30,7 +27,7 @@ llvm.func @foo(i32) -> ()
 // CHECK: br
 // CHECK: [[GEP:%.+]] = getelementptr { i32 }, ptr [[STRUCT_ARG]], i32 0, i32 0
 // CHECK: store i32 [[ARG0]], ptr [[GEP]]
-// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[WRAPPER_FN:.+]], ptr [[STRUCT_ARG]])
+// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[OUTLINED_FN:.+]], ptr [[STRUCT_ARG]])
 // CHECK: ret void
 llvm.func @omp_teams_shared_simple(%arg0: i32) {
     omp.teams {
@@ -40,13 +37,10 @@ llvm.func @omp_teams_shared_simple(%arg0: i32) {
     llvm.return
 }
 
-// CHECK: define internal void [[OUTLINED_FN:@.+]](ptr [[STRUCT_ARG:%.+]])
+// CHECK: define internal void [[OUTLINED_FN:@.+]](ptr {{.+}}, ptr {{.+}}, ptr [[STRUCT_ARG:%.+]])
 // CHECK:   [[GEP:%.+]] = getelementptr { i32 }, ptr [[STRUCT_ARG]], i32 0, i32 0
 // CHECK:   [[LOAD_GEP:%.+]] = load i32, ptr [[GEP]]
 // CHECK:   call void @foo(i32 [[LOAD_GEP]])
-// CHECK:   ret void
-// CHECK: define void [[WRAPPER_FN]](ptr {{.+}}, ptr {{.+}}, ptr [[STRUCT_ARG:.+]])
-// CHECK:   call void [[OUTLINED_FN]](ptr [[STRUCT_ARG]])
 // CHECK:   ret void
 
 // -----
@@ -81,7 +75,7 @@ llvm.func @bar()
 // CHECK: store i32 [[LOADED]], ptr [[LOADED_PTR]]
 
 // Runtime call.
-// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[WRAPPER_FN:@.+]], ptr [[STRUCT_ARG]])
+// CHECK: call void {{.+}} @__kmpc_fork_teams(ptr @{{.+}}, i32 1, ptr [[OUTLINED_FN:@.+]], ptr [[STRUCT_ARG]])
 // CHECK: br label
 // CHECK: call void @bar()
 // CHECK: ret void
@@ -105,7 +99,7 @@ llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %a
 }
 
 // Check the outlined function.
-// CHECK: define internal void [[OUTLINED_FN:@.+]](ptr [[DATA:%.+]])
+// CHECK: define internal void [[OUTLINED_FN:@.+]](ptr {{.+}}, ptr {{.+}}, ptr [[DATA:%.+]])
 // CHECK:   [[CONDITION_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]]
 // CHECK:   [[CONDITION:%.+]] = load i1, ptr [[CONDITION_PTR]]
 // CHECK:   [[ARG0_PTR:%.+]] = getelementptr {{.+}}, ptr [[DATA]], i32 0, i32 1
@@ -130,7 +124,3 @@ llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %a
 // CHECK-NEXT: br label
 // CHECK: ret void
 
-// Check the wrapper function
-// CHECK: define void [[WRAPPER_FN]](ptr {{.+}}, ptr {{.+}}, ptr [[DATA:%.+]])
-// CHECK:   call void [[OUTLINED_FN]](ptr [[DATA]])
-// CHECK:   ret void
