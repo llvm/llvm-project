@@ -1473,11 +1473,11 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   bool UsesSecondVec =
       any_of(ConcatMask, [&](int M) { return M >= NumInputElts; });
   InstructionCost OldCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      Shuffle->getShuffleMask());
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, Shuffle->getShuffleMask());
   InstructionCost NewCost = TTI.getShuffleCost(
-      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc, VecType,
-      ConcatMask);
+      UsesSecondVec ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc,
+      UsesSecondVec ? VecType : ShuffleInputType, ConcatMask);
 
   LLVM_DEBUG(dbgs() << "Found a reduction feeding from a shuffle: " << *Shuffle
                     << "\n");
