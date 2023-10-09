@@ -10866,7 +10866,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   }
 
   default: {
-    if (auto A = dyn_cast<AtomicSDNode>(Op) || Op->isMemIntrinsic()) {
+    if (isa<AtomicSDNode>(Op) || Op->isMemIntrinsic()) {
       // If this causes us to throw away signedness info, then fail.
       if (IsSigned)
         return std::nullopt;
