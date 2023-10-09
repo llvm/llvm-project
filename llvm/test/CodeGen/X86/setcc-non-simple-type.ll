@@ -53,9 +53,9 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:  .LBB0_1: # %vector.ph
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_2 Depth 2
+; CHECK-NEXT:    xorpd %xmm3, %xmm3
 ; CHECK-NEXT:    movq $-1024, %rdi # imm = 0xFC00
 ; CHECK-NEXT:    movdqa %xmm0, %xmm4
-; CHECK-NEXT:    xorpd %xmm3, %xmm3
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %vector.body
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -114,9 +114,9 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:  .LBB0_1: # %vector.ph
 ; CHECK-AVX2-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-AVX2-NEXT:    # Child Loop BB0_2 Depth 2
+; CHECK-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-AVX2-NEXT:    movq $-1024, %rdi # imm = 0xFC00
 ; CHECK-AVX2-NEXT:    vmovdqa %xmm0, %xmm4
-; CHECK-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-AVX2-NEXT:    .p2align 4, 0x90
 ; CHECK-AVX2-NEXT:  .LBB0_2: # %vector.body
 ; CHECK-AVX2-NEXT:    # Parent Loop BB0_1 Depth=1
