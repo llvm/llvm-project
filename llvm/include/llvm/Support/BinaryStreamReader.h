@@ -73,8 +73,7 @@ public:
     if (auto EC = readBytes(Bytes, sizeof(T)))
       return EC;
 
-    Dest = llvm::support::endian::read<T, llvm::support::unaligned>(
-        Bytes.data(), Stream.getEndian());
+    Dest = llvm::support::endian::read<T>(Bytes.data(), Stream.getEndian());
     return Error::success();
   }
 
