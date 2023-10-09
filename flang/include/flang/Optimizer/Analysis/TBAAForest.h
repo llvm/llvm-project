@@ -21,7 +21,7 @@ namespace fir {
 //===----------------------------------------------------------------------===//
 // TBAATree
 //===----------------------------------------------------------------------===//
-/// Per-function TBAA tree. Each tree contins branches for data (of various
+/// Per-function TBAA tree. Each tree contains branches for data (of various
 /// kinds) and descriptor access
 struct TBAATree {
   //===----------------------------------------------------------------------===//
@@ -70,7 +70,7 @@ private:
 //===----------------------------------------------------------------------===//
 // TBAAForrest
 //===----------------------------------------------------------------------===//
-/// Colletion of TBAATrees, usually indexed by function (so that each function
+/// Collection of TBAATrees, usually indexed by function (so that each function
 /// has a different TBAATree)
 class TBAAForrest {
 public:

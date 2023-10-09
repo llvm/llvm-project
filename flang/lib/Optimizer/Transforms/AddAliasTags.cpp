@@ -41,10 +41,10 @@ static llvm::cl::opt<bool>
 // this is worth fixing in the future.
 static llvm::cl::opt<bool>
     enableGlobals("globals-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
-                  llvm::cl::desc("Add TBAA tags to dummy arguments. UNSAFE."));
+                  llvm::cl::desc("Add TBAA tags to global variables. UNSAFE."));
 static llvm::cl::opt<bool> enableLocalAllocs(
     "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
-    llvm::cl::desc("Add TBAA tags to dummy arguments. UNSAFE."));
+    llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
 
 namespace {
 
