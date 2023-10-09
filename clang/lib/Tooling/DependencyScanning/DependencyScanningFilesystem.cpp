@@ -162,6 +162,35 @@ DependencyScanningFilesystemSharedCache::CacheShard::
   return *EntriesByFilename.insert({Filename, &Entry}).first->getValue();
 }
 
+const CachedRealPath *
+DependencyScanningFilesystemSharedCache::CacheShard::findRealPathByFilename(
+    StringRef Filename) const {
+  assert(llvm::sys::path::is_absolute_gnu(Filename));
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+  auto It = RealPathsByFilename.find(Filename);
+  return It == RealPathsByFilename.end() ? nullptr : It->getValue();
+}
+
+const CachedRealPath &DependencyScanningFilesystemSharedCache::CacheShard::
+    getOrEmplaceRealPathForFilename(StringRef Filename,
+                                    llvm::ErrorOr<llvm::StringRef> RealPath) {
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+
+  auto Insertion = RealPathsByFilename.insert({Filename, nullptr});
+  if (Insertion.second) {
+    auto OwnedRealPath = [&]() -> CachedRealPath {
+      if (!RealPath)
+        return RealPath.getError();
+      return RealPath->str();
+    }();
+
+    Insertion.first->second = new (RealPathStorage.Allocate())
+        CachedRealPath(std::move(OwnedRealPath));
+  }
+
+  return *Insertion.first->second;
+}
+
 static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
@@ -319,6 +348,53 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   if (!Result)
     return Result.getError();
   return DepScanFile::create(Result.get());
+}
+
+std::error_code DependencyScanningWorkerFilesystem::getRealPath(
+    const Twine &Path, SmallVectorImpl<char> &Output) const {
+  SmallString<256> OwnedFilename;
+  StringRef OriginalFilename = Path.toStringRef(OwnedFilename);
+
+  SmallString<256> PathBuf;
+  auto FilenameForLookup = tryGetFilenameForLookup(OriginalFilename, PathBuf);
+  if (!FilenameForLookup)
+    return FilenameForLookup.getError();
+
+  auto HandleCachedRealPath =
+      [&Output](const CachedRealPath &RealPath) -> std::error_code {
+    if (!RealPath)
+      return RealPath.getError();
+    Output.assign(RealPath->begin(), RealPath->end());
+    return {};
+  };
+
+  // If we already have the result in local cache, no work required.
+  if (const auto *RealPath =
+          LocalCache.findRealPathByFilename(*FilenameForLookup))
+    return HandleCachedRealPath(*RealPath);
+
+  // If we have the result in the shared cache, cache it locally.
+  auto &Shard = SharedCache.getShardForFilename(*FilenameForLookup);
+  if (const auto *ShardRealPath =
+          Shard.findRealPathByFilename(*FilenameForLookup)) {
+    const auto &RealPath =
+        LocalCache.insertRealPathForFilename(*FilenameForLookup, *ShardRealPath);
+    return HandleCachedRealPath(RealPath);
+  }
+
+  // If we don't know the real path, compute it...
+  std::error_code EC = getUnderlyingFS().getRealPath(OriginalFilename, Output);
+  llvm::ErrorOr<llvm::StringRef> ComputedRealPath = EC;
+  if (!EC)
+    ComputedRealPath = StringRef{Output.data(), Output.size()};
+
+  // ...and try to write it into the shared cache. In case some other thread won
+  // this race and already wrote its own result there, just adopt it. Write
+  // whatever is in the shared cache into the local one.
+  const auto &RealPath = Shard.getOrEmplaceRealPathForFilename(
+      *FilenameForLookup, ComputedRealPath);
+  return HandleCachedRealPath(
+      LocalCache.insertRealPathForFilename(*FilenameForLookup, RealPath));
 }
 
 std::error_code DependencyScanningWorkerFilesystem::setCurrentWorkingDirectory(
