@@ -13,7 +13,7 @@
 // RUN: %clang_analyze_cc1                                         \
 // RUN:  -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
 // RUN:  -analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=true \
-// RUN:  -verify=pedantic -Wno-unused %s
+// RUN:  -verify=expected,pedantic -Wno-unused %s
 
 #include "../Inputs/system-header-simulator.h"
 char *getenv(const char *name);
@@ -39,7 +39,6 @@ void incorrect_usage_setenv_getenv_invalidation(void) {
 
   if (strcmp(tmpvar, "") == 0) { // body of strcmp is unknown
     // expected-warning@-1{{use of invalidated pointer 'tmpvar' in a function call}}
-    // pedantic-warning@-2{{use of invalidated pointer 'tmpvar' in a function call}}
   }
 }
 
