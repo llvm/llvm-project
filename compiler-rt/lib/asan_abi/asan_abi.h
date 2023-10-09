@@ -87,21 +87,5 @@ void *__asan_abi_stack_malloc_always_n(size_t scale, size_t size);
 // Functions concerning fake stack free
 void __asan_abi_stack_free_n(int scale, void *p, size_t n);
 
-// Functions concerning introspection (including lldb support)
-void *__asan_abi_get_alloc_stack(void *addr, void **trace, size_t size,
-                                 int *thread_id);
-void __asan_abi_report_error(void *pc, void *bp, void *sp, void *addr,
-                             bool is_write, size_t access_size, int exp);
-void __asan_abi_set_error_report_callback(void (*callback)(const char *));
-void __asan_abi_describe_address(void *addr);
-bool __asan_abi_report_present(void);
-void *__asan_abi_get_report_pc(void);
-void *__asan_abi_get_report_bp(void);
-void *__asan_abi_get_report_sp(void);
-void *__asan_abi_get_report_address(void);
-int __asan_abi_get_report_access_type(void);
-size_t __asan_abi_get_report_access_size(void);
-const char *__asan_abi_get_report_description(void);
-
 __END_DECLS
 #endif // ASAN_ABI_H
