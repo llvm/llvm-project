@@ -4091,9 +4091,10 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
     Builder.CreateCall(FakeFunction, {});
   };
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-  Builder.restoreIP(
-      OMPBuilder.createTeams(Builder, BodyGenCB, nullptr, F->arg_begin()));
+  // `F` has an argument - an integer, so we use that as the thread limit.
+  Builder.restoreIP(OMPBuilder.createTeams(/*=*/Builder, BodyGenCB,
+                                           /*NumTeamsUpper=*/nullptr,
+                                           /*ThreadLimit=*/F->arg_begin()));
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
@@ -4141,8 +4142,10 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeams) {
     Builder.CreateCall(FakeFunction, {});
   };
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
-  Builder.restoreIP(OMPBuilder.createTeams(Builder, BodyGenCB, F->arg_begin()));
+  // `F` already has an integer argument, so we use that as upper bound to
+  // `num_teams`
+  Builder.restoreIP(OMPBuilder.createTeams(Builder, BodyGenCB,
+                                           /*NumTeamsUpper=*/F->arg_begin()));
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
@@ -4184,6 +4187,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
   BasicBlock *CodegenBB = splitBB(Builder, true);
   Builder.SetInsertPoint(CodegenBB);
 
+  // Generate values for `num_teams` and `thread_limit` using the first argument
+  // of the testing function.
   Value *NumTeamsUpper =
       Builder.CreateAdd(F->arg_begin(), Builder.getInt32(10), "numTeamsUpper");
   Value *ThreadLimit =
