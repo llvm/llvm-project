@@ -54,7 +54,6 @@ define void @trap_unreacheable() {
 ; CHECK:         .functype trap_unreacheable () -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    unreachable
-; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    end_function
   call void @llvm.trap()
   unreachable
@@ -104,7 +103,6 @@ define i64 @drop_unreachable() {
 ; CHECK:         .functype drop_unreachable () -> (i64)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    call ext_func_i32
-; CHECK-NEXT:    drop
 ; CHECK-NEXT:    unreachable
 ; CHECK-NEXT:    end_function
   call i32 @ext_func_i32()

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include <iterator>
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-peephole"
@@ -109,6 +110,53 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
   return true;
 }
 
+static bool eraseDeadCodeAroundUnreachable(MachineInstr &UnreachbleMI,
+                                           MachineBasicBlock &MBB) {
+  SmallVector<MachineInstr *, 16> ToDelete;
+
+  // Because wasm unreachable is stack polymorphic and unconditionally ends
+  // control, all instructions after it can be removed until the end of this
+  // block. We remove the common case of double unreachable.
+  auto ForwardsIterator = UnreachbleMI.getIterator();
+  for (ForwardsIterator++; !ForwardsIterator.isEnd(); ForwardsIterator++) {
+    MachineInstr &MI = *ForwardsIterator;
+    if (MI.getOpcode() == WebAssembly::UNREACHABLE) {
+      ToDelete.push_back(&MI);
+    } else {
+      break;
+    }
+  }
+
+  // For the same reasons as above, previous instructions that only affect
+  // local function state can be removed (e.g. local.set, drop, various reads).
+  // We remove the common case of "drop unreachable".
+  auto BackwardsIterator = UnreachbleMI.getReverseIterator();
+  for (BackwardsIterator++; !BackwardsIterator.isEnd(); BackwardsIterator++) {
+    MachineInstr &MI = *BackwardsIterator;
+    switch (MI.getOpcode()) {
+    case WebAssembly::DROP_I32:
+    case WebAssembly::DROP_I64:
+    case WebAssembly::DROP_F32:
+    case WebAssembly::DROP_F64:
+    case WebAssembly::DROP_EXTERNREF:
+    case WebAssembly::DROP_FUNCREF:
+    case WebAssembly::DROP_V128:
+      ToDelete.push_back(&MI);
+      continue;
+    default:
+      goto exit_loop;
+    }
+  }
+exit_loop:;
+
+  bool Changed = false;
+  for (MachineInstr *MI : ToDelete) {
+    MI->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
+}
+
 bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Peephole **********\n"
@@ -158,6 +206,9 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
       // Optimize away an explicit void return at the end of the function.
       case WebAssembly::RETURN:
         Changed |= maybeRewriteToFallthrough(MI, MBB, MF, MFI, MRI, TII);
+        break;
+      case WebAssembly::UNREACHABLE:
+        Changed |= eraseDeadCodeAroundUnreachable(MI, MBB);
         break;
       }
 

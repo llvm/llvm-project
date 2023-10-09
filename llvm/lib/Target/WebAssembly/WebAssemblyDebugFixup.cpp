@@ -122,9 +122,23 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
           // it will be culled later.
         }
       } else {
+
+        // There is a WebAssembly Peephole optimisation can remove instructions before and after
+        // a wasm unreachable. This is a valid transformation because unreachable is "stack polymorphic",
+        // but stack polymorphism is not modeled in the llvm wasm backend.
+        // In current codegen, unreachable can only appear at the end of a basic block, and the stack is empty
+        // at the end of every basic block.
+        // So we can assume unreachable has stack-type [t*] -> [], and simply clear the stack.
+        if (MI.getOpcode() == WebAssembly::UNREACHABLE) {
+          Stack.clear();
+          break;
+        }
+
         // Track stack depth.
         for (MachineOperand &MO : reverse(MI.explicit_uses())) {
           if (MO.isReg() && MFI.isVRegStackified(MO.getReg())) {
+            assert(!Stack.empty() &&
+                   "WebAssemblyDebugFixup: Pop: Operand stack empty!");
             auto Prev = Stack.back();
             Stack.pop_back();
             assert(Prev.Reg == MO.getReg() &&
