@@ -356,19 +356,6 @@ fir::ShapeOp genShapeOp(mlir::OpBuilder &builder, fir::SequenceType seqTy,
   return builder.create<fir::ShapeOp>(loc, extents);
 }
 
-/// Return the nested sequence type if any.
-static mlir::Type extractSequenceType(mlir::Type ty) {
-  if (mlir::isa<fir::SequenceType>(ty))
-    return ty;
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
-    return extractSequenceType(boxTy.getEleTy());
-  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
-    return extractSequenceType(heapTy.getEleTy());
-  if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(ty))
-    return extractSequenceType(ptrTy.getEleTy());
-  return mlir::Type{};
-}
-
 template <typename RecipeOp>
 static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
                                      mlir::Type ty, mlir::Location loc) {
@@ -394,8 +381,7 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
       }
     }
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
-    mlir::Type innerTy = extractSequenceType(boxTy);
-    if (!innerTy)
+    if (!mlir::isa<fir::SequenceType>(boxTy.getEleTy()))
       TODO(loc, "Unsupported boxed type in OpenACC privatization");
     fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
     hlfir::Entity source = hlfir::Entity{retVal};
@@ -763,6 +749,19 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
     return getReductionInitValue(builder, loc, ptrTy.getEleTy(), op);
 
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
+}
+
+/// Return the nested sequence type if any.
+static mlir::Type extractSequenceType(mlir::Type ty) {
+  if (mlir::isa<fir::SequenceType>(ty))
+    return ty;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+    return extractSequenceType(boxTy.getEleTy());
+  if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
+    return extractSequenceType(heapTy.getEleTy());
+  if (auto ptrTy = mlir::dyn_cast<fir::PointerType>(ty))
+    return extractSequenceType(ptrTy.getEleTy());
+  return mlir::Type{};
 }
 
 static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
