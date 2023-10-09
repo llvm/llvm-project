@@ -56,10 +56,6 @@ protected:
 
   std::vector<unsigned> MaxPressure;
 
-  unsigned SGPRExcessLimit;
-
-  unsigned VGPRExcessLimit;
-
   unsigned TargetOccupancy;
 
   MachineFunction *MF;
@@ -94,9 +90,17 @@ public:
 
   unsigned VGPRCriticalLimit;
 
+  unsigned SGPRExcessLimit;
+
+  unsigned VGPRExcessLimit;
+
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;
+
+  unsigned VGPRExcessMargin = 1;
+
+  unsigned SGPRExcessMargin = 1;
 
   GCNSchedStrategy(const MachineSchedContext *C);
 
@@ -116,6 +120,12 @@ public:
   bool hasNextStage() const;
 
   GCNSchedStageID getNextStage() const;
+
+  virtual bool computeScheduleMetric(unsigned RegionIdx, unsigned WavesAfter,
+                                    unsigned WavesBefore) {
+    return false;
+  }
+  virtual void clearMetric(){};
 };
 
 /// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
@@ -135,33 +145,6 @@ protected:
 public:
   GCNMaxILPSchedStrategy(const MachineSchedContext *C);
 };
-
-class ScheduleMetrics {
-  unsigned ScheduleLength;
-  unsigned BubbleCycles;
-
-public:
-  ScheduleMetrics() {}
-  ScheduleMetrics(unsigned L, unsigned BC)
-      : ScheduleLength(L), BubbleCycles(BC) {}
-  unsigned getLength() const { return ScheduleLength; }
-  unsigned getBubbles() const { return BubbleCycles; }
-  unsigned getMetric() const {
-    unsigned Metric = (BubbleCycles * ScaleFactor) / ScheduleLength;
-    // Metric is zero if the amount of bubbles is less than 1% which is too
-    // small. So, return 1.
-    return Metric ? Metric : 1;
-  }
-  static const unsigned ScaleFactor;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const ScheduleMetrics &Sm) {
-  dbgs() << "\n Schedule Metric (scaled by "
-         << ScheduleMetrics::ScaleFactor
-         << " ) is: " << Sm.getMetric() << " [ " << Sm.getBubbles() << "/"
-         << Sm.getLength() << " ]\n";
-  return OS;
-}
 
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
@@ -296,15 +279,9 @@ public:
   // Check result of scheduling.
   void checkScheduling();
 
-  // computes the given schedule virtual execution time in clocks
-  ScheduleMetrics getScheduleMetrics(const std::vector<SUnit> &InputSchedule);
-  ScheduleMetrics getScheduleMetrics(const GCNScheduleDAGMILive &DAG);
-  unsigned computeSUnitReadyCycle(const SUnit &SU, unsigned CurrCycle,
-                                  DenseMap<unsigned, unsigned> &ReadyCycles,
-                                  const TargetSchedModel &SM);
-
   // Returns true if scheduling should be reverted.
-  virtual bool shouldRevertScheduling(unsigned WavesAfter);
+  virtual bool shouldRevertScheduling(unsigned WavesAfter,
+                                      unsigned WavesBefore);
 
   // Returns true if current region has known excess pressure.
   bool isRegionWithExcessRP() const {
@@ -324,7 +301,8 @@ public:
 
 class OccInitialScheduleStage : public GCNSchedStage {
 public:
-  bool shouldRevertScheduling(unsigned WavesAfter) override;
+  bool shouldRevertScheduling(unsigned WavesAfter,
+                              unsigned WavesBefore) override;
 
   OccInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
@@ -342,7 +320,8 @@ public:
 
   bool initGCNRegion() override;
 
-  bool shouldRevertScheduling(unsigned WavesAfter) override;
+  bool shouldRevertScheduling(unsigned WavesAfter,
+                              unsigned WavesBefore) override;
 
   UnclusteredHighRPStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
@@ -357,7 +336,8 @@ public:
 
   bool initGCNRegion() override;
 
-  bool shouldRevertScheduling(unsigned WavesAfter) override;
+  bool shouldRevertScheduling(unsigned WavesAfter,
+                              unsigned WavesBefore) override;
 
   ClusteredLowOccStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
@@ -393,7 +373,8 @@ public:
 
   bool initGCNRegion() override;
 
-  bool shouldRevertScheduling(unsigned WavesAfter) override;
+  bool shouldRevertScheduling(unsigned WavesAfter,
+                              unsigned WavesBefore = 0) override;
 
   PreRARematStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
@@ -401,7 +382,8 @@ public:
 
 class ILPInitialScheduleStage : public GCNSchedStage {
 public:
-  bool shouldRevertScheduling(unsigned WavesAfter) override;
+  bool shouldRevertScheduling(unsigned WavesAfter,
+                              unsigned WavesBefore) override;
 
   ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
@@ -421,6 +403,87 @@ public:
   GCNPostScheduleDAGMILive(MachineSchedContext *C,
                            std::unique_ptr<MachineSchedStrategy> S,
                            bool RemoveKillFlags);
+};
+
+#ifndef NDEBUG
+struct EarlierIssuingCycle {
+  bool operator()(std::pair<MachineInstr *, unsigned> A,
+                  std::pair<MachineInstr *, unsigned> B) const {
+    return A.second < B.second;
+  }
+};
+#endif
+
+/// The goal of this scheduling strategy is to find a reasonable tradeof between
+/// the kernel occupancy (i.e. maximum number of waves per simd). and ILP (i.e.
+/// minimize the amount of stall cycles by means of the better latency
+/// covering).
+class GCNBalancedSchedStrategy final : public GCNSchedStrategy {
+
+  const unsigned ScaleFactor = 100;
+  unsigned StallTotal = 0;
+  unsigned CurrCycle = 0;
+  DenseMap<unsigned, unsigned> ReadyCycles;
+  DenseMap<unsigned, SmallVector<unsigned, 4>> Metrics;
+  const TargetSchedModel *SM;
+  unsigned computeSUnitReadyCycle(const SUnit &SU);
+
+  void clearMetric() override {
+    StallTotal = 0;
+    CurrCycle = 0;
+    ReadyCycles.clear();
+#ifndef NDEBUG
+    PrintableSchedule.clear();
+#endif
+  }
+
+#ifndef NDEBUG
+  std::set<std::pair<MachineInstr *, unsigned>, EarlierIssuingCycle> PrintableSchedule;
+
+  void printSchedule() {
+    if (PrintableSchedule.empty())
+      return;
+
+    unsigned BBNum = PrintableSchedule.begin()->first->getParent()->getNumber();
+    dbgs() << "\n################## Schedule time ReadyCycles for MBB : "
+           << BBNum
+           << " ##################\n# Cycle #\t\t\tInstruction          "
+              "             "
+              "                            \n";
+    unsigned IPrev = 1;
+    for (auto &I : PrintableSchedule) {
+      if (I.second > IPrev + 1)
+        dbgs() << "****************************** BUBBLE OF "
+               << I.second - IPrev
+               << " CYCLES DETECTED ******************************\n\n";
+      dbgs() << "[ " << I.second << " ]  :  " << *I.first << "\n";
+      IPrev = I.second;
+    }
+    dbgs() << "\n\t"
+             << "Metric: "
+             << (StallTotal
+                     ? (StallTotal * ScaleFactor) / CurrCycle
+                     : 1)
+             << "\n\n";
+  }
+#endif
+
+public:
+  GCNBalancedSchedStrategy(const MachineSchedContext *C) : GCNSchedStrategy(C) {
+    SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
+    SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
+    SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
+    SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
+  }
+
+  void initialize(ScheduleDAGMI *DAG) override {
+    GCNSchedStrategy::initialize(DAG);
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    SM = &ST.getInstrInfo()->getSchedModel();
+  }
+
+  bool computeScheduleMetric(unsigned RegionIdx, unsigned WavesAfter,
+                            unsigned WavesBefore) override;
 };
 
 } // End namespace llvm
