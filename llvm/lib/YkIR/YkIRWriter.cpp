@@ -41,8 +41,8 @@ enum OpCode {
   Alloca,
   Call,
   GetElementPtr,
-  Branch,
-  CondBranch,
+  Br,
+  CondBr,
   ICmp,
   BinaryOperator,
   Ret,
@@ -296,7 +296,7 @@ public:
       // type_index:
       OutStreamer.emitSizeT(typeIndex(I->getType()));
       // opcode:
-      serialiseOpcode(OpCode::Branch);
+      serialiseOpcode(OpCode::Br);
       // num_operands:
       // We don't serialise any operands, because traces will guide us.
       OutStreamer.emitInt32(0);
@@ -306,7 +306,7 @@ public:
     } else {
       // We DO need operands for conditional branches, so that we can build
       // guards.
-      serialiseInstGeneric(I, VLMap, BBIdx, InstIdx, OpCode::CondBranch);
+      serialiseInstGeneric(I, VLMap, BBIdx, InstIdx, OpCode::CondBr);
     }
   }
 
