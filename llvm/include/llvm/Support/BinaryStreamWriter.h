@@ -59,8 +59,7 @@ public:
     static_assert(std::is_integral_v<T>,
                   "Cannot call writeInteger with non-integral value!");
     uint8_t Buffer[sizeof(T)];
-    llvm::support::endian::write<T, llvm::support::unaligned>(
-        Buffer, Value, Stream.getEndian());
+    llvm::support::endian::write<T>(Buffer, Value, Stream.getEndian());
     return writeBytes(Buffer);
   }
 
