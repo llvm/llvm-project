@@ -48,3 +48,16 @@ int main(int argc, const char *argv[], const char *envp[]) {
   // expected-warning@-1 2 {{dereferencing an invalid pointer}}
   // expected-note@-2 2 {{dereferencing an invalid pointer}}
 }
+
+void multiple_invalidation_no_duplicate_notes(void) {
+  char *v1 = getenv("VAR1");
+
+  setenv("VAR2", "...", 1); // no note here
+
+  setenv("VAR3", "...", 1);
+  // expected-note@-1{{'setenv' call may invalidate the environment returned by 'getenv'}}
+
+  strcmp(v1, "");
+  // expected-warning@-1{{use of invalidated pointer 'v1' in a function call}}
+  // expected-note@-2{{use of invalidated pointer 'v1' in a function call}}
+}

@@ -142,7 +142,9 @@ const NoteTag *InvalidPtrChecker::createEnvInvalidationNote(
       Out << ", and " << InvalidLocationNames[1];
 
     // Mark all regions that were interesting before as NOT interesting now
-    // to avoid extra notes coming from other checkers.
+    // to avoid extra notes coming from invalidation points higher up the
+    // bugpath. This ensures, that only the last invalidation point is marked
+    // with a note tag.
     if (IsInterestingForInvalidation(MainRegion))
       BR.markNotInteresting(MainRegion);
     for (const MemRegion *GetenvRegion : GetenvRegions)
