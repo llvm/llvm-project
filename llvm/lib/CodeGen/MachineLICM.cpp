@@ -1050,7 +1050,7 @@ bool MachineLICMBase::HasLoopPHIUse(const MachineInstr *MI,
         if (UseMI.isPHI()) {
           // A PHI inside the loop causes a copy because the live range of Reg is
           // extended across the PHI.
-          if (CurLoop->getHeader() == UseMI.getParent())
+          if (CurLoop->contains(&UseMI))
             return true;
           // A PHI in an exit block can cause a copy to be inserted if the PHI
           // has multiple predecessors in the loop with different values.
