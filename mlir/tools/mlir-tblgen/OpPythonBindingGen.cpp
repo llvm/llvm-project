@@ -840,7 +840,7 @@ populateBuilderRegions(const Operator &op,
 }
 
 /// Emits a default builder constructing an operation from the list of its
-/// result types, followed by a list of its operands. Returns fully vector
+/// result types, followed by a list of its operands. Returns vector
 /// of fully built functionArgs for downstream users (to save having to
 /// rebuild anew).
 static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
