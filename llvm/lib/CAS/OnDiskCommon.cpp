@@ -63,14 +63,15 @@ void cas::ondisk::setMaxMappingSize(uint64_t Size) {
   OnDiskCASMaxMappingSize = Size;
 }
 
-std::error_code cas::ondisk::lockFileThreadSafe(int FD, bool Exclusive) {
+std::error_code cas::ondisk::lockFileThreadSafe(int FD,
+                                                sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
-  if (flock(FD, Exclusive ? LOCK_EX : LOCK_SH) == 0)
+  if (flock(FD, Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 #elif defined(_WIN32)
   // On Windows this implementation is thread-safe.
-  return sys::fs::lockFile(FD, Exclusive);
+  return sys::fs::lockFile(FD, Kind);
 #else
   return make_error_code(std::errc::no_lock_available);
 #endif
@@ -91,12 +92,13 @@ std::error_code cas::ondisk::unlockFileThreadSafe(int FD) {
 
 std::error_code
 cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
-                                   bool Exclusive) {
+                                   sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
-    if (flock(FD, (Exclusive ? LOCK_EX : LOCK_SH) | LOCK_NB) == 0)
+    if (flock(FD, (Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) |
+                      LOCK_NB) == 0)
       return std::error_code();
     int Error = errno;
     if (Error == EWOULDBLOCK) {
@@ -109,7 +111,7 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
   return make_error_code(std::errc::no_lock_available);
 #elif defined(_WIN32)
   // On Windows this implementation is thread-safe.
-  return sys::fs::tryLockFile(FD, Timeout, Exclusive);
+  return sys::fs::tryLockFile(FD, Timeout, Kind);
 #else
   return make_error_code(std::errc::no_lock_available);
 #endif

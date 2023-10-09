@@ -348,7 +348,7 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
   sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
   auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(File); });
 
-  if (std::error_code EC = lockFileThreadSafe(FD, /*Exclusive=*/true))
+  if (std::error_code EC = lockFileThreadSafe(FD, sys::fs::LockKind::Exclusive))
     return createFileError(PathBuf, EC);
   auto UnlockFD = make_scope_exit([&]() { unlockFileThreadSafe(FD); });
 
@@ -490,7 +490,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   // from creating a new chain (essentially while a \p UnifiedOnDiskCache
   // instance holds a shared lock the storage for the primary directory will
   // grow unrestricted).
-  if (std::error_code EC = lockFileThreadSafe(LockFD, /*Exclusive=*/false))
+  if (std::error_code EC = lockFileThreadSafe(LockFD, sys::fs::LockKind::Shared))
     return createFileError(PathBuf, EC);
 
   SmallVector<std::string, 4> DBDirs;
@@ -630,7 +630,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   // this \p UnifiedOnDiskCache path is opened.
 
   if (std::error_code EC = tryLockFileThreadSafe(
-          LockFD, std::chrono::milliseconds(0), /*Exclusive=*/true)) {
+          LockFD, std::chrono::milliseconds(0), sys::fs::LockKind::Exclusive)) {
     if (EC == errc::no_lock_available)
       return Error::success(); // couldn't get exclusive lock, give up.
     return createFileError(RootPath, EC);

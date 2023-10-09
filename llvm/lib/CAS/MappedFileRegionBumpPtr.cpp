@@ -76,14 +76,13 @@ namespace {
 struct FileLockRAII {
   std::string Path;
   int FD;
-  enum LockKind { Shared, Exclusive };
-  std::optional<LockKind> Locked;
+  std::optional<sys::fs::LockKind> Locked;
 
   FileLockRAII(std::string Path, int FD) : Path(std::move(Path)), FD(FD) {}
   ~FileLockRAII() { consumeError(unlock()); }
 
-  Error lock(LockKind LK) {
-    if (std::error_code EC = lockFileThreadSafe(FD, LK == Exclusive))
+  Error lock(sys::fs::LockKind LK) {
+    if (std::error_code EC = lockFileThreadSafe(FD, LK))
       return createFileError(Path, EC);
     Locked = LK;
     return Error::success();
@@ -134,12 +133,12 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   // Take shared/reader lock that will be held until we close the file; unlocked
   // by destroyImpl.
   if (std::error_code EC =
-          lockFileThreadSafe(SharedLockFD, /*Exclusive=*/false))
+          lockFileThreadSafe(SharedLockFD, sys::fs::LockKind::Shared))
     return createFileError(Path, EC);
 
   // Take shared/reader lock for initialization.
   FileLockRAII InitLock(Result.Path, FD);
-  if (Error E = InitLock.lock(FileLockRAII::Shared))
+  if (Error E = InitLock.lock(sys::fs::LockKind::Shared))
     return std::move(E);
 
   sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
@@ -151,7 +150,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     // Lock the file exclusively so only one process will do the initialization.
     if (Error E = InitLock.unlock())
       return std::move(E);
-    if (Error E = InitLock.lock(FileLockRAII::Exclusive))
+    if (Error E = InitLock.lock(sys::fs::LockKind::Exclusive))
       return std::move(E);
     // Retrieve the current size now that we have exclusive access.
     FileSize = FileSizeInfo::get(File);
@@ -166,7 +165,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     // We are initializing the file; it may be empty, or may have been shrunk
     // during a previous close.
     // FIXME: Detect a case where someone opened it with a smaller capacity.
-    assert(InitLock.Locked == FileLockRAII::Exclusive);
+    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     if (std::error_code EC = sys::fs::resize_file_sparse(FD, Capacity))
       return createFileError(Result.Path, EC);
 
@@ -189,7 +188,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   }
 
   if (FileSize->Size == 0) {
-    assert(InitLock.Locked == FileLockRAII::Exclusive);
+    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     // We are creating a new file; run the constructor.
     if (Error E = NewFileConstructor(Result))
       return std::move(E);
@@ -203,7 +202,7 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     FileSize = FileSizeInfo::get(File);
     if (!FileSize)
       return createFileError(Result.Path, FileSize.getError());
-    assert(InitLock.Locked == FileLockRAII::Exclusive);
+    assert(InitLock.Locked == sys::fs::LockKind::Exclusive);
     Result.H->AllocatedSize.exchange(FileSize->AllocatedSize);
   }
 

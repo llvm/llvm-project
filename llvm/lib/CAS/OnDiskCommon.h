@@ -10,6 +10,7 @@
 #define LLVM_LIB_CAS_ONDISKCOMMON_H
 
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include <chrono>
 #include <optional>
 
@@ -29,7 +30,8 @@ void setMaxMappingSize(uint64_t Size);
 /// Thread-safe alternative to \c sys::fs::lockFile. This does not support all
 /// the platforms that \c sys::fs::lockFile does, so keep it in the CAS library
 /// for now.
-std::error_code lockFileThreadSafe(int FD, bool Exclusive = true);
+std::error_code lockFileThreadSafe(
+    int FD, llvm::sys::fs::LockKind Kind = llvm::sys::fs::LockKind::Exclusive);
 
 /// Thread-safe alternative to \c sys::fs::unlockFile. This does not support all
 /// the platforms that \c sys::fs::lockFile does, so keep it in the CAS library
@@ -41,7 +43,7 @@ std::error_code unlockFileThreadSafe(int FD);
 /// library for now.
 std::error_code tryLockFileThreadSafe(
     int FD, std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
-    bool Exclusive = true);
+    llvm::sys::fs::LockKind Kind = llvm::sys::fs::LockKind::Exclusive);
 
 /// Allocate space for the file \p FD on disk, if the filesystem supports it.
 ///

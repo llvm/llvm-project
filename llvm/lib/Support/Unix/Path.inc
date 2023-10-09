@@ -1265,13 +1265,21 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   return NumRead;
 }
 
-std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout, bool Exclusive) {
+std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
+                            LockKind Kind) {
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
     struct flock Lock;
     memset(&Lock, 0, sizeof(Lock));
-    Lock.l_type = Exclusive ? F_WRLCK : F_RDLCK;
+    switch (Kind) {
+    case LockKind::Exclusive:
+      Lock.l_type = F_WRLCK;
+      break;
+    case LockKind::Shared:
+      Lock.l_type = F_RDLCK;
+      break;
+    }
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
@@ -1287,10 +1295,17 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout, bool Excl
   return make_error_code(errc::no_lock_available);
 }
 
-std::error_code lockFile(int FD, bool Exclusive) {
+std::error_code lockFile(int FD, LockKind Kind) {
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
-  Lock.l_type = Exclusive ? F_WRLCK : F_RDLCK;
+  switch (Kind) {
+  case LockKind::Exclusive:
+    Lock.l_type = F_WRLCK;
+    break;
+  case LockKind::Shared:
+    Lock.l_type = F_RDLCK;
+    break;
+  }
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
