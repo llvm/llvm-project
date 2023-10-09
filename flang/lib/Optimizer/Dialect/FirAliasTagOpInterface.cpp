@@ -1,4 +1,4 @@
-//===-- FirAliasAnalysisOpInterface.cpp ----------------------------------===//
+//===-- FirAliasTagOpInterface.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Dialect/FirAliasAnalysisOpInterface.h"
+#include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
-#include "flang/Optimizer/Dialect/FirAliasAnalysisOpInterface.cpp.inc"
+#include "flang/Optimizer/Dialect/FirAliasTagOpInterface.cpp.inc"
 
 mlir::LogicalResult
-fir::detail::verifyFirAliasAnalysisOpInterface(mlir::Operation *op) {
-  auto iface = mlir::cast<FirAliasAnalysisOpInterface>(op);
+fir::detail::verifyFirAliasTagOpInterface(mlir::Operation *op) {
+  auto iface = mlir::cast<FirAliasTagOpInterface>(op);
 
   mlir::ArrayAttr tags = iface.getTBAATagsOrNull();
   if (!tags)

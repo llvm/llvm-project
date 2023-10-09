@@ -21,7 +21,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
-include "flang/Optimizer/Dialect/FirAliasAnalysisOpInterface.td"
+include "flang/Optimizer/Dialect/FirAliasTagOpInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -260,7 +260,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasAnalysisOpInterface]> {
+def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -289,7 +289,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasAnalysisOpInterface]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasAnalysisOpInterface]> {
+def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{

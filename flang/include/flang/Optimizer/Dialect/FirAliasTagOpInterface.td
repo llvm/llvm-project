@@ -1,4 +1,4 @@
-//===-- FirAliasAnalysisOpInterface.td ---------------------*- tablegen -*-===//
+//===-- FirAliasTagOpInterface.td --------------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 include "mlir/IR/Interfaces.td"
 
-def FirAliasAnalysisOpInterface : OpInterface<"FirAliasAnalysisOpInterface"> {
+def FirAliasTagOpInterface : OpInterface<"FirAliasTagOpInterface"> {
   let description = [{
     An interface for memory operations that can carry alias analysis metadata.
     It provides setters and getters for the operation's alias analysis
@@ -18,7 +18,7 @@ def FirAliasAnalysisOpInterface : OpInterface<"FirAliasAnalysisOpInterface"> {
   }];
 
   let cppNamespace = "::fir";
-  let verify = [{ return detail::verifyFirAliasAnalysisOpInterface($_op); }];
+  let verify = [{ return detail::verifyFirAliasTagOpInterface($_op); }];
 
   let methods = [
     InterfaceMethod<
