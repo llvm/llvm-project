@@ -576,11 +576,13 @@ public:
     auto S = std::make_shared<DWOFile>();
     S->File = std::move(Obj.get());
     StringRef FileName = S->File.getBinary()->getFileName();
+    // Allow multi-threaded access if there is a .dwp file as the CU index and TU index might be accessed from multiple threads.
+    bool ThreadSafe = FileName.find(".dwp") != StringRef::npos;
     S->Context = DWARFContext::create(
         *S->File.getBinary(), DWARFContext::ProcessDebugRelocations::Ignore,
         nullptr, "", WithColor::defaultErrorHandler,
         WithColor::defaultWarningHandler,
-        FileName.find(".dwp") != StringRef::npos);
+        ThreadSafe);
     *Entry = S;
     auto *Ctxt = S->Context.get();
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
