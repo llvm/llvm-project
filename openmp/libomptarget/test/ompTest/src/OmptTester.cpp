@@ -300,6 +300,23 @@ static void on_ompt_callback_target_submit_emi(
       endpoint, target_data, host_op_id, requested_num_teams);
 }
 
+static void on_ompt_callback_target_map(ompt_id_t target_id,
+                                        unsigned int nitems, void **host_addr,
+                                        void **device_addr, size_t *bytes,
+                                        unsigned int *mapping_flags,
+                                        const void *codeptr_ra) {
+  assert(0 && "Target map callback is unimplemented");
+}
+
+static void on_ompt_callback_target_map_emi(ompt_data_t *target_data,
+                                            unsigned int nitems,
+                                            void **host_addr,
+                                            void **device_addr, size_t *bytes,
+                                            unsigned int *mapping_flags,
+                                            const void *codeptr_ra) {
+  assert(0 && "Target map emi callback is unimplemented");
+}
+
 /// Load the value of a given boolean environmental variable.
 bool getBoolEnvironmentVariable(const char *VariableName) {
   if (VariableName == nullptr)
@@ -342,10 +359,12 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
     register_ompt_callback(ompt_callback_target_emi);
     register_ompt_callback(ompt_callback_target_submit_emi);
     register_ompt_callback(ompt_callback_target_data_op_emi);
+    register_ompt_callback(ompt_callback_target_map_emi);
   } else {
     register_ompt_callback(ompt_callback_target);
     register_ompt_callback(ompt_callback_target_submit);
     register_ompt_callback(ompt_callback_target_data_op);
+    register_ompt_callback(ompt_callback_target_map);
   }
 
   // Subscribe the reporter, so it will be notified of events
