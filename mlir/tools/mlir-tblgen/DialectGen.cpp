@@ -229,7 +229,7 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
 
 static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
                              raw_ostream &os) {
-  emitSourceFileHeader("Dialect Declarations", os);
+  emitSourceFileHeader("Dialect Declarations", os, recordKeeper);
 
   auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
   if (dialectDefs.empty())
@@ -300,7 +300,7 @@ static void emitDialectDef(Dialect &dialect, raw_ostream &os) {
 
 static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
                             raw_ostream &os) {
-  emitSourceFileHeader("Dialect Definitions", os);
+  emitSourceFileHeader("Dialect Definitions", os, recordKeeper);
 
   auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
   if (dialectDefs.empty())

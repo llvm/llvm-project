@@ -183,36 +183,36 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    movdqa %xmm0, %xmm6
 ; SSE4-NEXT:    pxor %xmm7, %xmm7
-; SSE4-NEXT:    movdqa {{.*#+}} xmm9 = [2147483647,2147483647]
-; SSE4-NEXT:    movdqa %xmm9, %xmm0
+; SSE4-NEXT:    movdqa {{.*#+}} xmm10 = [2147483647,2147483647]
+; SSE4-NEXT:    movdqa %xmm10, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm2, %xmm0
-; SSE4-NEXT:    movdqa %xmm9, %xmm8
+; SSE4-NEXT:    movdqa %xmm10, %xmm8
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm2, %xmm8
-; SSE4-NEXT:    movdqa %xmm9, %xmm0
+; SSE4-NEXT:    movdqa %xmm10, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE4-NEXT:    movdqa %xmm9, %xmm10
-; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm10
-; SSE4-NEXT:    movdqa %xmm9, %xmm0
+; SSE4-NEXT:    movdqa %xmm10, %xmm9
+; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm9
+; SSE4-NEXT:    movdqa %xmm10, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm6, %xmm0
-; SSE4-NEXT:    movdqa %xmm9, %xmm3
+; SSE4-NEXT:    movdqa %xmm10, %xmm3
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm6, %xmm3
-; SSE4-NEXT:    movdqa %xmm9, %xmm0
+; SSE4-NEXT:    movdqa %xmm10, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm9
+; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm10
 ; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [18446744071562067968,18446744071562067968]
-; SSE4-NEXT:    movapd %xmm9, %xmm0
+; SSE4-NEXT:    movapd %xmm10, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE4-NEXT:    movdqa %xmm1, %xmm6
-; SSE4-NEXT:    blendvpd %xmm0, %xmm9, %xmm6
+; SSE4-NEXT:    blendvpd %xmm0, %xmm10, %xmm6
 ; SSE4-NEXT:    movapd %xmm3, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE4-NEXT:    movdqa %xmm1, %xmm2
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm3, %xmm2
 ; SSE4-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm6[0,2]
-; SSE4-NEXT:    movapd %xmm10, %xmm0
+; SSE4-NEXT:    movapd %xmm9, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE4-NEXT:    movdqa %xmm1, %xmm3
-; SSE4-NEXT:    blendvpd %xmm0, %xmm10, %xmm3
+; SSE4-NEXT:    blendvpd %xmm0, %xmm9, %xmm3
 ; SSE4-NEXT:    movapd %xmm8, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE4-NEXT:    blendvpd %xmm0, %xmm8, %xmm1

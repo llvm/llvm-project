@@ -20,7 +20,7 @@ namespace llvm {
 class MipsSEDAGToDAGISel : public MipsDAGToDAGISel {
 
 public:
-  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOptLevel OL)
       : MipsDAGToDAGISel(TM, OL) {}
 
 private:
@@ -135,12 +135,12 @@ private:
   void processFunctionAfterISel(MachineFunction &MF) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                    unsigned ConstraintID,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 };
 
 FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+                                  CodeGenOptLevel OptLevel);
 }
 
 #endif

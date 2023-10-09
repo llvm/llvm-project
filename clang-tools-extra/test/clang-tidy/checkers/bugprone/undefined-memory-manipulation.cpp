@@ -126,6 +126,12 @@ void notTriviallyCopyable() {
   ::memmove(&p, &vb, sizeof(int));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, source object type 'types::VirtualBase'
 
+  types::Copy ca[10];
+  memset(ca, 0, sizeof(ca));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'types::Copy[10]'
+  memset(&ca, 0, sizeof(ca));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'types::Copy[10]'
+
 #define MEMSET memset(&vf, 0, sizeof(int));
   MEMSET
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'types::VirtualFunc'
@@ -159,6 +165,17 @@ void notTriviallyCopyable() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'aliases::Copy2'
   memset(pc3, 0, sizeof(int));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'Copy3'
+  using Copy3Arr = Copy3[5];
+  Copy3Arr c3a;
+  memset(c3a, 0, sizeof(c3a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'Copy3Arr'
+  memset(&c3a, 0, sizeof(c3a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'Copy3Arr'
+
+  typedef Copy3 Copy3Arr2[5];
+  Copy3Arr2 c3a2;
+  memset(c3a2, 0, sizeof(c3a2));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: undefined behavior, destination object type 'Copy3Arr2'
 }
 
 void triviallyCopyable() {

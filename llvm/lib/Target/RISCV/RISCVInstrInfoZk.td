@@ -36,19 +36,17 @@ def RnumArg : AsmOperandClass {
   let DiagnosticType = "InvalidRnumArg";
 }
 
-def rnum : Operand<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
+def rnum : RISCVOp<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
   let ParserMatchClass = RnumArg;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_RVKRNUM";
-  let OperandNamespace = "RISCVOp";
 }
 
-def byteselect : Operand<i32>, TImmLeaf<i32, [{return isUInt<2>(Imm);}]> {
+def byteselect : RISCVOp<i32>, TImmLeaf<i32, [{return isUInt<2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2>;
   let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_UIMM2";
-  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//

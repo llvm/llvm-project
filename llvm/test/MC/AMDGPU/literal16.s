@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=VI %s
 
 v_add_f16 v1, 0, v2
 // VI: v_add_f16_e32 v1, 0, v2 ; encoding: [0x80,0x04,0x02,0x3e]

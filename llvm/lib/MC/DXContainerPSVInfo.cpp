@@ -147,4 +147,65 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
     OS.write(reinterpret_cast<const char *>(&SignatureElements[0]),
              SignatureElements.size() * sizeof(v0::SignatureElement));
   }
+
+  for (const auto &MaskVector : OutputVectorMasks)
+    support::endian::write_array(OS, ArrayRef<uint32_t>(MaskVector),
+                                 support::little);
+  support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOrPrimMasks),
+                               support::little);
+  for (const auto &MaskVector : InputOutputMap)
+    support::endian::write_array(OS, ArrayRef<uint32_t>(MaskVector),
+                                 support::little);
+  support::endian::write_array(OS, ArrayRef<uint32_t>(InputPatchMap),
+                               support::little);
+  support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOutputMap),
+                               support::little);
+}
+
+void Signature::write(raw_ostream &OS) {
+  SmallVector<dxbc::ProgramSignatureElement> SigParams;
+  SigParams.reserve(Params.size());
+  StringTableBuilder StrTabBuilder((StringTableBuilder::DWARF));
+
+  // Name offsets are from the start of the part. Pre-calculate the offset to
+  // the start of the string table so that it can be added to the table offset.
+  uint32_t TableStart = sizeof(dxbc::ProgramSignatureHeader) +
+                        (sizeof(dxbc::ProgramSignatureElement) * Params.size());
+
+  for (const auto &P : Params) {
+    // zero out the data
+    dxbc::ProgramSignatureElement FinalElement;
+    memset(&FinalElement, 0, sizeof(dxbc::ProgramSignatureElement));
+    FinalElement.Stream = P.Stream;
+    FinalElement.NameOffset =
+        static_cast<uint32_t>(StrTabBuilder.add(P.Name)) + TableStart;
+    FinalElement.Index = P.Index;
+    FinalElement.SystemValue = P.SystemValue;
+    FinalElement.CompType = P.CompType;
+    FinalElement.Register = P.Register;
+    FinalElement.Mask = P.Mask;
+    FinalElement.ExclusiveMask = P.ExclusiveMask;
+    FinalElement.MinPrecision = P.MinPrecision;
+    SigParams.push_back(FinalElement);
+  }
+
+  StrTabBuilder.finalizeInOrder();
+  stable_sort(SigParams, [&](const dxbc::ProgramSignatureElement &L,
+                             const dxbc::ProgramSignatureElement R) {
+    return std::tie(L.Stream, L.Register, L.NameOffset) <
+           std::tie(R.Stream, R.Register, R.NameOffset);
+  });
+  if (sys::IsBigEndianHost)
+    for (auto &El : SigParams)
+      El.swapBytes();
+
+  dxbc::ProgramSignatureHeader Header = {static_cast<uint32_t>(Params.size()),
+                                         sizeof(dxbc::ProgramSignatureHeader)};
+  if (sys::IsBigEndianHost)
+    Header.swapBytes();
+  OS.write(reinterpret_cast<const char *>(&Header),
+           sizeof(dxbc::ProgramSignatureHeader));
+  OS.write(reinterpret_cast<const char *>(SigParams.data()),
+           sizeof(dxbc::ProgramSignatureElement) * SigParams.size());
+  StrTabBuilder.write(OS);
 }

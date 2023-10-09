@@ -88,10 +88,10 @@ TEST(IncludeCleaner, StdlibUnused) {
       template <typename> class vector {};
     }
   )cpp";
-  TU.AdditionalFiles["list"] = "#include <bits>";
-  TU.AdditionalFiles["queue"] = "#include <bits>";
-  TU.AdditionalFiles["vector"] = "#include <bits>";
-  TU.AdditionalFiles["string"] = "#include <bits>";
+  TU.AdditionalFiles["list"] = guard("#include <bits>");
+  TU.AdditionalFiles["queue"] = guard("#include <bits>");
+  TU.AdditionalFiles["vector"] = guard("#include <bits>");
+  TU.AdditionalFiles["string"] = guard("#include <bits>");
   TU.ExtraArgs = {"-isystem", testRoot()};
   auto AST = TU.build();
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
@@ -167,7 +167,8 @@ TEST(IncludeCleaner, ComputeMissingHeaders) {
   size_t End = llvm::cantFail(positionToOffset(MainFile.code(), Range.end));
   syntax::FileRange BRange{SM.getMainFileID(), static_cast<unsigned int>(Start),
                            static_cast<unsigned int>(End)};
-  include_cleaner::Header Header{*SM.getFileManager().getFile("b.h")};
+  include_cleaner::Header Header{
+      *SM.getFileManager().getOptionalFileRef("b.h")};
   MissingIncludeDiagInfo BInfo{B, BRange, {Header}};
   EXPECT_THAT(Findings.MissingIncludes, ElementsAre(BInfo));
 }
@@ -474,8 +475,8 @@ TEST(IncludeCleaner, IsPreferredProvider) {
   auto &IncludeDef2 = AST.getIncludeStructure().MainFileIncludes[2];
 
   auto &FM = AST.getSourceManager().getFileManager();
-  auto *DeclH = &FM.getOptionalFileRef("decl.h")->getFileEntry();
-  auto *DefH = &FM.getOptionalFileRef("def.h")->getFileEntry();
+  auto DeclH = *FM.getOptionalFileRef("decl.h");
+  auto DefH = *FM.getOptionalFileRef("def.h");
 
   auto Includes = convertIncludes(AST);
   std::vector<include_cleaner::Header> Providers = {

@@ -40,9 +40,8 @@ TEST(RecordedIncludesTest, Match) {
   Inc.add(Include{"vector", B, SourceLocation(), 5});
   Inc.add(Include{"missing", std::nullopt, SourceLocation(), 6});
 
-  EXPECT_THAT(Inc.match(&A.getFileEntry()), ElementsAre(line(1), line(2)));
-  EXPECT_THAT(Inc.match(&B.getFileEntry()),
-              ElementsAre(line(3), line(4), line(5)));
+  EXPECT_THAT(Inc.match(A), ElementsAre(line(1), line(2)));
+  EXPECT_THAT(Inc.match(B), ElementsAre(line(3), line(4), line(5)));
   EXPECT_THAT(Inc.match(*tooling::stdlib::Header::named("<vector>")),
               ElementsAre(line(4), line(5)));
 }

@@ -148,12 +148,8 @@ function(create_libc_unittest fq_target_name)
     ${LIBC_UNITTEST_SRCS}
     ${LIBC_UNITTEST_HDRS}
   )
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(
     ${fq_build_target_name}
     PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
@@ -386,12 +382,8 @@ function(add_libc_fuzzer target_name)
     ${LIBC_FUZZER_SRCS}
     ${LIBC_FUZZER_HDRS}
   )
-  target_include_directories(
-    ${fq_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
   target_link_libraries(${fq_target_name} PRIVATE 
     ${link_object_files} 
@@ -516,19 +508,16 @@ function(add_integration_test test_name)
   )
   set_target_properties(${fq_build_target_name}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name}
       PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_compile_options(${fq_build_target_name} PRIVATE
                            -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
-                           -flto --target=${LIBC_GPU_TARGET_TRIPLE})
+                           -flto --target=${LIBC_GPU_TARGET_TRIPLE}
+                           -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
   elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
     target_compile_options(${fq_build_target_name} PRIVATE
@@ -536,7 +525,11 @@ function(add_integration_test test_name)
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   endif()
 
-  target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  endif()
   target_link_libraries(
     ${fq_build_target_name}
     # The NVIDIA 'nvlink' linker does not currently support static libraries.
@@ -562,6 +555,7 @@ function(add_integration_test test_name)
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}>
+      ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
@@ -578,7 +572,9 @@ set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
 # The GPU build requires overriding the default CMake triple and architecture.
 if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto --target=${LIBC_GPU_TARGET_TRIPLE})
+       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+       --target=${LIBC_GPU_TARGET_TRIPLE}
+       -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
 elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
@@ -680,12 +676,8 @@ function(add_libc_hermetic_test test_name)
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       #OUTPUT_NAME ${fq_target_name}
   )
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name}
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
 
@@ -724,7 +716,7 @@ function(add_libc_hermetic_test test_name)
   endif()
 
   set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}> ${HERMETIC_TEST_LOADER_ARGS}
+      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}

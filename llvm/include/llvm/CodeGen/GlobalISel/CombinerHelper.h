@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/InstrTypes.h"
@@ -657,6 +658,9 @@ public:
   /// Do constant FP folding when opportunities are exposed after MIR building.
   bool matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP* &MatchInfo);
 
+  /// Constant fold G_FMA/G_FMAD.
+  bool matchConstantFoldFMA(MachineInstr &MI, ConstantFP *&MatchInfo);
+
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
   bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
@@ -818,14 +822,14 @@ private:
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///
   /// \returns true if a candidate is found.
-  bool findPostIndexCandidate(MachineInstr &MI, Register &Addr, Register &Base,
+  bool findPostIndexCandidate(GLoadStore &MI, Register &Addr, Register &Base,
                               Register &Offset);
 
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a pre-indexing operation.
   ///
   /// \returns true if a candidate is found.
-  bool findPreIndexCandidate(MachineInstr &MI, Register &Addr, Register &Base,
+  bool findPreIndexCandidate(GLoadStore &MI, Register &Addr, Register &Base,
                              Register &Offset);
 
   /// Helper function for matchLoadOrCombine. Searches for Registers

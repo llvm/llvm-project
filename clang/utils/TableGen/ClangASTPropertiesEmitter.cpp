@@ -593,7 +593,7 @@ void ASTPropsEmitter::emitWriteOfProperty(StringRef writerName,
 template <class NodeClass>
 static void emitASTReader(RecordKeeper &records, raw_ostream &out,
                           StringRef description) {
-  emitSourceFileHeader(description, out);
+  emitSourceFileHeader(description, out, records);
 
   ASTPropsEmitter(records, out).emitNodeReaderClass<NodeClass>();
 }
@@ -607,7 +607,7 @@ void clang::EmitClangTypeReader(RecordKeeper &records, raw_ostream &out) {
 template <class NodeClass>
 static void emitASTWriter(RecordKeeper &records, raw_ostream &out,
                           StringRef description) {
-  emitSourceFileHeader(description, out);
+  emitSourceFileHeader(description, out, records);
 
   ASTPropsEmitter(records, out).emitNodeWriterClass<NodeClass>();
 }
@@ -852,7 +852,7 @@ void ASTPropsEmitter::emitBasicReaderWriterFile(const ReaderWriterInfo &info) {
 /// Emit an .inc file that defines some helper classes for reading
 /// basic values.
 void clang::EmitClangBasicReader(RecordKeeper &records, raw_ostream &out) {
-  emitSourceFileHeader("Helper classes for BasicReaders", out);
+  emitSourceFileHeader("Helper classes for BasicReaders", out, records);
 
   // Use any property, we won't be using those properties.
   auto info = ReaderWriterInfo::forReader<TypeNode>();
@@ -862,7 +862,7 @@ void clang::EmitClangBasicReader(RecordKeeper &records, raw_ostream &out) {
 /// Emit an .inc file that defines some helper classes for writing
 /// basic values.
 void clang::EmitClangBasicWriter(RecordKeeper &records, raw_ostream &out) {
-  emitSourceFileHeader("Helper classes for BasicWriters", out);
+  emitSourceFileHeader("Helper classes for BasicWriters", out, records);
 
   // Use any property, we won't be using those properties.
   auto info = ReaderWriterInfo::forWriter<TypeNode>();

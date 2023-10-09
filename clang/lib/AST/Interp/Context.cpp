@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
+#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -102,7 +103,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Sint8;
     default:
-      return std::nullopt;
+      return PT_IntAPS;
     }
   }
 
@@ -117,7 +118,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Uint8;
     default:
-      return std::nullopt;
+      return PT_IntAP;
     }
   }
 
@@ -214,8 +215,8 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
 const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
   assert(FD);
   const Function *Func = P->getFunction(FD);
-  bool IsBeingCompiled = Func && !Func->isFullyCompiled();
-  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->hasBody();
+  bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
+  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->isDefined();
 
   if (IsBeingCompiled)
     return Func;

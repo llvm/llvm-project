@@ -25,7 +25,6 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   const LLT XLenLLT = LLT::scalar(XLen);
   const LLT DoubleXLenLLT = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
-  const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
@@ -43,11 +42,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(0, s32, XLenLLT);
 
   getActionDefinitionsBuilder(
-      {G_UADDE, G_UADDO, G_USUBE, G_USUBO})
-      .lowerFor({{XLenLLT, s1}});
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
+
+  getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, XLenLLT).lower();
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .legalFor({{s32, s32}, {s32, XLenLLT}, {XLenLLT, XLenLLT}})
+      .legalFor({{s32, s32}, {XLenLLT, XLenLLT}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, XLenLLT)
       .clampScalar(0, s32, XLenLLT);
@@ -166,6 +166,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         .clampScalar(0, XLenLLT, DoubleXLenLLT)
         .widenScalarToNextPow2(0);
   }
+
+  getActionDefinitionsBuilder(G_ABS).lower();
+
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
   getLegacyLegalizerInfo().computeTables();
 }

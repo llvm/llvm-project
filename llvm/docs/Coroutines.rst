@@ -151,8 +151,8 @@ lowerings:
 - In yield-once returned-continuation lowering, the coroutine must
   suspend itself exactly once (or throw an exception).  The ramp
   function returns a continuation function pointer and yielded
-  values, but the continuation function simply returns `void`
-  when the coroutine has run to completion.
+  values, the continuation function may optionally return ordinary
+  results when the coroutine has run to completion.
 
 The coroutine frame is maintained in a fixed-size buffer that is
 passed to the `coro.id` intrinsic, which guarantees a certain size
@@ -303,7 +303,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false)
+    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -385,7 +385,7 @@ Outlined resume part of the coroutine will reside in function `f.resume`:
   entry:
     %inc.spill.addr = getelementptr %f.frame, ptr %frame.ptr.resume, i64 0, i32 2
     %inc.spill = load i32, ptr %inc.spill.addr, align 4
-    %inc = add i32 %n.val, 1
+    %inc = add i32 %inc.spill, 1
     store i32 %inc, ptr %inc.spill.addr, align 4
     tail call void @print(i32 %inc)
     ret void
@@ -494,8 +494,13 @@ as the code in the previous section):
                                   i8 1, label %cleanup]
 
 In this case, the coroutine frame would include a suspend index that will
-indicate at which suspend point the coroutine needs to resume. The resume
-function will use an index to jump to an appropriate basic block and will look
+indicate at which suspend point the coroutine needs to resume.
+
+.. code-block:: llvm
+
+  %f.frame = type { ptr, ptr, i32, i32 }
+
+The resume function will use an index to jump to an appropriate basic block and will look
 as follows:
 
 .. code-block:: llvm
@@ -507,10 +512,11 @@ as follows:
     %switch = icmp eq i8 %index, 0
     %n.addr = getelementptr inbounds %f.Frame, ptr %FramePtr, i64 0, i32 3
     %n = load i32, ptr %n.addr, align 4
+
     br i1 %switch, label %loop.resume, label %loop
 
   loop.resume:
-    %sub = xor i32 %n, -1
+    %sub = sub nsw i32 0, %n
     call void @print(i32 %sub)
     br label %suspend
   loop:
@@ -586,7 +592,7 @@ correct resume point):
     %save2 = call token @llvm.coro.save(ptr %hdl)
     call void @async_op2(ptr %hdl)
     %suspend2 = call i1 @llvm.coro.suspend(token %save2, i1 false)
-    switch i8 %suspend1, label %suspend [i8 0, label %resume2
+    switch i8 %suspend2, label %suspend [i8 0, label %resume2
                                          i8 1, label %cleanup]
 
 .. _coroutine promise:
@@ -630,7 +636,7 @@ store the current value produced by a coroutine.
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false)
+    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -1312,8 +1318,8 @@ Arguments:
 """"""""""
 
 As for ``llvm.core.id.retcon``, except that the return type of the
-continuation prototype must be `void` instead of matching the
-coroutine's return type.
+continuation prototype must represent the normal return type of the continuation
+(instead of matching the coroutine's return type).
 
 Semantics:
 """"""""""
@@ -1326,7 +1332,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>)
+  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
 
 Overview:
 """""""""
@@ -1346,6 +1352,12 @@ handle value.
 The second argument should be `true` if this coro.end is in the block that is
 part of the unwind sequence leaving the coroutine body due to an exception and
 `false` otherwise.
+
+Non-trivial (non-none) token argument can only be specified for unique-suspend
+returned-continuation coroutines where it must be a token value produced by
+'``llvm.coro.end.results``' intrinsic.
+
+Only none token is allowed for coro.end calls in unwind sections
 
 Semantics:
 """"""""""
@@ -1378,7 +1390,7 @@ For landingpad based exception model, it is expected that frontend uses the
 .. code-block:: llvm
 
     ehcleanup:
-      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true)
+      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true, token none)
       br i1 %InResumePart, label %eh.resume, label %cleanup.cont
 
     cleanup.cont:
@@ -1403,7 +1415,7 @@ referring to an enclosing cleanuppad as follows:
 
     ehcleanup:
       %tok = cleanuppad within none []
-      %unused = call i1 @llvm.coro.end(ptr null, i1 true) [ "funclet"(token %tok) ]
+      %unused = call i1 @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
       cleanupret from %tok unwind label %RestOfTheCleanup
 
 The `CoroSplit` pass, if the funclet bundle is present, will insert
@@ -1428,6 +1440,53 @@ The following table summarizes the handling of `coro.end`_ intrinsic.
 |            | Landingpad  | mark coroutine as done | mark coroutine done             |
 +------------+-------------+------------------------+---------------------------------+
 
+.. _coro.end.results:
+
+'llvm.coro.end.results' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare token @llvm.coro.end.results(...)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.end.results``' intrinsic captures values to be returned from
+unique-suspend returned-continuation coroutines.
+
+Arguments:
+""""""""""
+
+The number of arguments must match the return type of the continuation function:
+
+- if the return type of the continuation function is ``void`` there must be no
+  arguments
+
+- if the return type of the continuation function is a ``struct``, the arguments
+  will be of element types of that ``struct`` in order;
+
+- otherwise, it is just the return value of the continuation function.
+
+.. code-block:: llvm
+
+  define {ptr, ptr} @g(ptr %buffer, ptr %ptr, i8 %val) presplitcoroutine {
+  entry:
+    %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer,
+                                               ptr @prototype,
+                                               ptr @allocate, ptr @deallocate)
+    %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+
+  ...
+
+  cleanup:
+    %tok = call token (...) @llvm.coro.end.results(i8 %val)
+    call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+    unreachable
+
+  ...
+
+  declare i8 @prototype(ptr, i1 zeroext)
+  
 
 'llvm.coro.end.async' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1715,6 +1774,25 @@ CoroCleanup
 -----------
 This pass runs late to lower all coroutine related intrinsics not replaced by
 earlier passes.
+
+Metadata
+========
+
+'``coro.outside.frame``' Metadata
+---------------------------------
+
+``coro.outside.frame`` metadata may be attached to an alloca instruction to
+to signify that it shouldn't be promoted to the coroutine frame, useful for
+filtering allocas out by the frontend when emitting internal control mechanisms.
+Additionally, this metadata is only used as a flag, so the associated
+node must be empty.
+
+.. code-block:: text
+
+  %__coro_gro = alloca %struct.GroType, align 1, !coro.outside.frame !0
+
+  ...
+  !0 = !{}
 
 Areas Requiring Attention
 =========================

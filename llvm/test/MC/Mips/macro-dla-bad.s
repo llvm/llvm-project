@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -arch=mips64 -mcpu=mips3 -target-abi n64 2>&1 | \
+# RUN: not llvm-mc %s -triple=mips64 -mcpu=mips3 -target-abi n64 2>&1 | \
 # RUN:   FileCheck %s
 
   .text

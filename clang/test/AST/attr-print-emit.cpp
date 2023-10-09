@@ -2,6 +2,12 @@
 // RUN: %clang -emit-ast -o %t.ast %s
 // RUN: %clang_cc1 %t.ast -ast-print | FileCheck %s
 
+// CHECK: void *aa() __attribute__((assume_aligned(64)));
+void *aa() __attribute__((assume_aligned(64)));
+
+// CHECK: void *aa2() __attribute__((assume_aligned(64, 8)));
+void *aa2() __attribute__((assume_aligned(64, 8)));
+
 // CHECK: void xla(int a) __attribute__((xray_log_args(1)));
 void xla(int a) __attribute__((xray_log_args(1)));
 

@@ -382,51 +382,56 @@ struct TypeBuilderImpl {
 
     // Gather the record type fields.
     // (1) The data components.
-    for (const auto &field :
+    for (const auto &component :
          Fortran::semantics::OrderedComponentIterator(tySpec)) {
       // Lowering is assuming non deferred component lower bounds are always 1.
       // Catch any situations where this is not true for now.
       if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-          componentHasNonDefaultLowerBounds(field))
-        TODO(converter.genLocation(field.name()),
+          componentHasNonDefaultLowerBounds(component))
+        TODO(converter.genLocation(component.name()),
              "derived type components with non default lower bounds");
-      if (IsProcedure(field))
-        TODO(converter.genLocation(field.name()), "procedure components");
-      mlir::Type ty = genSymbolType(field);
+      if (IsProcedure(component))
+        TODO(converter.genLocation(component.name()), "procedure components");
+      mlir::Type ty = genSymbolType(component);
       // Do not add the parent component (component of the parents are
       // added and should be sufficient, the parent component would
-      // duplicate the fields).
-      if (field.test(Fortran::semantics::Symbol::Flag::ParentComp))
+      // duplicate the fields). Note that genSymbolType must be called above on
+      // it so that the dispatch table for the parent type still gets emitted
+      // as needed.
+      if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
         continue;
-      cs.emplace_back(field.name().ToString(), ty);
+      cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
     }
 
+    mlir::Location loc = converter.genLocation(typeSymbol.name());
     // (2) The LEN type parameters.
     for (const auto &param :
          Fortran::semantics::OrderParameterDeclarations(typeSymbol))
       if (param->get<Fortran::semantics::TypeParamDetails>().attr() ==
-          Fortran::common::TypeParamAttr::Len)
+          Fortran::common::TypeParamAttr::Len) {
+        TODO(loc, "parameterized derived types");
+        // TODO: emplace in ps. Beware that param is the symbol in the type
+        // declaration, not instantiation: its kind may not be a constant.
+        // The instantiated symbol in tySpec.scope should be used instead.
         ps.emplace_back(param->name().ToString(), genSymbolType(*param));
+      }
 
     rec.finalize(ps, cs);
     popDerivedTypeInConstruction();
 
-    mlir::Location loc = converter.genLocation(typeSymbol.name());
     if (!ps.empty()) {
-      // This type is a PDT (parametric derived type). Create the functions to
-      // use for allocation, dereferencing, and address arithmetic here.
-      TODO(loc, "parameterized derived types");
+      // TODO: this type is a PDT (parametric derived type) with length
+      // parameter. Create the functions to use for allocation, dereferencing,
+      // and address arithmetic here.
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
-
-    converter.registerDispatchTableInfo(loc, &tySpec);
 
     // Generate the type descriptor object if any
     if (const Fortran::semantics::Scope *derivedScope =
             tySpec.scope() ? tySpec.scope() : tySpec.typeSymbol().scope())
       if (const Fortran::semantics::Symbol *typeInfoSym =
               derivedScope->runtimeDerivedTypeDescription())
-        converter.registerRuntimeTypeInfo(loc, *typeInfoSym);
+        converter.registerTypeInfo(loc, *typeInfoSym, tySpec, rec);
     return rec;
   }
 

@@ -118,7 +118,15 @@ struct SimplifyQuery {
                 bool CanUseUndef = true)
       : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
-  SimplifyQuery getWithInstruction(Instruction *I) const {
+
+  SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
+                AssumptionCache *AC = nullptr,
+                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                bool CanUseUndef = true)
+      : DL(DL), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
+        CanUseUndef(CanUseUndef) {}
+
+  SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
     return Copy;
@@ -339,8 +347,14 @@ simplifyInstructionWithOperands(Instruction *I, ArrayRef<Value *> NewOps,
 /// AllowRefinement specifies whether the simplification can be a refinement
 /// (e.g. 0 instead of poison), or whether it needs to be strictly identical.
 /// Op and RepOp can be assumed to not be poison when determining refinement.
-Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
-                              const SimplifyQuery &Q, bool AllowRefinement);
+///
+/// If DropFlags is passed, then the replacement result is only valid if
+/// poison-generating flags/metadata on those instructions are dropped. This
+/// is only useful in conjunction with AllowRefinement=false.
+Value *
+simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                       const SimplifyQuery &Q, bool AllowRefinement,
+                       SmallVectorImpl<Instruction *> *DropFlags = nullptr);
 
 /// Replace all uses of 'I' with 'SimpleV' and simplify the uses recursively.
 ///

@@ -13,7 +13,7 @@
 #include <sched.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, __sched_getcpucount,
                    (size_t cpuset_size, const cpu_set_t *mask)) {
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, __sched_getcpucount,
   return result;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

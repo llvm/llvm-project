@@ -147,7 +147,7 @@ define <4 x i32> @smstart_clobber_simdfp(<4 x i32> %x) nounwind {
 }
 
 ; Ensure SVE registers are preserved correctly.
-define <vscale x 4 x i32> @smstart_clobber_sve(<vscale x 4 x i32> %x) #0 {
+define <vscale x 4 x i32> @smstart_clobber_sve(<vscale x 4 x i32> %x) nounwind {
 ; CHECK-LABEL: smstart_clobber_sve:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -224,7 +224,7 @@ define <vscale x 4 x i32> @smstart_clobber_sve(<vscale x 4 x i32> %x) #0 {
 
 ; Call streaming callee twice; there should be no spills/fills between the two
 ; calls since the registers should have already been clobbered.
-define <vscale x 4 x i32> @smstart_clobber_sve_duplicate(<vscale x 4 x i32> %x) #0 {
+define <vscale x 4 x i32> @smstart_clobber_sve_duplicate(<vscale x 4 x i32> %x) nounwind {
 ; CHECK-LABEL: smstart_clobber_sve_duplicate:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -359,7 +359,7 @@ define void @disable_tailcallopt() nounwind {
   ret void;
 }
 
-define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone %ptr) #1 {
+define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone %ptr) #0 {
 ; CHECK-LABEL: call_to_non_streaming_pass_sve_objects:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
@@ -404,5 +404,4 @@ declare i64 @llvm.aarch64.sme.cntsb()
 
 declare void @foo(ptr noundef, ptr noundef, ptr noundef, i64 noundef)
 
-attributes #0 = { nounwind "target-features"="+sve" }
-attributes #1 = { nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" }
+attributes #0 = { nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" }

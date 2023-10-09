@@ -362,3 +362,7 @@ foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
   add_library(RTSanitizerCommonSymbolizerInternal.${arch}
               OBJECT IMPORTED GLOBAL)
 endforeach()
+
+if (COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+  add_subdirectory(symbolizer)
+endif()

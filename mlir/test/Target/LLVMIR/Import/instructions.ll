@@ -182,7 +182,7 @@ define void @integer_extension_and_truncation(i32 %arg1) {
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
 define ptr @pointer_casts(ptr %arg1, i64 %arg2) {
-  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr to i64
   ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr
   ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr to !llvm.ptr
@@ -480,6 +480,17 @@ define void @indirect_call(ptr addrspace(42) %fn) {
 
 ; // -----
 
+; CHECK-LABEL: @indirect_vararg_call
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @indirect_vararg_call(ptr addrspace(42) %fn) {
+  ; CHECK:  %[[C0:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
+  ; CHECK:  llvm.call %[[PTR]](%[[C0]]) vararg(!llvm.func<void (...)>) : !llvm.ptr<42>, (i16) -> ()
+  call addrspace(42) void (...) %fn(i16 0)
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @gep_static_idx
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @gep_static_idx(ptr %ptr) {
@@ -497,7 +508,7 @@ declare void @varargs(...)
 ; CHECK-LABEL: @varargs_call
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @varargs_call(i32 %0) {
-  ; CHECK:  llvm.call @varargs(%[[ARG1]]) : (i32) -> ()
+  ; CHECK:  llvm.call @varargs(%[[ARG1]]) vararg(!llvm.func<void (...)>) : (i32) -> ()
   call void (...) @varargs(i32 %0)
   ret void
 }

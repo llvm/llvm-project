@@ -511,6 +511,10 @@ def expectedFailureNetBSD(bugnumber=None):
     return expectedFailureOS(["netbsd"], bugnumber)
 
 
+def expectedFailureWindows(bugnumber=None):
+    return expectedFailureOS(["windows"], bugnumber)
+
+
 # TODO: This decorator does not do anything. Remove it.
 def expectedFlakey(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
@@ -1025,6 +1029,10 @@ def skipIfXmlSupportMissing(func):
 
 def skipIfEditlineSupportMissing(func):
     return _get_bool_config_skip_if_decorator("editline")(func)
+
+
+def skipIfEditlineWideCharSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("editline_wchar")(func)
 
 
 def skipIfFBSDVMCoreSupportMissing(func):

@@ -2599,8 +2599,8 @@ Default propagations rules:
  ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``,
  ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``,
  ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``,
- ``strcspn``, ``strlen``, ``strncasecmp``, ``strncmp``, ``strndup``,
- ``strndupa``, ``strnlen``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
+ ``strcspn``, ``strncasecmp``, ``strncmp``, ``strndup``,
+ ``strndupa``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
  ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``,
  ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
 

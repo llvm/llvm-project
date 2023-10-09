@@ -142,3 +142,14 @@ namespace PR61419 {
   extern const pair<id, id> p;
   id t = false ? p.first : p.second;
 } // namespace PR61419
+
+namespace GH67603 {
+  template <class> using A = long;
+  template <class B> void h() {
+    using C = B;
+    using D = B;
+    N t = 0 ? A<decltype(C())>() : A<decltype(D())>();
+    // expected-error@-1 {{rvalue of type 'A<decltype(C())>' (aka 'long')}}
+  }
+  template void h<int>();
+} // namespace GH67603

@@ -65,6 +65,7 @@ def : Pat<(i64 0), (COPY (i64 G0))>,
   Requires<[Is64Bit]>;
 
 // The ALU instructions want their simm13 operands as i32 immediates.
+// FIXME: This is no longer true, they are now pointer-sized.
 def as_i32imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
@@ -171,16 +172,10 @@ def TLS_ADDXrr : F3_1<2, 0b000000, (outs I64Regs:$rd),
                    "add $rs1, $rs2, $rd, $sym",
                    [(set i64:$rd,
                        (tlsadd i64:$rs1, i64:$rs2, tglobaltlsaddr:$sym))]>;
-
-// "LEA" form of add
-def LEAX_ADDri : F3_2<2, 0b000000,
-                     (outs I64Regs:$rd), (ins (MEMri $rs1, $simm13):$addr),
-                     "add ${addr:arith}, $rd",
-                     [(set iPTR:$rd, ADDRri:$addr)]>;
 }
 
-def : Pat<(SPcmpicc i64:$a, i64:$b), (CMPrr $a, $b)>;
-def : Pat<(SPcmpicc i64:$a, (i64 simm13:$b)), (CMPri $a, (as_i32imm $b))>;
+def : Pat<(SPcmpicc i64:$lhs, i64:$rhs), (SUBCCrr $lhs, $rhs)>;
+def : Pat<(SPcmpicc i64:$lhs, (i64 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
 def : Pat<(i64 (ctpop i64:$src)), (POPCrr $src)>;
 
 } // Predicates = [Is64Bit]
@@ -476,21 +471,6 @@ def SETHIXi : F2_1<0b100,
 
 // ATOMICS.
 let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
-  let asi = 0b10000000 in
-    def CASXrr: F3_1_asi<3, 0b111110,
-                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
-                                     I64Regs:$swap),
-                 "casx [$rs1], $rs2, $rd",
-                 [(set i64:$rd,
-                     (atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap))]>;
-
-  let asi = 0b10001000 in
-    def CASXLrr: F3_1_asi<3, 0b111110,
-                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
-                                     I64Regs:$swap),
-                 "casxl [$rs1], $rs2, $rd",
-                 []>;
-
   def CASXArr: F3_1_asi<3, 0b111110,
                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
                                      I64Regs:$swap, ASITag:$asi),
@@ -514,6 +494,9 @@ def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 // atomic_store_64 val, addr -> store val, addr
 def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_64 i64:$val, ADDRri:$dst), (STXri ADDRri:$dst, $val)>;
+
+def : Pat<(atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap),
+          (CASXArr $rs1, $rs2, $swap, 0x80)>;
 
 } // Predicates = [Is64Bit]
 

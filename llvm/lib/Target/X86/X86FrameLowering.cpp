@@ -562,49 +562,13 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
       RegsToZero.reset(Reg);
     }
 
+  // Zero out the GPRs first.
   for (MCRegister Reg : GPRsToZero.set_bits())
-    BuildMI(MBB, MBBI, DL, TII.get(X86::XOR32rr), Reg)
-        .addReg(Reg, RegState::Undef)
-        .addReg(Reg, RegState::Undef);
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
-  // Zero out registers.
-  for (MCRegister Reg : RegsToZero.set_bits()) {
-    if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
-      // FIXME: Ignore MMX registers?
-      continue;
-
-    unsigned XorOp;
-    if (X86::VR128RegClass.contains(Reg)) {
-      // XMM#
-      if (!ST.hasSSE1())
-        continue;
-      XorOp = X86::PXORrr;
-    } else if (X86::VR256RegClass.contains(Reg)) {
-      // YMM#
-      if (!ST.hasAVX())
-        continue;
-      XorOp = X86::VPXORrr;
-    } else if (X86::VR512RegClass.contains(Reg)) {
-      // ZMM#
-      if (!ST.hasAVX512())
-        continue;
-      XorOp = X86::VPXORYrr;
-    } else if (X86::VK1RegClass.contains(Reg) ||
-               X86::VK2RegClass.contains(Reg) ||
-               X86::VK4RegClass.contains(Reg) ||
-               X86::VK8RegClass.contains(Reg) ||
-               X86::VK16RegClass.contains(Reg)) {
-      if (!ST.hasVLX())
-        continue;
-      XorOp = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
-    } else {
-      continue;
-    }
-
-    BuildMI(MBB, MBBI, DL, TII.get(XorOp), Reg)
-      .addReg(Reg, RegState::Undef)
-      .addReg(Reg, RegState::Undef);
-  }
+  // Zero out the remaining registers.
+  for (MCRegister Reg : RegsToZero.set_bits())
+    TII.buildClearRegister(Reg, MBB, MBBI, DL);
 }
 
 void X86FrameLowering::emitStackProbe(

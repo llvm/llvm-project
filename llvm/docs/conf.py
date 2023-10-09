@@ -17,7 +17,7 @@ from datetime import date
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath("."))
 
 # -- General configuration -----------------------------------------------------
 
@@ -26,31 +26,21 @@ from datetime import date
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+extensions = ["myst_parser", "sphinx.ext.intersphinx", "sphinx.ext.todo"]
+
+# Automatic anchors for markdown titles
+from llvm_slug import make_slug
+
+myst_heading_anchors = 6
+myst_heading_slug_func = make_slug
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
-# The suffix of source filenames.
-source_suffix = {
-    ".rst": "restructuredtext",
-}
+source_suffix = [".rst", ".md"]
 
-try:
-    import recommonmark
-except ImportError:
-    # manpages do not use any .md sources
-    if not tags.has("builder-man"):
-        raise
-else:
-    import sphinx
-
-    if sphinx.version_info >= (3, 0):
-        # This requires 0.5 or later.
-        extensions.append("recommonmark")
-    else:
-        source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
-    source_suffix[".md"] = "markdown"
+import sphinx
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'

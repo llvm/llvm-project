@@ -623,10 +623,8 @@ public:
     this->S = static_cast<uint8_t>(S);
   }
 
-  /// Check whether the given target flags are set for this Symbol.
-  bool hasTargetFlags(TargetFlagsType Flags) const {
-    return static_cast<TargetFlagsType>(TargetFlags) & Flags;
-  }
+  /// Get the target flags of this Symbol.
+  TargetFlagsType getTargetFlags() const { return TargetFlags; }
 
   /// Set the target flags for this Symbol.
   void setTargetFlags(TargetFlagsType Flags) {
@@ -724,10 +722,10 @@ public:
   void setMemProt(orc::MemProt Prot) { this->Prot = Prot; }
 
   /// Get the memory lifetime policy for this section.
-  orc::MemLifetimePolicy getMemLifetimePolicy() const { return MLP; }
+  orc::MemLifetime getMemLifetime() const { return ML; }
 
   /// Set the memory lifetime policy for this section.
-  void setMemLifetimePolicy(orc::MemLifetimePolicy MLP) { this->MLP = MLP; }
+  void setMemLifetime(orc::MemLifetime ML) { this->ML = ML; }
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
@@ -795,7 +793,7 @@ private:
 
   StringRef Name;
   orc::MemProt Prot;
-  orc::MemLifetimePolicy MLP = orc::MemLifetimePolicy::Standard;
+  orc::MemLifetime ML = orc::MemLifetime::Standard;
   SectionOrdinal SecOrdinal = 0;
   BlockSet Blocks;
   SymbolSet Symbols;

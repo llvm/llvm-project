@@ -830,7 +830,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Constant *CCmp = ConstantExpr::getCompare(CCVal, CSrc0, CSrc1);
         if (CCmp->isNullValue()) {
           return IC.replaceInstUsesWith(
-              II, ConstantExpr::getSExt(CCmp, II.getType()));
+              II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
 
         // The result of V_ICMP/V_FCMP assembly instructions (which this
@@ -1044,50 +1044,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                          PatternMatch::m_Specific(II.getArgOperand(1))))) {
         return IC.replaceInstUsesWith(II, Src);
       }
-    }
-
-    break;
-  }
-  case Intrinsic::amdgcn_ldexp: {
-    // FIXME: This doesn't introduce new instructions and belongs in
-    // InstructionSimplify.
-    Type *Ty = II.getType();
-    Value *Op0 = II.getArgOperand(0);
-    Value *Op1 = II.getArgOperand(1);
-
-    // Folding undef to qnan is safe regardless of the FP mode.
-    if (isa<UndefValue>(Op0)) {
-      auto *QNaN = ConstantFP::get(Ty, APFloat::getQNaN(Ty->getFltSemantics()));
-      return IC.replaceInstUsesWith(II, QNaN);
-    }
-
-    const APFloat *C = nullptr;
-    match(Op0, PatternMatch::m_APFloat(C));
-
-    // FIXME: Should flush denorms depending on FP mode, but that's ignored
-    // everywhere else.
-    //
-    // These cases should be safe, even with strictfp.
-    // ldexp(0.0, x) -> 0.0
-    // ldexp(-0.0, x) -> -0.0
-    // ldexp(inf, x) -> inf
-    // ldexp(-inf, x) -> -inf
-    if (C && (C->isZero() || C->isInfinity())) {
-      return IC.replaceInstUsesWith(II, Op0);
-    }
-
-    // With strictfp, be more careful about possibly needing to flush denormals
-    // or not, and snan behavior depends on ieee_mode.
-    if (II.isStrictFP())
-      break;
-
-    if (C && C->isNaN())
-      return IC.replaceInstUsesWith(II, ConstantFP::get(Ty, C->makeQuiet()));
-
-    // ldexp(x, 0) -> x
-    // ldexp(x, undef) -> x
-    if (isa<UndefValue>(Op1) || match(Op1, PatternMatch::m_ZeroInt())) {
-      return IC.replaceInstUsesWith(II, Op0);
     }
 
     break;

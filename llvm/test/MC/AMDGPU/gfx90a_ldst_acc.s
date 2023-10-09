@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefix=NOT-GFX90A --implicit-check-not=error: %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefix=NOT-GFX90A --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
 
 // GFX90A: flat_load_ubyte a5, v[2:3] offset:4095 ; encoding: [0xff,0x0f,0x40,0xdc,0x02,0x00,0x80,0x05]
 // NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU

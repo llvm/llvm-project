@@ -13,12 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALEMITTER_H
 #define LLVM_CLANG_AST_INTERP_EVALEMITTER_H
 
-#include "ByteCodeGenError.h"
-#include "Context.h"
-#include "InterpStack.h"
 #include "InterpState.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "Source.h"
 #include "llvm/Support/Error.h"
 
@@ -26,9 +22,8 @@ namespace clang {
 namespace interp {
 class Context;
 class Function;
-class InterpState;
+class InterpStack;
 class Program;
-class SourceInfo;
 enum Opcode : uint32_t;
 
 /// An emitter which evaluates opcodes as they are emitted.
@@ -78,7 +73,8 @@ protected:
   llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
-  unsigned LambdaThisCapture;
+  /// Offset of the This parameter in a lambda record.
+  unsigned LambdaThisCapture = 0;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 

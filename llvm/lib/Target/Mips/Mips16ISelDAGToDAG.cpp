@@ -220,6 +220,6 @@ bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
 }
 
 FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM,
-                                        CodeGenOpt::Level OptLevel) {
+                                        CodeGenOptLevel OptLevel) {
   return new Mips16DAGToDAGISel(TM, OptLevel);
 }

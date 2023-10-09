@@ -69,22 +69,22 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    mflr 0
 ; CHECK-P7-NEXT:    stdu 1, -48(1)
 ; CHECK-P7-NEXT:    li 3, -32477
-; CHECK-P7-NEXT:    lis 5, 0
-; CHECK-P7-NEXT:    addi 4, 1, 46
-; CHECK-P7-NEXT:    li 7, 0
 ; CHECK-P7-NEXT:    std 0, 64(1)
-; CHECK-P7-NEXT:    sth 3, 46(1)
+; CHECK-P7-NEXT:    addi 4, 1, 46
 ; CHECK-P7-NEXT:    li 6, 234
-; CHECK-P7-NEXT:    rlwinm 3, 4, 3, 27, 27
-; CHECK-P7-NEXT:    ori 5, 5, 33059
-; CHECK-P7-NEXT:    ori 7, 7, 65535
+; CHECK-P7-NEXT:    sth 3, 46(1)
+; CHECK-P7-NEXT:    lis 3, 0
 ; CHECK-P7-NEXT:    sync
-; CHECK-P7-NEXT:    slw 6, 6, 3
-; CHECK-P7-NEXT:    slw 8, 5, 3
-; CHECK-P7-NEXT:    slw 5, 7, 3
+; CHECK-P7-NEXT:    ori 5, 3, 33059
+; CHECK-P7-NEXT:    rlwinm 3, 4, 3, 27, 27
 ; CHECK-P7-NEXT:    rldicr 4, 4, 0, 61
+; CHECK-P7-NEXT:    slw 7, 5, 3
+; CHECK-P7-NEXT:    li 5, 0
+; CHECK-P7-NEXT:    slw 6, 6, 3
+; CHECK-P7-NEXT:    ori 5, 5, 65535
+; CHECK-P7-NEXT:    slw 5, 5, 3
 ; CHECK-P7-NEXT:    and 6, 6, 5
-; CHECK-P7-NEXT:    and 7, 8, 5
+; CHECK-P7-NEXT:    and 7, 7, 5
 ; CHECK-P7-NEXT:  .LBB0_1: # %L.entry
 ; CHECK-P7-NEXT:    #
 ; CHECK-P7-NEXT:    lwarx 9, 0, 4

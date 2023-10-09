@@ -12,7 +12,10 @@ module attributes {omp.is_target_device = true} {
     %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr<i32>
     llvm.store %1, %3 : !llvm.ptr<i32>
     llvm.store %0, %5 : !llvm.ptr<i32>
-    omp.target map((to -> %3 : !llvm.ptr<i32>), (to -> %5 : !llvm.ptr<i32>), (from -> %7 : !llvm.ptr<i32>)) {
+    %map1 = omp.map_info var_ptr(%3 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
+    %map2 = omp.map_info var_ptr(%5 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
+    %map3 = omp.map_info var_ptr(%7 : !llvm.ptr<i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr<i32> {name = ""}
+    omp.target map_entries(%map1, %map2, %map3 : !llvm.ptr<i32>, !llvm.ptr<i32>, !llvm.ptr<i32>) {
       %8 = llvm.load %3 : !llvm.ptr<i32>
       %9 = llvm.load %5 : !llvm.ptr<i32>
       %10 = llvm.add %8, %9  : i32
@@ -28,18 +31,18 @@ module attributes {omp.is_target_device = true} {
 // CHECK:      @[[DYNA_ENV:.*]] = weak_odr protected global %struct.DynamicEnvironmentTy zeroinitializer
 // CHECK:      @[[KERNEL_ENV:.*]] = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1 }, ptr @[[IDENT]], ptr @[[DYNA_ENV]] }
 // CHECK:      define weak_odr protected void @__omp_offloading_{{[^_]+}}_{{[^_]+}}_omp_target_region__l{{[0-9]+}}(ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
-// CHECK:        %[[INIT:.*]] = call i32 @__kmpc_target_init(ptr @[[KERNEL_ENV]])
-// CHECK-NEXT:   %[[CMP:.*]] = icmp eq i32 %3, -1
-// CHECK-NEXT:   br i1 %[[CMP]], label %[[LABEL_ENTRY:.*]], label %[[LABEL_EXIT:.*]]
-// CHECK:        [[LABEL_ENTRY]]:
 // CHECK:        %[[TMP_A:.*]] = alloca ptr, align 8
 // CHECK:        store ptr %[[ADDR_A]], ptr %[[TMP_A]], align 8
-// CHECK:        %[[PTR_A:.*]] = load ptr, ptr %[[TMP_A]], align 8
 // CHECK:        %[[TMP_B:.*]] = alloca ptr, align 8
 // CHECK:        store ptr %[[ADDR_B]], ptr %[[TMP_B]], align 8
-// CHECK:        %[[PTR_B:.*]] = load ptr, ptr %[[TMP_B]], align 8
 // CHECK:        %[[TMP_C:.*]] = alloca ptr, align 8
 // CHECK:        store ptr %[[ADDR_C]], ptr %[[TMP_C]], align 8
+// CHECK:        %[[INIT:.*]] = call i32 @__kmpc_target_init(ptr @[[KERNEL_ENV]])
+// CHECK-NEXT:   %[[CMP:.*]] = icmp eq i32 %[[INIT]], -1
+// CHECK-NEXT:   br i1 %[[CMP]], label %[[LABEL_ENTRY:.*]], label %[[LABEL_EXIT:.*]]
+// CHECK:        [[LABEL_ENTRY]]:
+// CHECK:        %[[PTR_A:.*]] = load ptr, ptr %[[TMP_A]], align 8
+// CHECK:        %[[PTR_B:.*]] = load ptr, ptr %[[TMP_B]], align 8
 // CHECK:        %[[PTR_C:.*]] = load ptr, ptr %[[TMP_C]], align 8
 // CHECK-NEXT:   br label %[[LABEL_TARGET:.*]]
 // CHECK:        [[LABEL_TARGET]]:

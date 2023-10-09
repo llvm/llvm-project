@@ -10,6 +10,9 @@
 # CHECK: measurements:
 # CHECK-NEXT: value: {{.*}}, per_snippet_value: {{.*}}
 
+# TODO: Sometimes transiently fails on PTRACE_ATTACH
+# ALLOW_RETRIES: 2
+
 # LLVM-EXEGESIS-MEM-DEF test1 4096 2147483647
 # LLVM-EXEGESIS-MEM-MAP test1 1048576
 

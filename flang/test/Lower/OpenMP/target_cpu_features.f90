@@ -1,5 +1,5 @@
 !REQUIRES: amdgpu-registered-target
-!RUN: %flang_fc1 -emit-fir -triple amdgcn-amd-amdhsa -target-cpu gfx908 -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -triple amdgcn-amd-amdhsa -target-cpu gfx908 -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
 
 !===============================================================================
 ! Target_Enter Simple

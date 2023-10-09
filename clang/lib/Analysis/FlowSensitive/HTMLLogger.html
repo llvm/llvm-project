@@ -18,7 +18,7 @@
         <template data-if="v.value_id"><span class="address">#{{v.value_id}}</span></template>
       </span>
       <template data-if="v.location">
-        <span>{{v.type}} <span class="address">@{{v.location}}</span></span>
+        <span class="location">{{v.type}} <span class="address">@{{v.location}}</span></span>
       </template>
     </summary>
     <template
@@ -41,7 +41,12 @@
 <section id="timeline" data-selection="">
 <header>Timeline</header>
 <template data-for="entry in timeline">
-  <div id="{{entry.block}}:{{entry.iter}}" data-bb="{{entry.block}}" class="entry">{{entry.block}} ({{entry.iter}})</div>
+  <div id="{{entry.block}}:{{entry.iter}}" data-bb="{{entry.block}}" class="entry">
+    {{entry.block}}
+    <template data-if="entry.post_visit">(post-visit)</template>
+    <template data-if="!entry.post_visit">({{entry.iter}})</template>
+    <template data-if="entry.converged"> &#x2192;&#x7c;<!--Rightwards arrow, vertical line--></template>
+  </div>
 </template>
 </section>
 
@@ -54,8 +59,12 @@
 <section id="block" data-selection="bb">
 <header><template>Block {{selection.bb}}</template></header>
 <div id="iterations">
-  <template data-for="i in Array(cfg[selection.bb].iters).keys()">
-    <a class="chooser {{selection.bb}}:{{i+1}}" data-iter="{{selection.bb}}:{{i+1}}">Iteration {{i+1}}</a>
+  <template data-for="iter in cfg[selection.bb].iters">
+    <a class="chooser {{selection.bb}}:{{iter.iter}}" data-iter="{{selection.bb}}:{{iter.iter}}">
+      <template data-if="iter.post_visit">Post-visit</template>
+      <template data-if="!iter.post_visit">Iteration {{iter.iter}}</template>
+      <template data-if="iter.converged"> &#x2192;&#x7c;<!--Rightwards arrow, vertical line--></template>
+    </a>
   </template>
 </div>
 <table id="bb-elements">
@@ -77,8 +86,10 @@
 <section id="element" data-selection="iter,elt">
 <template data-let="state = states[selection.iter + '_' + selection.elt]">
 <header>
-  <template data-if="state.element == 0">{{state.block}} (iteration {{state.iter}}) initial state</template>
-  <template data-if="state.element != 0">Element {{selection.elt}} (iteration {{state.iter}})</template>
+  <template data-if="state.element == 0">{{state.block}} initial state</template>
+  <template data-if="state.element != 0">Element {{selection.elt}}</template>
+  <template data-if="state.post_visit"> (post-visit)</template>
+  <template data-if="!state.post_visit"> (iteration {{state.iter}})</template>
 </header>
 <template data-if="state.value" data-let="v = state.value">
   <h2>Value</h2>

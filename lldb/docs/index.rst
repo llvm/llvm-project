@@ -151,6 +151,7 @@ interesting areas to contribute to lldb.
    resources/debugging
    resources/fuzzing
    resources/sbapi
+   resources/dataformatters
    resources/extensions
    resources/caveats
    resources/projects

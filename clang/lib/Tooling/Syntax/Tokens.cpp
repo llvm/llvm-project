@@ -940,11 +940,11 @@ std::string TokenBuffer::dumpForTests() const {
 
   for (FileID ID : Keys) {
     const MarkedFile &File = Files.find(ID)->second;
-    auto *Entry = SourceMgr->getFileEntryForID(ID);
+    auto Entry = SourceMgr->getFileEntryRefForID(ID);
     if (!Entry)
       continue; // Skip builtin files.
-    OS << llvm::formatv("file '{0}'\n", Entry->getName())
-       << "  spelled tokens:\n"
+    std::string Path = llvm::sys::path::convert_to_slash(Entry->getName());
+    OS << llvm::formatv("file '{0}'\n", Path) << "  spelled tokens:\n"
        << "    ";
     DumpTokens(OS, File.SpelledTokens);
     OS << "\n";

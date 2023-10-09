@@ -503,11 +503,8 @@ void benchmarkMain() {
   }
 
   BitVector AllReservedRegs;
-  llvm::for_each(Repetitors,
-                 [&AllReservedRegs](
-                     const std::unique_ptr<const SnippetRepetitor> &Repetitor) {
-                   AllReservedRegs |= Repetitor->getReservedRegs();
-                 });
+  for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
+    AllReservedRegs |= Repetitor->getReservedRegs();
 
   std::vector<BenchmarkCode> Configurations;
   if (!Opcodes.empty()) {

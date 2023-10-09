@@ -179,6 +179,46 @@ TEST(FileEntryTest, DenseMapInfo) {
     EXPECT_TRUE(Set.find(R1)->isSameRef(R1));
     EXPECT_TRUE(Set.find(R2)->isSameRef(R2));
   }
+
+  // Insert R1Also first and confirm it "wins" when looked up as FileEntry.
+  {
+    SmallDenseSet<FileEntryRef, 8> Set;
+    Set.insert(R1Also);
+    Set.insert(R1);
+    Set.insert(R2);
+
+    auto R1AlsoIt = Set.find_as(&R1Also.getFileEntry());
+    ASSERT_TRUE(R1AlsoIt != Set.end());
+    EXPECT_TRUE(R1AlsoIt->isSameRef(R1Also));
+
+    auto R1It = Set.find_as(&R1.getFileEntry());
+    ASSERT_TRUE(R1It != Set.end());
+    EXPECT_TRUE(R1It->isSameRef(R1Also));
+
+    auto R2It = Set.find_as(&R2.getFileEntry());
+    ASSERT_TRUE(R2It != Set.end());
+    EXPECT_TRUE(R2It->isSameRef(R2));
+  }
+
+  // Insert R1Also second and confirm R1 "wins" when looked up as FileEntry.
+  {
+    SmallDenseSet<FileEntryRef, 8> Set;
+    Set.insert(R1);
+    Set.insert(R1Also);
+    Set.insert(R2);
+
+    auto R1AlsoIt = Set.find_as(&R1Also.getFileEntry());
+    ASSERT_TRUE(R1AlsoIt != Set.end());
+    EXPECT_TRUE(R1AlsoIt->isSameRef(R1));
+
+    auto R1It = Set.find_as(&R1.getFileEntry());
+    ASSERT_TRUE(R1It != Set.end());
+    EXPECT_TRUE(R1It->isSameRef(R1));
+
+    auto R2It = Set.find_as(&R2.getFileEntry());
+    ASSERT_TRUE(R2It != Set.end());
+    EXPECT_TRUE(R2It->isSameRef(R2));
+  }
 }
 
 TEST(DirectoryEntryTest, isSameRef) {

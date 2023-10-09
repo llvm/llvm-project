@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj %s | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-V62
-# RUN: not llvm-mc -arch=hexagon -mcpu=hexagonv60 -filetype=asm %s 2>%t; FileCheck -check-prefix=CHECK-NOV62 %s < %t
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv62 -filetype=obj %s | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-V62
+# RUN: not llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=asm %s 2>%t; FileCheck -check-prefix=CHECK-NOV62 %s < %t
 #
 
 # Assure that v62 added registers are understood

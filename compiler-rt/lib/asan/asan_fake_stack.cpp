@@ -68,8 +68,8 @@ void FakeStack::Destroy(int tid) {
   if (Verbosity() >= 2) {
     InternalScopedString str;
     for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++)
-      str.append("%zd: %zd/%zd; ", class_id, hint_position_[class_id],
-                 NumberOfFrames(stack_size_log(), class_id));
+      str.AppendF("%zd: %zd/%zd; ", class_id, hint_position_[class_id],
+                  NumberOfFrames(stack_size_log(), class_id));
     Report("T%d: FakeStack destroyed: %s\n", tid, str.data());
   }
   uptr size = RequiredSize(stack_size_log_);

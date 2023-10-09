@@ -926,6 +926,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         NewFn = nullptr;
         return true;
       }
+
+      if (Name.startswith("ldexp.")) {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ldexp,
+          {F->getReturnType(), F->getArg(1)->getType()});
+        return true;
+      }
     }
 
     break;
@@ -943,6 +951,12 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name.equals("coro.end") && F->arg_size() == 2) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
+      return true;
+    }
+
     break;
   }
   case 'd':
@@ -2839,9 +2853,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       auto *VecTy = cast<FixedVectorType>(CI->getType());
       Type *EltTy = VecTy->getElementType();
       unsigned EltNum = VecTy->getNumElements();
-      Value *Cast = Builder.CreateBitCast(CI->getArgOperand(0),
-                                          EltTy->getPointerTo());
-      Value *Load = Builder.CreateLoad(EltTy, Cast);
+      Value *Load = Builder.CreateLoad(EltTy, CI->getArgOperand(0));
       Type *I32Ty = Type::getInt32Ty(C);
       Rep = PoisonValue::get(VecTy);
       for (unsigned I = 0; I < EltNum; ++I)
@@ -4196,6 +4208,13 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
     }
     NewCall = dyn_cast<CallInst>(Ret);
+    break;
+  }
+
+  case Intrinsic::coro_end: {
+    SmallVector<Value *, 3> Args(CI->args());
+    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
 

@@ -31,16 +31,15 @@ public:
   DwarfUnit(LinkingGlobalData &GlobalData, unsigned ID,
             StringRef ClangModuleName)
       : OutputSections(GlobalData), ID(ID), ClangModuleName(ClangModuleName),
-        OutUnitDIE(nullptr) {}
+        OutUnitDIE(nullptr) {
+    AcceleratorRecords.setAllocator(&GlobalData.getAllocator());
+  }
 
   /// Unique id of the unit.
   unsigned getUniqueID() const { return ID; }
 
   /// Return language of this unit.
   uint16_t getLanguage() const { return Language; }
-
-  /// Set size of this(newly generated) compile unit.
-  void setUnitSize(uint64_t UnitSize) { this->UnitSize = UnitSize; }
 
   /// Returns size of this(newly generated) compile unit.
   uint64_t getUnitSize() const { return UnitSize; }
@@ -79,7 +78,12 @@ public:
   DIE *getOutUnitDIE() { return OutUnitDIE; }
 
   /// Set output unit DIE.
-  void setOutUnitDIE(DIE *UnitDie) { OutUnitDIE = UnitDie; }
+  void setOutUnitDIE(DIE *UnitDie) {
+    OutUnitDIE = UnitDie;
+
+    if (OutUnitDIE != nullptr)
+      UnitSize = getDebugInfoHeaderSize() + OutUnitDIE->getSize();
+  }
 
   /// \defgroup Methods used to emit unit's debug info:
   ///
@@ -95,35 +99,6 @@ public:
                       const DWARFDebugLine::LineTable &OutLineTable);
   /// @}
 
-  /// This structure keeps fields which would be used for creating accelerator
-  /// table.
-  struct AccelInfo {
-    AccelInfo(StringEntry *Name, const DIE *Die, bool SkipPubSection = false);
-    AccelInfo(StringEntry *Name, const DIE *Die, uint32_t QualifiedNameHash,
-              bool ObjCClassIsImplementation);
-
-    /// Name of the entry.
-    StringEntry *Name = nullptr;
-
-    /// Tag of the DIE this entry describes.
-    dwarf::Tag Tag = dwarf::DW_TAG_null;
-
-    /// Output offset of the DIE this entry describes.
-    uint64_t OutOffset = 0;
-
-    /// Hash of the fully qualified name.
-    uint32_t QualifiedNameHash = 0;
-
-    /// Emit this entry only in the apple_* sections.
-    bool SkipPubSection = false;
-
-    /// Is this an ObjC class implementation?
-    bool ObjcClassImplementation = false;
-
-    /// Cloned Die containing acceleration info.
-    const DIE *Die = nullptr;
-  };
-
   /// \defgroup Methods used for reporting warnings and errors:
   ///
   /// @{
@@ -132,10 +107,110 @@ public:
   void error(const Twine &Err) { GlobalData.warn(Err, getUnitName()); }
   /// @}
 
+  /// \defgroup Methods and data members used for building accelerator tables:
+  ///
+  /// @{
+
+  enum class AccelType : uint8_t { None, Name, Namespace, ObjC, Type };
+
+  /// This structure keeps fields which would be used for creating accelerator
+  /// table.
+  struct AccelInfo {
+    AccelInfo() {
+      AvoidForPubSections = false;
+      ObjcClassImplementation = false;
+    }
+
+    /// Name of the entry.
+    StringEntry *String = nullptr;
+
+    /// Output offset of the DIE this entry describes.
+    uint64_t OutOffset = 0;
+
+    /// Hash of the fully qualified name.
+    uint32_t QualifiedNameHash = 0;
+
+    /// Tag of the DIE this entry describes.
+    dwarf::Tag Tag = dwarf::DW_TAG_null;
+
+    /// Type of this accelerator record.
+    AccelType Type = AccelType::None;
+
+    /// Avoid using this entry for pub sections.
+    bool AvoidForPubSections : 1;
+
+    /// Is this an ObjC class implementation?
+    bool ObjcClassImplementation : 1;
+  };
+
+  void rememberNameForAccelerators(StringEntry *Name, uint64_t OutOffset,
+                                   dwarf::Tag Tag, bool AvoidForPubSections) {
+    AccelInfo Info;
+
+    Info.Type = AccelType::Name;
+    Info.String = Name;
+    Info.OutOffset = OutOffset;
+    Info.Tag = Tag;
+    Info.AvoidForPubSections = AvoidForPubSections;
+
+    AcceleratorRecords.add(Info);
+  }
+  void rememberNamespaceForAccelerators(StringEntry *Name, uint64_t OutOffset,
+                                        dwarf::Tag Tag) {
+    AccelInfo Info;
+
+    Info.Type = AccelType::Namespace;
+    Info.String = Name;
+    Info.OutOffset = OutOffset;
+    Info.Tag = Tag;
+
+    AcceleratorRecords.add(Info);
+  }
+  void rememberObjCNameForAccelerators(StringEntry *Name, uint64_t OutOffset,
+                                       dwarf::Tag Tag) {
+    AccelInfo Info;
+
+    Info.Type = AccelType::ObjC;
+    Info.String = Name;
+    Info.OutOffset = OutOffset;
+    Info.Tag = Tag;
+    Info.AvoidForPubSections = true;
+
+    AcceleratorRecords.add(Info);
+  }
+  void rememberTypeForAccelerators(StringEntry *Name, uint64_t OutOffset,
+                                   dwarf::Tag Tag, uint32_t QualifiedNameHash,
+                                   bool ObjcClassImplementation) {
+    AccelInfo Info;
+
+    Info.Type = AccelType::Type;
+    Info.String = Name;
+    Info.OutOffset = OutOffset;
+    Info.Tag = Tag;
+    Info.QualifiedNameHash = QualifiedNameHash;
+    Info.ObjcClassImplementation = ObjcClassImplementation;
+
+    AcceleratorRecords.add(Info);
+  }
+
+  /// Emit .debug_pubnames and .debug_pubtypes for \p Unit.
+  void emitPubAccelerators();
+
+  /// Accelerator tables data.
+  ArrayList<AccelInfo> AcceleratorRecords;
+
+  /// @}
+
 protected:
   /// Emit single abbreviation entry.
   void emitDwarfAbbrevEntry(const DIEAbbrev &Abbrev,
                             SectionDescriptor &AbbrevSection);
+
+  /// Emit single pubnames/pubtypes accelerator entry.
+  std::optional<uint64_t>
+  emitPubAcceleratorEntry(SectionDescriptor &OutSection,
+                          DwarfUnit::AccelInfo &Info,
+                          std::optional<uint64_t> LengthOffset);
 
   /// Unique ID for the unit.
   unsigned ID = 0;

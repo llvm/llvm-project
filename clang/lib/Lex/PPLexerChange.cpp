@@ -366,8 +366,8 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     if (const IdentifierInfo *ControllingMacro =
           CurPPLexer->MIOpt.GetControllingMacroAtEndOfFile()) {
       // Okay, this has a controlling macro, remember in HeaderFileInfo.
-      if (const FileEntry *FE = CurPPLexer->getFileEntry()) {
-        HeaderInfo.SetFileControllingMacro(FE, ControllingMacro);
+      if (OptionalFileEntryRef FE = CurPPLexer->getFileEntry()) {
+        HeaderInfo.SetFileControllingMacro(*FE, ControllingMacro);
         if (MacroInfo *MI =
               getMacroInfo(const_cast<IdentifierInfo*>(ControllingMacro)))
           MI->setUsedForHeaderGuard(true);
@@ -541,7 +541,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   Result.startToken();
   CurLexer->BufferPtr = EndPos;
 
-  if (isIncrementalProcessingEnabled()) {
+  if (getLangOpts().IncrementalExtensions) {
     CurLexer->FormTokenWithChars(Result, EndPos, tok::annot_repl_input_end);
     Result.setAnnotationEndLoc(Result.getLocation());
     Result.setAnnotationValue(nullptr);
