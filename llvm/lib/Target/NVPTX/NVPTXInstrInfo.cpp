@@ -29,6 +29,15 @@ void NVPTXInstrInfo::anchor() {}
 
 NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
 
+static bool isKnownBranch(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case NVPTX::Bra:
+  case NVPTX::BraUni:
+  case NVPTX::Jump:
+    return true;
+  }
+  return false;
+};
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  const DebugLoc &DL, MCRegister DestReg,
@@ -61,7 +70,9 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Bad register copy");
   }
   BuildMI(MBB, I, DL, get(Op), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc))
+      .addReg(0)
+      .addImm(0);
 }
 
 /// analyzeBranch - Analyze the branching code at the end of MBB, returning
@@ -92,50 +103,62 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&FBB,
                                    SmallVectorImpl<MachineOperand> &Cond,
                                    bool AllowModify) const {
+  auto getBranchTarget = [](MachineInstr &MI) {
+    assert(MI.isBranch());
+    return MI.getOperand(0).getMBB();
+  };
+  auto getPred = [](MachineInstr &MI) {
+    assert(MI.isPredicable());
+    // The predicate and predicate switch are always the last two operands
+    return MI.getOperand(MI.getNumOperands() - 2);
+  };
+  auto isConditional = [&](MachineInstr &MI) { return !!getPred(MI).getReg(); };
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
-  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I))
+  if (I == MBB.begin() || !(--I)->isTerminator())
     return false;
+  if (I->isReturn())
+    return true;
 
   // Get the last instruction in the block.
   MachineInstr &LastInst = *I;
+  assert(LastInst.isTerminator());
 
   // If there is only one terminator instruction, process it.
-  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
-    if (LastInst.getOpcode() == NVPTX::GOTO) {
-      TBB = LastInst.getOperand(0).getMBB();
-      return false;
-    } else if (LastInst.getOpcode() == NVPTX::CBranch) {
-      // Block ends with fall-through condbranch.
-      TBB = LastInst.getOperand(1).getMBB();
-      Cond.push_back(LastInst.getOperand(0));
+  if (I == MBB.begin() || !(--I)->isTerminator()) {
+    if (!isKnownBranch(LastInst)) {
+      // We don't know what this is
+      return true;
+    }
+    if (!isConditional(LastInst)) {
+      TBB = getBranchTarget(LastInst);
       return false;
     }
-    // Otherwise, don't know what this is.
-    return true;
+    // Block ends with fall-through condbranch.
+    TBB = getBranchTarget(LastInst);
+    Cond.push_back(getPred(LastInst));
+    return false;
   }
 
   // Get the instruction before it if it's a terminator.
   MachineInstr &SecondLastInst = *I;
 
   // If there are three terminators, we don't know what sort of block this is.
-  if (I != MBB.begin() && isUnpredicatedTerminator(*--I))
+  if (I != MBB.begin() && (--I)->isTerminator())
     return true;
 
-  // If the block ends with NVPTX::GOTO and NVPTX:CBranch, handle it.
-  if (SecondLastInst.getOpcode() == NVPTX::CBranch &&
-      LastInst.getOpcode() == NVPTX::GOTO) {
-    TBB = SecondLastInst.getOperand(1).getMBB();
-    Cond.push_back(SecondLastInst.getOperand(0));
-    FBB = LastInst.getOperand(0).getMBB();
+  // If the block ends with unconditional preceded by a conditional, handle it.
+  if (isConditional(SecondLastInst) && !isConditional(LastInst)) {
+    TBB = getBranchTarget(SecondLastInst);
+    Cond.push_back(getPred(SecondLastInst));
+    FBB = getBranchTarget(LastInst);
     return false;
   }
 
-  // If the block ends with two NVPTX:GOTOs, handle it.  The second one is not
-  // executed, so remove it.
-  if (SecondLastInst.getOpcode() == NVPTX::GOTO &&
-      LastInst.getOpcode() == NVPTX::GOTO) {
-    TBB = SecondLastInst.getOperand(0).getMBB();
+  // If the block ends with two unconditional jumps, handle it. The second one
+  // is not executed, so remove it.
+  if (!isConditional(SecondLastInst) && !isConditional(LastInst)) {
+    TBB = getBranchTarget(SecondLastInst);
     I = LastInst;
     if (AllowModify)
       I->eraseFromParent();
@@ -153,7 +176,7 @@ unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (I == MBB.begin())
     return 0;
   --I;
-  if (I->getOpcode() != NVPTX::GOTO && I->getOpcode() != NVPTX::CBranch)
+  if (!isKnownBranch(*I))
     return 0;
 
   // Remove the branch.
@@ -164,7 +187,7 @@ unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (I == MBB.begin())
     return 1;
   --I;
-  if (I->getOpcode() != NVPTX::CBranch)
+  if (!isKnownBranch(*I))
     return 1;
 
   // Remove the branch.
@@ -188,14 +211,14 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // One-way branch.
   if (!FBB) {
     if (Cond.empty()) // Unconditional branch
-      BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
+      BuildMI(&MBB, DL, get(NVPTX::Jump)).addMBB(TBB).addReg(0).addImm(0);
     else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+      BuildMI(&MBB, DL, get(NVPTX::Bra)).addMBB(TBB).add(Cond[0]).addImm(0);
     return 1;
   }
 
   // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
-  BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
+  BuildMI(&MBB, DL, get(NVPTX::Bra)).addMBB(TBB).add(Cond[0]).addImm(0);
+  BuildMI(&MBB, DL, get(NVPTX::Jump)).addMBB(FBB).addReg(0).addImm(0);
   return 2;
 }

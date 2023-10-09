@@ -3498,33 +3498,44 @@ defm : CVT_ROUND<frint, CvtRNI, CvtRNI_FTZ>;
 // Control-flow
 //-----------------------------------
 
-let isTerminator=1 in {
-   let isReturn=1, isBarrier=1 in
-      def Return : NVPTXInst<(outs), (ins), "ret;", [(retglue)]>;
-
-   let isBranch=1 in
-      def CBranch : NVPTXInst<(outs), (ins Int1Regs:$a, brtarget:$target),
-                              "@$a bra \t$target;",
-                              [(brcond Int1Regs:$a, bb:$target)]>;
-   let isBranch=1 in
-      def CBranchOther : NVPTXInst<(outs), (ins Int1Regs:$a, brtarget:$target),
-                                   "@!$a bra \t$target;", []>;
-
-   let isBranch=1, isBarrier=1 in
-      def GOTO : NVPTXInst<(outs), (ins brtarget:$target),
-                           "bra.uni \t$target;", [(br bb:$target)]>;
+// As with the uniform call instructions, uniform branches and returns are
+// modelled as distinct instructions
+let isTerminator = 1 in {
+  let isBranch = 1 in {
+    def Bra : NVPTXInst<(outs), (ins brtarget:$target), "bra \t$target;", []>;
+    def BraUni : NVPTXInst<(outs), (ins brtarget:$target), "bra.uni \t$target;", []>;
+    // LLVM won't let us model conditional and unconditional branches with a
+    // single instruction, but PTX has only one "true" branch instruction.
+    // For codegen purposes, and to placate the verifier, we model a separate
+    // "unconditional" branch with a pseudo.
+    let isBarrier = 1 in
+      def Jump : NVPTXPseudo<(outs), (ins brtarget:$target), "bra.uni \t$target",
+      [], /* defaultPreds */ 1>;
+  }
+  let isReturn = 1, isBarrier = 1 in {
+    def Ret : NVPTXInst<(outs), (ins), "ret;", [(retglue)]>;
+    def RetUni : NVPTXInst<(outs), (ins), "ret.uni;", [(retglue)]>;
+  }
 }
 
-def : Pat<(brcond (i32 Int32Regs:$a), bb:$target),
-          (CBranch (SETP_u32ri Int32Regs:$a, 0, CmpNE), bb:$target)>;
+// Conditional Branch
+def : Pat<(brcond Int1Regs:$p, bb:$target),
+          (Bra bb:$target, Int1Regs:$p, /* invert */ 0)>;
+// GOTO / jmp is by definition non-divergent, so we can use the uniform version
+// of the branch with a default-true predicate
+def : Pat<(br bb:$target), (Jump bb:$target, zero_reg, /* invert */ 0)>;
+// conditional branch on i32 condition
+def : Pat<(brcond (i32 Int32Regs:$p), bb:$target),
+          (Bra bb:$target, (SETP_u32ri Int32Regs:$p, 0, CmpNE), /* invert */ 0)>;
 
+// XXX
 // SelectionDAGBuilder::visitSWitchCase() will invert the condition of a
 // conditional branch if the target block is the next block so that the code
 // can fall through to the target block.  The invertion is done by 'xor
 // condition, 1', which will be translated to (setne condition, -1).  Since ptx
 // supports '@!pred bra target', we should use it.
-def : Pat<(brcond (i1 (setne Int1Regs:$a, -1)), bb:$target),
-          (CBranchOther Int1Regs:$a, bb:$target)>;
+def : Pat<(brcond (i1 (setne Int1Regs:$p, -1)), bb:$target),
+            (Bra bb:$target, Int1Regs:$p, /* invert */1)>;
 
 // Call
 def SDT_NVPTXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,

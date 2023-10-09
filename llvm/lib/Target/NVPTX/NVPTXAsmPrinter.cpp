@@ -222,6 +222,11 @@ void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
     const MachineOperand &MO = MI->getOperand(0);
     OutMI.addOperand(GetSymbolRef(
       OutContext.getOrCreateSymbol(Twine(MO.getSymbolName()))));
+    MCOperand Predicate, Sw;
+    if (lowerOperand(MI->getOperand(1), Predicate))
+      OutMI.addOperand(Predicate);
+    if (lowerOperand(MI->getOperand(2), Sw))
+      OutMI.addOperand(Sw);
     return;
   }
 
