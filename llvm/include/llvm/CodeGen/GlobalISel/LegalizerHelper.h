@@ -286,6 +286,14 @@ private:
                               uint64_t KnownLen, Align DstAlign, Align SrcAlign,
                               bool IsVolatile);
 
+  // Implements floating-point environment read/write via library function call.
+  LegalizeResult createGetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                       MachineInstr &MI);
+  LegalizeResult createSetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                       MachineInstr &MI);
+  LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                         MachineInstr &MI);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -440,6 +448,7 @@ createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
 LegalizerHelper::LegalizeResult
 createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                  MachineInstr &MI, LostDebugLocObserver &LocObserver);
+
 
 } // End namespace llvm.
 

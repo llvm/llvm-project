@@ -1837,6 +1837,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_LROUND;
     case Intrinsic::llround:
       return TargetOpcode::G_LLROUND;
+    case Intrinsic::get_fpmode:
+      return TargetOpcode::G_GET_FPMODE;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -2414,6 +2416,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                     {getOrCreateVReg(*FpValue)})
         .addImm(TestMaskValue->getZExtValue());
 
+    return true;
+  }
+  case Intrinsic::set_fpmode: {
+    Value *FPState = CI.getOperand(0);
+    MIRBuilder.buildInstr(TargetOpcode::G_SET_FPMODE, {},
+                          { getOrCreateVReg(*FPState) });
+    return true;
+  }
+  case Intrinsic::reset_fpmode: {
+    MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
     return true;
   }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
