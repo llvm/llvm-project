@@ -2190,7 +2190,7 @@ bool Type::hasUnsignedIntegerRepresentation() const {
 bool Type::isFloatingType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Half &&
-           BT->getKind() <= BuiltinType::Ibm128;
+           BT->getKind() <= BuiltinType::DecimalFloat128;
   if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
     return CT->getElementType()->isFloatingType();
   return false;
@@ -2204,6 +2204,12 @@ bool Type::hasFloatingRepresentation() const {
   return isFloatingType();
 }
 
+bool Type::isDecimalFloatingType() const {
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->isDecimalFloatingPoint();
+  return false;
+}
+
 bool Type::isRealFloatingType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isFloatingPoint();
@@ -2213,7 +2219,7 @@ bool Type::isRealFloatingType() const {
 bool Type::isRealType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Ibm128;
+           BT->getKind() <= BuiltinType::DecimalFloat128;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete() && !ET->getDecl()->isScoped();
   return isBitIntType();
@@ -2222,7 +2228,7 @@ bool Type::isRealType() const {
 bool Type::isArithmeticType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Ibm128;
+           BT->getKind() <= BuiltinType::DecimalFloat128;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     // GCC allows forward declaration of enum types (forbid by C99 6.7.2.3p2).
     // If a body isn't seen by the time we get here, return false.

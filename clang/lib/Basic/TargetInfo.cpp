@@ -319,6 +319,9 @@ TargetInfo::IntType TargetInfo::getLeastIntTypeByWidth(unsigned BitWidth,
 
 FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
                                              FloatModeKind ExplicitType) const {
+  if (isDecimalFloatModeKind(ExplicitType))
+    return ExplicitType;
+
   if (getHalfWidth() == BitWidth)
     return FloatModeKind::Half;
   if (getFloatWidth() == BitWidth)

@@ -75,8 +75,22 @@ enum class FloatModeKind {
   LongDouble = 1 << 3,
   Float128 = 1 << 4,
   Ibm128 = 1 << 5,
-  LLVM_MARK_AS_BITMASK_ENUM(Ibm128)
+  Decimal32 = 1 << 6,
+  Decimal64 = 1 << 7,
+  Decimal128 = 1 << 8,
+  LLVM_MARK_AS_BITMASK_ENUM(Decimal128)
 };
+
+inline bool isDecimalFloatModeKind(FloatModeKind FMK) {
+  switch (FMK) {
+  case FloatModeKind::Decimal32:
+  case FloatModeKind::Decimal64:
+  case FloatModeKind::Decimal128:
+    return true;
+  default:
+    return false;
+  }
+}
 
 /// Fields controlling how types are laid out in memory; these may need to
 /// be copied for targets like AMDGPU that base their ABIs on an auxiliary

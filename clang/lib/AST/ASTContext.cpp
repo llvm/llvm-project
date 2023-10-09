@@ -12164,6 +12164,12 @@ QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
     return Float128Ty;
   case FloatModeKind::Ibm128:
     return Ibm128Ty;
+  case FloatModeKind::Decimal32:
+    return DecimalFloat32Ty;
+  case FloatModeKind::Decimal64:
+    return DecimalFloat64Ty;
+  case FloatModeKind::Decimal128:
+    return DecimalFloat128Ty;
   case FloatModeKind::NoFloat:
     return {};
   }

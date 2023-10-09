@@ -34,3 +34,11 @@ _Decimal64 d64;   // cxx-error {{unknown type name '_Decimal64'}} \
                   // c-dfp-off-error {{decimal floating-point extensions are not enabled}}
 _Decimal128 d128; // cxx-error {{unknown type name '_Decimal128'}} \
                   // c-dfp-off-error {{decimal floating-point extensions are not enabled}}
+
+typedef float __attribute__((mode(SD))) D32;  // dfp-off-error {{decimal floating-point extensions are not enabled}}
+typedef float __attribute__((mode(DD))) D64;  // dfp-off-error {{decimal floating-point extensions are not enabled}}
+typedef float __attribute__((mode(TD))) D128; // dfp-off-error {{decimal floating-point extensions are not enabled}}
+
+float __attribute__((mode(SD))) famsd; // dfp-off-error {{decimal floating-point extensions are not enabled}}
+float __attribute__((mode(DD))) famdd; // dfp-off-error {{decimal floating-point extensions are not enabled}}
+float __attribute__((mode(TD))) famtd; // dfp-off-error {{decimal floating-point extensions are not enabled}}

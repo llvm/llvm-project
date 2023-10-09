@@ -8531,8 +8531,8 @@ bool Sema::SemaBuiltinComplex(CallExpr *TheCall) {
            << Real->getSourceRange() << Imag->getSourceRange();
   }
 
-  // We don't allow _Complex _Float16 nor _Complex __fp16 as type specifiers;
-  // don't allow this builtin to form those types either.
+  // We don't allow _Complex _Float16, _Complex __fp16, or _Complex _DecimalXX
+  // as type specifiers; don't allow this builtin to form those types either.
   // FIXME: Should we allow these types?
   if (Real->getType()->isFloat16Type())
     return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
@@ -8540,6 +8540,11 @@ bool Sema::SemaBuiltinComplex(CallExpr *TheCall) {
   if (Real->getType()->isHalfType())
     return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
            << "half";
+  if (Real->getType()->isDecimalFloatingType()) {
+    const BuiltinType *BT = Real->getType()->getAs<BuiltinType>();
+    return Diag(TheCall->getBeginLoc(), diag::err_invalid_complex_spec)
+           << BT->getName(Context.getPrintingPolicy());
+  }
 
   TheCall->setType(Context.getComplexType(Real->getType()));
   return false;

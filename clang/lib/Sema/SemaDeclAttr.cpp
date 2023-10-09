@@ -4668,6 +4668,7 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
   IntegerMode = true;
   ComplexMode = false;
   ExplicitType = FloatModeKind::NoFloat;
+  FloatModeKind ExplicitDFPType = FloatModeKind::NoFloat;
   switch (Str.size()) {
   case 2:
     switch (Str[0]) {
@@ -4678,9 +4679,11 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
       DestWidth = 16;
       break;
     case 'S':
+      ExplicitDFPType = FloatModeKind::Decimal32;
       DestWidth = 32;
       break;
     case 'D':
+      ExplicitDFPType = FloatModeKind::Decimal64;
       DestWidth = 64;
       break;
     case 'X':
@@ -4692,6 +4695,7 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
       break;
     case 'T':
       ExplicitType = FloatModeKind::LongDouble;
+      ExplicitDFPType = FloatModeKind::Decimal128;
       DestWidth = 128;
       break;
     case 'I':
@@ -4704,6 +4708,9 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
     } else if (Str[1] == 'C') {
       IntegerMode = false;
       ComplexMode = true;
+    } else if (Str[1] == 'D') {
+      IntegerMode = false;
+      ExplicitType = ExplicitDFPType;
     } else if (Str[1] != 'I') {
       DestWidth = 0;
     }
@@ -4851,6 +4858,13 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   if (NewElemTy.isNull()) {
     Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
+  }
+
+  if (NewElemTy->isDecimalFloatingType()) {
+    if (!getLangOpts().DecimalFloatingPoint) {
+      Diag(AttrLoc, diag::err_dfp_disabled);
+      return;
+    }
   }
 
   if (ComplexMode) {

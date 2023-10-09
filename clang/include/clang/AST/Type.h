@@ -2176,9 +2176,14 @@ public:
   bool isUnscopedEnumerationType() const;
 
   /// Floating point categories.
+  bool isDecimalFloatingType() const;
+                                   // C23 6.2.5p13 (_Decimal32/64/128)
   bool isRealFloatingType() const; // C99 6.2.5p10 (float, double, long double)
+                                   // C23 6.2.5p14 (standard + decimal float)
+                                   // C23 H.2.4p5  (+interchange +extended FP)
   /// isComplexType() does *not* include complex integers (a GCC extension).
   /// isComplexIntegerType() can be used to test for complex integers.
+  /// C23 did not add complex decimal floating-point.
   bool isComplexType() const;      // C99 6.2.5p11 (complex)
   bool isAnyComplexType() const;   // C99 6.2.5p11 (complex) + Complex Int.
   bool isFloatingType() const;     // C99 6.2.5p11 (real floating + complex)
@@ -2746,8 +2751,12 @@ public:
     return getKind() >= Bool && getKind() <= UInt128;
   }
 
+  bool isDecimalFloatingPoint() const {
+    return getKind() >= DecimalFloat32 && getKind() <= DecimalFloat128;
+  }
+
   bool isFloatingPoint() const {
-    return getKind() >= Half && getKind() <= Ibm128;
+    return getKind() >= Half && getKind() <= DecimalFloat128;
   }
 
   bool isSVEBool() const { return getKind() == Kind::SveBool; }
