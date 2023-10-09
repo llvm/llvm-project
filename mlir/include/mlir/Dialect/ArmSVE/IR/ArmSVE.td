@@ -38,9 +38,9 @@ class ArmSVE_Op<string mnemonic, list<Trait> traits = []> :
   Op<ArmSVE_Dialect, mnemonic, traits> {}
 
 class ArmSVE_IntrOp<string mnemonic,
-                                    list<Trait> traits = [],
-                                    list<int> overloadedOperands = [],
-                                    list<int> overloadedResults = []> :
+                    list<Trait> traits = [],
+                    list<int> overloadedOperands = [],
+                    list<int> overloadedResults = []> :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
                   /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
