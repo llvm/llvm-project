@@ -7,15 +7,11 @@
 # ===----------------------------------------------------------------------===##
 import sys
 import re
-import subprocess
+import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
 from libcxx.test.features import _isMSVC
-
-
-def quote(x):
-    return subprocess.list2cmdline([x])
 
 
 _warningFlags = [
@@ -325,7 +321,7 @@ DEFAULT_PARAMETERS = [
     Parameter(
         name="executor",
         type=str,
-        default=f"{quote(sys.executable)} {quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
+        default=f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
     )
