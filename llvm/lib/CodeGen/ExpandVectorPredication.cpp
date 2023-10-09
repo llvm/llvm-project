@@ -299,6 +299,15 @@ Value *CachingVPExpander::expandPredicationToIntCall(
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
+  case Intrinsic::bswap:
+  case Intrinsic::bitreverse: {
+    Value *Op = VPI.getOperand(0);
+    Function *Fn = Intrinsic::getDeclaration(
+        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
+    Value *NewOp = Builder.CreateCall(Fn, {Op}, VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
   }
   return nullptr;
 }
@@ -702,13 +711,15 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_fneg: {
     Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0), VPI.getName());
     replaceOperation(*NewNegOp, VPI);
-    return NewNegOp;  
+    return NewNegOp;
   }
   case Intrinsic::vp_abs:
   case Intrinsic::vp_smax:
   case Intrinsic::vp_smin:
   case Intrinsic::vp_umax:
   case Intrinsic::vp_umin:
+  case Intrinsic::vp_bswap:
+  case Intrinsic::vp_bitreverse:
     return expandPredicationToIntCall(Builder, VPI,
                                       VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_fabs:
