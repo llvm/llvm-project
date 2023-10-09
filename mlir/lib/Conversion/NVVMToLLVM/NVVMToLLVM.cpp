@@ -63,6 +63,8 @@ class PtxBuilder {
 
   // https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html#constraints
   char getRegisterType(Type type) {
+    if (type.isInteger(1))
+      return 'b';
     if (type.isInteger(16))
       return 'h';
     if (type.isInteger(32))
