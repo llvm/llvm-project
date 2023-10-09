@@ -42,6 +42,7 @@ enum OpCode {
   Call,
   GetElementPtr,
   Branch,
+  CondBranch,
   ICmp,
   BinaryOperator,
   Ret,
@@ -53,6 +54,7 @@ enum OperandKind {
   LocalVariable,
   Type,
   Function,
+  Block,
   UnimplementedOperand = 255,
 };
 
@@ -189,6 +191,13 @@ public:
     OutStreamer.emitSizeT(functionIndex(F));
   }
 
+  void serialiseBlockOperand(BasicBlock *BB, ValueLoweringMap &VLMap) {
+    OutStreamer.emitInt8(OperandKind::Block);
+    // FIXME: For now we assume that basic block indices are the same in LLVM
+    // IR and our IR.
+    OutStreamer.emitSizeT(getIndex(BB->getParent(), BB));
+  }
+
   // YKFIXME: This allows programs which we haven't yet defined a
   // lowering for to compile. For now We just emit a string operand containing
   // the unhandled LLVM operand in textual form.
@@ -206,6 +215,8 @@ public:
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
       // If an instruction defines the operand, it's a local variable.
       serialiseLocalVariableOperand(I, VLMap);
+    } else if (BasicBlock *BB = dyn_cast<BasicBlock>(V)) {
+      serialiseBlockOperand(BB, VLMap);
     } else {
       serialiseUnimplementedOperand(V);
     }
@@ -277,6 +288,28 @@ public:
     InstIdx++;
   }
 
+  void serialiseBranchInst(BranchInst *I, ValueLoweringMap &VLMap,
+                           unsigned BBIdx, unsigned InstIdx) {
+    // We split LLVM's `br` into two Yk IR instructions: one for unconditional
+    // branching, another for conidtional branching.
+    if (!I->isConditional()) {
+      // type_index:
+      OutStreamer.emitSizeT(typeIndex(I->getType()));
+      // opcode:
+      serialiseOpcode(OpCode::Branch);
+      // num_operands:
+      // We don't serialise any operands, because traces will guide us.
+      OutStreamer.emitInt32(0);
+
+      VLMap[I] = {BBIdx, InstIdx};
+      InstIdx++;
+    } else {
+      // We DO need operands for conditional branches, so that we can build
+      // guards.
+      serialiseInstGeneric(I, VLMap, BBIdx, InstIdx, OpCode::CondBranch);
+    }
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
 // Macros to help dispatch to serialisers.
@@ -296,13 +329,13 @@ public:
     GENERIC_INST_SERIALISE(I, LoadInst, Load)
     GENERIC_INST_SERIALISE(I, StoreInst, Store)
     GENERIC_INST_SERIALISE(I, GetElementPtrInst, GetElementPtr)
-    GENERIC_INST_SERIALISE(I, BranchInst, Branch)
     GENERIC_INST_SERIALISE(I, ICmpInst, ICmp)
     GENERIC_INST_SERIALISE(I, llvm::BinaryOperator, BinaryOperator)
     GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
 
     CUSTOM_INST_SERIALISE(I, AllocaInst, serialiseAllocaInst)
     CUSTOM_INST_SERIALISE(I, CallInst, serialiseCallInst)
+    CUSTOM_INST_SERIALISE(I, BranchInst, serialiseBranchInst)
 
     // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
     // a match, so if we get here then the instruction wasn't handled.
