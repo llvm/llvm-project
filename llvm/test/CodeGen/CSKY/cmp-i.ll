@@ -2033,16 +2033,16 @@ define i1 @ICMP_LONG_sgt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    cmplt16 a1, a3
 ; CHECK-NEXT:    mvc32 t0
-; CHECK-NEXT:    st32.w t0, (sp, 4)
+; CHECK-NEXT:    st32.w t0, (sp, 8)
 ; CHECK-NEXT:    cmpne16 a3, a1
 ; CHECK-NEXT:    mvc32 a1
-; CHECK-NEXT:    st16.w a1, (sp, 8)
+; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    cmphs16 a0, a2
 ; CHECK-NEXT:    mvcv16 a1
-; CHECK-NEXT:    ld16.w a0, (sp, 4)
+; CHECK-NEXT:    ld16.w a0, (sp, 8)
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    ld16.w a2, (sp, 8)
+; CHECK-NEXT:    ld16.w a2, (sp, 4)
 ; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
@@ -2366,16 +2366,16 @@ define i1 @ICMP_LONG_sge(i64 %x, i64 %y) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    cmphs16 a2, a0
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    st16.w a0, (sp, 4)
+; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    cmpne16 a3, a1
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    st16.w a0, (sp, 8)
+; CHECK-NEXT:    st16.w a0, (sp, 4)
 ; CHECK-NEXT:    cmplt16 a3, a1
 ; CHECK-NEXT:    mvcv16 a0
-; CHECK-NEXT:    ld16.w a1, (sp, 4)
+; CHECK-NEXT:    ld16.w a1, (sp, 8)
 ; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
-; CHECK-NEXT:    ld16.w a2, (sp, 8)
+; CHECK-NEXT:    ld16.w a2, (sp, 4)
 ; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
@@ -2697,16 +2697,16 @@ define i1 @ICMP_LONG_slt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    cmplt16 a3, a1
 ; CHECK-NEXT:    mvc32 t0
-; CHECK-NEXT:    st32.w t0, (sp, 4)
+; CHECK-NEXT:    st32.w t0, (sp, 8)
 ; CHECK-NEXT:    cmpne16 a3, a1
 ; CHECK-NEXT:    mvc32 a1
-; CHECK-NEXT:    st16.w a1, (sp, 8)
+; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    cmphs16 a2, a0
 ; CHECK-NEXT:    mvcv16 a1
-; CHECK-NEXT:    ld16.w a0, (sp, 4)
+; CHECK-NEXT:    ld16.w a0, (sp, 8)
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    ld16.w a2, (sp, 8)
+; CHECK-NEXT:    ld16.w a2, (sp, 4)
 ; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
@@ -2750,16 +2750,16 @@ define i1 @ICMP_LONG_I_slt(i64 %x) {
 ; CHECK-NEXT:    movi16 a2, 0
 ; CHECK-NEXT:    cmplt16 a1, a2
 ; CHECK-NEXT:    mvc32 a2
-; CHECK-NEXT:    st16.w a2, (sp, 4)
+; CHECK-NEXT:    st16.w a2, (sp, 8)
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
-; CHECK-NEXT:    st16.w a1, (sp, 8)
+; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    cmpnei16 a0, 0
 ; CHECK-NEXT:    mvcv16 a1
-; CHECK-NEXT:    ld16.w a0, (sp, 4)
+; CHECK-NEXT:    ld16.w a0, (sp, 8)
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    ld16.w a2, (sp, 8)
+; CHECK-NEXT:    ld16.w a2, (sp, 4)
 ; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
@@ -3024,16 +3024,16 @@ define i1 @ICMP_LONG_sle(i64 %x, i64 %y) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    cmphs16 a0, a2
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    st16.w a0, (sp, 4)
+; CHECK-NEXT:    st16.w a0, (sp, 8)
 ; CHECK-NEXT:    cmpne16 a3, a1
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    st16.w a0, (sp, 8)
+; CHECK-NEXT:    st16.w a0, (sp, 4)
 ; CHECK-NEXT:    cmplt16 a1, a3
 ; CHECK-NEXT:    mvcv16 a0
-; CHECK-NEXT:    ld16.w a1, (sp, 4)
+; CHECK-NEXT:    ld16.w a1, (sp, 8)
 ; CHECK-NEXT:    btsti16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
-; CHECK-NEXT:    ld16.w a2, (sp, 8)
+; CHECK-NEXT:    ld16.w a2, (sp, 4)
 ; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12
@@ -3072,16 +3072,16 @@ define i1 @ICMP_LONG_I_sle(i64 %x) {
 ; CHECK-NEXT:    movi16 a2, 0
 ; CHECK-NEXT:    cmplt16 a1, a2
 ; CHECK-NEXT:    mvc32 a2
-; CHECK-NEXT:    st16.w a2, (sp, 4)
+; CHECK-NEXT:    st16.w a2, (sp, 8)
 ; CHECK-NEXT:    cmpnei16 a1, 0
 ; CHECK-NEXT:    mvc32 a1
-; CHECK-NEXT:    st16.w a1, (sp, 8)
+; CHECK-NEXT:    st16.w a1, (sp, 4)
 ; CHECK-NEXT:    cmphsi16 a0, 2
 ; CHECK-NEXT:    mvcv16 a1
-; CHECK-NEXT:    ld16.w a0, (sp, 4)
+; CHECK-NEXT:    ld16.w a0, (sp, 8)
 ; CHECK-NEXT:    btsti16 a0, 0
 ; CHECK-NEXT:    mvc32 a0
-; CHECK-NEXT:    ld16.w a2, (sp, 8)
+; CHECK-NEXT:    ld16.w a2, (sp, 4)
 ; CHECK-NEXT:    btsti16 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    addi16 sp, sp, 12

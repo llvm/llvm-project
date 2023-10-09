@@ -52,16 +52,16 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_sext(ptr %base, ptr %offptr) {
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #8]
 ; CHECK-NEXT:    vshl.i32 q0, q0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vmov r2, r12, d0
-; CHECK-NEXT:    vmov r3, lr, d1
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    vmov r12, lr, d1
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
 ; CHECK-NEXT:    vshl.i32 q0, q0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vmov r4, r5, d0
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh.w r12, [r12]
 ; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    ldrh.w r12, [r12]
 ; CHECK-NEXT:    ldrh.w lr, [lr]
 ; CHECK-NEXT:    ldrh r4, [r4]
 ; CHECK-NEXT:    ldrh r5, [r5]
@@ -72,8 +72,8 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_sext(ptr %base, ptr %offptr) {
 ; CHECK-NEXT:    vmov.16 q0[2], r0
 ; CHECK-NEXT:    vmov.16 q0[3], r1
 ; CHECK-NEXT:    vmov.16 q0[4], r2
-; CHECK-NEXT:    vmov.16 q0[5], r12
-; CHECK-NEXT:    vmov.16 q0[6], r3
+; CHECK-NEXT:    vmov.16 q0[5], r3
+; CHECK-NEXT:    vmov.16 q0[6], r12
 ; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
@@ -249,38 +249,38 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_2gep(ptr %base, ptr %offptr) {
 ; CHECK-LABEL: scaled_v8i16_i16_2gep:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vldrh.s32 q0, [r1, #8]
 ; CHECK-NEXT:    mov.w r12, #40
 ; CHECK-NEXT:    vshl.i32 q0, q0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vadd.i32 q0, q0, r12
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    vmov r2, r4, d1
+; CHECK-NEXT:    vmov r3, r2, d0
+; CHECK-NEXT:    vmov lr, r4, d1
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
 ; CHECK-NEXT:    vshl.i32 q0, q0, #1
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vadd.i32 q0, q0, r12
 ; CHECK-NEXT:    vmov r0, r1, d1
+; CHECK-NEXT:    ldrh r6, [r3]
+; CHECK-NEXT:    ldrh r5, [r2]
+; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    ldrh.w r12, [lr]
-; CHECK-NEXT:    ldrh.w lr, [r4]
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    ldrh r2, [r2]
+; CHECK-NEXT:    ldrh r4, [r4]
 ; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    vmov.16 q0[0], r4
-; CHECK-NEXT:    vmov.16 q0[1], r5
+; CHECK-NEXT:    ldrh r2, [r2]
+; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    vmov.16 q0[0], r2
+; CHECK-NEXT:    vmov.16 q0[1], r3
 ; CHECK-NEXT:    vmov.16 q0[2], r0
 ; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    vmov.16 q0[4], r3
-; CHECK-NEXT:    vmov.16 q0[5], r12
-; CHECK-NEXT:    vmov.16 q0[6], r2
-; CHECK-NEXT:    vmov.16 q0[7], lr
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    vmov.16 q0[4], r6
+; CHECK-NEXT:    vmov.16 q0[5], r5
+; CHECK-NEXT:    vmov.16 q0[6], r12
+; CHECK-NEXT:    vmov.16 q0[7], r4
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %offs = load <8 x i16>, ptr %offptr, align 2
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i16> %offs
@@ -470,26 +470,26 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_biggep5(<8 x ptr> %base) {
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    mov.w r12, #131072
-; CHECK-NEXT:    vadd.i32 q0, q0, r12
 ; CHECK-NEXT:    vadd.i32 q1, q1, r12
-; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    vmov r0, r12, d1
+; CHECK-NEXT:    vadd.i32 q0, q0, r12
 ; CHECK-NEXT:    vmov r3, lr, d3
 ; CHECK-NEXT:    vmov r1, r2, d2
-; CHECK-NEXT:    ldrh r4, [r4]
-; CHECK-NEXT:    ldrh r5, [r5]
-; CHECK-NEXT:    vmov.16 q0[0], r4
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vmov.16 q0[1], r5
+; CHECK-NEXT:    vmov r0, r12, d1
 ; CHECK-NEXT:    ldrh r6, [r3]
-; CHECK-NEXT:    ldrh.w r3, [r12]
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    vmov.16 q0[3], r3
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    vmov.16 q0[4], r1
+; CHECK-NEXT:    ldrh r5, [r2]
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    ldrh r4, [r1]
+; CHECK-NEXT:    ldrh.w r1, [r12]
 ; CHECK-NEXT:    ldrh.w lr, [lr]
-; CHECK-NEXT:    vmov.16 q0[5], r2
+; CHECK-NEXT:    ldrh r2, [r2]
+; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    vmov.16 q0[0], r2
+; CHECK-NEXT:    vmov.16 q0[1], r3
+; CHECK-NEXT:    vmov.16 q0[2], r0
+; CHECK-NEXT:    vmov.16 q0[3], r1
+; CHECK-NEXT:    vmov.16 q0[4], r4
+; CHECK-NEXT:    vmov.16 q0[5], r5
 ; CHECK-NEXT:    vmov.16 q0[6], r6
 ; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
@@ -609,16 +609,16 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_basei32(ptr %base, ptr %offpt
 ; CHECK-NEXT:    vldrh.u32 q0, [r1, #8]
 ; CHECK-NEXT:    vshl.i32 q0, q0, #2
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vmov r2, r12, d0
-; CHECK-NEXT:    vmov r3, lr, d1
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    vmov r12, lr, d1
 ; CHECK-NEXT:    vldrh.u32 q0, [r1]
 ; CHECK-NEXT:    vshl.i32 q0, q0, #2
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    vmov r4, r5, d0
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh.w r12, [r12]
 ; CHECK-NEXT:    ldrh r3, [r3]
+; CHECK-NEXT:    ldrh.w r12, [r12]
 ; CHECK-NEXT:    ldrh.w lr, [lr]
 ; CHECK-NEXT:    ldrh r4, [r4]
 ; CHECK-NEXT:    ldrh r5, [r5]
@@ -629,8 +629,8 @@ define arm_aapcs_vfpcc <8 x i16> @scaled_v8i16_i16_basei32(ptr %base, ptr %offpt
 ; CHECK-NEXT:    vmov.16 q0[2], r0
 ; CHECK-NEXT:    vmov.16 q0[3], r1
 ; CHECK-NEXT:    vmov.16 q0[4], r2
-; CHECK-NEXT:    vmov.16 q0[5], r12
-; CHECK-NEXT:    vmov.16 q0[6], r3
+; CHECK-NEXT:    vmov.16 q0[5], r3
+; CHECK-NEXT:    vmov.16 q0[6], r12
 ; CHECK-NEXT:    vmov.16 q0[7], lr
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:

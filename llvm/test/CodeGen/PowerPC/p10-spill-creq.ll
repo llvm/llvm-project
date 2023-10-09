@@ -61,16 +61,16 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    cmpwi cr6, r4, 0
 ; CHECK-NEXT:    crand 4*cr5+gt, 4*cr2+gt, 4*cr1+lt
 ; CHECK-NEXT:    crand 4*cr5+lt, 4*cr3+gt, 4*cr5+un
-; CHECK-NEXT:    # implicit-def: $x3
+; CHECK-NEXT:    # implicit-def: $x4
 ; CHECK-NEXT:    bc 4, 4*cr5+gt, .LBB0_10
 ; CHECK-NEXT:  # %bb.9: # %bb34
-; CHECK-NEXT:    ld r3, 0(r3)
+; CHECK-NEXT:    ld r4, 0(r3)
 ; CHECK-NEXT:  .LBB0_10: # %bb36
 ; CHECK-NEXT:    cmpwi cr2, r5, 0
-; CHECK-NEXT:    # implicit-def: $x4
+; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_12
 ; CHECK-NEXT:  # %bb.11: # %bb38
-; CHECK-NEXT:    ld r4, 0(r3)
+; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:  .LBB0_12: # %bb40
 ; CHECK-NEXT:    crand 4*cr6+gt, 4*cr7+lt, 4*cr1+lt
 ; CHECK-NEXT:    crand 4*cr6+lt, 4*cr6+lt, 4*cr5+un
@@ -81,7 +81,7 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ld r6, 0(r3)
 ; CHECK-NEXT:  .LBB0_14: # %bb50
 ; CHECK-NEXT:    cmpwi cr3, r5, -1
-; CHECK-NEXT:    crand 4*cr7+lt, 4*cr2+lt, 4*cr6+un
+; CHECK-NEXT:    crand 4*cr7+gt, 4*cr2+lt, 4*cr6+un
 ; CHECK-NEXT:    # implicit-def: $r5
 ; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_16
 ; CHECK-NEXT:  # %bb.15: # %bb52
@@ -90,7 +90,7 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mfocrf r7, 128
 ; CHECK-NEXT:    stw r7, -4(r1)
 ; CHECK-NEXT:    # implicit-def: $r7
-; CHECK-NEXT:    bc 4, 4*cr7+lt, .LBB0_18
+; CHECK-NEXT:    bc 4, 4*cr7+gt, .LBB0_18
 ; CHECK-NEXT:  # %bb.17: # %bb56
 ; CHECK-NEXT:    lwz r7, 0(r3)
 ; CHECK-NEXT:  .LBB0_18: # %bb58
@@ -98,12 +98,12 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    crand 4*cr7+un, 4*cr3+gt, 4*cr6+un
 ; CHECK-NEXT:    cmpwi cr3, r5, 1
 ; CHECK-NEXT:    cmpwi cr4, r7, 1
-; CHECK-NEXT:    crand 4*cr7+gt, 4*cr7+eq, 4*cr1+lt
+; CHECK-NEXT:    crand 4*cr7+lt, 4*cr7+eq, 4*cr1+lt
 ; CHECK-NEXT:    # implicit-def: $x5
 ; CHECK-NEXT:    crand 4*cr6+un, 4*cr2+eq, 4*cr6+un
 ; CHECK-NEXT:    crand 4*cr5+un, 4*cr6+eq, 4*cr5+un
 ; CHECK-NEXT:    crand 4*cr6+gt, 4*cr3+lt, 4*cr6+gt
-; CHECK-NEXT:    crand 4*cr7+lt, 4*cr4+lt, 4*cr7+lt
+; CHECK-NEXT:    crand 4*cr7+gt, 4*cr4+lt, 4*cr7+gt
 ; CHECK-NEXT:    cmpwi r6, 1
 ; CHECK-NEXT:    crand 4*cr6+lt, lt, 4*cr6+lt
 ; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_20
@@ -119,27 +119,27 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    setbc r8, 4*cr5+un
 ; CHECK-NEXT:    lwz r12, 8(r1)
 ; CHECK-NEXT:    xxlxor f2, f2, f2
-; CHECK-NEXT:    isel r3, r3, r5, 4*cr5+gt
-; CHECK-NEXT:    setbc r5, 4*cr7+gt
+; CHECK-NEXT:    isel r4, r4, r5, 4*cr5+gt
+; CHECK-NEXT:    setbc r5, 4*cr7+lt
 ; CHECK-NEXT:    crnor 4*cr5+gt, 4*cr6+gt, 4*cr5+gt
-; CHECK-NEXT:    crnor 4*cr6+gt, 4*cr7+lt, 4*cr7+eq
+; CHECK-NEXT:    crnor 4*cr6+gt, 4*cr7+gt, 4*cr7+eq
 ; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr6+lt, 4*cr5+lt
 ; CHECK-NEXT:    add r5, r7, r5
 ; CHECK-NEXT:    add r5, r8, r5
-; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+gt
-; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+lt
+; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+gt
+; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; CHECK-NEXT:    isel r6, 0, r6, 4*cr6+gt
 ; CHECK-NEXT:    mtocrf 128, r9
 ; CHECK-NEXT:    mtfprd f0, r5
-; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq
+; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+eq
 ; CHECK-NEXT:    mtocrf 32, r12
 ; CHECK-NEXT:    mtocrf 16, r12
 ; CHECK-NEXT:    mtocrf 8, r12
-; CHECK-NEXT:    iseleq r3, 0, r3
+; CHECK-NEXT:    iseleq r4, 0, r4
 ; CHECK-NEXT:    isel r6, 0, r6, 4*cr1+eq
 ; CHECK-NEXT:    xscvsxddp f0, f0
-; CHECK-NEXT:    add r3, r6, r3
-; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    add r4, r6, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    mtfprd f1, r3
 ; CHECK-NEXT:    xsmuldp f0, f0, f2
 ; CHECK-NEXT:    xscvsxddp f1, f1

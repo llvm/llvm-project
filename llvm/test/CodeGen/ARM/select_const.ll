@@ -671,22 +671,22 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    cmp r0, #0
 ; THUMB-NEXT:    bne .LBB24_2
 ; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r5, #23
+; THUMB-NEXT:    movs r6, #23
 ; THUMB-NEXT:    b .LBB24_3
 ; THUMB-NEXT:  .LBB24_2:
 ; THUMB-NEXT:    movs r0, #3
-; THUMB-NEXT:    mvns r5, r0
+; THUMB-NEXT:    mvns r6, r0
 ; THUMB-NEXT:  .LBB24_3:
 ; THUMB-NEXT:    ldr r0, .LCPI24_0
-; THUMB-NEXT:    ands r5, r0
-; THUMB-NEXT:    movs r6, #0
-; THUMB-NEXT:    subs r0, r5, #1
+; THUMB-NEXT:    ands r6, r0
+; THUMB-NEXT:    movs r5, #0
+; THUMB-NEXT:    subs r0, r6, #1
 ; THUMB-NEXT:    push {r4}
 ; THUMB-NEXT:    pop {r1}
-; THUMB-NEXT:    sbcs r1, r6
+; THUMB-NEXT:    sbcs r1, r5
 ; THUMB-NEXT:    eors r3, r7
-; THUMB-NEXT:    ldr r6, .LCPI24_0
-; THUMB-NEXT:    eors r2, r6
+; THUMB-NEXT:    ldr r5, .LCPI24_0
+; THUMB-NEXT:    eors r2, r5
 ; THUMB-NEXT:    orrs r2, r3
 ; THUMB-NEXT:    beq .LBB24_5
 ; THUMB-NEXT:  @ %bb.4:
@@ -695,7 +695,7 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    cmp r2, #0
 ; THUMB-NEXT:    beq .LBB24_7
 ; THUMB-NEXT:  @ %bb.6:
-; THUMB-NEXT:    movs r0, r5
+; THUMB-NEXT:    movs r0, r6
 ; THUMB-NEXT:  .LBB24_7:
 ; THUMB-NEXT:    pop {r4, r5, r6, r7}
 ; THUMB-NEXT:    pop {r2}

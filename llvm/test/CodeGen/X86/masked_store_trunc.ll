@@ -1812,22 +1812,22 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    movmskpd %xmm1, %eax
-; SSE2-NEXT:    xorl $3, %eax
-; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    movmskpd %xmm1, %ecx
+; SSE2-NEXT:    xorl $3, %ecx
+; SSE2-NEXT:    testb $1, %cl
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    jne .LBB8_1
 ; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    testb $2, %cl
 ; SSE2-NEXT:    jne .LBB8_3
 ; SSE2-NEXT:  .LBB8_4: # %else2
 ; SSE2-NEXT:    retq
 ; SSE2-NEXT:  .LBB8_1: # %cond.store
-; SSE2-NEXT:    movb %cl, (%rdi)
-; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    movb %al, (%rdi)
+; SSE2-NEXT:    testb $2, %cl
 ; SSE2-NEXT:    je .LBB8_4
 ; SSE2-NEXT:  .LBB8_3: # %cond.store1
-; SSE2-NEXT:    movb %ch, 1(%rdi)
+; SSE2-NEXT:    movb %ah, 1(%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: truncstore_v2i64_v2i8:

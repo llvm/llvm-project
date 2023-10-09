@@ -191,23 +191,23 @@ define i64 @abd_ext_i64(i64 %a, i64 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    sarl $31, %edi
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %esi, %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    sbbl %edi, %esi
-; X86-NEXT:    sbbl %edi, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    xorl %ecx, %edx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    movl %edi, %ecx
+; X86-NEXT:    sbbl %esi, %ecx
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    xorl %edi, %edx
+; X86-NEXT:    xorl %edi, %eax
+; X86-NEXT:    subl %edi, %eax
+; X86-NEXT:    sbbl %edi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -233,23 +233,23 @@ define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    sarl $31, %edi
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %esi, %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    sbbl %edi, %esi
-; X86-NEXT:    sbbl %edi, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    xorl %ecx, %edx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    sbbl %ecx, %edx
+; X86-NEXT:    movl %edi, %ecx
+; X86-NEXT:    sbbl %esi, %ecx
+; X86-NEXT:    sbbl %esi, %edi
+; X86-NEXT:    sarl $31, %edi
+; X86-NEXT:    xorl %edi, %edx
+; X86-NEXT:    xorl %edi, %eax
+; X86-NEXT:    subl %edi, %eax
+; X86-NEXT:    sbbl %edi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl

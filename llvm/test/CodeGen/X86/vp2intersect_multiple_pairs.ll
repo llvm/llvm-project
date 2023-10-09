@@ -39,10 +39,10 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X86-NEXT:    kmovw %k0, %eax
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
-; X86-NEXT:    kmovw %k0, %edx
+; X86-NEXT:    kmovw %k0, %ecx
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
-; X86-NEXT:    kmovw %k0, %ecx
+; X86-NEXT:    kmovw %k0, %edx
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
 ; X86-NEXT:    kmovw %k0, %edi
@@ -50,11 +50,11 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k2 # 2-byte Reload
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k3 # 2-byte Reload
 ; X86-NEXT:    kmovw %k2, %edi
-; X86-NEXT:    addl %edx, %ecx
-; X86-NEXT:    kmovw %k1, %edx
-; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    kmovw %k1, %ecx
+; X86-NEXT:    addl %edi, %ecx
 ; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    addl %edx, %eax
 ; X86-NEXT:    movw %ax, (%esi)
 ; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
