@@ -197,6 +197,7 @@ public:
       return 0;
 
     const u16 Count = B->getCount();
+    DCHECK_GT(Count, 0U);
     B->moveToArray(ToArray);
 
     if (ClassId != SizeClassMap::BatchClassId)
