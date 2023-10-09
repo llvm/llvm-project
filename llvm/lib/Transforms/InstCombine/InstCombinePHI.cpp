@@ -1441,18 +1441,37 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         PHIUser->user_back() == &PN) {
       return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
     }
-    // When a PHI is used only to be compared with zero, it is safe to replace
-    // an incoming value proved as known nonzero with any non-zero constant.
-    // For example, in the code below, the incoming value %v can be replaced
-    // with any non-zero constant based on the fact that the PHI is only used to
-    // be compared with zero and %v is a known non-zero value:
-    // %v = select %cond, 1, 2
-    // %p = phi [%v, BB] ...
-    //      icmp eq, %p, 0
-    auto *CmpInst = dyn_cast<ICmpInst>(PHIUser);
-    // FIXME: To be simple, handle only integer type for now.
-    if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
-        match(CmpInst->getOperand(1), m_Zero())) {
+  }
+
+  // When a PHI is used only to be compared with zero, it is safe to replace
+  // an incoming value proved as known nonzero with any non-zero constant.
+  // For example, in the code below, the incoming value %v can be replaced
+  // with any non-zero constant based on the fact that the PHI is only used to
+  // be compared with zero and %v is a known non-zero value:
+  // %v = select %cond, 1, 2
+  // %p = phi [%v, BB] ...
+  //      icmp eq, %p, 0
+  // FIXME: To be simple, handle only integer type for now.
+  // This handles a small number of uses to keep the complexity down, and an
+  // icmp(or(phi)) can equally be replaced with any non-zero constant as the
+  // "or" will only add bits.
+  if (!PN.hasNUsesOrMore(3)) {
+    bool AllUsesOfPhiEndsInCmp = all_of(PN.users(), [&PN](User *U) {
+      auto *CmpInst = dyn_cast<ICmpInst>(U);
+      if (!CmpInst) {
+        // This is always correct as OR only add bits and we are checking
+        // against 0.
+        if (U->hasOneUse() && match(U, m_c_Or(m_Specific(&PN), m_Value())))
+          CmpInst = dyn_cast<ICmpInst>(U->user_back());
+      }
+      if (!CmpInst || !isa<IntegerType>(PN.getType()) ||
+          !CmpInst->isEquality() || !match(CmpInst->getOperand(1), m_Zero())) {
+        return false;
+      }
+      return true;
+    });
+    // All uses of PHI results in a compare with zero.
+    if (AllUsesOfPhiEndsInCmp) {
       ConstantInt *NonZeroConst = nullptr;
       bool MadeChange = false;
       for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
@@ -1461,7 +1480,6 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
           if (!NonZeroConst)
             NonZeroConst = getAnyNonZeroConstInt(PN);
-
           if (NonZeroConst != VA) {
             replaceOperand(PN, I, NonZeroConst);
             MadeChange = true;
