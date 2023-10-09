@@ -1753,6 +1753,16 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     return ParseResult::unrecoverable_error;
   }
 
+  {
+    // If any generics are present, this expression is not parseable.
+    m_is_cacheable =
+        !llvm::any_of(parsed_expr->code_manipulator->GetVariableInfo(),
+                     [](const auto &variable) {
+                       return variable.IsMetadataPointer() ||
+                              variable.IsPackCount() ||
+                              variable.IsUnboundPack();
+                     });
+  }
   auto dumpModule = [&](const char *msg) {
     std::string s;
     llvm::raw_string_ostream ss(s);
