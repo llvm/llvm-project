@@ -393,32 +393,39 @@ TEST_F(TokenAnnotatorTest, UnderstandsClasses) {
   auto Tokens = annotate("class C {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_ClassRBrace);
 
   Tokens = annotate("const class C {} c;");
   EXPECT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_ClassRBrace);
 
   Tokens = annotate("const class {} c;");
   EXPECT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_ClassRBrace);
 
   Tokens = annotate("class [[deprecated(\"\")]] C { int i; };");
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[14], tok::r_brace, TT_ClassRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   auto Tokens = annotate("struct S {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("struct EXPORT_MACRO [[nodiscard]] C { int i; };");
   EXPECT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("struct [[deprecated]] [[nodiscard]] C { int i; };");
   EXPECT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[16], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("template <typename T> struct S<const T[N]> {};");
   EXPECT_EQ(Tokens.size(), 18u) << Tokens;
@@ -426,6 +433,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
   EXPECT_TOKEN(Tokens[13], tok::greater, TT_TemplateCloser);
   EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[15], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("template <typename T> struct S<T const[N]> {};");
   EXPECT_EQ(Tokens.size(), 18u) << Tokens;
@@ -433,6 +441,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[10], tok::l_square, TT_ArraySubscriptLSquare);
   EXPECT_TOKEN(Tokens[13], tok::greater, TT_TemplateCloser);
   EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[15], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("template <typename T, unsigned n> struct S<T const[n]> {\n"
                     "  void f(T const (&a)[n]);\n"
@@ -445,17 +454,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[23], tok::l_paren, TT_FunctionTypeLParen);
   EXPECT_TOKEN(Tokens[24], tok::amp, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[27], tok::l_square, TT_ArraySubscriptLSquare);
+  EXPECT_TOKEN(Tokens[32], tok::r_brace, TT_StructRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
   auto Tokens = annotate("union U {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_UnionLBrace);
+  EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_UnionRBrace);
 
   Tokens = annotate("union U { void f() { return; } };");
   EXPECT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_UnionLBrace);
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_UnionRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
