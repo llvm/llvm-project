@@ -77,14 +77,14 @@ entry:
 ; MCU-CTORS:         .section        .ctors,"aw",@progbits
 ; MCU-INIT-ARRAY:    .section        .init_array,"aw",@init_array
 
-; COFF-CTOR:		.section	.ctors.65520,"dw",associative,v
+; COFF-CTOR:		.section	.ctors,"dw"
 ; COFF-CTOR-NEXT:	.p2align	3
-; COFF-CTOR-NEXT:	.quad	g
+; COFF-CTOR-NEXT:	.quad	j
+; COFF-CTOR-NEXT:	.quad	i
+; COFF-CTOR-NEXT:	.quad	f
 ; COFF-CTOR-NEXT:	.section	.ctors.09980,"dw",associative,v
 ; COFF-CTOR-NEXT:	.p2align	3
 ; COFF-CTOR-NEXT:	.quad	h
-; COFF-CTOR-NEXT:	.section	.ctors,"dw"
+; COFF-CTOR-NEXT:	.section	.ctors.65520,"dw",associative,v
 ; COFF-CTOR-NEXT:	.p2align	3
-; COFF-CTOR-NEXT:	.quad	f
-; COFF-CTOR-NEXT:	.quad	i
-; COFF-CTOR-NEXT:	.quad	j
+; COFF-CTOR-NEXT:	.quad	g

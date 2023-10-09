@@ -2807,7 +2807,11 @@ void AsmPrinter::emitXXStructorList(const DataLayout &DL, const Constant *List,
 
   // Emit the structors in reverse order if we are using the .ctor/.dtor
   // initialization scheme.
-  if (!TM.Options.UseInitArray)
+  bool UseCtorSection = !TM.Options.UseInitArray;
+  // MinGW targets always use the .ctors section.
+  if (TM.getTargetTriple().isWindowsGNUEnvironment())
+    UseCtorSection = true;
+  if (UseCtorSection)
     std::reverse(Structors.begin(), Structors.end());
 
   const Align Align = DL.getPointerPrefAlignment();
