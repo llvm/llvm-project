@@ -250,8 +250,7 @@ public:
 };
 
 // An inherited class for rational matrices, with no new data attributes.
-// This is only used for the matrix-related method which apply only
-// to fractions (inverse).
+// This class is for functionality that only applies to matrices of fractions.
 class FracMatrix : public Matrix<Fraction> {
 public:
   FracMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
