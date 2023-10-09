@@ -33,7 +33,7 @@ struct ImplicitNVDerived : public ImplicitNV {};
 NVDerived *get();
 
 NonVirtual *create() {
-  NonVirtual *x = new NVDerived(); // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *x = new NVDerived(); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   return x;
 }
 
@@ -52,32 +52,32 @@ void sinkParamCast(NVDerived *z) {
 
 void singleDerived() {
   NonVirtual *sd;
-  sd = new NVDerived(); // expected-note{{Conversion from derived to base happened here}}
+  sd = new NVDerived(); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete sd; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void singleDerivedArr() {
-  NonVirtual *sda = new NVDerived[5]; // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *sda = new NVDerived[5]; // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete[] sda; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void doubleDerived() {
-  NonVirtual *dd = new NVDoubleDerived(); // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *dd = new NVDoubleDerived(); // expected-note{{Casting from 'NVDoubleDerived' to 'NonVirtual' here}}
   delete (dd); // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void assignThroughFunction() {
-  NonVirtual *atf = get(); // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *atf = get(); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete atf; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void assignThroughFunction2() {
   NonVirtual *atf2;
-  atf2 = get(); // expected-note{{Conversion from derived to base happened here}}
+  atf2 = get(); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete atf2; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
@@ -90,49 +90,49 @@ void createThroughFunction() {
 }
 
 void deleteThroughFunction() {
-  NonVirtual *dtf = new NVDerived(); // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *dtf = new NVDerived(); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   sink(dtf); // expected-note{{Calling 'sink'}}
 }
 
 void singleCastCStyle() {
   NVDerived *sccs = new NVDerived();
-  NonVirtual *sccs2 = (NonVirtual*)sccs; // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *sccs2 = (NonVirtual*)sccs; // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete sccs2; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void doubleCastCStyle() {
-  NonVirtual *dccs = new NVDerived();
-  NVDerived *dccs2 = (NVDerived*)dccs;
-  dccs = (NonVirtual*)dccs2; // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *dccs = new NVDerived(); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
+  NVDerived *dccs2 = (NVDerived*)dccs; // expected-note{{Casting from 'NonVirtual' to 'NVDerived' here}}
+  dccs = (NonVirtual*)dccs2; // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete dccs; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void singleCast() {
   NVDerived *sc = new NVDerived();
-  NonVirtual *sc2 = reinterpret_cast<NonVirtual*>(sc); // expected-note{{Conversion from derived to base happened here}}
+  NonVirtual *sc2 = reinterpret_cast<NonVirtual*>(sc); // expected-note{{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete sc2; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void doubleCast() {
-  NonVirtual *dd = new NVDerived();
-  NVDerived *dd2 = reinterpret_cast<NVDerived*>(dd);
-  dd = reinterpret_cast<NonVirtual*>(dd2); // expected-note {{Conversion from derived to base happened here}}
+  NonVirtual *dd = new NVDerived(); // expected-note {{Casting from 'NVDerived' to 'NonVirtual' here}}
+  NVDerived *dd2 = reinterpret_cast<NVDerived*>(dd); // expected-note {{Casting from 'NonVirtual' to 'NVDerived' here}}
+  dd = reinterpret_cast<NonVirtual*>(dd2); // expected-note {{Casting from 'NVDerived' to 'NonVirtual' here}}
   delete dd; // expected-warning {{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void implicitNV() {
-  ImplicitNV *invd = new ImplicitNVDerived(); // expected-note{{Conversion from derived to base happened here}}
+  ImplicitNV *invd = new ImplicitNVDerived(); // expected-note{{Casting from 'ImplicitNVDerived' to 'ImplicitNV' here}}
   delete invd; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
 
 void doubleDecl() {
   ImplicitNV *dd1, *dd2;
-  dd1 = new ImplicitNVDerived(); // expected-note{{Conversion from derived to base happened here}}
+  dd1 = new ImplicitNVDerived(); // expected-note{{Casting from 'ImplicitNVDerived' to 'ImplicitNV' here}}
   delete dd1; // expected-warning{{Destruction of a polymorphic object with no virtual destructor}}
   // expected-note@-1{{Destruction of a polymorphic object with no virtual destructor}}
 }
