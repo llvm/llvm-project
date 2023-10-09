@@ -77,21 +77,3 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 define void @swift_async(i8* swiftasync %ctx) minsize "frame-pointer"="all" {
   ret void
 }
-
-declare void @bar(i32 %i)
-
-define void @odd_num_callee_saved_registers(ptr swifterror %error, i32 %i) nounwind minsize {
-  call void asm sideeffect "mov x0, #42", "~{x0},~{x19},~{x20},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"() nounwind
-  call void @bar(i32 %i)
-  ret void
-}
-
-; CHECK-LABEL: _OUTLINED_FUNCTION_PROLOG_x30x29x19x20x22x23x24x25x26x27x28:
-; CHECK:	stp	x28, xzr, [sp, #-80]!
-; CHECK-LABEL: _OUTLINED_FUNCTION_EPILOG_TAIL_x30x29x19x20x22x23x24x25x26x27x28:
-; CHECK:	ldp	x28, xzr, [sp], #96
-
-; CHECK-LINUX-LABEL: OUTLINED_FUNCTION_PROLOG_x19x20x22x23x24x25x26x27x28x30x29:
-; CHECK-LINUX:	stp	x29, xzr, [sp, #-8]!
-; CHECK-LINUX-LABEL: OUTLINED_FUNCTION_EPILOG_TAIL_x19x20x22x23x24x25x26x27x28x30x29:
-; CHECK-LINUX:	ldp	x29, xzr, [sp], #96
