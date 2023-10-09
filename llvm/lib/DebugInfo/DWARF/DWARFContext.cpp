@@ -586,7 +586,7 @@ public:
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
   }
 
-  bool isThreadSafe() override { return false; }
+  bool isThreadSafe() const override { return false; }
 
   const DenseMap<uint64_t, DWARFTypeUnit *> &getNormalTypeUnitMap() {
     if (!NormalTypeUnits) {
@@ -724,7 +724,7 @@ public:
     return ThreadUnsafeDWARFContextState::getDWOContext(AbsolutePath);
   }
 
-  bool isThreadSafe() override { return true; }
+  bool isThreadSafe() const override { return true; }
 
   const DenseMap<uint64_t, DWARFTypeUnit *> &
   getTypeUnitMap(bool IsDWO) override {
