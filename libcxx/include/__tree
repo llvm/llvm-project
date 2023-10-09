@@ -774,8 +774,6 @@ public:
 
     __node_value_type __value_;
 
-    _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
-
 private:
   ~__tree_node() = delete;
   __tree_node(__tree_node const&) = delete;
