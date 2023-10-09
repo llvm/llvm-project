@@ -205,9 +205,9 @@ public:
     params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
     // Construct dimSizes, lvlSizes, dim2lvl, and lvl2dim buffers.
     params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizesValues);
-    params[kParamLvlSizes] = genMapBuffers(
-        builder, loc, stt, dimSizesValues, params[kParamDimSizes],
-        params[kParamDim2Lvl], params[kParamLvl2Dim]);
+    params[kParamLvlSizes] =
+        genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
+                      params[kParamDim2Lvl], params[kParamLvl2Dim]);
     // Secondary and primary types encoding.
     setTemplateTypes(stt);
     // Finally, make note that initialization is complete.
