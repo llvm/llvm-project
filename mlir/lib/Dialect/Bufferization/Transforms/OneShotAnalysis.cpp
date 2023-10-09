@@ -40,8 +40,8 @@
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
-#include <random>
 #include <optional>
+#include <random>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -1323,6 +1323,5 @@ bufferization::runOneShotBufferize(Operation *op,
   }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite,
-                     /*opFilter=*/nullptr, statistics);
+  return bufferizeOp(op, options, statistics);
 }
