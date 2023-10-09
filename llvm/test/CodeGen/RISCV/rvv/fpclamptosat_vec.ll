@@ -1459,7 +1459,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -1742,7 +1742,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -2045,7 +2045,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -4780,7 +4780,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -5059,7 +5059,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -5361,7 +5361,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill

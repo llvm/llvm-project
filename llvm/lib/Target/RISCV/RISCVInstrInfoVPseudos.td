@@ -6756,24 +6756,19 @@ defm PseudoVID : VPseudoVID_V;
 
 let Predicates = [HasVInstructions] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
-  foreach m = MxList in {
-    defvar mx = m.MX;
-    let VLMul = m.value in {
-      let HasSEWOp = 1, BaseInstr = VMV_X_S in
-      def PseudoVMV_X_S # "_" # mx:
-        Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-        Sched<[WriteVIMovVX, ReadVIMovVX]>,
-        RISCVVPseudo;
-      let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
-          Constraints = "$rd = $rs1" in
-      def PseudoVMV_S_X # "_" # mx: Pseudo<(outs m.vrclass:$rd),
-                                             (ins m.vrclass:$rs1, GPR:$rs2,
-                                                  AVL:$vl, ixlenimm:$sew),
-                                             []>,
-        Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
-        RISCVVPseudo;
-    }
-  }
+  let HasSEWOp = 1, BaseInstr = VMV_X_S in
+  def PseudoVMV_X_S:
+    Pseudo<(outs GPR:$rd), (ins VR:$rs2, ixlenimm:$sew), []>,
+    Sched<[WriteVIMovVX, ReadVIMovVX]>,
+    RISCVVPseudo;
+  let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
+      Constraints = "$rd = $rs1" in
+  def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
+                                         (ins VR:$rs1, GPR:$rs2,
+                                              AVL:$vl, ixlenimm:$sew),
+                                         []>,
+    Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
+    RISCVVPseudo;
 }
 } // Predicates = [HasVInstructions]
 
@@ -7403,7 +7398,12 @@ defm : VPatNullaryV<"int_riscv_vid", "PseudoVID">;
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in
   def : Pat<(XLenVT (riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVMV_X_S_" # vti.LMul.MX) $rs2, vti.Log2SEW)>;
+            (PseudoVMV_X_S
+               !if(!isa<GroupVTypeInfo>(vti),
+                   (!cast<GroupVTypeInfo>(vti).VectorM1
+                      (EXTRACT_SUBREG $rs2, sub_vrm1_0)),
+                   (vti.Vector $rs2)),
+               vti.Log2SEW)>;
   // vmv.s.x is handled with a custom node in RISCVInstrInfoVVLPatterns.td
 }
 
@@ -7421,10 +7421,15 @@ foreach fvti = AllFloatVectors in {
                (fvti.Scalar fvti.ScalarRegClass:$rs2),
                GPR:$vl, fvti.Log2SEW)>;
 
+    defvar is_group = !isa<GroupVTypeInfo>(fvti);
+    defvar merge = !if(is_group,
+                       (!cast<GroupVTypeInfo>(fvti).VectorM1
+                          (EXTRACT_SUBREG $rs1, sub_vrm1_0)),
+                       (fvti.Vector $rs1));
+    defvar vmv_s_x = (PseudoVMV_S_X merge, (XLenVT X0), GPR:$vl, fvti.Log2SEW);
     def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
                            (fvti.Scalar (fpimm0)), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_S_X_" # fvti.LMul.MX)
-               (fvti.Vector $rs1), (XLenVT X0), GPR:$vl, fvti.Log2SEW)>;
+              !if(is_group, (INSERT_SUBREG $rs1, vmv_s_x, sub_vrm1_0), vmv_s_x)>;
   }
 }
 

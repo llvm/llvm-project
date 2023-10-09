@@ -355,9 +355,9 @@ define <4 x double> @unary_interleave_v4f64(<4 x double> %x) {
 ; RV32-V512:       # %bb.0:
 ; RV32-V512-NEXT:    lui a0, 12304
 ; RV32-V512-NEXT:    addi a0, a0, 512
-; RV32-V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; RV32-V512-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-V512-NEXT:    vmv.s.x v9, a0
-; RV32-V512-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
 ; RV32-V512-NEXT:    vsext.vf2 v10, v9
 ; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-V512-NEXT:    vrgatherei16.vv v9, v8, v10

@@ -561,7 +561,7 @@ define void @buildvec_seq_v9i8(ptr %x) {
 ; CHECK-LABEL: buildvec_seq_v9i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 73
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 3
