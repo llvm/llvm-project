@@ -213,16 +213,28 @@ struct ConvertVectorMaskedLoad final
     auto numElements = (origElements + scale - 1) / scale;
     auto newType = VectorType::get(numElements, newElementType);
 
-    auto createMaskOp = op.getMask().getDefiningOp<vector::CreateMaskOp>();
-    auto constantMaskOp = op.getMask().getDefiningOp<vector::ConstantMaskOp>();
-    // TODO: Handle extracted mask.
+    auto maskOp = op.getMask().getDefiningOp();
+    SmallVector<vector::ExtractOp, 2> extractOps;
+    // Finding the mask creation operation.
+    while (maskOp &&
+           !isa<vector::CreateMaskOp, vector::ConstantMaskOp>(maskOp)) {
+      if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
+        maskOp = extractOp.getVector().getDefiningOp();
+        extractOps.push_back(extractOp);
+      }
+    }
+    auto createMaskOp = dyn_cast_or_null<vector::CreateMaskOp>(maskOp);
+    auto constantMaskOp = dyn_cast_or_null<vector::ConstantMaskOp>(maskOp);
     if (!createMaskOp && !constantMaskOp)
       return failure();
 
     // Computing the "compressed" mask. All the emulation logic (i.e. computing
     // new mask index) only happens on the last dimension of the vectors.
     Operation *newMask = nullptr;
-    auto newMaskType = VectorType::get(numElements, rewriter.getI1Type());
+    auto shape = llvm::to_vector(
+        maskOp->getResultTypes()[0].cast<VectorType>().getShape().drop_back());
+    shape.push_back(numElements);
+    auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
       auto numMaskOperands = maskOperands.size();
@@ -234,9 +246,11 @@ struct ConvertVectorMaskedLoad final
           getAsOpFoldResult(maskOperands[numMaskOperands - 1]);
       OpFoldResult maskIndex =
           affine::makeComposedFoldedAffineApply(rewriter, loc, s0, origIndex);
-      newMask = rewriter.create<vector::CreateMaskOp>(
-          loc, newMaskType,
+      auto newMaskOperands = llvm::to_vector(maskOperands.drop_back());
+      newMaskOperands.push_back(
           getValueOrCreateConstantIndexOp(rewriter, loc, maskIndex));
+      newMask = rewriter.create<vector::CreateMaskOp>(loc, newMaskType,
+                                                      newMaskOperands);
     } else if (constantMaskOp) {
       auto maskDimSizes = constantMaskOp.getMaskDimSizes().getValue();
       auto numMaskOperands = maskDimSizes.size();
@@ -244,8 +258,16 @@ struct ConvertVectorMaskedLoad final
           cast<IntegerAttr>(maskDimSizes[numMaskOperands - 1]).getInt();
       auto maskIndex =
           rewriter.getI64IntegerAttr((origIndex + scale - 1) / scale);
+      auto newMaskDimSizes = llvm::to_vector(maskDimSizes.drop_back());
+      newMaskDimSizes.push_back(maskIndex);
       newMask = rewriter.create<vector::ConstantMaskOp>(
-          loc, newMaskType, ArrayAttr::get(op.getContext(), maskIndex));
+          loc, newMaskType, rewriter.getArrayAttr(newMaskDimSizes));
+    }
+
+    while (!extractOps.empty()) {
+      newMask = rewriter.create<vector::ExtractOp>(
+          loc, newMask->getResults()[0], extractOps.back().getMixedPosition());
+      extractOps.pop_back();
     }
 
     auto newPassThru =
