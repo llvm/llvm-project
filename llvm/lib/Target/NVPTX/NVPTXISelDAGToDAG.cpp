@@ -14,6 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -829,6 +830,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, unsigned Opcode_i8,
   case MVT::v2f16:
   case MVT::v2bf16:
   case MVT::v2i16:
+  case MVT::v4i8:
     return Opcode_i32;
   case MVT::f32:
     return Opcode_f32;
@@ -910,7 +912,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Vector Setting
   unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    assert(Isv2x16VT(LoadedVT) && "Unexpected vector type");
+    assert((Isv2x16VT(LoadedVT) || LoadedVT == MVT::v4i8) &&
+           "Unexpected vector type");
     // v2f16/v2bf16/v2i16 is loaded using ld.b32
     fromTypeWidth = 32;
   }
@@ -1254,6 +1257,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   SDLoc DL(N);
   SDNode *LD;
   SDValue Base, Offset, Addr;
+  EVT OrigType = N->getValueType(0);
 
   EVT EltVT = Mem->getMemoryVT();
   unsigned NumElts = 1;
@@ -1261,12 +1265,15 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
     // vectors of 16bits type are loaded/stored as multiples of v2x16 elements.
-    if ((EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) ||
-        (EltVT == MVT::bf16 && N->getValueType(0) == MVT::v2bf16) ||
-        (EltVT == MVT::i16 && N->getValueType(0) == MVT::v2i16)) {
+    if ((EltVT == MVT::f16 && OrigType == MVT::v2f16) ||
+        (EltVT == MVT::bf16 && OrigType == MVT::v2bf16) ||
+        (EltVT == MVT::i16 && OrigType == MVT::v2i16)) {
       assert(NumElts % 2 == 0 && "Vector must have even number of elements");
-      EltVT = N->getValueType(0);
+      EltVT = OrigType;
       NumElts /= 2;
+    } else if (OrigType == MVT::v4i8) {
+      EltVT = OrigType;
+      NumElts = 1;
     }
   }
 
@@ -1601,7 +1608,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   // concept of sign-/zero-extension, so emulate it here by adding an explicit
   // CVT instruction. Ptxas should clean up any redundancies here.
 
-  EVT OrigType = N->getValueType(0);
   LoadSDNode *LdNode = dyn_cast<LoadSDNode>(N);
 
   if (OrigType != EltVT &&
@@ -1679,7 +1685,8 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   MVT ScalarVT = SimpleVT.getScalarType();
   unsigned toTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
-    assert(Isv2x16VT(StoreVT) && "Unexpected vector type");
+    assert((Isv2x16VT(StoreVT) || StoreVT == MVT::v4i8) &&
+           "Unexpected vector type");
     // v2x16 is stored using st.b32
     toTypeWidth = 32;
   }
