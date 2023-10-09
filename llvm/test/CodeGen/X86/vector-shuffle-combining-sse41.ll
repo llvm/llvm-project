@@ -25,36 +25,36 @@ define <16 x i8> @combine_vpshufb_as_movzx(<16 x i8> %a0) {
 define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-LABEL: PR50049:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    movdqa (%rdi), %xmm2
 ; SSE-NEXT:    movdqa 16(%rdi), %xmm0
-; SSE-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE-NEXT:    movdqa (%rsi), %xmm3
-; SSE-NEXT:    movdqa 16(%rsi), %xmm4
-; SSE-NEXT:    movdqa 32(%rsi), %xmm5
+; SSE-NEXT:    movdqa 32(%rdi), %xmm1
+; SSE-NEXT:    movdqa (%rsi), %xmm4
+; SSE-NEXT:    movdqa 16(%rsi), %xmm5
+; SSE-NEXT:    movdqa 32(%rsi), %xmm3
 ; SSE-NEXT:    movdqa {{.*#+}} xmm6 = <128,128,128,128,128,128,2,5,8,11,14,u,u,u,u,u>
 ; SSE-NEXT:    pshufb %xmm6, %xmm0
 ; SSE-NEXT:    movdqa {{.*#+}} xmm7 = <0,3,6,9,12,15,128,128,128,128,128,u,u,u,u,u>
-; SSE-NEXT:    pshufb %xmm7, %xmm1
-; SSE-NEXT:    por %xmm0, %xmm1
+; SSE-NEXT:    pshufb %xmm7, %xmm2
+; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    pshufb %xmm6, %xmm5
+; SSE-NEXT:    pshufb %xmm7, %xmm4
+; SSE-NEXT:    por %xmm5, %xmm4
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm5 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
+; SSE-NEXT:    pmullw %xmm5, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm6 = <8,u,9,u,10,u,128,u,128,u,128,u,128,u,128,u>
 ; SSE-NEXT:    pshufb %xmm6, %xmm4
+; SSE-NEXT:    movdqa {{.*#+}} xmm7 = <128,u,128,u,128,u,1,u,4,u,7,u,10,u,13,u>
 ; SSE-NEXT:    pshufb %xmm7, %xmm3
 ; SSE-NEXT:    por %xmm4, %xmm3
-; SSE-NEXT:    pmovzxbw {{.*#+}} xmm4 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; SSE-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; SSE-NEXT:    pmullw %xmm4, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm4, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm6 = <8,u,9,u,10,u,128,u,128,u,128,u,128,u,128,u>
-; SSE-NEXT:    pshufb %xmm6, %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm7 = <128,u,128,u,128,u,1,u,4,u,7,u,10,u,13,u>
-; SSE-NEXT:    pshufb %xmm7, %xmm5
-; SSE-NEXT:    por %xmm3, %xmm5
-; SSE-NEXT:    pshufb %xmm6, %xmm1
-; SSE-NEXT:    pshufb %xmm7, %xmm2
-; SSE-NEXT:    por %xmm1, %xmm2
-; SSE-NEXT:    pmullw %xmm5, %xmm2
-; SSE-NEXT:    pand %xmm4, %xmm2
-; SSE-NEXT:    packuswb %xmm2, %xmm0
+; SSE-NEXT:    pshufb %xmm6, %xmm2
+; SSE-NEXT:    pshufb %xmm7, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    pmullw %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm5, %xmm1
+; SSE-NEXT:    packuswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
   %x1 = load <48 x i8>, ptr %p1, align 16
   %x2 = load <48 x i8>, ptr %p2, align 16

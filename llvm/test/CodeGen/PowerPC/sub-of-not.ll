@@ -65,23 +65,26 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    stwu 1, -64(1)
 ; PPC32-NEXT:    stw 21, 20(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 21, 123(1)
 ; PPC32-NEXT:    stw 22, 24(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 22, 119(1)
-; PPC32-NEXT:    add 7, 21, 7
 ; PPC32-NEXT:    lbz 4, 115(1)
-; PPC32-NEXT:    lbz 21, 135(1)
-; PPC32-NEXT:    add 6, 22, 6
-; PPC32-NEXT:    lbz 22, 131(1)
+; PPC32-NEXT:    lbz 22, 119(1)
+; PPC32-NEXT:    lbz 21, 123(1)
 ; PPC32-NEXT:    add 4, 4, 5
-; PPC32-NEXT:    lbz 5, 127(1)
+; PPC32-NEXT:    add 5, 22, 6
+; PPC32-NEXT:    lbz 22, 131(1)
+; PPC32-NEXT:    add 6, 21, 7
+; PPC32-NEXT:    lbz 21, 135(1)
+; PPC32-NEXT:    addi 6, 6, 1
+; PPC32-NEXT:    stw 20, 16(1) # 4-byte Folded Spill
+; PPC32-NEXT:    add 9, 22, 9
+; PPC32-NEXT:    lbz 20, 127(1)
 ; PPC32-NEXT:    add 10, 21, 10
 ; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 9, 22, 9
-; PPC32-NEXT:    lbz 25, 83(1)
-; PPC32-NEXT:    add 5, 5, 8
-; PPC32-NEXT:    lbz 21, 147(1)
 ; PPC32-NEXT:    addi 5, 5, 1
+; PPC32-NEXT:    lbz 25, 83(1)
+; PPC32-NEXT:    add 7, 20, 8
+; PPC32-NEXT:    lbz 21, 147(1)
+; PPC32-NEXT:    addi 7, 7, 1
 ; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    addi 4, 4, 1
 ; PPC32-NEXT:    lbz 24, 79(1)
@@ -136,16 +139,14 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32-NEXT:    addi 11, 25, 1
 ; PPC32-NEXT:    stb 8, 6(3)
 ; PPC32-NEXT:    addi 8, 10, 1
-; PPC32-NEXT:    stb 5, 3(3)
-; PPC32-NEXT:    addi 5, 7, 1
 ; PPC32-NEXT:    stb 11, 8(3)
 ; PPC32-NEXT:    addi 11, 24, 1
 ; PPC32-NEXT:    stb 8, 5(3)
 ; PPC32-NEXT:    addi 8, 9, 1
-; PPC32-NEXT:    stb 5, 2(3)
-; PPC32-NEXT:    addi 5, 6, 1
 ; PPC32-NEXT:    stb 11, 7(3)
 ; PPC32-NEXT:    stb 8, 4(3)
+; PPC32-NEXT:    stb 7, 3(3)
+; PPC32-NEXT:    stb 6, 2(3)
 ; PPC32-NEXT:    stb 5, 1(3)
 ; PPC32-NEXT:    stb 4, 0(3)
 ; PPC32-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
@@ -158,6 +159,7 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32-NEXT:    lwz 23, 28(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 22, 24(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 21, 20(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 20, 16(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    addi 1, 1, 64
 ; PPC32-NEXT:    blr
 ;

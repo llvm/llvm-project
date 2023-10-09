@@ -386,27 +386,31 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s8, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lh s0, 0(a1)
-; RV32I-NEXT:    lh s1, 4(a1)
-; RV32I-NEXT:    lh s2, 8(a1)
-; RV32I-NEXT:    lh s3, 12(a1)
-; RV32I-NEXT:    mv s4, a0
+; RV32I-NEXT:    lh s1, 0(a1)
+; RV32I-NEXT:    lh s2, 4(a1)
+; RV32I-NEXT:    lh s3, 8(a1)
+; RV32I-NEXT:    lh s4, 12(a1)
+; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a0, s4
 ; RV32I-NEXT:    call __modsi3@plt
 ; RV32I-NEXT:    mv s5, a0
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s2
+; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __modsi3@plt
 ; RV32I-NEXT:    mv s6, a0
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    call __modsi3@plt
 ; RV32I-NEXT:    mv s7, a0
 ; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __modsi3@plt
 ; RV32I-NEXT:    mv s8, a0
+; RV32I-NEXT:    li a1, 95
+; RV32I-NEXT:    mv a0, s4
+; RV32I-NEXT:    call __divsi3@plt
+; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    li a1, 95
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    call __divsi3@plt
@@ -418,18 +422,14 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV32I-NEXT:    li a1, 95
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __divsi3@plt
-; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    li a1, 95
-; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call __divsi3@plt
 ; RV32I-NEXT:    add a0, s8, a0
-; RV32I-NEXT:    add s1, s7, s1
-; RV32I-NEXT:    add s2, s6, s2
-; RV32I-NEXT:    add s3, s5, s3
-; RV32I-NEXT:    sh s3, 6(s4)
-; RV32I-NEXT:    sh s2, 4(s4)
-; RV32I-NEXT:    sh s1, 2(s4)
-; RV32I-NEXT:    sh a0, 0(s4)
+; RV32I-NEXT:    add s2, s7, s2
+; RV32I-NEXT:    add s3, s6, s3
+; RV32I-NEXT:    add s4, s5, s4
+; RV32I-NEXT:    sh s4, 6(s0)
+; RV32I-NEXT:    sh s3, 4(s0)
+; RV32I-NEXT:    sh s2, 2(s0)
+; RV32I-NEXT:    sh a0, 0(s0)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
@@ -503,27 +503,31 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s8, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lh s0, 0(a1)
-; RV64I-NEXT:    lh s1, 8(a1)
-; RV64I-NEXT:    lh s2, 16(a1)
-; RV64I-NEXT:    lh s3, 24(a1)
-; RV64I-NEXT:    mv s4, a0
+; RV64I-NEXT:    lh s1, 0(a1)
+; RV64I-NEXT:    lh s2, 8(a1)
+; RV64I-NEXT:    lh s3, 16(a1)
+; RV64I-NEXT:    lh s4, 24(a1)
+; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s3
+; RV64I-NEXT:    mv a0, s4
 ; RV64I-NEXT:    call __moddi3@plt
 ; RV64I-NEXT:    mv s5, a0
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s3
 ; RV64I-NEXT:    call __moddi3@plt
 ; RV64I-NEXT:    mv s6, a0
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call __moddi3@plt
 ; RV64I-NEXT:    mv s7, a0
 ; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __moddi3@plt
 ; RV64I-NEXT:    mv s8, a0
+; RV64I-NEXT:    li a1, 95
+; RV64I-NEXT:    mv a0, s4
+; RV64I-NEXT:    call __divdi3@plt
+; RV64I-NEXT:    mv s4, a0
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s3
 ; RV64I-NEXT:    call __divdi3@plt
@@ -535,18 +539,14 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    li a1, 95
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __divdi3@plt
-; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    li a1, 95
-; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call __divdi3@plt
 ; RV64I-NEXT:    add a0, s8, a0
-; RV64I-NEXT:    add s1, s7, s1
-; RV64I-NEXT:    add s2, s6, s2
-; RV64I-NEXT:    add s3, s5, s3
-; RV64I-NEXT:    sh s3, 6(s4)
-; RV64I-NEXT:    sh s2, 4(s4)
-; RV64I-NEXT:    sh s1, 2(s4)
-; RV64I-NEXT:    sh a0, 0(s4)
+; RV64I-NEXT:    add s2, s7, s2
+; RV64I-NEXT:    add s3, s6, s3
+; RV64I-NEXT:    add s4, s5, s4
+; RV64I-NEXT:    sh s4, 6(s0)
+; RV64I-NEXT:    sh s3, 4(s0)
+; RV64I-NEXT:    sh s2, 2(s0)
+; RV64I-NEXT:    sh a0, 0(s0)
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload

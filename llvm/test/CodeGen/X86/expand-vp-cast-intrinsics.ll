@@ -489,13 +489,13 @@ define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroex
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    subq $40, %rsp
 ; AVX1-NEXT:    .cfi_def_cfa_offset 48
-; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
-; AVX1-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX1-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX1-NEXT:    addq $40, %rsp
 ; AVX1-NEXT:    .cfi_def_cfa_offset 8
@@ -505,13 +505,13 @@ define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroex
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    subq $40, %rsp
 ; AVX2-NEXT:    .cfi_def_cfa_offset 48
-; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
+; AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
-; AVX2-NEXT:    vpunpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX2-NEXT:    vpunpcklwd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; AVX2-NEXT:    addq $40, %rsp
 ; AVX2-NEXT:    .cfi_def_cfa_offset 8

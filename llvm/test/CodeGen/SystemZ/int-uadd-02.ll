@@ -215,39 +215,39 @@ define zeroext i1 @f11(ptr %ptr0) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    lg %r12, 0(%r2)
-; CHECK-NEXT:    lg %r11, 16(%r2)
-; CHECK-NEXT:    lg %r10, 32(%r2)
-; CHECK-NEXT:    lg %r9, 48(%r2)
+; CHECK-NEXT:    lg %r6, 0(%r2)
+; CHECK-NEXT:    lg %r13, 16(%r2)
+; CHECK-NEXT:    lg %r12, 32(%r2)
+; CHECK-NEXT:    lg %r7, 48(%r2)
 ; CHECK-NEXT:    lg %r8, 64(%r2)
-; CHECK-NEXT:    lg %r7, 80(%r2)
-; CHECK-NEXT:    lg %r6, 96(%r2)
-; CHECK-NEXT:    lg %r13, 112(%r2)
+; CHECK-NEXT:    lg %r9, 80(%r2)
+; CHECK-NEXT:    lg %r10, 96(%r2)
+; CHECK-NEXT:    lg %r11, 112(%r2)
 ; CHECK-NEXT:    mvc 160(8,%r15), 128(%r2) # 8-byte Folded Spill
 ; CHECK-NEXT:    mvc 168(8,%r15), 144(%r2) # 8-byte Folded Spill
 ; CHECK-NEXT:    brasl %r14, foo@PLT
-; CHECK-NEXT:    algr %r2, %r12
+; CHECK-NEXT:    algr %r2, %r6
 ; CHECK-NEXT:    ipm %r0
 ; CHECK-NEXT:    risbg %r0, %r0, 63, 191, 35
-; CHECK-NEXT:    algr %r2, %r11
+; CHECK-NEXT:    algr %r2, %r13
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
-; CHECK-NEXT:    algr %r2, %r10
-; CHECK-NEXT:    ipm %r1
-; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
-; CHECK-NEXT:    algr %r2, %r9
-; CHECK-NEXT:    ipm %r1
-; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
-; CHECK-NEXT:    algr %r2, %r8
+; CHECK-NEXT:    algr %r2, %r12
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
 ; CHECK-NEXT:    algr %r2, %r7
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
-; CHECK-NEXT:    algr %r2, %r6
+; CHECK-NEXT:    algr %r2, %r8
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
-; CHECK-NEXT:    algr %r2, %r13
+; CHECK-NEXT:    algr %r2, %r9
+; CHECK-NEXT:    ipm %r1
+; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
+; CHECK-NEXT:    algr %r2, %r10
+; CHECK-NEXT:    ipm %r1
+; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
+; CHECK-NEXT:    algr %r2, %r11
 ; CHECK-NEXT:    ipm %r1
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 35
 ; CHECK-NEXT:    alg %r2, 160(%r15) # 8-byte Folded Reload

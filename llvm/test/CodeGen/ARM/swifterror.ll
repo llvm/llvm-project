@@ -1122,9 +1122,9 @@ define swiftcc { i32, i32, i32, i32} @params_and_return_in_reg(i32, i32, i32, i3
 ; CHECK-APPLE-NEXT:    add r7, sp, #20
 ; CHECK-APPLE-NEXT:    sub sp, sp, #20
 ; CHECK-APPLE-NEXT:    bfc sp, #0, #3
-; CHECK-APPLE-NEXT:    str r8, [sp, #12] @ 4-byte Spill
-; CHECK-APPLE-NEXT:    mov r6, r3
-; CHECK-APPLE-NEXT:    str r10, [sp, #4] @ 4-byte Spill
+; CHECK-APPLE-NEXT:    mov r6, r8
+; CHECK-APPLE-NEXT:    str r10, [sp, #12] @ 4-byte Spill
+; CHECK-APPLE-NEXT:    str r3, [sp, #8] @ 4-byte Spill
 ; CHECK-APPLE-NEXT:    mov r4, r2
 ; CHECK-APPLE-NEXT:    mov r11, r1
 ; CHECK-APPLE-NEXT:    mov r5, r0
@@ -1135,17 +1135,17 @@ define swiftcc { i32, i32, i32, i32} @params_and_return_in_reg(i32, i32, i32, i3
 ; CHECK-APPLE-NEXT:    mov r10, #0
 ; CHECK-APPLE-NEXT:    mov r8, #0
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
-; CHECK-APPLE-NEXT:    str r8, [sp, #8] @ 4-byte Spill
+; CHECK-APPLE-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
 ; CHECK-APPLE-NEXT:    mov r0, r5
-; CHECK-APPLE-NEXT:    ldr r10, [sp, #4] @ 4-byte Reload
+; CHECK-APPLE-NEXT:    ldr r10, [sp, #12] @ 4-byte Reload
 ; CHECK-APPLE-NEXT:    mov r1, r11
-; CHECK-APPLE-NEXT:    ldr r8, [sp, #12] @ 4-byte Reload
+; CHECK-APPLE-NEXT:    str r8, [sp, #4] @ 4-byte Spill
 ; CHECK-APPLE-NEXT:    mov r2, r4
-; CHECK-APPLE-NEXT:    mov r3, r6
+; CHECK-APPLE-NEXT:    mov r8, r6
 ; CHECK-APPLE-NEXT:    bl _params_and_return_in_reg2
 ; CHECK-APPLE-NEXT:    str r8, [sp, #12] @ 4-byte Spill
 ; CHECK-APPLE-NEXT:    mov r4, r0
-; CHECK-APPLE-NEXT:    ldr r8, [sp, #8] @ 4-byte Reload
+; CHECK-APPLE-NEXT:    ldr r8, [sp, #4] @ 4-byte Reload
 ; CHECK-APPLE-NEXT:    mov r5, r1
 ; CHECK-APPLE-NEXT:    mov r6, r2
 ; CHECK-APPLE-NEXT:    mov r11, r3

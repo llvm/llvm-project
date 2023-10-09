@@ -60,12 +60,14 @@ define arm_aapcs_vfpcc void @scatter_inc_mini_8i16(<8 x i16> %data, ptr %dst, <8
 define arm_aapcs_vfpcc void @scatter_inc_mini_16i8(<16 x i8> %data, ptr %dst, <16 x i32> %offs) {
 ; CHECK-LABEL: scatter_inc_mini_16i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    movs r1, #16
 ; CHECK-NEXT:    vadd.i32 q1, q1, r0
 ; CHECK-NEXT:    vadd.i32 q1, q1, r1
-; CHECK-NEXT:    add.w r12, sp, #24
+; CHECK-NEXT:    add.w r12, sp, #32
 ; CHECK-NEXT:    vmov r2, r3, d2
 ; CHECK-NEXT:    vadd.i32 q3, q3, r0
 ; CHECK-NEXT:    vmov lr, r5, d3
@@ -75,32 +77,32 @@ define arm_aapcs_vfpcc void @scatter_inc_mini_16i8(<16 x i8> %data, ptr %dst, <1
 ; CHECK-NEXT:    vmov r4, r12, d4
 ; CHECK-NEXT:    vmov.u8 r6, q0[0]
 ; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r0, r7, d5
+; CHECK-NEXT:    vmov r0, r8, d5
 ; CHECK-NEXT:    vadd.i32 q3, q3, r1
 ; CHECK-NEXT:    vadd.i32 q1, q1, r1
 ; CHECK-NEXT:    vmov.u8 r1, q0[4]
+; CHECK-NEXT:    vmov.u8 r7, q0[6]
 ; CHECK-NEXT:    strb r6, [r2]
 ; CHECK-NEXT:    vmov.u8 r2, q0[1]
 ; CHECK-NEXT:    strb r2, [r3]
 ; CHECK-NEXT:    vmov.u8 r6, q0[2]
-; CHECK-NEXT:    vmov r2, r8, d6
+; CHECK-NEXT:    vmov r2, r9, d6
 ; CHECK-NEXT:    strb.w r6, [lr]
 ; CHECK-NEXT:    vmov.u8 r6, q0[3]
-; CHECK-NEXT:    vmov.u8 r3, q0[6]
+; CHECK-NEXT:    vmov.u8 r3, q0[8]
 ; CHECK-NEXT:    strb r6, [r5]
 ; CHECK-NEXT:    vmov r6, r5, d7
 ; CHECK-NEXT:    strb r1, [r4]
 ; CHECK-NEXT:    vmov.u8 r1, q0[5]
 ; CHECK-NEXT:    strb.w r1, [r12]
 ; CHECK-NEXT:    vmov r1, r4, d2
-; CHECK-NEXT:    strb r3, [r0]
+; CHECK-NEXT:    strb r7, [r0]
 ; CHECK-NEXT:    vmov.u8 r0, q0[7]
-; CHECK-NEXT:    strb r0, [r7]
-; CHECK-NEXT:    vmov r0, r3, d3
-; CHECK-NEXT:    vmov.u8 r7, q0[8]
-; CHECK-NEXT:    strb r7, [r2]
+; CHECK-NEXT:    strb.w r0, [r8]
+; CHECK-NEXT:    vmov r0, r7, d3
+; CHECK-NEXT:    strb r3, [r2]
 ; CHECK-NEXT:    vmov.u8 r2, q0[9]
-; CHECK-NEXT:    strb.w r2, [r8]
+; CHECK-NEXT:    strb.w r2, [r9]
 ; CHECK-NEXT:    vmov.u8 r2, q0[10]
 ; CHECK-NEXT:    strb r2, [r6]
 ; CHECK-NEXT:    vmov.u8 r2, q0[11]
@@ -112,8 +114,9 @@ define arm_aapcs_vfpcc void @scatter_inc_mini_16i8(<16 x i8> %data, ptr %dst, <1
 ; CHECK-NEXT:    vmov.u8 r1, q0[14]
 ; CHECK-NEXT:    strb r1, [r0]
 ; CHECK-NEXT:    vmov.u8 r0, q0[15]
-; CHECK-NEXT:    strb r0, [r3]
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    strb r0, [r7]
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
   %1 = add <16 x i32> %offs, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %2 = getelementptr inbounds i8, ptr %dst, <16 x i32> %1
   call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %data, <16 x ptr> %2, i32 2, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)

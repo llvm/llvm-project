@@ -19,34 +19,34 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    mr 29, 3
 ; CHECK-NEXT:    bl malloc
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 6, 30, -4
+; CHECK-NEXT:    addi 7, 30, -4
 ; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    addi 4, 29, -8
 ; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    lwzu 8, 4(6)
+; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    bdz .LBB0_5
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    extswsli 7, 5, 5
+; CHECK-NEXT:    extswsli 6, 5, 5
 ; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(6)
+; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    add 7, 3, 7
-; CHECK-NEXT:    stdu 7, 8(4)
-; CHECK-NEXT:    extswsli 7, 5, 5
+; CHECK-NEXT:    add 6, 3, 6
+; CHECK-NEXT:    stdu 6, 8(4)
+; CHECK-NEXT:    extswsli 6, 5, 5
 ; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(6)
+; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    bdz .LBB0_4
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    add 9, 3, 7
-; CHECK-NEXT:    extswsli 7, 5, 5
+; CHECK-NEXT:    add 9, 3, 6
+; CHECK-NEXT:    extswsli 6, 5, 5
 ; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(6)
+; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    stdu 9, 8(4)
 ; CHECK-NEXT:    bdnz .LBB0_3
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    add 6, 3, 7
+; CHECK-NEXT:    add 6, 3, 6
 ; CHECK-NEXT:    stdu 6, 8(4)
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    extswsli 5, 5, 5

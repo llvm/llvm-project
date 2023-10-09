@@ -62,25 +62,25 @@ define arm_aapcs_vfpcc <8 x i16> @bitcast_to_v8i1(i8 %b, <8 x i16> %a) {
 ; CHECK-LE-NEXT:    vmov.i8 q1, #0x0
 ; CHECK-LE-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-LE-NEXT:    vmsr p0, r0
-; CHECK-LE-NEXT:    vpsel q1, q2, q1
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[0]
-; CHECK-LE-NEXT:    vmov.16 q2[0], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[1]
-; CHECK-LE-NEXT:    vmov.16 q2[1], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[2]
-; CHECK-LE-NEXT:    vmov.16 q2[2], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[3]
-; CHECK-LE-NEXT:    vmov.16 q2[3], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[4]
-; CHECK-LE-NEXT:    vmov.16 q2[4], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[5]
-; CHECK-LE-NEXT:    vmov.16 q2[5], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[6]
-; CHECK-LE-NEXT:    vmov.16 q2[6], r0
-; CHECK-LE-NEXT:    vmov.u8 r0, q1[7]
-; CHECK-LE-NEXT:    vmov.16 q2[7], r0
+; CHECK-LE-NEXT:    vpsel q2, q2, q1
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[0]
+; CHECK-LE-NEXT:    vmov.16 q1[0], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[1]
+; CHECK-LE-NEXT:    vmov.16 q1[1], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[2]
+; CHECK-LE-NEXT:    vmov.16 q1[2], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[3]
+; CHECK-LE-NEXT:    vmov.16 q1[3], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[4]
+; CHECK-LE-NEXT:    vmov.16 q1[4], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[5]
+; CHECK-LE-NEXT:    vmov.16 q1[5], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[6]
+; CHECK-LE-NEXT:    vmov.16 q1[6], r0
+; CHECK-LE-NEXT:    vmov.u8 r0, q2[7]
+; CHECK-LE-NEXT:    vmov.16 q1[7], r0
+; CHECK-LE-NEXT:    vcmp.i16 ne, q1, zr
 ; CHECK-LE-NEXT:    vmov.i32 q1, #0x0
-; CHECK-LE-NEXT:    vcmp.i16 ne, q2, zr
 ; CHECK-LE-NEXT:    vpsel q0, q0, q1
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
@@ -95,26 +95,26 @@ define arm_aapcs_vfpcc <8 x i16> @bitcast_to_v8i1(i8 %b, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-BE-NEXT:    lsrs r0, r0, #24
 ; CHECK-BE-NEXT:    vmsr p0, r0
-; CHECK-BE-NEXT:    vpsel q1, q2, q1
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[0]
-; CHECK-BE-NEXT:    vmov.16 q2[0], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[1]
-; CHECK-BE-NEXT:    vmov.16 q2[1], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[2]
-; CHECK-BE-NEXT:    vmov.16 q2[2], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[3]
-; CHECK-BE-NEXT:    vmov.16 q2[3], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[4]
-; CHECK-BE-NEXT:    vmov.16 q2[4], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[5]
-; CHECK-BE-NEXT:    vmov.16 q2[5], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[6]
-; CHECK-BE-NEXT:    vmov.16 q2[6], r0
-; CHECK-BE-NEXT:    vmov.u8 r0, q1[7]
-; CHECK-BE-NEXT:    vmov.16 q2[7], r0
+; CHECK-BE-NEXT:    vpsel q2, q2, q1
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[0]
+; CHECK-BE-NEXT:    vmov.16 q1[0], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[1]
+; CHECK-BE-NEXT:    vmov.16 q1[1], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[2]
+; CHECK-BE-NEXT:    vmov.16 q1[2], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[3]
+; CHECK-BE-NEXT:    vmov.16 q1[3], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[4]
+; CHECK-BE-NEXT:    vmov.16 q1[4], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[5]
+; CHECK-BE-NEXT:    vmov.16 q1[5], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[6]
+; CHECK-BE-NEXT:    vmov.16 q1[6], r0
+; CHECK-BE-NEXT:    vmov.u8 r0, q2[7]
+; CHECK-BE-NEXT:    vmov.16 q1[7], r0
+; CHECK-BE-NEXT:    vcmp.i16 ne, q1, zr
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
-; CHECK-BE-NEXT:    vcmp.i16 ne, q2, zr
 ; CHECK-BE-NEXT:    vrev32.16 q0, q0
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
@@ -261,33 +261,33 @@ define arm_aapcs_vfpcc i8 @bitcast_from_v8i1(<8 x i16> %a) {
 ; CHECK-LE-NEXT:    .pad #4
 ; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.i16 eq, q0, zr
-; CHECK-LE-NEXT:    movs r2, #0
-; CHECK-LE-NEXT:    vmrs r0, p0
-; CHECK-LE-NEXT:    and r1, r0, #1
+; CHECK-LE-NEXT:    vmrs r1, p0
+; CHECK-LE-NEXT:    and r0, r1, #1
+; CHECK-LE-NEXT:    rsbs r2, r0, #0
+; CHECK-LE-NEXT:    movs r0, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #0, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #2, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #1, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #4, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #2, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #6, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #3, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #8, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #4, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #10, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #5, #1
+; CHECK-LE-NEXT:    ubfx r2, r1, #12, #1
+; CHECK-LE-NEXT:    ubfx r1, r1, #14, #1
+; CHECK-LE-NEXT:    rsbs r2, r2, #0
+; CHECK-LE-NEXT:    bfi r0, r2, #6, #1
 ; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #0, #1
-; CHECK-LE-NEXT:    ubfx r1, r0, #2, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #1, #1
-; CHECK-LE-NEXT:    ubfx r1, r0, #4, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #2, #1
-; CHECK-LE-NEXT:    ubfx r1, r0, #6, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #3, #1
-; CHECK-LE-NEXT:    ubfx r1, r0, #8, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #4, #1
-; CHECK-LE-NEXT:    ubfx r1, r0, #10, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #5, #1
-; CHECK-LE-NEXT:    ubfx r1, r0, #12, #1
-; CHECK-LE-NEXT:    ubfx r0, r0, #14, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    bfi r2, r1, #6, #1
-; CHECK-LE-NEXT:    rsbs r0, r0, #0
-; CHECK-LE-NEXT:    bfi r2, r0, #7, #1
-; CHECK-LE-NEXT:    uxtb r0, r2
+; CHECK-LE-NEXT:    bfi r0, r1, #7, #1
+; CHECK-LE-NEXT:    uxtb r0, r0
 ; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -296,34 +296,34 @@ define arm_aapcs_vfpcc i8 @bitcast_from_v8i1(<8 x i16> %a) {
 ; CHECK-BE-NEXT:    .pad #4
 ; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
-; CHECK-BE-NEXT:    movs r2, #0
 ; CHECK-BE-NEXT:    vcmp.i16 eq, q1, zr
-; CHECK-BE-NEXT:    vmrs r0, p0
-; CHECK-BE-NEXT:    ubfx r1, r0, #14, #1
+; CHECK-BE-NEXT:    vmrs r1, p0
+; CHECK-BE-NEXT:    ubfx r0, r1, #14, #1
+; CHECK-BE-NEXT:    rsbs r2, r0, #0
+; CHECK-BE-NEXT:    movs r0, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #0, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #12, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #1, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #10, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #2, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #8, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #3, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #6, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #4, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #4, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #5, #1
+; CHECK-BE-NEXT:    ubfx r2, r1, #2, #1
+; CHECK-BE-NEXT:    and r1, r1, #1
+; CHECK-BE-NEXT:    rsbs r2, r2, #0
+; CHECK-BE-NEXT:    bfi r0, r2, #6, #1
 ; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #0, #1
-; CHECK-BE-NEXT:    ubfx r1, r0, #12, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #1, #1
-; CHECK-BE-NEXT:    ubfx r1, r0, #10, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #2, #1
-; CHECK-BE-NEXT:    ubfx r1, r0, #8, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #3, #1
-; CHECK-BE-NEXT:    ubfx r1, r0, #6, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #4, #1
-; CHECK-BE-NEXT:    ubfx r1, r0, #4, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #5, #1
-; CHECK-BE-NEXT:    ubfx r1, r0, #2, #1
-; CHECK-BE-NEXT:    and r0, r0, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    bfi r2, r1, #6, #1
-; CHECK-BE-NEXT:    rsbs r0, r0, #0
-; CHECK-BE-NEXT:    bfi r2, r0, #7, #1
-; CHECK-BE-NEXT:    uxtb r0, r2
+; CHECK-BE-NEXT:    bfi r0, r1, #7, #1
+; CHECK-BE-NEXT:    uxtb r0, r0
 ; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    bx lr
 entry:

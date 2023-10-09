@@ -35,18 +35,18 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f32_v2i32(<2 x float> %f) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, s17
 ; CHECK-NEXT:    bl __aeabi_f2ulz
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    vmov r0, s16
 ; CHECK-NEXT:    vldr s18, .LCPI1_0
 ; CHECK-NEXT:    vcmp.f32 s17, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #0
+; CHECK-NEXT:    movlt r5, #0
 ; CHECK-NEXT:    vcmp.f32 s17, s18
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r4, #-1
+; CHECK-NEXT:    movgt.w r5, #-1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
@@ -60,20 +60,20 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f32_v2i32(<2 x float> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s17, s18
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #0
+; CHECK-NEXT:    movlt r4, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r5, #0
+; CHECK-NEXT:    movgt r4, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    vcmp.f32 s16, s18
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r4
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2
@@ -343,9 +343,9 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f64_v2i32(<2 x double> %f) {
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI9_1
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmov r9, r8, d0
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    clz r0, r0
@@ -354,26 +354,26 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f64_v2i32(<2 x double> %f) {
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #1
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #-1
+; CHECK-NEXT:    movne.w r5, #-1
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    movne r7, #1
 ; CHECK-NEXT:    ldrd r3, r2, [sp, #4] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
@@ -387,24 +387,24 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f64_v2i32(<2 x double> %f) {
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r10
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne.w r10, #0
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r10
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -541,21 +541,20 @@ define arm_aapcs_vfpcc <4 x i32> @test_unsigned_v4f64_v4i32(<4 x double> %f) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vldr d0, .LCPI11_0
 ; CHECK-NEXT:    vmov q5, q1
-; CHECK-NEXT:    vmov r7, r3, d0
+; CHECK-NEXT:    vmov r7, r9, d0
 ; CHECK-NEXT:    vmov r4, r5, d10
-; CHECK-NEXT:    str r3, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    str r7, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    str.w r9, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    vldr d0, .LCPI11_1
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    vmov r9, r11, d0
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    strd r2, r3, [sp, #16] @ 8-byte Folded Spill
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -563,69 +562,69 @@ define arm_aapcs_vfpcc <4 x i32> @test_unsigned_v4f64_v4i32(<4 x double> %f) {
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov r10, r8, d8
 ; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    csel r0, r0, r6, ne
 ; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    vmov r5, r4, d11
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    ldr r6, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    mov r3, r6
+; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    vmov r11, r5, d11
+; CHECK-NEXT:    mov r4, r7
+; CHECK-NEXT:    str r7, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r10
 ; CHECK-NEXT:    mov r1, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r1, r8
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    mov r3, r11
-; CHECK-NEXT:    mov r7, r9
-; CHECK-NEXT:    str.w r9, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    ldr r7, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    mov r3, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r9, r0
 ; CHECK-NEXT:    mov r0, r10
 ; CHECK-NEXT:    mov r1, r8
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp.w r9, #0
-; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    csel r9, r0, r9, ne
-; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    mov r3, r6
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    csel r8, r0, r9, ne
+; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r9, #-1
-; CHECK-NEXT:    ldr.w r10, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    movne.w r8, #-1
+; CHECK-NEXT:    ldr.w r10, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    mov r3, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov r4, r5, d9
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r6, r0, r7, ne
-; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    cmp.w r9, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r6, #-1
-; CHECK-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r8, r0
+; CHECK-NEXT:    ldrd r2, r3, [sp, #16] @ 8-byte Folded Reload
+; CHECK-NEXT:    mov r9, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r3, r11
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    mov r0, r4
@@ -633,11 +632,11 @@ define arm_aapcs_vfpcc <4 x i32> @test_unsigned_v4f64_v4i32(<4 x double> %f) {
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r0, r0, r7, ne
-; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    cmp.w r9, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r9, r1
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    vmov q0[2], q0[0], r8, r1
 ; CHECK-NEXT:    vmov q0[3], q0[1], r0, r6
 ; CHECK-NEXT:    add sp, #24
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
@@ -667,131 +666,130 @@ define arm_aapcs_vfpcc <5 x i32> @test_unsigned_v5f64_v5i32(<5 x double> %f) {
 ; CHECK-NEXT:    .pad #40
 ; CHECK-NEXT:    sub sp, #40
 ; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vmov.f32 s17, s1
 ; CHECK-NEXT:    vldr d0, .LCPI12_0
 ; CHECK-NEXT:    vmov r5, r6, d4
-; CHECK-NEXT:    str r0, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    vmov r7, r4, d0
+; CHECK-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    vmov r2, r3, d0
 ; CHECK-NEXT:    vmov.f32 s20, s6
 ; CHECK-NEXT:    vmov.f32 s18, s4
 ; CHECK-NEXT:    vmov.f32 s22, s2
 ; CHECK-NEXT:    vmov.f32 s21, s7
 ; CHECK-NEXT:    vmov.f32 s19, s5
 ; CHECK-NEXT:    vmov.f32 s23, s3
-; CHECK-NEXT:    str r7, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    str r4, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    strd r2, r3, [sp, #32] @ 8-byte Folded Spill
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    vldr d0, .LCPI12_1
-; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    strd r2, r3, [sp, #32] @ 8-byte Folded Spill
-; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    vmov r7, r3, d0
+; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    str r7, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    bl __aeabi_dcmpge
+; CHECK-NEXT:    mov r11, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov r8, r1, d11
+; CHECK-NEXT:    cmp.w r11, #0
+; CHECK-NEXT:    vmov r6, r9, d10
+; CHECK-NEXT:    csel r0, r0, r11, ne
 ; CHECK-NEXT:    cmp.w r10, #0
-; CHECK-NEXT:    vmov r6, r11, d10
-; CHECK-NEXT:    csel r0, r0, r10, ne
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    vmov r2, r1, d9
-; CHECK-NEXT:    strd r2, r1, [sp, #12] @ 8-byte Folded Spill
-; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    strd r2, r1, [sp, #16] @ 8-byte Folded Spill
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    str.w r0, [r9, #16]
+; CHECK-NEXT:    str r0, [r4, #16]
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    ldr r5, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    ldr.w r10, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr r7, [sp, #32] @ 4-byte Reload
-; CHECK-NEXT:    mov r9, r0
-; CHECK-NEXT:    ldr r5, [sp, #36] @ 4-byte Reload
-; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r11
 ; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    mov r11, r0
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    mov r3, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    mov r1, r9
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    mov r2, r5
 ; CHECK-NEXT:    csel r0, r0, r4, ne
-; CHECK-NEXT:    cmp.w r9, #0
+; CHECK-NEXT:    cmp.w r11, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    ldr.w r10, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    ldr.w r9, [sp, #28] @ 4-byte Reload
-; CHECK-NEXT:    ldr r4, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    str r0, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    mov r1, r10
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    mov r3, r4
+; CHECK-NEXT:    mov r3, r10
+; CHECK-NEXT:    mov r11, r10
+; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    ldr.w r10, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    mov r1, r10
-; CHECK-NEXT:    mov r2, r7
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r3, r7
+; CHECK-NEXT:    mov r5, r6
+; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r9, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    csel r11, r0, r6, ne
-; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    mov r8, r4
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    csel r0, r0, r6, ne
+; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r11, #-1
-; CHECK-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    ldr r5, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    movne.w r0, #-1
+; CHECK-NEXT:    ldr r4, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    ldr.w r8, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr.w r10, [sp, #32] @ 4-byte Reload
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    ldr.w r9, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r4, r5
+; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r10
 ; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    mov r11, r10
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    csel r4, r0, r5, ne
 ; CHECK-NEXT:    vmov r5, r6, d8
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r4, #-1
-; CHECK-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
+; CHECK-NEXT:    ldr r3, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r8, r0
+; CHECK-NEXT:    mov r10, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r2, r11
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r7, r0
@@ -800,13 +798,14 @@ define arm_aapcs_vfpcc <5 x i32> @test_unsigned_v5f64_v5i32(<5 x double> %f) {
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r0, r0, r7, ne
-; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    cmp.w r10, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[3], q0[1], r11, r0
 ; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
+; CHECK-NEXT:    ldr r0, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    add sp, #40
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
@@ -833,14 +832,14 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12}
-; CHECK-NEXT:    .pad #48
-; CHECK-NEXT:    sub sp, #48
+; CHECK-NEXT:    .pad #40
+; CHECK-NEXT:    sub sp, #40
 ; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    str r0, [sp, #32] @ 4-byte Spill
 ; CHECK-NEXT:    vmov.f32 s17, s1
 ; CHECK-NEXT:    vldr d0, .LCPI13_0
 ; CHECK-NEXT:    vmov r5, r6, d5
-; CHECK-NEXT:    vmov r11, r4, d0
+; CHECK-NEXT:    vmov r11, r3, d0
 ; CHECK-NEXT:    vmov.f32 s22, s8
 ; CHECK-NEXT:    vmov.f32 s20, s6
 ; CHECK-NEXT:    vmov.f32 s18, s4
@@ -849,51 +848,48 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-NEXT:    vmov.f32 s21, s7
 ; CHECK-NEXT:    vmov.f32 s19, s5
 ; CHECK-NEXT:    vmov.f32 s25, s3
-; CHECK-NEXT:    str.w r11, [sp, #36] @ 4-byte Spill
+; CHECK-NEXT:    str r3, [sp, #36] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    mov r2, r11
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    str r4, [sp, #40] @ 4-byte Spill
+; CHECK-NEXT:    str.w r11, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    vldr d0, .LCPI13_1
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    vmov r9, r3, d0
-; CHECK-NEXT:    str r3, [sp, #44] @ 4-byte Spill
-; CHECK-NEXT:    mov r2, r9
+; CHECK-NEXT:    vmov r4, r9, d0
+; CHECK-NEXT:    str r4, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r8, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    vmov r2, r1, d10
+; CHECK-NEXT:    vmov r10, r1, d10
 ; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    vmov r5, r6, d11
 ; CHECK-NEXT:    csel r0, r0, r8, ne
 ; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    mov r7, r10
-; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    vmov r2, r1, d12
-; CHECK-NEXT:    strd r2, r1, [sp, #20] @ 8-byte Folded Spill
+; CHECK-NEXT:    strd r2, r1, [sp, #12] @ 8-byte Folded Spill
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    str.w r10, [sp, #32] @ 4-byte Spill
+; CHECK-NEXT:    ldr r7, [sp, #32] @ 4-byte Reload
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    str.w r0, [r10, #20]
-; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r2, r11
+; CHECK-NEXT:    str r0, [r7, #20]
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    ldr.w r8, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr.w r11, [sp, #44] @ 4-byte Reload
-; CHECK-NEXT:    mov r8, r0
+; CHECK-NEXT:    mov r11, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    mov r10, r9
-; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r0, r5
@@ -902,95 +898,92 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-NEXT:    vmov r2, r1, d9
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csel r0, r0, r4, ne
-; CHECK-NEXT:    cmp.w r8, #0
-; CHECK-NEXT:    strd r2, r1, [sp, #12] @ 8-byte Folded Spill
+; CHECK-NEXT:    cmp.w r11, #0
+; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    strd r2, r1, [sp, #4] @ 8-byte Folded Spill
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    str r0, [r7, #16]
-; CHECK-NEXT:    ldr.w r9, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
-; CHECK-NEXT:    ldr r5, [sp, #36] @ 4-byte Reload
-; CHECK-NEXT:    ldr.w r8, [sp, #40] @ 4-byte Reload
-; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r0, r10
+; CHECK-NEXT:    ldr r6, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    ldr.w r11, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    mov r2, r5
-; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    mov r2, r11
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
+; CHECK-NEXT:    ldr r5, [sp, #24] @ 4-byte Reload
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r0, r10
 ; CHECK-NEXT:    mov r1, r6
-; CHECK-NEXT:    mov r2, r10
-; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    mov r8, r9
+; CHECK-NEXT:    mov r2, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r0, r10
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r2, r11
 ; CHECK-NEXT:    csel r0, r0, r7, ne
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    ldr.w r9, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    ldr r7, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    mov r3, r8
-; CHECK-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; CHECK-NEXT:    mov r11, r5
-; CHECK-NEXT:    mov r1, r9
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr r4, [sp, #44] @ 4-byte Reload
-; CHECK-NEXT:    mov r1, r9
-; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r2, r10
-; CHECK-NEXT:    mov r5, r7
+; CHECK-NEXT:    ldr r7, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    ldr r4, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    ldr.w r9, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    mov r6, r10
-; CHECK-NEXT:    str.w r10, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    bl __aeabi_dcmpgt
+; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    mov r6, r7
+; CHECK-NEXT:    mov r10, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r9
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    mov r2, r11
-; CHECK-NEXT:    csel r10, r0, r7, ne
-; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    csel r9, r0, r7, ne
+; CHECK-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    mov r3, r4
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #-1
-; CHECK-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    ldr r5, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    movne.w r9, #-1
+; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r9, r0
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r11, r0
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r2, r6
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    mov r11, r7
-; CHECK-NEXT:    mov r8, r4
+; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov r5, r6, d8
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r4, r0, r7, ne
-; CHECK-NEXT:    cmp.w r9, #0
+; CHECK-NEXT:    cmp.w r11, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r4, #-1
-; CHECK-NEXT:    ldrd r2, r3, [sp, #36] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
+; CHECK-NEXT:    ldr r3, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    mov r10, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    mov r3, r8
@@ -1001,15 +994,15 @@ define arm_aapcs_vfpcc <6 x i32> @test_unsigned_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csel r0, r0, r7, ne
-; CHECK-NEXT:    cmp.w r9, #0
+; CHECK-NEXT:    cmp.w r10, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
-; CHECK-NEXT:    ldr r0, [sp, #28] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[3], q0[1], r10, r0
+; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    vmov q0[3], q0[1], r9, r0
 ; CHECK-NEXT:    ldr r0, [sp, #32] @ 4-byte Reload
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    add sp, #48
+; CHECK-NEXT:    add sp, #40
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
@@ -1060,18 +1053,18 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f16_v2i32(<2 x half> %f) {
 ; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcvtb.f32.f16 s16, s16
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    vmov r0, s16
 ; CHECK-NEXT:    vldr s20, .LCPI15_0
 ; CHECK-NEXT:    vcmp.f32 s18, #0
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #0
+; CHECK-NEXT:    movlt r5, #0
 ; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r4, #-1
+; CHECK-NEXT:    movgt.w r5, #-1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
@@ -1085,20 +1078,20 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f16_v2i32(<2 x half> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #0
+; CHECK-NEXT:    movlt r4, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r5, #0
+; CHECK-NEXT:    movgt r4, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    vcmp.f32 s16, s20
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r4
 ; CHECK-NEXT:    vpop {d8, d9, d10}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2
@@ -1639,63 +1632,63 @@ define arm_aapcs_vfpcc <4 x i64> @test_unsigned_v4f32_v4i64(<4 x float> %f) {
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov r0, s19
 ; CHECK-NEXT:    bl __aeabi_f2ulz
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r11, r0
 ; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    vldr s20, .LCPI29_0
 ; CHECK-NEXT:    vcmp.f32 s19, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r10, #0
+; CHECK-NEXT:    movlt.w r11, #0
 ; CHECK-NEXT:    vcmp.f32 s19, s20
-; CHECK-NEXT:    mov r11, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vmov r9, s17
 ; CHECK-NEXT:    vmov r8, s16
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r10, #-1
+; CHECK-NEXT:    movgt.w r11, #-1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s18, #0
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r6, #0
+; CHECK-NEXT:    movlt r7, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s19, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r6, #-1
+; CHECK-NEXT:    movgt.w r7, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s19, s20
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r11, #0
+; CHECK-NEXT:    movlt.w r10, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r11, #-1
+; CHECK-NEXT:    movgt.w r10, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r7, #0
+; CHECK-NEXT:    movlt r6, #0
 ; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r7, #-1
+; CHECK-NEXT:    movgt.w r6, #-1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    vcmp.f32 s17, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r4, #0
+; CHECK-NEXT:    movlt r5, #0
 ; CHECK-NEXT:    vcmp.f32 s17, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r4, #-1
+; CHECK-NEXT:    movgt.w r5, #-1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s16, #0
-; CHECK-NEXT:    vmov q1[2], q1[0], r6, r10
+; CHECK-NEXT:    vmov q1[2], q1[0], r7, r11
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, s20
 ; CHECK-NEXT:    it lt
@@ -1707,21 +1700,21 @@ define arm_aapcs_vfpcc <4 x i64> @test_unsigned_v4f32_v4i64(<4 x float> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s17, s20
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #0
+; CHECK-NEXT:    movlt r4, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r5, #-1
+; CHECK-NEXT:    movgt.w r4, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    vcmp.f32 s16, s20
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r1, #-1
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
-; CHECK-NEXT:    vmov q1[3], q1[1], r7, r11
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r4
+; CHECK-NEXT:    vmov q1[3], q1[1], r6, r10
 ; CHECK-NEXT:    vpop {d8, d9, d10}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
@@ -2152,7 +2145,7 @@ define arm_aapcs_vfpcc <2 x i1> @test_unsigned_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_d2uiz
-; CHECK-NEXT:    vmov r5, r6, d9
+; CHECK-NEXT:    vmov r6, r5, d9
 ; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    csel r0, r0, r8, ne
 ; CHECK-NEXT:    cmp r7, #0
@@ -2164,18 +2157,18 @@ define arm_aapcs_vfpcc <2 x i1> @test_unsigned_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    bfi r7, r0, #0, #1
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    mov r3, r11
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_d2uiz
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    csel r0, r0, r4, ne
@@ -2227,9 +2220,9 @@ define arm_aapcs_vfpcc <2 x i8> @test_unsigned_v2f64_v2i8(<2 x double> %f) {
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI33_1
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmov r9, r8, d0
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    clz r0, r0
@@ -2238,26 +2231,26 @@ define arm_aapcs_vfpcc <2 x i8> @test_unsigned_v2f64_v2i8(<2 x double> %f) {
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #1
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #255
+; CHECK-NEXT:    movne r5, #255
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    movne r7, #1
 ; CHECK-NEXT:    ldrd r3, r2, [sp, #4] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
@@ -2271,24 +2264,24 @@ define arm_aapcs_vfpcc <2 x i8> @test_unsigned_v2f64_v2i8(<2 x double> %f) {
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #255
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r10
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne.w r10, #0
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r10
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2329,9 +2322,9 @@ define arm_aapcs_vfpcc <2 x i13> @test_unsigned_v2f64_v2i13(<2 x double> %f) {
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI34_1
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmov r9, r8, d0
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    clz r0, r0
@@ -2340,26 +2333,26 @@ define arm_aapcs_vfpcc <2 x i13> @test_unsigned_v2f64_v2i13(<2 x double> %f) {
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #1
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movwne r10, #8191
+; CHECK-NEXT:    movwne r5, #8191
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    movne r7, #1
 ; CHECK-NEXT:    ldrd r3, r2, [sp, #4] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
@@ -2373,24 +2366,24 @@ define arm_aapcs_vfpcc <2 x i13> @test_unsigned_v2f64_v2i13(<2 x double> %f) {
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movwne r0, #8191
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r10
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne.w r10, #0
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r10
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2431,9 +2424,9 @@ define arm_aapcs_vfpcc <2 x i16> @test_unsigned_v2f64_v2i16(<2 x double> %f) {
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI35_1
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmov r9, r8, d0
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    clz r0, r0
@@ -2442,26 +2435,26 @@ define arm_aapcs_vfpcc <2 x i16> @test_unsigned_v2f64_v2i16(<2 x double> %f) {
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #1
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movwne r10, #65535
+; CHECK-NEXT:    movwne r5, #65535
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    movne r7, #1
 ; CHECK-NEXT:    ldrd r3, r2, [sp, #4] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
@@ -2475,24 +2468,24 @@ define arm_aapcs_vfpcc <2 x i16> @test_unsigned_v2f64_v2i16(<2 x double> %f) {
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movwne r0, #65535
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r10
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne.w r10, #0
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r10
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2553,12 +2546,12 @@ define arm_aapcs_vfpcc <2 x i19> @test_unsigned_v2f64_v2i19(<2 x double> %f) {
 ; CHECK-NEXT:    lsr.w r9, r0, #5
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    cmp.w r9, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    ldrd r2, r3, [sp, #8] @ 8-byte Folded Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r1
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
@@ -2570,8 +2563,8 @@ define arm_aapcs_vfpcc <2 x i19> @test_unsigned_v2f64_v2i19(<2 x double> %f) {
 ; CHECK-NEXT:    movne r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    itt ne
-; CHECK-NEXT:    movwne r7, #65535
-; CHECK-NEXT:    movtne r7, #7
+; CHECK-NEXT:    movwne r5, #65535
+; CHECK-NEXT:    movtne r5, #7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r2, #0
@@ -2583,18 +2576,18 @@ define arm_aapcs_vfpcc <2 x i19> @test_unsigned_v2f64_v2i19(<2 x double> %f) {
 ; CHECK-NEXT:    movtne r0, #7
 ; CHECK-NEXT:    cmp.w r9, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne r7, #0
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne r7, #0
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r7
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r7
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2635,9 +2628,9 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f64_v2i32_duplicate(<2 x doubl
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI37_1
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmov r9, r8, d0
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    clz r0, r0
@@ -2646,26 +2639,26 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f64_v2i32_duplicate(<2 x doubl
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #1
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #-1
+; CHECK-NEXT:    movne.w r5, #-1
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    movne r7, #1
 ; CHECK-NEXT:    ldrd r3, r2, [sp, #4] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
@@ -2679,24 +2672,24 @@ define arm_aapcs_vfpcc <2 x i32> @test_unsigned_v2f64_v2i32_duplicate(<2 x doubl
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r10
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
+; CHECK-NEXT:    movne.w r10, #0
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r10
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2839,9 +2832,9 @@ define arm_aapcs_vfpcc <2 x i64> @test_unsigned_v2f64_v2i64(<2 x double> %f) {
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI39_1
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmov r9, r8, d0
 ; CHECK-NEXT:    mov r1, r7
 ; CHECK-NEXT:    clz r0, r0
@@ -2850,26 +2843,26 @@ define arm_aapcs_vfpcc <2 x i64> @test_unsigned_v2f64_v2i64(<2 x double> %f) {
 ; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r8
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r7, #1
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #-1
+; CHECK-NEXT:    movne.w r5, #-1
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
+; CHECK-NEXT:    movne r7, #1
 ; CHECK-NEXT:    ldrd r3, r2, [sp, #4] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r0, r11
 ; CHECK-NEXT:    mov r1, r4
@@ -2883,24 +2876,24 @@ define arm_aapcs_vfpcc <2 x i64> @test_unsigned_v2f64_v2i64(<2 x double> %f) {
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r10
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    movne.w r10, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r5, #-1
+; CHECK-NEXT:    movne.w r10, #-1
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r1, #0
-; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r1, #-1
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r10
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -2930,196 +2923,195 @@ define arm_aapcs_vfpcc <2 x i100> @test_unsigned_v2f64_v2i100(<2 x double> %f) {
 ; CHECK-NEXT:    sub sp, #48
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vldr d0, .LCPI40_0
-; CHECK-NEXT:    vmov r7, r5, d8
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov r9, r5, d8
+; CHECK-NEXT:    str r0, [sp, #44] @ 4-byte Spill
 ; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    str r3, [sp, #44] @ 4-byte Spill
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r9, r2
+; CHECK-NEXT:    mov r7, r2
+; CHECK-NEXT:    mov r6, r3
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    vldr d0, .LCPI40_1
 ; CHECK-NEXT:    mov r11, r0
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    str r2, [sp, #32] @ 4-byte Spill
+; CHECK-NEXT:    str r2, [sp, #40] @ 4-byte Spill
 ; CHECK-NEXT:    mov r10, r3
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __fixunsdfti
 ; CHECK-NEXT:    cmp.w r8, #0
-; CHECK-NEXT:    strd r1, r0, [sp, #12] @ 8-byte Folded Spill
+; CHECK-NEXT:    strd r1, r0, [sp, #8] @ 8-byte Folded Spill
 ; CHECK-NEXT:    csel r0, r2, r8, ne
+; CHECK-NEXT:    str r3, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    cmp.w r11, #0
-; CHECK-NEXT:    str r3, [sp, #28] @ 4-byte Spill
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
-; CHECK-NEXT:    str r0, [r4, #8]
-; CHECK-NEXT:    mov r11, r5
+; CHECK-NEXT:    ldr r4, [sp, #44] @ 4-byte Reload
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    ldr r5, [sp, #44] @ 4-byte Reload
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    str.w r9, [sp, #40] @ 4-byte Spill
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    mov r3, r6
+; CHECK-NEXT:    mov r11, r7
+; CHECK-NEXT:    str r0, [r4, #8]
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    str r5, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    str r7, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    str r6, [sp, #32] @ 4-byte Spill
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr r6, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    ldr r7, [sp, #40] @ 4-byte Reload
 ; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    mov r3, r10
-; CHECK-NEXT:    str r7, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    str.w r9, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    mov r2, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov r2, r9
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    mov r2, r11
+; CHECK-NEXT:    mov r3, r6
 ; CHECK-NEXT:    csel r0, r1, r0, ne
 ; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    str r0, [r4, #4]
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r1, r11
-; CHECK-NEXT:    str r4, [sp, #36] @ 4-byte Spill
-; CHECK-NEXT:    mov r9, r5
-; CHECK-NEXT:    str.w r11, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r1, r11
-; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    mov r2, r7
 ; CHECK-NEXT:    mov r3, r10
-; CHECK-NEXT:    mov r7, r6
+; CHECK-NEXT:    mov r9, r7
+; CHECK-NEXT:    str.w r10, [sp, #36] @ 4-byte Spill
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    vmov r8, r11, d9
-; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    csel r0, r1, r0, ne
-; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    str r0, [r4]
-; CHECK-NEXT:    ldr r6, [sp, #40] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r9
-; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    ldr r5, [sp, #28] @ 4-byte Reload
+; CHECK-NEXT:    ldr r6, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r6
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r1, r11
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r1, r11
 ; CHECK-NEXT:    mov r2, r7
 ; CHECK-NEXT:    mov r3, r10
-; CHECK-NEXT:    mov r9, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r10, r0
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r1, r11
 ; CHECK-NEXT:    bl __fixunsdfti
-; CHECK-NEXT:    strd r2, r0, [sp, #8] @ 8-byte Folded Spill
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    csel r4, r1, r7, ne
-; CHECK-NEXT:    str r3, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    mov r1, r11
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    cmp.w r10, #0
+; CHECK-NEXT:    strd r2, r0, [sp, #4] @ 8-byte Folded Spill
+; CHECK-NEXT:    csel r7, r1, r10, ne
+; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    mov r2, r6
-; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r6
+; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r4, #-1
+; CHECK-NEXT:    movne.w r7, #-1
+; CHECK-NEXT:    mov r4, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    ldr.w r10, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r1, r11
 ; CHECK-NEXT:    mov r2, r9
 ; CHECK-NEXT:    mov r3, r10
-; CHECK-NEXT:    mov r6, r9
+; CHECK-NEXT:    bl __aeabi_dcmpge
+; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r4
+; CHECK-NEXT:    csel r9, r1, r0, ne
+; CHECK-NEXT:    cmp r6, #0
+; CHECK-NEXT:    it ne
+; CHECK-NEXT:    movne.w r9, #-1
+; CHECK-NEXT:    ldr r6, [sp, #44] @ 4-byte Reload
+; CHECK-NEXT:    lsrs r0, r7, #28
+; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    orr.w r0, r0, r9, lsl #4
+; CHECK-NEXT:    str r0, [r6, #20]
+; CHECK-NEXT:    mov r0, r8
+; CHECK-NEXT:    bl __aeabi_dcmpgt
+; CHECK-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r8
+; CHECK-NEXT:    mov r3, r10
+; CHECK-NEXT:    mov r5, r10
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csel r9, r1, r0, ne
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    csel r4, r1, r0, ne
+; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r9, #-1
-; CHECK-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    movne.w r4, #-1
 ; CHECK-NEXT:    lsrs r0, r4, #28
-; CHECK-NEXT:    orr.w r0, r0, r9, lsl #4
-; CHECK-NEXT:    str r0, [r1, #20]
+; CHECK-NEXT:    orr.w r0, r0, r7, lsl #4
+; CHECK-NEXT:    str r0, [r6, #16]
+; CHECK-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    ldr r5, [sp, #40] @ 4-byte Reload
-; CHECK-NEXT:    mov r1, r11
-; CHECK-NEXT:    ldr r7, [sp, #44] @ 4-byte Reload
-; CHECK-NEXT:    mov r2, r5
-; CHECK-NEXT:    mov r3, r7
-; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    ldr.w r10, [sp, #32] @ 4-byte Reload
 ; CHECK-NEXT:    mov r2, r6
-; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    mov r1, r11
 ; CHECK-NEXT:    mov r3, r10
-; CHECK-NEXT:    mov r6, r10
+; CHECK-NEXT:    bl __aeabi_dcmpgt
+; CHECK-NEXT:    mov r1, r11
+; CHECK-NEXT:    ldr.w r11, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    mov r0, r8
+; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    mov r2, r11
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov r2, r5
-; CHECK-NEXT:    mov r3, r7
-; CHECK-NEXT:    csel r10, r1, r0, ne
-; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    mov r1, r11
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r10, #-1
-; CHECK-NEXT:    lsr.w r0, r10, #28
-; CHECK-NEXT:    orr.w r0, r0, r4, lsl #4
-; CHECK-NEXT:    ldr r4, [sp, #36] @ 4-byte Reload
-; CHECK-NEXT:    str r0, [r4, #16]
-; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r1, r11
-; CHECK-NEXT:    ldr.w r11, [sp, #32] @ 4-byte Reload
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    mov r0, r8
-; CHECK-NEXT:    mov r3, r6
-; CHECK-NEXT:    mov r7, r6
-; CHECK-NEXT:    mov r2, r11
-; CHECK-NEXT:    bl __aeabi_dcmpge
-; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    csel r0, r1, r0, ne
-; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #15
 ; CHECK-NEXT:    lsr.w r1, r9, #28
+; CHECK-NEXT:    ldr.w r9, [sp, #44] @ 4-byte Reload
 ; CHECK-NEXT:    orr.w r0, r1, r0, lsl #4
-; CHECK-NEXT:    strb r0, [r4, #24]
-; CHECK-NEXT:    ldr r6, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    strb.w r0, [r9, #24]
+; CHECK-NEXT:    ldr r7, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r5, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    ldrd r2, r3, [sp, #40] @ 8-byte Folded Reload
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
+; CHECK-NEXT:    ldr r3, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    mov r2, r11
-; CHECK-NEXT:    mov r3, r7
 ; CHECK-NEXT:    bl __aeabi_dcmpge
-; CHECK-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csel r0, r1, r0, ne
 ; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #15
 ; CHECK-NEXT:    and r0, r0, #15
-; CHECK-NEXT:    orr.w r0, r0, r10, lsl #4
-; CHECK-NEXT:    str r0, [r4, #12]
+; CHECK-NEXT:    orr.w r0, r0, r4, lsl #4
+; CHECK-NEXT:    str.w r0, [r9, #12]
 ; CHECK-NEXT:    add sp, #48
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
@@ -3271,18 +3263,18 @@ define arm_aapcs_vfpcc <2 x i128> @test_unsigned_v2f64_v2i128(<2 x double> %f) {
 ; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    mov r7, r11
-; CHECK-NEXT:    mov r10, r8
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    ldr.w r8, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r10, r4
+; CHECK-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r11, r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    mov r3, r4
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    csel r0, r1, r0, ne
 ; CHECK-NEXT:    cmp.w r11, #0
@@ -3295,12 +3287,12 @@ define arm_aapcs_vfpcc <2 x i128> @test_unsigned_v2f64_v2i128(<2 x double> %f) {
 ; CHECK-NEXT:    mov r11, r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r3, r4
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    csel r0, r1, r0, ne
 ; CHECK-NEXT:    cmp.w r11, #0
@@ -3310,16 +3302,16 @@ define arm_aapcs_vfpcc <2 x i128> @test_unsigned_v2f64_v2i128(<2 x double> %f) {
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
-; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    mov r8, r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    mov r2, r10
+; CHECK-NEXT:    mov r3, r4
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csel r0, r1, r0, ne
-; CHECK-NEXT:    cmp.w r9, #0
+; CHECK-NEXT:    cmp.w r8, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r0, #-1
 ; CHECK-NEXT:    str r0, [r7]
@@ -3781,18 +3773,18 @@ define arm_aapcs_vfpcc <8 x i50> @test_unsigned_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    movlt r7, #0
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s26, #0
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s26, s20
-; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r6, #0
+; CHECK-NEXT:    movlt.w r10, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    vcmp.f32 s24, s20
 ; CHECK-NEXT:    itt gt
-; CHECK-NEXT:    movwgt r6, #65535
-; CHECK-NEXT:    movtgt r6, #3
+; CHECK-NEXT:    movwgt r10, #65535
+; CHECK-NEXT:    movtgt r10, #3
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r7, #-1
@@ -3811,14 +3803,14 @@ define arm_aapcs_vfpcc <8 x i50> @test_unsigned_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    str r0, [r4]
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r9, #0
+; CHECK-NEXT:    movlt r6, #0
 ; CHECK-NEXT:    vcmp.f32 s26, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r9, #-1
-; CHECK-NEXT:    lsls r0, r6, #22
-; CHECK-NEXT:    str.w r9, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    orr.w r9, r0, r9, lsr #10
+; CHECK-NEXT:    movgt.w r6, #-1
+; CHECK-NEXT:    lsl.w r0, r10, #22
+; CHECK-NEXT:    str r6, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    orr.w r6, r0, r6, lsr #10
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s18, #0
@@ -3834,7 +3826,7 @@ define arm_aapcs_vfpcc <8 x i50> @test_unsigned_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    movwgt r5, #65535
 ; CHECK-NEXT:    movtgt r5, #3
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    str.w r9, [r4, #45]
+; CHECK-NEXT:    str.w r6, [r4, #45]
 ; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r7, #0
@@ -3850,26 +3842,26 @@ define arm_aapcs_vfpcc <8 x i50> @test_unsigned_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    mov r9, r1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r1, #0
+; CHECK-NEXT:    movlt r0, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r1, #-1
+; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
+; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt.w r9, #0
 ; CHECK-NEXT:    vcmp.f32 s18, s20
-; CHECK-NEXT:    vcvtt.f32.f16 s16, s16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    itt gt
 ; CHECK-NEXT:    movwgt r9, #65535
 ; CHECK-NEXT:    movtgt r9, #3
 ; CHECK-NEXT:    lsl.w r0, r9, #22
 ; CHECK-NEXT:    orr.w r0, r0, r1, lsr #10
+; CHECK-NEXT:    vcvtt.f32.f16 s16, s16
 ; CHECK-NEXT:    str r0, [r4, #20]
 ; CHECK-NEXT:    vmov r0, s16
 ; CHECK-NEXT:    bl __aeabi_f2ulz
@@ -3896,7 +3888,7 @@ define arm_aapcs_vfpcc <8 x i50> @test_unsigned_v8f16_v8i50(<8 x half> %f) {
 ; CHECK-NEXT:    vcvtb.f32.f16 s16, s19
 ; CHECK-NEXT:    orr.w r0, r0, r11, lsl #18
 ; CHECK-NEXT:    str r0, [r4, #8]
-; CHECK-NEXT:    lsrs r0, r6, #10
+; CHECK-NEXT:    lsr.w r0, r10, #10
 ; CHECK-NEXT:    strb.w r0, [r4, #49]
 ; CHECK-NEXT:    vmov r0, s16
 ; CHECK-NEXT:    bl __aeabi_f2ulz
@@ -4011,7 +4003,7 @@ define arm_aapcs_vfpcc <8 x i64> @test_unsigned_v8f16_v8i64(<8 x half> %f) {
 ; CHECK-NEXT:    vmov r0, s20
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcvtb.f32.f16 s22, s19
-; CHECK-NEXT:    mov r8, r0
+; CHECK-NEXT:    mov r9, r0
 ; CHECK-NEXT:    vmov r0, s22
 ; CHECK-NEXT:    vldr s28, .LCPI49_0
 ; CHECK-NEXT:    vcmp.f32 s20, #0
@@ -4019,42 +4011,42 @@ define arm_aapcs_vfpcc <8 x i64> @test_unsigned_v8f16_v8i64(<8 x half> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcvtb.f32.f16 s16, s16
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r8, #0
+; CHECK-NEXT:    movlt.w r9, #0
 ; CHECK-NEXT:    vcmp.f32 s20, s28
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov r9, r1
+; CHECK-NEXT:    mov r8, r1
 ; CHECK-NEXT:    vmov r5, s24
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r8, #-1
+; CHECK-NEXT:    movgt.w r9, #-1
 ; CHECK-NEXT:    vmov r4, s16
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s22, #0
-; CHECK-NEXT:    mov r10, r0
+; CHECK-NEXT:    mov r11, r0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s22, s28
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r10, #0
+; CHECK-NEXT:    movlt.w r11, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s20, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r10, #-1
+; CHECK-NEXT:    movgt.w r11, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s20, s28
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r9, #0
+; CHECK-NEXT:    movlt.w r8, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov r11, r1
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    vcmp.f32 s22, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r9, #-1
+; CHECK-NEXT:    movgt.w r8, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt.w r11, #0
+; CHECK-NEXT:    movlt.w r10, #0
 ; CHECK-NEXT:    vcmp.f32 s22, s28
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r11, #-1
+; CHECK-NEXT:    movgt.w r10, #-1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    vcmp.f32 s24, #0
@@ -4127,15 +4119,15 @@ define arm_aapcs_vfpcc <8 x i64> @test_unsigned_v8f16_v8i64(<8 x half> %f) {
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s17, #0
-; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s17, s28
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r5, #0
+; CHECK-NEXT:    movlt r6, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s30, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r5, #-1
+; CHECK-NEXT:    movgt.w r6, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s30, s28
 ; CHECK-NEXT:    it lt
@@ -4153,11 +4145,11 @@ define arm_aapcs_vfpcc <8 x i64> @test_unsigned_v8f16_v8i64(<8 x half> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r7, #-1
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov q6[3], q6[1], r7, r4
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    vcmp.f32 s16, #0
-; CHECK-NEXT:    vmov q3[2], q3[0], r10, r8
+; CHECK-NEXT:    vmov q3[2], q3[0], r11, r9
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, s28
 ; CHECK-NEXT:    it lt
@@ -4169,21 +4161,21 @@ define arm_aapcs_vfpcc <8 x i64> @test_unsigned_v8f16_v8i64(<8 x half> %f) {
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s17, s28
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r6, #0
+; CHECK-NEXT:    movlt r5, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s16, #0
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt.w r6, #-1
+; CHECK-NEXT:    movgt.w r5, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    vcmp.f32 s16, s28
-; CHECK-NEXT:    vmov q2[2], q2[0], r0, r5
+; CHECK-NEXT:    vmov q2[2], q2[0], r0, r6
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r1, #-1
-; CHECK-NEXT:    vmov q2[3], q2[1], r1, r6
-; CHECK-NEXT:    vmov q3[3], q3[1], r11, r9
+; CHECK-NEXT:    vmov q2[3], q2[1], r1, r5
+; CHECK-NEXT:    vmov q3[3], q3[1], r10, r8
 ; CHECK-NEXT:    vmov q0, q5
 ; CHECK-NEXT:    vmov q1, q6
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -4339,7 +4331,6 @@ define arm_aapcs_vfpcc <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    mov r0, r9
 ; CHECK-NEXT:    bl __fixunssfti
 ; CHECK-NEXT:    vcmp.f32 s30, #0
-; CHECK-NEXT:    vcvtt.f32.f16 s18, s18
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    it lt
@@ -4371,17 +4362,18 @@ define arm_aapcs_vfpcc <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    vcmp.f32 s30, #0
 ; CHECK-NEXT:    str.w r1, [r4, #91]
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r3, #0
-; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    lsrs r1, r2, #28
+; CHECK-NEXT:    vcvtt.f32.f16 s30, s18
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt r3, #15
 ; CHECK-NEXT:    orr.w r2, r1, r3, lsl #4
-; CHECK-NEXT:    vmov r1, s18
-; CHECK-NEXT:    vcmp.f32 s28, #0
+; CHECK-NEXT:    vmov r1, s30
 ; CHECK-NEXT:    strb.w r2, [r4, #99]
+; CHECK-NEXT:    vcmp.f32 s28, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r5, #0
@@ -4394,23 +4386,23 @@ define arm_aapcs_vfpcc <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    str.w r0, [r4, #87]
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    vcmp.f32 s18, #0
-; CHECK-NEXT:    vcvtt.f32.f16 s28, s17
+; CHECK-NEXT:    vcmp.f32 s30, #0
+; CHECK-NEXT:    vcvtt.f32.f16 s18, s17
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, #0
+; CHECK-NEXT:    vcmp.f32 s30, #0
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r1, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r2, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    lsr.w r6, r1, #28
-; CHECK-NEXT:    vcmp.f32 s18, #0
+; CHECK-NEXT:    vcmp.f32 s30, #0
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r2, #-1
 ; CHECK-NEXT:    orr.w r6, r6, r2, lsl #4
@@ -4418,18 +4410,18 @@ define arm_aapcs_vfpcc <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    str.w r6, [r4, #70]
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #0
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    lsrs r6, r0, #28
 ; CHECK-NEXT:    orr.w r1, r6, r1, lsl #4
 ; CHECK-NEXT:    str.w r1, [r4, #66]
-; CHECK-NEXT:    vmov r1, s28
-; CHECK-NEXT:    vcmp.f32 s18, #0
+; CHECK-NEXT:    vmov r1, s18
+; CHECK-NEXT:    vcmp.f32 s30, #0
 ; CHECK-NEXT:    lsrs r2, r2, #28
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s18, s20
+; CHECK-NEXT:    vcmp.f32 s30, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r3, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
@@ -4451,22 +4443,22 @@ define arm_aapcs_vfpcc <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    str.w r0, [r4, #62]
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __fixunssfti
-; CHECK-NEXT:    vcmp.f32 s28, #0
+; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s28, s20
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s28, #0
+; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r1, #-1
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s28, s20
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r2, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    lsr.w r7, r1, #28
-; CHECK-NEXT:    vcmp.f32 s28, #0
+; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r2, #-1
 ; CHECK-NEXT:    orr.w r7, r7, r2, lsl #4
@@ -4474,16 +4466,16 @@ define arm_aapcs_vfpcc <8 x i100> @test_unsigned_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    str.w r7, [r4, #45]
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r0, #0
-; CHECK-NEXT:    vcmp.f32 s28, s20
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    movgt.w r0, #-1
 ; CHECK-NEXT:    lsrs r7, r0, #28
-; CHECK-NEXT:    vcmp.f32 s28, #0
+; CHECK-NEXT:    vcmp.f32 s18, #0
 ; CHECK-NEXT:    orr.w r7, r7, r1, lsl #4
 ; CHECK-NEXT:    vmov r1, s16
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s28, s20
+; CHECK-NEXT:    vcmp.f32 s18, s20
 ; CHECK-NEXT:    str.w r7, [r4, #41]
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r3, #0

@@ -34,18 +34,18 @@ while.body:
   %shr32 = lshr i64 %add29, 32
   br label %while.body
 }
-; CHECK: adds	r5, r0, r1
-; CHECK: push	{r3}
+; CHECK: adds	r3, r0, r1
+; CHECK: push	{r5}
 ; CHECK: pop	{r1}
-; CHECK: adcs	r1, r3
+; CHECK: adcs	r1, r5
 ; CHECK: ldr	r0, [sp, #12]           @ 4-byte Reload
 ; CHECK: ldr	r2, [sp, #8]            @ 4-byte Reload
 ; CHECK: adds	r2, r0, r2
-; CHECK: push	{r3}
-; CHECK: pop	{r4}
-; CHECK: adcs	r4, r3
-; CHECK: adds	r0, r2, r3
 ; CHECK: push	{r5}
+; CHECK: pop	{r4}
+; CHECK: adcs	r4, r5
+; CHECK: adds	r0, r2, r5
+; CHECK: push	{r3}
 ; CHECK: pop	{r0}
 ; CHECK: adcs	r0, r4
 ; CHECK: ldr	r6, [sp, #4]            @ 4-byte Reload

@@ -71,19 +71,19 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKLX-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECKLX-NEXT:    addis 4, 2, .LC1@toc@ha
 ; CHECKLX-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECKLX-NEXT:    ld 4, .LC1@toc@l(4)
+; CHECKLX-NEXT:    ld 5, .LC1@toc@l(4)
 ; CHECKLX-NEXT:    lwz 6, 0(3)
 ; CHECKLX-NEXT:    .p2align 5
 ; CHECKLX-NEXT:  .LBB0_1: # %if.end
 ; CHECKLX-NEXT:    #
-; CHECKLX-NEXT:    lwz 7, 0(4)
-; CHECKLX-NEXT:    lwz 5, 0(3)
+; CHECKLX-NEXT:    lwz 7, 0(5)
+; CHECKLX-NEXT:    lwz 4, 0(3)
 ; CHECKLX-NEXT:    cmpw 6, 7
 ; CHECKLX-NEXT:    bgt 0, .LBB0_3
 ; CHECKLX-NEXT:  # %bb.2: # %if.end
 ; CHECKLX-NEXT:    #
-; CHECKLX-NEXT:    addi 5, 5, 1
-; CHECKLX-NEXT:    stw 5, 0(3)
+; CHECKLX-NEXT:    addi 4, 4, 1
+; CHECKLX-NEXT:    stw 4, 0(3)
 ; CHECKLX-NEXT:    lwz 6, 0(3)
 ; CHECKLX-NEXT:    b .LBB0_1
 ; CHECKLX-NEXT:  .LBB0_3: # %if.then
@@ -94,7 +94,7 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECKLX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECKLX-NEXT:    .cfi_offset lr, 16
 ; CHECKLX-NEXT:    mtctr 12
-; CHECKLX-NEXT:    extsw 3, 5
+; CHECKLX-NEXT:    extsw 3, 4
 ; CHECKLX-NEXT:    bctrl
 ; CHECKLX-NEXT:    ld 2, 24(1)
 ; CHECKLX-NEXT:    addi 1, 1, 32
@@ -104,30 +104,30 @@ define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ;
 ; CHECKAIX-LABEL: test:
 ; CHECKAIX:       # %bb.0: # %entry
-; CHECKAIX-NEXT:    ld 4, L..C0(2) # @ga
-; CHECKAIX-NEXT:    ld 5, L..C1(2) # @gb
+; CHECKAIX-NEXT:    ld 5, L..C0(2) # @ga
+; CHECKAIX-NEXT:    ld 6, L..C1(2) # @gb
 ; CHECKAIX-NEXT:  L..BB0_1: # %if.end
 ; CHECKAIX-NEXT:    #
-; CHECKAIX-NEXT:    lwz 6, 0(4)
-; CHECKAIX-NEXT:    lwz 7, 0(5)
-; CHECKAIX-NEXT:    cmpw 6, 7
-; CHECKAIX-NEXT:    lwz 6, 0(4)
+; CHECKAIX-NEXT:    lwz 4, 0(5)
+; CHECKAIX-NEXT:    lwz 7, 0(6)
+; CHECKAIX-NEXT:    cmpw 4, 7
+; CHECKAIX-NEXT:    lwz 4, 0(5)
 ; CHECKAIX-NEXT:    bgt 0, L..BB0_3
 ; CHECKAIX-NEXT:  # %bb.2: # %if.end
 ; CHECKAIX-NEXT:    #
-; CHECKAIX-NEXT:    addi 6, 6, 1
-; CHECKAIX-NEXT:    stw 6, 0(4)
+; CHECKAIX-NEXT:    addi 4, 4, 1
+; CHECKAIX-NEXT:    stw 4, 0(5)
 ; CHECKAIX-NEXT:    b L..BB0_1
 ; CHECKAIX-NEXT:  L..BB0_3: # %if.then
 ; CHECKAIX-NEXT:    mflr 0
 ; CHECKAIX-NEXT:    stdu 1, -112(1)
-; CHECKAIX-NEXT:    ld 4, 0(3)
+; CHECKAIX-NEXT:    ld 5, 0(3)
 ; CHECKAIX-NEXT:    std 0, 128(1)
 ; CHECKAIX-NEXT:    ld 11, 16(3)
 ; CHECKAIX-NEXT:    std 2, 40(1)
 ; CHECKAIX-NEXT:    ld 2, 8(3)
-; CHECKAIX-NEXT:    extsw 3, 6
-; CHECKAIX-NEXT:    mtctr 4
+; CHECKAIX-NEXT:    extsw 3, 4
+; CHECKAIX-NEXT:    mtctr 5
 ; CHECKAIX-NEXT:    bctrl
 ; CHECKAIX-NEXT:    ld 2, 40(1)
 ; CHECKAIX-NEXT:    addi 1, 1, 112

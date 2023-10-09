@@ -106,16 +106,16 @@ define ptr @vld4_v2i64(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov r4, r8, d9
 ; CHECK-NEXT:    vmov.f32 s12, s10
 ; CHECK-NEXT:    vmov.f32 s13, s11
-; CHECK-NEXT:    vmov r3, r7, d1
+; CHECK-NEXT:    vmov r2, r7, d1
 ; CHECK-NEXT:    vmov.f32 s2, s16
 ; CHECK-NEXT:    vmov.f32 s3, s17
-; CHECK-NEXT:    vmov r2, r6, d1
-; CHECK-NEXT:    adds.w r3, r3, lr
+; CHECK-NEXT:    vmov r3, r6, d1
+; CHECK-NEXT:    adds.w r2, r2, lr
 ; CHECK-NEXT:    adc.w r7, r7, r12
-; CHECK-NEXT:    adds r2, r2, r4
+; CHECK-NEXT:    adds r3, r3, r4
 ; CHECK-NEXT:    vmov r4, r5, d2
 ; CHECK-NEXT:    adc.w r6, r6, r8
-; CHECK-NEXT:    adds.w r12, r2, r3
+; CHECK-NEXT:    adds.w r12, r3, r2
 ; CHECK-NEXT:    vmov r3, r2, d0
 ; CHECK-NEXT:    adc.w lr, r6, r7
 ; CHECK-NEXT:    adds r3, r3, r4
