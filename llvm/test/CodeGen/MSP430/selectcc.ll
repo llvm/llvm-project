@@ -3,7 +3,8 @@
 
 define i16 @select_to_shifts_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: select_to_shifts_i16:
-; CHECK:       ; %bb.0:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    mov r12, r14
 ; CHECK-NEXT:    clr r12
 ; CHECK-NEXT:    bit #2, r14
@@ -20,24 +21,26 @@ define i16 @select_to_shifts_i16(i16 %a, i16 %b) {
 
 define i32 @select_to_shifts_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: select_to_shifts_i32:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r12, r11
-; CHECK-NEXT:    and #2, r11
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    and #2, r12
 ; CHECK-NEXT:    clr r13
-; CHECK-NEXT:    tst r11
-; CHECK-NEXT:    clr r12
+; CHECK-NEXT:    tst r12
+; CHECK-NEXT:    clr r11
 ; CHECK-NEXT:    jne .LBB1_3
 ; CHECK-NEXT:  ; %bb.1:
-; CHECK-NEXT:    tst r11
+; CHECK-NEXT:    tst r12
 ; CHECK-NEXT:    jne .LBB1_4
 ; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    mov r11, r12
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_3:
-; CHECK-NEXT:    mov r14, r12
-; CHECK-NEXT:    tst r11
+; CHECK-NEXT:    mov r14, r11
+; CHECK-NEXT:    tst r12
 ; CHECK-NEXT:    jeq .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    mov r15, r13
+; CHECK-NEXT:    mov r11, r12
 ; CHECK-NEXT:    ret
   %and = and i32 %a, 2
   %tobool = icmp eq i32 %and, 0

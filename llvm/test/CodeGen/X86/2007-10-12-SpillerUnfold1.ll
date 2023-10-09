@@ -4,16 +4,16 @@
 define fastcc void @fht(ptr %fz, i16 signext  %n) {
 ; CHECK-LABEL: fht:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    subss %xmm3, %xmm1
-; CHECK-NEXT:    movaps %xmm3, %xmm4
+; CHECK-NEXT:    subss %xmm2, %xmm1
+; CHECK-NEXT:    movaps %xmm2, %xmm4
 ; CHECK-NEXT:    mulss %xmm0, %xmm4
-; CHECK-NEXT:    addss %xmm3, %xmm4
-; CHECK-NEXT:    movaps %xmm3, %xmm2
-; CHECK-NEXT:    subss %xmm4, %xmm2
-; CHECK-NEXT:    addss %xmm3, %xmm4
+; CHECK-NEXT:    addss %xmm2, %xmm4
+; CHECK-NEXT:    movaps %xmm2, %xmm3
+; CHECK-NEXT:    subss %xmm4, %xmm3
+; CHECK-NEXT:    addss %xmm2, %xmm4
 ; CHECK-NEXT:    xorps %xmm5, %xmm5
 ; CHECK-NEXT:    subss %xmm1, %xmm5
 ; CHECK-NEXT:    addss %xmm0, %xmm1
@@ -22,14 +22,14 @@ define fastcc void @fht(ptr %fz, i16 signext  %n) {
 ; CHECK-NEXT:    addss %xmm4, %xmm5
 ; CHECK-NEXT:    addss %xmm0, %xmm5
 ; CHECK-NEXT:    movss %xmm5, 0
-; CHECK-NEXT:    movss %xmm3, (%ecx)
-; CHECK-NEXT:    addss %xmm0, %xmm3
-; CHECK-NEXT:    movss %xmm3, 0
-; CHECK-NEXT:    mulss %xmm0, %xmm1
-; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    addss %xmm1, %xmm2
-; CHECK-NEXT:    addss %xmm0, %xmm2
 ; CHECK-NEXT:    movss %xmm2, (%ecx)
+; CHECK-NEXT:    addss %xmm0, %xmm2
+; CHECK-NEXT:    movss %xmm2, 0
+; CHECK-NEXT:    mulss %xmm0, %xmm1
+; CHECK-NEXT:    mulss %xmm0, %xmm3
+; CHECK-NEXT:    addss %xmm1, %xmm3
+; CHECK-NEXT:    addss %xmm0, %xmm3
+; CHECK-NEXT:    movss %xmm3, (%ecx)
 ; CHECK-NEXT:    retl
 entry:
 	br i1 true, label %bb171.preheader, label %bb431

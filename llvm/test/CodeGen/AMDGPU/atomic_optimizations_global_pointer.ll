@@ -48,17 +48,17 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX89-LABEL: add_i32_constant:
 ; GFX89:       ; %bb.0: ; %entry
 ; GFX89-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX89-NEXT:    s_mov_b64 s[6:7], exec
-; GFX89-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
-; GFX89-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
+; GFX89-NEXT:    s_mov_b64 s[4:5], exec
+; GFX89-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
+; GFX89-NEXT:    v_mbcnt_hi_u32_b32 v0, s5, v0
 ; GFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX89-NEXT:    ; implicit-def: $vgpr1
-; GFX89-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX89-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX89-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX89-NEXT:  ; %bb.1:
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b32 s8, s2
-; GFX89-NEXT:    s_bcnt1_i32_b64 s2, s[6:7]
+; GFX89-NEXT:    s_bcnt1_i32_b64 s2, s[4:5]
 ; GFX89-NEXT:    s_mul_i32 s2, s2, 5
 ; GFX89-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX89-NEXT:    s_mov_b32 s10, -1
@@ -69,7 +69,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    buffer_wbinvl1_vol
 ; GFX89-NEXT:  .LBB0_2:
-; GFX89-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX89-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX89-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX89-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b32 s3, 0xf000
@@ -1518,17 +1518,17 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-LABEL: sub_i32_constant:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX8-NEXT:    s_mov_b64 s[6:7], exec
-; GFX8-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
-; GFX8-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
+; GFX8-NEXT:    s_mov_b64 s[4:5], exec
+; GFX8-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
+; GFX8-NEXT:    v_mbcnt_hi_u32_b32 v0, s5, v0
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    ; implicit-def: $vgpr1
-; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX8-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX8-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s8, s2
-; GFX8-NEXT:    s_bcnt1_i32_b64 s2, s[6:7]
+; GFX8-NEXT:    s_bcnt1_i32_b64 s2, s[4:5]
 ; GFX8-NEXT:    s_mul_i32 s2, s2, 5
 ; GFX8-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s10, -1
@@ -1539,7 +1539,7 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:  .LBB6_2:
-; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX8-NEXT:    v_mul_u32_u24_e32 v0, 5, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1552,17 +1552,17 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-LABEL: sub_i32_constant:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX9-NEXT:    s_mov_b64 s[6:7], exec
-; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v0, s6, 0
-; GFX9-NEXT:    v_mbcnt_hi_u32_b32 v0, s7, v0
+; GFX9-NEXT:    s_mov_b64 s[4:5], exec
+; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
+; GFX9-NEXT:    v_mbcnt_hi_u32_b32 v0, s5, v0
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-NEXT:    ; implicit-def: $vgpr1
-; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GFX9-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s8, s2
-; GFX9-NEXT:    s_bcnt1_i32_b64 s2, s[6:7]
+; GFX9-NEXT:    s_bcnt1_i32_b64 s2, s[4:5]
 ; GFX9-NEXT:    s_mul_i32 s2, s2, 5
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
@@ -1573,7 +1573,7 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:  .LBB6_2:
-; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v0, 5, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)

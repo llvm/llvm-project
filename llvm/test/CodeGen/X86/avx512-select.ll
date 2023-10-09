@@ -556,22 +556,22 @@ define void @vselect_v1i1(ptr %w, ptr %x, ptr %y) nounwind {
 ; X86-AVX512F-LABEL: vselect_v1i1:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    pushl %esi
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    movzbl (%eax), %esi
+; X86-AVX512F-NEXT:    movzbl (%edx), %esi
 ; X86-AVX512F-NEXT:    kmovw %esi, %k0
-; X86-AVX512F-NEXT:    movzbl (%edx), %edx
-; X86-AVX512F-NEXT:    kmovw %edx, %k1
 ; X86-AVX512F-NEXT:    movzbl (%ecx), %ecx
-; X86-AVX512F-NEXT:    kmovw %ecx, %k2
+; X86-AVX512F-NEXT:    kmovw %ecx, %k1
+; X86-AVX512F-NEXT:    movzbl (%eax), %eax
+; X86-AVX512F-NEXT:    kmovw %eax, %k2
 ; X86-AVX512F-NEXT:    kandnw %k1, %k2, %k1
 ; X86-AVX512F-NEXT:    kandw %k2, %k0, %k0
 ; X86-AVX512F-NEXT:    korw %k1, %k0, %k0
 ; X86-AVX512F-NEXT:    kshiftlw $15, %k0, %k0
 ; X86-AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; X86-AVX512F-NEXT:    kmovw %k0, %ecx
-; X86-AVX512F-NEXT:    movb %cl, (%eax)
+; X86-AVX512F-NEXT:    kmovw %k0, %eax
+; X86-AVX512F-NEXT:    movb %al, (%edx)
 ; X86-AVX512F-NEXT:    popl %esi
 ; X86-AVX512F-NEXT:    retl
 ;
@@ -595,22 +595,22 @@ define void @vselect_v1i1(ptr %w, ptr %x, ptr %y) nounwind {
 ; X86-AVX512BW-LABEL: vselect_v1i1:
 ; X86-AVX512BW:       # %bb.0:
 ; X86-AVX512BW-NEXT:    pushl %esi
+; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512BW-NEXT:    movzbl (%eax), %esi
+; X86-AVX512BW-NEXT:    movzbl (%edx), %esi
 ; X86-AVX512BW-NEXT:    kmovd %esi, %k0
-; X86-AVX512BW-NEXT:    movzbl (%edx), %edx
-; X86-AVX512BW-NEXT:    kmovd %edx, %k1
 ; X86-AVX512BW-NEXT:    movzbl (%ecx), %ecx
-; X86-AVX512BW-NEXT:    kmovd %ecx, %k2
+; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
+; X86-AVX512BW-NEXT:    movzbl (%eax), %eax
+; X86-AVX512BW-NEXT:    kmovd %eax, %k2
 ; X86-AVX512BW-NEXT:    kandnw %k1, %k2, %k1
 ; X86-AVX512BW-NEXT:    kandw %k2, %k0, %k0
 ; X86-AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; X86-AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
 ; X86-AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
-; X86-AVX512BW-NEXT:    kmovd %k0, %ecx
-; X86-AVX512BW-NEXT:    movb %cl, (%eax)
+; X86-AVX512BW-NEXT:    kmovd %k0, %eax
+; X86-AVX512BW-NEXT:    movb %al, (%edx)
 ; X86-AVX512BW-NEXT:    popl %esi
 ; X86-AVX512BW-NEXT:    retl
 ;

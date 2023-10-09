@@ -10,34 +10,33 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movq 8(%ebp), %mm0
-; X86-NEXT:    movq 16(%ebp), %mm5
-; X86-NEXT:    movq %mm5, (%esp) # 8-byte Spill
-; X86-NEXT:    movq %mm0, %mm3
-; X86-NEXT:    paddd %mm5, %mm3
-; X86-NEXT:    pxor %mm1, %mm1
-; X86-NEXT:    movq %mm3, %mm6
-; X86-NEXT:    pmuludq %mm1, %mm6
-; X86-NEXT:    movq 24(%ebp), %mm4
-; X86-NEXT:    movq %mm6, %mm2
+; X86-NEXT:    movq 16(%ebp), %mm4
+; X86-NEXT:    movq %mm4, (%esp) # 8-byte Spill
+; X86-NEXT:    movq %mm0, %mm2
 ; X86-NEXT:    paddd %mm4, %mm2
-; X86-NEXT:    paddw %mm2, %mm0
-; X86-NEXT:    movq %mm5, %mm1
-; X86-NEXT:    paddw %mm0, %mm1
-; X86-NEXT:    movq 32(%ebp), %mm5
-; X86-NEXT:    movq %mm1, %mm7
-; X86-NEXT:    pmuludq %mm5, %mm7
-; X86-NEXT:    paddw %mm4, %mm7
-; X86-NEXT:    paddw %mm7, %mm5
-; X86-NEXT:    paddw %mm5, %mm2
-; X86-NEXT:    paddw %mm2, %mm0
-; X86-NEXT:    paddw %mm6, %mm0
-; X86-NEXT:    pmuludq %mm3, %mm0
+; X86-NEXT:    pxor %mm3, %mm3
+; X86-NEXT:    movq %mm2, %mm5
+; X86-NEXT:    pmuludq %mm3, %mm5
+; X86-NEXT:    movq 24(%ebp), %mm6
+; X86-NEXT:    movq %mm5, %mm3
+; X86-NEXT:    paddd %mm6, %mm3
+; X86-NEXT:    paddw %mm3, %mm0
+; X86-NEXT:    paddw %mm0, %mm4
+; X86-NEXT:    movq 32(%ebp), %mm1
+; X86-NEXT:    movq %mm4, %mm7
+; X86-NEXT:    pmuludq %mm1, %mm7
+; X86-NEXT:    paddw %mm6, %mm7
+; X86-NEXT:    paddw %mm7, %mm1
+; X86-NEXT:    paddw %mm1, %mm3
+; X86-NEXT:    paddw %mm3, %mm0
+; X86-NEXT:    paddw %mm5, %mm0
+; X86-NEXT:    pmuludq %mm2, %mm0
 ; X86-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}, %mm0
-; X86-NEXT:    paddw %mm1, %mm0
+; X86-NEXT:    paddw %mm4, %mm0
 ; X86-NEXT:    pmuludq %mm7, %mm0
 ; X86-NEXT:    pmuludq (%esp), %mm0 # 8-byte Folded Reload
-; X86-NEXT:    paddw %mm5, %mm0
-; X86-NEXT:    paddw %mm2, %mm0
+; X86-NEXT:    paddw %mm1, %mm0
+; X86-NEXT:    paddw %mm3, %mm0
 ; X86-NEXT:    movq2dq %mm0, %xmm0
 ; X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -48,34 +47,33 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-LABEL: mmx_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movdq2q %xmm0, %mm0
-; X64-NEXT:    movdq2q %xmm1, %mm5
-; X64-NEXT:    movq %mm5, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X64-NEXT:    movq %mm0, %mm3
-; X64-NEXT:    paddd %mm5, %mm3
-; X64-NEXT:    pxor %mm1, %mm1
-; X64-NEXT:    movq %mm3, %mm6
-; X64-NEXT:    pmuludq %mm1, %mm6
-; X64-NEXT:    movdq2q %xmm2, %mm4
-; X64-NEXT:    movq %mm6, %mm2
+; X64-NEXT:    movdq2q %xmm1, %mm4
+; X64-NEXT:    movq %mm4, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movq %mm0, %mm2
 ; X64-NEXT:    paddd %mm4, %mm2
-; X64-NEXT:    paddw %mm2, %mm0
-; X64-NEXT:    movq %mm5, %mm1
-; X64-NEXT:    paddw %mm0, %mm1
-; X64-NEXT:    movdq2q %xmm3, %mm5
-; X64-NEXT:    movq %mm1, %mm7
-; X64-NEXT:    pmuludq %mm5, %mm7
-; X64-NEXT:    paddw %mm4, %mm7
-; X64-NEXT:    paddw %mm7, %mm5
-; X64-NEXT:    paddw %mm5, %mm2
-; X64-NEXT:    paddw %mm2, %mm0
-; X64-NEXT:    paddw %mm6, %mm0
-; X64-NEXT:    pmuludq %mm3, %mm0
+; X64-NEXT:    pxor %mm3, %mm3
+; X64-NEXT:    movq %mm2, %mm5
+; X64-NEXT:    pmuludq %mm3, %mm5
+; X64-NEXT:    movdq2q %xmm2, %mm6
+; X64-NEXT:    movq %mm5, %mm3
+; X64-NEXT:    paddd %mm6, %mm3
+; X64-NEXT:    paddw %mm3, %mm0
+; X64-NEXT:    paddw %mm0, %mm4
+; X64-NEXT:    movdq2q %xmm3, %mm1
+; X64-NEXT:    movq %mm4, %mm7
+; X64-NEXT:    pmuludq %mm1, %mm7
+; X64-NEXT:    paddw %mm6, %mm7
+; X64-NEXT:    paddw %mm7, %mm1
+; X64-NEXT:    paddw %mm1, %mm3
+; X64-NEXT:    paddw %mm3, %mm0
+; X64-NEXT:    paddw %mm5, %mm0
+; X64-NEXT:    pmuludq %mm2, %mm0
 ; X64-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %mm0
-; X64-NEXT:    paddw %mm1, %mm0
+; X64-NEXT:    paddw %mm4, %mm0
 ; X64-NEXT:    pmuludq %mm7, %mm0
 ; X64-NEXT:    pmuludq {{[-0-9]+}}(%r{{[sb]}}p), %mm0 # 8-byte Folded Reload
-; X64-NEXT:    paddw %mm5, %mm0
-; X64-NEXT:    paddw %mm2, %mm0
+; X64-NEXT:    paddw %mm1, %mm0
+; X64-NEXT:    paddw %mm3, %mm0
 ; X64-NEXT:    movq2dq %mm0, %xmm0
 ; X64-NEXT:    retq
   %5 = bitcast double %0 to x86_mmx

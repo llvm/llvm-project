@@ -23,18 +23,17 @@ define i32 @val_compare_and_swap(ptr %p, i32 %cmp, i32 %new) #0 {
 define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) #0 {
 ; OUTLINE-ATOMICS: bl __aarch64_cas4_acq
 ; CHECK-LABEL: val_compare_and_swap_from_load:
+; CHECK-NEXT: mov    x[[RESULT:[0-9]+]], x0
 ; CHECK-NEXT: ldr    [[NEW:w[0-9]+]], [x2]
 ; CHECK-NEXT: [[TRYBB:.?LBB[0-9_]+]]:
-; CHECK-NEXT: ldaxr  w[[RESULT:[0-9]+]], [x0]
-; CHECK-NEXT: cmp    w[[RESULT]], w1
+; CHECK-NEXT: ldaxr  w0, [x[[RESULT]]]
+; CHECK-NEXT: cmp    w0, w1
 ; CHECK-NEXT: b.ne   [[FAILBB:.?LBB[0-9_]+]]
-; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], [[NEW]], [x0]
+; CHECK-NEXT: stxr   [[SCRATCH_REG:w[0-9]+]], [[NEW]], [x[[RESULT]]]
 ; CHECK-NEXT: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-; CHECK-NEXT: mov    x0, x[[RESULT]]
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: [[FAILBB]]:
 ; CHECK-NEXT: clrex
-; CHECK-NEXT: mov    x0, x[[RESULT]]
 ; CHECK-NEXT: ret
   %new = load i32, ptr %pnew
   %pair = cmpxchg ptr %p, i32 %cmp, i32 %new acquire acquire
@@ -96,14 +95,13 @@ define i32 @fetch_and_nand(ptr %p) #0 {
 
 define i64 @fetch_and_nand_64(ptr %p) #0 {
 ; CHECK-LABEL: fetch_and_nand_64:
-; CHECK: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
-; CHECK: ldaxr   x[[DEST_REG:[0-9]+]], [x[[ADDR]]]
+; CHECK: ldaxr   x[[DEST_REG:[0-9]+]], [x0]
 ; CHECK: mvn    w[[TMP_REG:[0-9]+]], w[[DEST_REG]]
-; CHECK: orr    [[SCRATCH2_REG:x[0-9]+]], x[[TMP_REG]], #0xfffffffffffffff8
-; CHECK: stlxr   [[SCRATCH_REG:w[0-9]+]], [[SCRATCH2_REG]], [x[[ADDR]]]
+; CHECK: orr    x[[TMP_REG]], x[[TMP_REG]], #0xfffffffffffffff8
+; CHECK: stlxr   [[SCRATCH_REG:w[0-9]+]], x[[TMP_REG]], [x0]
 ; CHECK: cbnz   [[SCRATCH_REG]], [[TRYBB]]
-
+; CHECK: mov    x0, x[[DEST_REG]]
   %val = atomicrmw nand ptr %p, i64 7 acq_rel
   ret i64 %val
 }
@@ -126,12 +124,12 @@ define i32 @fetch_and_or(ptr %p) #0 {
 define i64 @fetch_and_or_64(ptr %p) #0 {
 ; OUTLINE-ATOMICS: bl __aarch64_ldset8_relax
 ; CHECK: fetch_and_or_64:
-; CHECK: mov    x[[ADDR:[0-9]+]], x0
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
-; CHECK: ldxr   [[DEST_REG:x[0-9]+]], [x[[ADDR]]]
+; CHECK: ldxr   [[DEST_REG:x[0-9]+]], [x0]
 ; CHECK: orr    [[SCRATCH2_REG:x[0-9]+]], [[DEST_REG]], #0x7
-; CHECK: stxr   [[SCRATCH_REG:w[0-9]+]], [[SCRATCH2_REG]], [x[[ADDR]]]
+; CHECK: stxr   [[SCRATCH_REG:w[0-9]+]], [[SCRATCH2_REG]], [x0]
 ; CHECK: cbnz   [[SCRATCH_REG]], [[TRYBB]]
+; CHECK: mov    x0, [[DEST_REG]]
   %val = atomicrmw or ptr %p, i64 7 monotonic
   ret i64 %val
 }

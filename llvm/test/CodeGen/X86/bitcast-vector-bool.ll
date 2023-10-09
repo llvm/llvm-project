@@ -1133,29 +1133,29 @@ define i64 @bitcast_v128i8_to_v2i64(<128 x i8> %a0) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; AVX1-NEXT:    vpmovmskb %xmm2, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %eax, %edx
-; AVX1-NEXT:    vpmovmskb %xmm3, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
 ; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
 ; AVX1-NEXT:    shll $16, %ecx
 ; AVX1-NEXT:    orl %eax, %ecx
-; AVX1-NEXT:    shlq $32, %rcx
-; AVX1-NEXT:    orq %rdx, %rcx
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    vpmovmskb %xmm3, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
+; AVX1-NEXT:    vpmovmskb %xmm2, %edx
 ; AVX1-NEXT:    shll $16, %edx
 ; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    shlq $32, %rdx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vpmovmskb %xmm1, %esi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    shll $16, %eax
 ; AVX1-NEXT:    orl %esi, %eax
 ; AVX1-NEXT:    shlq $32, %rax
-; AVX1-NEXT:    orq %rdx, %rax
-; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    orq %rcx, %rax
+; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1200,29 +1200,29 @@ define i1 @trunc_v128i8_cmp(<128 x i8> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    shll $16, %ecx
 ; SSE2-SSSE3-NEXT:    orl %eax, %ecx
 ; SSE2-SSSE3-NEXT:    psllw $7, %xmm2
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %edx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-SSSE3-NEXT:    psllw $7, %xmm3
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm3, %eax
-; SSE2-SSSE3-NEXT:    shll $16, %eax
-; SSE2-SSSE3-NEXT:    orl %edx, %eax
-; SSE2-SSSE3-NEXT:    shlq $32, %rax
-; SSE2-SSSE3-NEXT:    orq %rcx, %rax
-; SSE2-SSSE3-NEXT:    psllw $7, %xmm4
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %ecx
-; SSE2-SSSE3-NEXT:    psllw $7, %xmm5
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm5, %edx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm3, %edx
 ; SSE2-SSSE3-NEXT:    shll $16, %edx
-; SSE2-SSSE3-NEXT:    orl %ecx, %edx
+; SSE2-SSSE3-NEXT:    orl %eax, %edx
+; SSE2-SSSE3-NEXT:    shlq $32, %rdx
+; SSE2-SSSE3-NEXT:    orq %rcx, %rdx
+; SSE2-SSSE3-NEXT:    psllw $7, %xmm4
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
+; SSE2-SSSE3-NEXT:    psllw $7, %xmm5
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm5, %ecx
+; SSE2-SSSE3-NEXT:    shll $16, %ecx
+; SSE2-SSSE3-NEXT:    orl %eax, %ecx
 ; SSE2-SSSE3-NEXT:    psllw $7, %xmm6
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %ecx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
 ; SSE2-SSSE3-NEXT:    psllw $7, %xmm7
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm7, %esi
 ; SSE2-SSSE3-NEXT:    shll $16, %esi
-; SSE2-SSSE3-NEXT:    orl %ecx, %esi
+; SSE2-SSSE3-NEXT:    orl %eax, %esi
 ; SSE2-SSSE3-NEXT:    shlq $32, %rsi
-; SSE2-SSSE3-NEXT:    orq %rdx, %rsi
+; SSE2-SSSE3-NEXT:    orq %rcx, %rsi
 ; SSE2-SSSE3-NEXT:    movq %rsi, %xmm0
-; SSE2-SSSE3-NEXT:    movq %rax, %xmm1
+; SSE2-SSSE3-NEXT:    movq %rdx, %xmm1
 ; SSE2-SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpeqb %xmm1, %xmm0
@@ -1240,29 +1240,29 @@ define i1 @trunc_v128i8_cmp(<128 x i8> %a0) nounwind {
 ; SSE41-NEXT:    shll $16, %ecx
 ; SSE41-NEXT:    orl %eax, %ecx
 ; SSE41-NEXT:    psllw $7, %xmm2
-; SSE41-NEXT:    pmovmskb %xmm2, %edx
+; SSE41-NEXT:    pmovmskb %xmm2, %eax
 ; SSE41-NEXT:    psllw $7, %xmm3
-; SSE41-NEXT:    pmovmskb %xmm3, %eax
-; SSE41-NEXT:    shll $16, %eax
-; SSE41-NEXT:    orl %edx, %eax
-; SSE41-NEXT:    shlq $32, %rax
-; SSE41-NEXT:    orq %rcx, %rax
-; SSE41-NEXT:    psllw $7, %xmm4
-; SSE41-NEXT:    pmovmskb %xmm4, %ecx
-; SSE41-NEXT:    psllw $7, %xmm5
-; SSE41-NEXT:    pmovmskb %xmm5, %edx
+; SSE41-NEXT:    pmovmskb %xmm3, %edx
 ; SSE41-NEXT:    shll $16, %edx
-; SSE41-NEXT:    orl %ecx, %edx
+; SSE41-NEXT:    orl %eax, %edx
+; SSE41-NEXT:    shlq $32, %rdx
+; SSE41-NEXT:    orq %rcx, %rdx
+; SSE41-NEXT:    psllw $7, %xmm4
+; SSE41-NEXT:    pmovmskb %xmm4, %eax
+; SSE41-NEXT:    psllw $7, %xmm5
+; SSE41-NEXT:    pmovmskb %xmm5, %ecx
+; SSE41-NEXT:    shll $16, %ecx
+; SSE41-NEXT:    orl %eax, %ecx
 ; SSE41-NEXT:    psllw $7, %xmm6
-; SSE41-NEXT:    pmovmskb %xmm6, %ecx
+; SSE41-NEXT:    pmovmskb %xmm6, %eax
 ; SSE41-NEXT:    psllw $7, %xmm7
 ; SSE41-NEXT:    pmovmskb %xmm7, %esi
 ; SSE41-NEXT:    shll $16, %esi
-; SSE41-NEXT:    orl %ecx, %esi
+; SSE41-NEXT:    orl %eax, %esi
 ; SSE41-NEXT:    shlq $32, %rsi
-; SSE41-NEXT:    orq %rdx, %rsi
+; SSE41-NEXT:    orq %rcx, %rsi
 ; SSE41-NEXT:    movq %rsi, %xmm0
-; SSE41-NEXT:    movq %rax, %xmm1
+; SSE41-NEXT:    movq %rdx, %xmm1
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE41-NEXT:    ptest %xmm0, %xmm1
@@ -1279,32 +1279,32 @@ define i1 @trunc_v128i8_cmp(<128 x i8> %a0) nounwind {
 ; AVX1-NEXT:    shll $16, %ecx
 ; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %edx
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    shll $16, %eax
-; AVX1-NEXT:    orl %edx, %eax
-; AVX1-NEXT:    shlq $32, %rax
-; AVX1-NEXT:    orq %rcx, %rax
-; AVX1-NEXT:    vpsllw $7, %xmm2, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %edx
 ; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpsllw $7, %xmm3, %xmm0
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    shlq $32, %rdx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    vpsllw $7, %xmm2, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
+; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    vpsllw $7, %xmm3, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovmskb %xmm0, %esi
 ; AVX1-NEXT:    shll $16, %esi
-; AVX1-NEXT:    orl %ecx, %esi
+; AVX1-NEXT:    orl %eax, %esi
 ; AVX1-NEXT:    shlq $32, %rsi
-; AVX1-NEXT:    orq %rdx, %rsi
+; AVX1-NEXT:    orq %rcx, %rsi
 ; AVX1-NEXT:    vmovq %rsi, %xmm0
-; AVX1-NEXT:    vmovq %rax, %xmm1
+; AVX1-NEXT:    vmovq %rdx, %xmm1
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vptest %xmm1, %xmm0

@@ -692,30 +692,30 @@ define void @fetch_and_umax(ptr %p, i128 %bits) {
 define i128 @atomic_load_seq_cst(ptr %p) {
 ; NOOUTLINE-LABEL: atomic_load_seq_cst:
 ; NOOUTLINE:       // %bb.0:
-; NOOUTLINE-NEXT:    mov x8, x0
 ; NOOUTLINE-NEXT:  .LBB12_1: // %atomicrmw.start
 ; NOOUTLINE-NEXT:    // =>This Inner Loop Header: Depth=1
-; NOOUTLINE-NEXT:    ldaxp x0, x1, [x8]
-; NOOUTLINE-NEXT:    stlxp w9, x0, x1, [x8]
+; NOOUTLINE-NEXT:    ldaxp x8, x1, [x0]
+; NOOUTLINE-NEXT:    stlxp w9, x8, x1, [x0]
 ; NOOUTLINE-NEXT:    cbnz w9, .LBB12_1
 ; NOOUTLINE-NEXT:  // %bb.2: // %atomicrmw.end
+; NOOUTLINE-NEXT:    mov x0, x8
 ; NOOUTLINE-NEXT:    ret
 ;
 ; OUTLINE-LABEL: atomic_load_seq_cst:
 ; OUTLINE:       // %bb.0:
-; OUTLINE-NEXT:    mov x8, x0
 ; OUTLINE-NEXT:  .LBB12_1: // %atomicrmw.start
 ; OUTLINE-NEXT:    // =>This Inner Loop Header: Depth=1
-; OUTLINE-NEXT:    ldaxp x0, x1, [x8]
-; OUTLINE-NEXT:    stlxp w9, x0, x1, [x8]
+; OUTLINE-NEXT:    ldaxp x8, x1, [x0]
+; OUTLINE-NEXT:    stlxp w9, x8, x1, [x0]
 ; OUTLINE-NEXT:    cbnz w9, .LBB12_1
 ; OUTLINE-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-NEXT:    mov x0, x8
 ; OUTLINE-NEXT:    ret
 ;
 ; LSE-LABEL: atomic_load_seq_cst:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    mov x2, #0
-; LSE-NEXT:    mov x3, #0
+; LSE-NEXT:    mov x2, #0 // =0x0
+; LSE-NEXT:    mov x3, #0 // =0x0
 ; LSE-NEXT:    caspal x2, x3, x2, x3, [x0]
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
@@ -747,8 +747,8 @@ define i128 @atomic_load_relaxed(i64, i64, ptr %p) {
 ;
 ; LSE-LABEL: atomic_load_relaxed:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    mov x0, #0
-; LSE-NEXT:    mov x1, #0
+; LSE-NEXT:    mov x0, #0 // =0x0
+; LSE-NEXT:    mov x1, #0 // =0x0
 ; LSE-NEXT:    casp x0, x1, x0, x1, [x2]
 ; LSE-NEXT:    ret
     %r = load atomic i128, ptr %p monotonic, align 16

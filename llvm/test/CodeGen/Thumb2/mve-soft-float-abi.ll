@@ -241,10 +241,10 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
 ; CHECK-BE-NEXT:    add r0, sp, #64
-; CHECK-BE-NEXT:    vldrh.u16 q6, [r0]
+; CHECK-BE-NEXT:    vldrh.u16 q5, [r0]
 ; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vrev64.16 q4, q0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[0]
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[0]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[0]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -253,8 +253,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[0], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[1]
+; CHECK-BE-NEXT:    vmov.16 q6[0], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[1]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[1]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -263,8 +263,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[1], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[2]
+; CHECK-BE-NEXT:    vmov.16 q6[1], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[2]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[2]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -273,8 +273,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[2], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[3]
+; CHECK-BE-NEXT:    vmov.16 q6[2], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[3]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[3]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -283,8 +283,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[3], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[4]
+; CHECK-BE-NEXT:    vmov.16 q6[3], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[4]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[4]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -293,8 +293,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[4], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[5]
+; CHECK-BE-NEXT:    vmov.16 q6[4], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[5]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[5]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -303,8 +303,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[5], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[6]
+; CHECK-BE-NEXT:    vmov.16 q6[5], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[6]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[6]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -313,8 +313,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[6], r0
-; CHECK-BE-NEXT:    vmov.u16 r0, q6[7]
+; CHECK-BE-NEXT:    vmov.16 q6[6], r0
+; CHECK-BE-NEXT:    vmov.u16 r0, q5[7]
 ; CHECK-BE-NEXT:    vmov.u16 r4, q4[7]
 ; CHECK-BE-NEXT:    bl __aeabi_h2f
 ; CHECK-BE-NEXT:    mov r5, r0
@@ -323,8 +323,8 @@ define <8 x half> @vector_add_f16(<8 x half> %lhs, <8 x half> %rhs) {
 ; CHECK-BE-NEXT:    mov r1, r5
 ; CHECK-BE-NEXT:    bl __aeabi_fadd
 ; CHECK-BE-NEXT:    bl __aeabi_f2h
-; CHECK-BE-NEXT:    vmov.16 q5[7], r0
-; CHECK-BE-NEXT:    vrev64.16 q0, q5
+; CHECK-BE-NEXT:    vmov.16 q6[7], r0
+; CHECK-BE-NEXT:    vrev64.16 q0, q6
 ; CHECK-BE-NEXT:    vmov r1, r0, d0
 ; CHECK-BE-NEXT:    vmov r3, r2, d1
 ; CHECK-BE-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
@@ -354,25 +354,25 @@ define <4 x float> @vector_add_f32(<4 x float> %lhs, <4 x float> %rhs) {
 ; CHECK-MVE-NEXT:    sub sp, #4
 ; CHECK-MVE-NEXT:    .vsave {d8, d9}
 ; CHECK-MVE-NEXT:    vpush {d8, d9}
-; CHECK-MVE-NEXT:    mov r4, r0
+; CHECK-MVE-NEXT:    mov r6, r0
 ; CHECK-MVE-NEXT:    add r0, sp, #40
 ; CHECK-MVE-NEXT:    vldrw.u32 q4, [r0]
-; CHECK-MVE-NEXT:    mov r6, r1
+; CHECK-MVE-NEXT:    mov r5, r1
 ; CHECK-MVE-NEXT:    mov r0, r3
-; CHECK-MVE-NEXT:    mov r5, r2
+; CHECK-MVE-NEXT:    mov r4, r2
 ; CHECK-MVE-NEXT:    vmov r7, r1, d9
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    vmov s19, r0
-; CHECK-MVE-NEXT:    mov r0, r5
+; CHECK-MVE-NEXT:    mov r0, r4
 ; CHECK-MVE-NEXT:    mov r1, r7
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
-; CHECK-MVE-NEXT:    vmov r5, r1, d8
+; CHECK-MVE-NEXT:    vmov r4, r1, d8
 ; CHECK-MVE-NEXT:    vmov s18, r0
-; CHECK-MVE-NEXT:    mov r0, r6
+; CHECK-MVE-NEXT:    mov r0, r5
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    vmov s17, r0
-; CHECK-MVE-NEXT:    mov r0, r4
-; CHECK-MVE-NEXT:    mov r1, r5
+; CHECK-MVE-NEXT:    mov r0, r6
+; CHECK-MVE-NEXT:    mov r1, r4
 ; CHECK-MVE-NEXT:    bl __aeabi_fadd
 ; CHECK-MVE-NEXT:    vmov s16, r0
 ; CHECK-MVE-NEXT:    vmov r2, r3, d9

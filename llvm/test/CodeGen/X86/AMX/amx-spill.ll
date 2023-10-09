@@ -20,25 +20,25 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
-; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
 ; CHECK-NEXT:    movabsq $64, %r8
-; CHECK-NEXT:    tilestored %tmm1, -64(%rsp,%r8) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm0, -64(%rsp,%r8) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm3
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm4
-; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm2
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm5
-; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm2
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
@@ -46,16 +46,16 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm6
 ; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm7
-; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm1
-; CHECK-NEXT:    tdpbssd %tmm7, %tmm6, %tmm1
+; CHECK-NEXT:    tileloadd (%rcx,%rax), %tmm0
+; CHECK-NEXT:    tdpbssd %tmm7, %tmm6, %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tileloadd -64(%rsp,%rax), %tmm7 # 1024-byte Folded Reload
-; CHECK-NEXT:    tdpbssd %tmm7, %tmm1, %tmm3
-; CHECK-NEXT:    tdpbssd %tmm4, %tmm3, %tmm2
-; CHECK-NEXT:    tdpbssd %tmm5, %tmm2, %tmm0
+; CHECK-NEXT:    tdpbssd %tmm7, %tmm0, %tmm1
+; CHECK-NEXT:    tdpbssd %tmm3, %tmm1, %tmm4
+; CHECK-NEXT:    tdpbssd %tmm5, %tmm4, %tmm2
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
-; CHECK-NEXT:    tilestored %tmm0, (%rax,%rcx)
+; CHECK-NEXT:    tilestored %tmm2, (%rax,%rcx)
 ; CHECK-NEXT:    addq $968, %rsp # imm = 0x3C8
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper

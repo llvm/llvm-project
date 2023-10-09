@@ -92,16 +92,16 @@ define <2 x i64> @test5(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl %ebx, %edi
-; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    shldl %cl, %ebx, %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movl %ebx, %esi
+; CHECK-NEXT:    shll %cl, %esi
+; CHECK-NEXT:    shldl %cl, %ebx, %edi
 ; CHECK-NEXT:    testb $32, %cl
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    je .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movl %edi, %esi
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    movl %edx, %ebx
 ; CHECK-NEXT:    movb %ch, %cl
@@ -115,8 +115,8 @@ define <2 x i64> @test5(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-NEXT:  .LBB4_4:
 ; CHECK-NEXT:    movl %ebp, 12(%eax)
 ; CHECK-NEXT:    movl %ebx, 8(%eax)
-; CHECK-NEXT:    movl %esi, 4(%eax)
-; CHECK-NEXT:    movl %edi, (%eax)
+; CHECK-NEXT:    movl %edi, 4(%eax)
+; CHECK-NEXT:    movl %esi, (%eax)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popl %edi

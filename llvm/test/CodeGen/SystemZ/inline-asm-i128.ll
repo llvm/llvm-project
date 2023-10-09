@@ -7,21 +7,24 @@
 define i32 @fun0(ptr %p1, i32 signext %l1, ptr %p2, i32 signext %l2, i8 zeroext %pad) {
 ; CHECK-LABEL: fun0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lgr %r0, %r5
-; CHECK-NEXT:    # kill: def $r4d killed $r4d def $r4q
-; CHECK-NEXT:    lgr %r1, %r3
-; CHECK-NEXT:    # kill: def $r2d killed $r2d def $r2q
-; CHECK-NEXT:    sllg %r5, %r6, 24
-; CHECK-NEXT:    rosbg %r5, %r0, 40, 63, 0
-; CHECK-NEXT:    risbg %r3, %r1, 40, 191, 0
+; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
+; CHECK-NEXT:    .cfi_offset %r12, -64
+; CHECK-NEXT:    .cfi_offset %r13, -56
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    lgr %r0, %r4
+; CHECK-NEXT:    lgr %r12, %r2
+; CHECK-NEXT:    sllg %r1, %r6, 24
+; CHECK-NEXT:    rosbg %r1, %r5, 40, 63, 0
+; CHECK-NEXT:    risbg %r13, %r3, 40, 191, 0
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    clcl %r2, %r4
+; CHECK-NEXT:    clcl %r12, %r0
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ogr %r3, %r5
-; CHECK-NEXT:    risbg %r0, %r3, 40, 191, 0
+; CHECK-NEXT:    ogr %r13, %r1
+; CHECK-NEXT:    risbg %r0, %r13, 40, 191, 0
 ; CHECK-NEXT:    ipm %r2
 ; CHECK-NEXT:    afi %r2, -268435456
 ; CHECK-NEXT:    srl %r2, 31
+; CHECK-NEXT:    lmg %r12, %r15, 96(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = ptrtoint ptr %p1 to i64

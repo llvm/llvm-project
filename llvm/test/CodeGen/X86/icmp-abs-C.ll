@@ -161,22 +161,22 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X86-LABEL: ne_and_with_dom_abs:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movswl %cx, %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movswl %dx, %eax
 ; X86-NEXT:    sarl $15, %eax
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    subl %eax, %ecx
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
 ; X86-NEXT:    movzwl %ax, %esi
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpw $64, %cx
-; X86-NEXT:    setne %cl
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    cmpw $64, %dx
+; X86-NEXT:    setne %dl
 ; X86-NEXT:    cmpl $2345, %esi # imm = 0x929
 ; X86-NEXT:    jae .LBB3_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movb %cl, %dl
-; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    movb %dl, %cl
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB3_2:
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi

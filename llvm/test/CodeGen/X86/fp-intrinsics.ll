@@ -1414,14 +1414,14 @@ define i64 @f20u64(double %x) #0 {
 ;
 ; SSE-LABEL: f20u64:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    comisd %xmm2, %xmm0
-; SSE-NEXT:    xorpd %xmm1, %xmm1
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    comisd %xmm1, %xmm0
+; SSE-NEXT:    xorpd %xmm2, %xmm2
 ; SSE-NEXT:    jb .LBB25_2
 ; SSE-NEXT:  # %bb.1: # %entry
-; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:    movapd %xmm1, %xmm2
 ; SSE-NEXT:  .LBB25_2: # %entry
-; SSE-NEXT:    subsd %xmm1, %xmm0
+; SSE-NEXT:    subsd %xmm2, %xmm0
 ; SSE-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE-NEXT:    setae %al
 ; SSE-NEXT:    movzbl %al, %eax

@@ -259,13 +259,13 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $44, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 48
-; X32-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill
-; X32-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X32-NEXT:    movaps %xmm1, (%esp) # 16-byte Spill
 ; X32-NEXT:    movdqa %xmm2, %xmm0
 ; X32-NEXT:    movdqa {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    calll split_return_callee
-; X32-NEXT:    paddd (%esp), %xmm0 # 16-byte Folded Reload
-; X32-NEXT:    paddd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; X32-NEXT:    paddd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; X32-NEXT:    paddd (%esp), %xmm1 # 16-byte Folded Reload
 ; X32-NEXT:    addl $44, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
@@ -274,13 +274,13 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 48
-; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; X64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; X64-NEXT:    movdqa %xmm2, %xmm0
 ; X64-NEXT:    movdqa %xmm3, %xmm1
 ; X64-NEXT:    callq split_return_callee
-; X64-NEXT:    paddd (%rsp), %xmm0 # 16-byte Folded Reload
-; X64-NEXT:    paddd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; X64-NEXT:    paddd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; X64-NEXT:    paddd (%rsp), %xmm1 # 16-byte Folded Reload
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq

@@ -980,15 +980,15 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    leal (%eax,%eax,2), %esi
-; X86-SSE2-NEXT:    movzwl 8(%ecx,%esi,4), %edx
-; X86-SSE2-NEXT:    movl 4(%ecx,%esi,4), %edi
-; X86-SSE2-NEXT:    shrdl $8, %edx, %edi
+; X86-SSE2-NEXT:    leal (%eax,%eax,2), %edx
+; X86-SSE2-NEXT:    movzwl 8(%ecx,%edx,4), %esi
+; X86-SSE2-NEXT:    movl 4(%ecx,%edx,4), %edi
+; X86-SSE2-NEXT:    shrdl $8, %esi, %edi
 ; X86-SSE2-NEXT:    xorl %eax, %edi
 ; X86-SSE2-NEXT:    sarl $31, %eax
-; X86-SSE2-NEXT:    movzbl 10(%ecx,%esi,4), %ecx
+; X86-SSE2-NEXT:    movzbl 10(%ecx,%edx,4), %ecx
 ; X86-SSE2-NEXT:    shll $16, %ecx
-; X86-SSE2-NEXT:    orl %edx, %ecx
+; X86-SSE2-NEXT:    orl %esi, %ecx
 ; X86-SSE2-NEXT:    shll $8, %ecx
 ; X86-SSE2-NEXT:    movl %ecx, %edx
 ; X86-SSE2-NEXT:    sarl $8, %edx

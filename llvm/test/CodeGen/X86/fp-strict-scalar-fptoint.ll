@@ -572,14 +572,14 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ;
 ; SSE-X64-LABEL: fptoui_f32toi64:
 ; SSE-X64:       # %bb.0:
-; SSE-X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE-X64-NEXT:    comiss %xmm2, %xmm0
-; SSE-X64-NEXT:    xorps %xmm1, %xmm1
+; SSE-X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-X64-NEXT:    comiss %xmm1, %xmm0
+; SSE-X64-NEXT:    xorps %xmm2, %xmm2
 ; SSE-X64-NEXT:    jb .LBB9_2
 ; SSE-X64-NEXT:  # %bb.1:
-; SSE-X64-NEXT:    movaps %xmm2, %xmm1
+; SSE-X64-NEXT:    movaps %xmm1, %xmm2
 ; SSE-X64-NEXT:  .LBB9_2:
-; SSE-X64-NEXT:    subss %xmm1, %xmm0
+; SSE-X64-NEXT:    subss %xmm2, %xmm0
 ; SSE-X64-NEXT:    cvttss2si %xmm0, %rcx
 ; SSE-X64-NEXT:    setae %al
 ; SSE-X64-NEXT:    movzbl %al, %eax
@@ -1212,14 +1212,14 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ;
 ; SSE-X64-LABEL: fptoui_f64toi64:
 ; SSE-X64:       # %bb.0:
-; SSE-X64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-X64-NEXT:    comisd %xmm2, %xmm0
-; SSE-X64-NEXT:    xorpd %xmm1, %xmm1
+; SSE-X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-X64-NEXT:    comisd %xmm1, %xmm0
+; SSE-X64-NEXT:    xorpd %xmm2, %xmm2
 ; SSE-X64-NEXT:    jb .LBB18_2
 ; SSE-X64-NEXT:  # %bb.1:
-; SSE-X64-NEXT:    movapd %xmm2, %xmm1
+; SSE-X64-NEXT:    movapd %xmm1, %xmm2
 ; SSE-X64-NEXT:  .LBB18_2:
-; SSE-X64-NEXT:    subsd %xmm1, %xmm0
+; SSE-X64-NEXT:    subsd %xmm2, %xmm0
 ; SSE-X64-NEXT:    cvttsd2si %xmm0, %rcx
 ; SSE-X64-NEXT:    setae %al
 ; SSE-X64-NEXT:    movzbl %al, %eax

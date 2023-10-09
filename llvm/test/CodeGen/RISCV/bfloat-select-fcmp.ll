@@ -17,14 +17,14 @@ define bfloat @select_fcmp_false(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_oeq(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_oeq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    feq.s a0, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    feq.s a0, fa4, fa5
 ; CHECK-NEXT:    bnez a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp oeq bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -68,14 +68,14 @@ define bfloat @select_fcmp_oge(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_olt(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_olt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    flt.s a0, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    flt.s a0, fa4, fa5
 ; CHECK-NEXT:    bnez a0, .LBB4_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp olt bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -85,14 +85,14 @@ define bfloat @select_fcmp_olt(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_ole(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_ole:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    fle.s a0, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fle.s a0, fa4, fa5
 ; CHECK-NEXT:    bnez a0, .LBB5_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp ole bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -102,16 +102,16 @@ define bfloat @select_fcmp_ole(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_one(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    flt.s a0, fa5, fa4
-; CHECK-NEXT:    flt.s a1, fa4, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    flt.s a0, fa4, fa5
+; CHECK-NEXT:    flt.s a1, fa5, fa4
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    bnez a0, .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp one bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -140,16 +140,16 @@ define bfloat @select_fcmp_ord(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_ueq(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_ueq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    flt.s a0, fa5, fa4
-; CHECK-NEXT:    flt.s a1, fa4, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    flt.s a0, fa4, fa5
+; CHECK-NEXT:    flt.s a1, fa5, fa4
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    beqz a0, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp ueq bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -159,14 +159,14 @@ define bfloat @select_fcmp_ueq(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_ugt(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_ugt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    fle.s a0, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    fle.s a0, fa4, fa5
 ; CHECK-NEXT:    beqz a0, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp ugt bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -176,14 +176,14 @@ define bfloat @select_fcmp_ugt(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_uge(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    flt.s a0, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    flt.s a0, fa4, fa5
 ; CHECK-NEXT:    beqz a0, .LBB10_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB10_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp uge bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
@@ -227,14 +227,14 @@ define bfloat @select_fcmp_ule(bfloat %a, bfloat %b) nounwind {
 define bfloat @select_fcmp_une(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: select_fcmp_une:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-NEXT:    feq.s a0, fa5, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
+; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK-NEXT:    feq.s a0, fa4, fa5
 ; CHECK-NEXT:    beqz a0, .LBB13_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB13_2:
-; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa4
 ; CHECK-NEXT:    ret
   %1 = fcmp une bfloat %a, %b
   %2 = select i1 %1, bfloat %a, bfloat %b
