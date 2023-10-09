@@ -248,3 +248,45 @@ TEST(MatrixTest, computeHermiteNormalForm) {
     checkHermiteNormalForm(mat, hermiteForm);
   }
 }
+
+TEST(MatrixTest, inverse) {
+  FracMatrix mat = makeFracMatrix(
+      2, 2,
+      {{Fraction(2, 1), Fraction(1, 1)}, {Fraction(7, 1), Fraction(0, 1)}});
+  FracMatrix inverse = makeFracMatrix(
+      2, 2,
+      {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
+
+  FracMatrix inv = mat.inverse();
+
+  for (unsigned row = 0; row < 2; row++)
+    for (unsigned col = 0; col < 2; col++)
+      EXPECT_EQ(inv(row, col), inverse(row, col));
+}
+
+TEST(MatrixTest, intInverse) {
+    IntMatrix mat = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
+    IntMatrix inverse = makeIntMatrix(2, 2, {{0, -1}, {-7, 2}});
+    
+    IntMatrix inv = mat.integerInverse();
+
+    for (unsigned i = 0; i < 2u; i++)
+      for (unsigned j = 0; j < 2u; j++)
+        EXPECT_EQ(inv(i, j), inverse(i, j));
+
+    mat = makeIntMatrix(4, 4, {{ 4, 14, 11,  3},
+                               {13,  5, 14, 12},
+                               {13,  9,  7, 14},
+                               { 2,  3, 12,  7}});
+    inverse = makeIntMatrix(4, 4, {{155, 1636, -579, -1713},
+                                   {725, -743, 537, -111},
+                                   {210, 735, -855, 360},
+                                   {-715, -1409, 1401, 1482}});
+
+    inv = mat.integerInverse();
+
+    for (unsigned i = 0; i < 2u; i++)
+      for (unsigned j = 0; j < 2u; j++)
+        EXPECT_EQ(inv(i, j), inverse(i, j));
+
+}
