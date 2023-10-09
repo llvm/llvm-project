@@ -252,7 +252,7 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
   let constructor = "::fir::createStackArraysPass()";
 }
 
-def AddAliasTags : Pass<"fir-alias-analysis", "mlir::ModuleOp"> {
+def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let summary = "Add tbaa tags to operations that implement FirAliasAnalysisOpInterface";
   let description = [{
     TBAA (type based alias analysis) is one method to pass pointer alias information

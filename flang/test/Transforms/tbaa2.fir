@@ -1,5 +1,5 @@
 // Test fir alias analysis pass on a larger real life code example (from the RFC)
-// RUN: fir-opt --fir-alias-analysis %s | FileCheck %s
+// RUN: fir-opt --fir-add-alias-tags %s | FileCheck %s
 
   fir.global @_QMmodEa : !fir.box<!fir.heap<!fir.array<?xf32>>> {
     %c0 = arith.constant 0 : index
