@@ -32,10 +32,7 @@ for the use/testing of AddressSanitizer:
 
 .. code-block:: console
 
-   cmake -DCMAKE_BUILD_TYPE=Release \
-     -DLLVM_ENABLE_PROJECTS="clang" \
-     -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
-     ../llvm
+   $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_RUNTIMES="compiler-rt" <path to source>/llvm
 
 Usage
 =====
