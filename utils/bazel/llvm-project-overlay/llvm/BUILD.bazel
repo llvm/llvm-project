@@ -4149,6 +4149,20 @@ gentbl(
 )
 
 gentbl(
+    name = "llvm-fromelf-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-objcopy/FromElfOpts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-objcopy/FromElfOpts.td",
+    td_srcs = [
+        "include/llvm/Option/OptParser.td",
+    ],
+)
+
+gentbl(
     name = "llvm-bitcode-strip-opts",
     strip_include_prefix = "tools/llvm-objcopy",
     tbl_outs = [(
@@ -4208,11 +4222,17 @@ cc_binary(
         ":llvm-installnametool-opts",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
+        ":llvm-fromelf-opts",
     ],
 )
 
 binary_alias(
     name = "llvm-strip",
+    binary = ":llvm-objcopy",
+)
+
+binary_alias(
+    name = "llvm-fromelf",
     binary = ":llvm-objcopy",
 )
 

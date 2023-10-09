@@ -9,6 +9,7 @@
 #include "ObjcopyOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -93,6 +94,8 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
     return parseStripOptions(Args, reportWarning);
   else if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
+  else if (Is("fromelf"))
+    return parseFromElfOptions(Args);
   else
     return parseObjcopyOptions(Args, reportWarning);
 }
@@ -123,6 +126,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+  case FileFormat::SegBin:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
@@ -131,6 +135,36 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   }
 
   llvm_unreachable("unsupported output format");
+}
+
+static Error emitOutput(CommonConfig &Config,
+                        FilePermissionsApplier &PermsApplierOrErr,
+                        std::function<Error(raw_ostream &)> ObjcopyFunc) {
+  std::string OutputFilename =
+      Config.OutputFilename.str() + ((Config.OutputFormat == FileFormat::SegBin)
+                                         ? std::to_string(Config.SegmentIndex)
+                                         : "");
+  if (ObjcopyFunc) {
+    if (Config.SplitDWO.size()) {
+      // remove .dwo tables
+      Config.ExtractDWO = false;
+      Config.StripDWO = true;
+    }
+    // Apply transformations described by Config and store result into
+    // Config.OutputFilename using specified ObjcopyFunc function.
+    if (Error E = writeToOutput(OutputFilename, ObjcopyFunc))
+      return E;
+  }
+
+  if (Error E = PermsApplierOrErr.apply(OutputFilename, Config.PreserveDates))
+    return E;
+
+  if (!Config.SplitDWO.empty())
+    if (Error E = PermsApplierOrErr.apply(Config.SplitDWO, Config.PreserveDates,
+                                          static_cast<sys::fs::perms>(0666)))
+      return E;
+
+  return Error::success();
 }
 
 /// The function executeObjcopy does the higher level dispatch based on the type
@@ -145,6 +179,7 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     return PermsApplierOrErr.takeError();
 
   std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
+  uint32_t SegmentCount = 0;
 
   OwningBinary<llvm::object::Binary> BinaryHolder;
   std::unique_ptr<MemoryBuffer> MemoryBufferHolder;
@@ -181,47 +216,33 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
         return E;
     } else {
       // Handle llvm::object::Binary.
+      if (ELFObjectFileBase *ElfFile =
+              dyn_cast<ELFObjectFileBase>(BinaryHolder.getBinary()))
+        SegmentCount = ElfFile->getProgramHeaderCount();
+
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),
                                       OutFile);
       };
     }
   }
-
-  if (ObjcopyFunc) {
-    if (Config.SplitDWO.empty()) {
-      // Apply transformations described by Config and store result into
-      // Config.OutputFilename using specified ObjcopyFunc function.
-      if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
-        return E;
-    } else {
-      Config.ExtractDWO = true;
-      Config.StripDWO = false;
-      // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
-      // file using specified ObjcopyFunc function.
-      if (Error E = writeToOutput(Config.SplitDWO, ObjcopyFunc))
-        return E;
-      Config.ExtractDWO = false;
-      Config.StripDWO = true;
-      // Apply transformations described by Config, remove .dwo tables and
-      // store result into Config.OutputFilename using specified ObjcopyFunc
-      // function.
-      if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
+  if (Config.SplitDWO.size()) {
+    Config.ExtractDWO = true;
+    Config.StripDWO = false;
+    // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
+    // file using specified ObjcopyFunc function.
+    if (Error E = writeToOutput(Config.SplitDWO, ObjcopyFunc))
+      return E;
+  }
+  if (Config.OutputFormat == FileFormat::SegBin) {
+    for (uint32_t SegmentIdx = 0; SegmentIdx < SegmentCount; SegmentIdx++) {
+      Config.SegmentIndex = SegmentIdx;
+      if (Error E = emitOutput(Config, PermsApplierOrErr.get(), ObjcopyFunc))
         return E;
     }
+    return Error::success();
   }
-
-  if (Error E =
-          PermsApplierOrErr->apply(Config.OutputFilename, Config.PreserveDates))
-    return E;
-
-  if (!Config.SplitDWO.empty())
-    if (Error E =
-            PermsApplierOrErr->apply(Config.SplitDWO, Config.PreserveDates,
-                                     static_cast<sys::fs::perms>(0666)))
-      return E;
-
-  return Error::success();
+  return emitOutput(Config, PermsApplierOrErr.get(), ObjcopyFunc);
 }
 
 int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {

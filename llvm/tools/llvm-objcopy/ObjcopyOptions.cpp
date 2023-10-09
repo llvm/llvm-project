@@ -150,6 +150,35 @@ public:
   }
 };
 
+enum FromElfID {
+  FROM_ELF_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(FROM_ELF_, __VA_ARGS__),
+#include "FromElfOpts.inc"
+#undef OPTION
+};
+
+namespace from_elf {
+
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
+#include "FromElfOpts.inc"
+#undef PREFIX
+
+static constexpr opt::OptTable::Info FromElfInfoTable[] = {
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(FROM_ELF_, __VA_ARGS__),
+#include "FromElfOpts.inc"
+#undef OPTION
+};
+} // namespace from_elf
+
+class FromElfOptTable : public opt::GenericOptTable {
+public:
+  FromElfOptTable() : opt::GenericOptTable(from_elf::FromElfInfoTable) {}
+};
+
 } // namespace
 
 static SectionFlag parseSectionRenameFlag(StringRef SectionName) {
@@ -385,7 +414,7 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
 
 namespace {
 
-enum class ToolType { Objcopy, Strip, InstallNameTool, BitcodeStrip };
+enum class ToolType { Objcopy, Strip, InstallNameTool, BitcodeStrip, FromElf };
 
 } // anonymous namespace
 
@@ -408,6 +437,10 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
   case ToolType::BitcodeStrip:
     ToolName = "llvm-bitcode-strip";
     HelpText = " [options] input";
+    break;
+  case ToolType::FromElf:
+    ToolName = "llvm-fromelf";
+    HelpText = " [options] input [output]";
     break;
   }
   OptTable.printHelp(OS, (ToolName + HelpText).str().c_str(),
@@ -625,6 +658,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.InputFormat = StringSwitch<FileFormat>(InputFormat)
                            .Case("binary", FileFormat::Binary)
                            .Case("ihex", FileFormat::IHex)
+                           .Case("elf", FileFormat::ELF)
                            .Default(FileFormat::Unspecified);
 
   if (InputArgs.hasArg(OBJCOPY_new_symbol_visibility)) {
@@ -688,6 +722,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
+                            .Case("sbin", FileFormat::SegBin)
                             .Default(FileFormat::Unspecified);
   if (Config.OutputFormat == FileFormat::Unspecified) {
     if (OutputFormat.empty()) {
@@ -701,6 +736,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       Config.OutputArch = Target->Machine;
     }
   }
+
+  if (Config.OutputFormat == FileFormat::SegBin &&
+      Config.InputFormat != FileFormat::ELF)
+    return createStringError(
+        errc::invalid_argument,
+        "--output-target sbin can be used with only --input-target elf");
 
   if (const auto *A = InputArgs.getLastArg(OBJCOPY_compress_debug_sections)) {
     Config.CompressionType = StringSwitch<DebugCompressionType>(A->getValue())
@@ -1188,6 +1229,72 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
       "__LLVM,__swift_cmdline", MatchStyle::Literal, ErrorCallback)));
   MachOConfig.EmptySegmentsToRemove.insert("__LLVM");
 
+  DC.CopyConfigs.push_back(std::move(ConfigMgr));
+  return std::move(DC);
+}
+
+Expected<DriverConfig>
+objcopy::parseFromElfOptions(ArrayRef<const char *> RawArgsArr) {
+  DriverConfig DC;
+  FromElfOptTable T;
+  const char *const *DashDash =
+      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
+  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
+  if (DashDash != RawArgsArr.end())
+    DashDash = std::next(DashDash);
+
+  unsigned MissingArgumentIndex, MissingArgumentCount;
+  llvm::opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
+    printHelp(T, errs(), ToolType::FromElf);
+    exit(1);
+  }
+
+  if (InputArgs.hasArg(FROM_ELF_help)) {
+    printHelp(T, outs(), ToolType::FromElf);
+    exit(0);
+  }
+
+  if (InputArgs.hasArg(FROM_ELF_version)) {
+    outs() << "llvm-fromelf, compatible with ARM fromelf\n";
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
+  SmallVector<const char *, 2> Positional;
+
+  for (auto *Arg : InputArgs.filtered(FROM_ELF_UNKNOWN))
+    return createStringError(errc::invalid_argument, "unknown argument '%s'",
+                             Arg->getAsString(InputArgs).c_str());
+
+  for (auto *Arg : InputArgs.filtered(FROM_ELF_INPUT))
+    Positional.push_back(Arg->getValue());
+  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
+
+  if (Positional.empty())
+    return createStringError(errc::invalid_argument, "no input file specified");
+
+  if (Positional.size() > 2)
+    return createStringError(errc::invalid_argument,
+                             "too many positional arguments");
+  ConfigManager ConfigMgr;
+  CommonConfig &Config = ConfigMgr.Common;
+  Config.InputFilename = Positional[0];
+  Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
+  Config.InputFormat = FileFormat::ELF;
+  StringRef OutputFormat;
+  OutputFormat = InputArgs.getLastArgValue(FROM_ELF_output_target);
+  if (OutputFormat.empty())
+    Config.OutputFormat = FileFormat::SegBin;
+  else {
+    Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
+                              .Case("sbin", FileFormat::SegBin)
+                              .Default(FileFormat::Unspecified);
+  }
+  if (Config.OutputFormat == FileFormat::Unspecified)
+    return createStringError(errc::invalid_argument, "unknown output format");
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);
 }

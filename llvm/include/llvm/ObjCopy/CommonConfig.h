@@ -27,12 +27,7 @@
 namespace llvm {
 namespace objcopy {
 
-enum class FileFormat {
-  Unspecified,
-  ELF,
-  Binary,
-  IHex,
-};
+enum class FileFormat { Unspecified, ELF, Binary, IHex, SegBin };
 
 // This type keeps track of the machine info for various architectures. This
 // lets us map architecture names to ELF types and the e_machine value of the
@@ -213,6 +208,8 @@ struct CommonConfig {
   StringRef AddGnuDebugLink;
   // Cached gnu_debuglink's target CRC
   uint32_t GnuDebugLinkCRC32;
+  // Segment Index to be dumped
+  uint32_t SegmentIndex;
   std::optional<StringRef> ExtractPartition;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;

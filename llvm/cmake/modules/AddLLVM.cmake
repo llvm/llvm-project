@@ -1316,6 +1316,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-size
     llvm-strings
     llvm-strip
+    llvm-fromelf
     llvm-profdata
     llvm-symbolizer
     # symlink version of some of above tools that are enabled by
@@ -1331,7 +1332,8 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     size
     strings
     strip
-    )
+    fromelf
+  )
   # Build llvm-mt if libxml2 is enabled. Can be used by runtimes.
   if (LLVM_ENABLE_LIBXML2)
     list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-mt)

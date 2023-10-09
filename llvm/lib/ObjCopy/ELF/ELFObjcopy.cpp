@@ -183,6 +183,8 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
     return std::make_unique<BinaryWriter>(Obj, Out);
   case FileFormat::IHex:
     return std::make_unique<IHexWriter>(Obj, Out);
+  case FileFormat::SegBin:
+    return std::make_unique<SegBinWriter>(Obj, Out, Config.SegmentIndex);
   default:
     return createELFWriter(Config, Obj, Out, OutputElfType);
   }

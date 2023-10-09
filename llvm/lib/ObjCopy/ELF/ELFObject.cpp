@@ -174,6 +174,13 @@ Error SectionWriter::visit(const Section &Sec) {
   return Error::success();
 }
 
+Error BinarySegmentWriter::visit(const Segment &Seg) {
+  if (Seg.Type == PT_LOAD)
+    llvm::copy(Seg.Contents, Out.getBufferStart());
+
+  return Error::success();
+}
+
 static bool addressOverflows32bit(uint64_t Addr) {
   // Sign extended 32 bit addresses (e.g 0xFFFFFFFF80000000) are ok
   return Addr > UINT32_MAX && Addr + 0x80000000 > UINT32_MAX;
@@ -2676,6 +2683,25 @@ Error BinaryWriter::finalize() {
                              "failed to allocate memory buffer of " +
                                  Twine::utohexstr(TotalSize) + " bytes");
   SecWriter = std::make_unique<BinarySectionWriter>(*Buf);
+  return Error::success();
+}
+
+Error SegBinWriter::write() {
+  const Segment &Seg = Obj.getSegmentForIndex(SegmentIndex);
+  if (Error Err = Seg.accept(*SegmentWriter))
+    return Err;
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+  return Error::success();
+}
+
+Error SegBinWriter::finalize() {
+  const Segment &Seg = Obj.getSegmentForIndex(SegmentIndex);
+  Buf = WritableMemoryBuffer::getNewMemBuffer(Seg.FileSize);
+  if (!Buf)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of " +
+                                 Twine::utohexstr(Seg.FileSize) + " bytes");
+  SegmentWriter = std::make_unique<BinarySegmentWriter>(*Buf);
   return Error::success();
 }
 

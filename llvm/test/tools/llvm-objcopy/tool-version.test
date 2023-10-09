@@ -10,6 +10,9 @@
 # RUN: llvm-bitcode-strip --version | FileCheck %s
 # RUN: llvm-bitcode-strip -V | FileCheck %s
 
+# RUN: llvm-fromelf --version | FileCheck %s
+# RUN: llvm-fromelf -V | FileCheck %s
+
 # OBJCOPY-DAG: {{ version }}
 # OBJCOPY-DAG: GNU objcopy
 

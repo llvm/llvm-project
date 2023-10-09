@@ -45,6 +45,11 @@ Expected<DriverConfig>
 parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
                          llvm::function_ref<Error(Error)> ErrorCallback);
 
+// ParseFromElfOptions returns the config and sets the input arguments.
+// If a help flag is set then ParseFromElfOptions will print the help
+// messege and exit.
+Expected<DriverConfig> parseFromElfOptions(ArrayRef<const char *> ArgsArr);
+
 // ParseStripOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseStripOptions will print the help messege and
 // exit. ErrorCallback is used to handle recoverable errors. An Error returned

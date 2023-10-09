@@ -114,6 +114,8 @@ public:
   // corresponding to the section with that index.
   Expected<std::vector<BBAddrMap>>
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt) const;
+
+  virtual uint32_t getProgramHeaderCount() const = 0;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -467,6 +469,8 @@ public:
   bool isRelocatableObject() const override;
 
   void createFakeSections() { EF.createFakeSections(); }
+
+  uint32_t getProgramHeaderCount() const override;
 };
 
 using ELF32LEObjectFile = ELFObjectFile<ELF32LE>;
@@ -551,6 +555,11 @@ uint32_t ELFObjectFile<ELFT>::getSectionType(DataRefImpl Sec) const {
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getSectionOffset(DataRefImpl Sec) const {
   return getSection(Sec)->sh_offset;
+}
+
+template <class ELFT>
+uint32_t ELFObjectFile<ELFT>::getProgramHeaderCount() const {
+  return EF.getHeader().e_phnum;
 }
 
 template <class ELFT>
