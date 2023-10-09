@@ -258,3 +258,35 @@ TEST(RegisterFlagsTest, AsTable) {
             "| really long name |",
             max_many_columns.AsTable(23));
 }
+
+TEST(RegisterFieldsTest, ToXML) {
+  StreamString strm;
+
+  // RegisterFlags requires that some fields be given, so no testing of empty
+  // input.
+
+  // Unnamed fields are padding that are ignored. This applies to fields passed
+  // in, and those generated to fill the other bits (31-1 here).
+  RegisterFlags("Foo", 4, {RegisterFlags::Field("", 0, 0)}).ToXML(strm);
+  ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
+                              "</flags>\n");
+
+  strm.Clear();
+  RegisterFlags("Foo", 4, {RegisterFlags::Field("abc", 0, 0)}).ToXML(strm);
+  ASSERT_EQ(strm.GetString(), "<flags id=\"Foo\" size=\"4\">\n"
+                              "  <field name=\"abc\" start=\"0\" end=\"0\"/>\n"
+                              "</flags>\n");
+
+  strm.Clear();
+  // Should use the current indentation level as a starting point.
+  strm.IndentMore();
+  RegisterFlags(
+      "Bar", 5,
+      {RegisterFlags::Field("f1", 25, 32), RegisterFlags::Field("f2", 10, 24)})
+      .ToXML(strm);
+  ASSERT_EQ(strm.GetString(),
+            "  <flags id=\"Bar\" size=\"5\">\n"
+            "    <field name=\"f1\" start=\"25\" end=\"32\"/>\n"
+            "    <field name=\"f2\" start=\"10\" end=\"24\"/>\n"
+            "  </flags>\n");
+}

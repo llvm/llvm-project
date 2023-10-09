@@ -175,3 +175,35 @@ std::string RegisterFlags::AsTable(uint32_t max_width) const {
 
   return table;
 }
+
+void RegisterFlags::ToXML(StreamString &strm) const {
+  // Example XML:
+  // <flags id="cpsr_flags" size="4">
+  //   <field name="incorrect" start="0" end="0"/>
+  // </flags>
+  strm.Indent();
+  strm << "<flags id=\"" << GetID() << "\" ";
+  strm.Printf("size=\"%d\"", GetSize());
+  strm << ">";
+  for (const Field &field : m_fields) {
+    // Skip padding fields.
+    if (field.GetName().empty())
+      continue;
+
+    strm << "\n";
+    strm.IndentMore();
+    field.ToXML(strm);
+    strm.IndentLess();
+  }
+  strm.PutChar('\n');
+  strm.Indent("</flags>\n");
+}
+
+void RegisterFlags::Field::ToXML(StreamString &strm) const {
+  // Example XML:
+  // <field name="correct" start="0" end="0"/>
+  strm.Indent();
+  strm << "<field name=\"" << GetName() << "\" ";
+  strm.Printf("start=\"%d\" end=\"%d\"", GetStart(), GetEnd());
+  strm << "/>";
+}

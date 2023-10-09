@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REGISTERFLAGS_H
 
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 namespace lldb_private {
 
@@ -50,6 +51,10 @@ public:
     /// Return the number of bits between this field and the other, that are not
     /// covered by either field.
     unsigned PaddingDistance(const Field &other) const;
+
+    /// Output XML that describes this field, to be inserted into a target XML
+    /// file.
+    void ToXML(StreamString &strm) const;
 
     bool operator<(const Field &rhs) const {
       return GetStart() < rhs.GetStart();
@@ -105,6 +110,9 @@ public:
   /// going to print the table to. If the table would exceed this width, it will
   /// be split into many tables as needed.
   std::string AsTable(uint32_t max_width) const;
+
+  // Output XML that describes this set of flags.
+  void ToXML(StreamString &strm) const;
 
 private:
   const std::string m_id;
