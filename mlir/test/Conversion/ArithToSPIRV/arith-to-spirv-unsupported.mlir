@@ -11,9 +11,9 @@ module attributes {
     #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
 } {
 
-func.func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
+func.func @unsupported_5elem_vector(%arg0: vector<5xi32>, %arg1: vector<5xi32>) {
   // expected-error@+1 {{failed to legalize operation 'arith.subi'}}
-  %1 = arith.subi %arg0, %arg0: vector<5xi32>
+  %1 = arith.subi %arg0, %arg1: vector<5xi32>
   return
 }
 

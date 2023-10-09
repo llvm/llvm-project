@@ -351,8 +351,21 @@ module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
 
-// CHECK-NOT: spirv.func @large_vector
-func.func @large_vector(%arg0: vector<1024xi32>) { return }
+// CHECK-NOT: spirv.func @large_vector_unsupported
+func.func @large_vector_unsupported(%arg0: vector<1024xi32>) { return }
+
+} // end module
+
+
+// -----
+
+// Check that large vectors are supported with VectorAnyINTEL or VectorComputeINTEL.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Float16, Kernel, VectorAnyINTEL], [SPV_INTEL_vector_compute]>, #spirv.resource_limits<>>
+} {
+
+// CHECK: spirv.func @large_any_vector
+func.func @large_any_vector(%arg0: vector<1024xi32>) { return }
 
 } // end module
 
