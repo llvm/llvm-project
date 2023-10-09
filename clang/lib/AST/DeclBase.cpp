@@ -29,6 +29,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -408,81 +409,6 @@ bool Decl::isInStdNamespace() const {
 bool Decl::isFileContextDecl() const {
   const auto *DC = dyn_cast<DeclContext>(this);
   return DC && DC->isFileContext();
-}
-
-bool Decl::isFlexibleArrayMemberLike(
-    ASTContext &Ctx, const Decl *D, QualType Ty,
-    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
-    bool IgnoreTemplateOrMacroSubstitution) {
-  // For compatibility with existing code, we treat arrays of length 0 or
-  // 1 as flexible array members.
-  const auto *CAT = Ctx.getAsConstantArrayType(Ty);
-  if (CAT) {
-    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
-
-    llvm::APInt Size = CAT->getSize();
-    FAMKind StrictFlexArraysLevel =
-        Ctx.getLangOpts().getStrictFlexArraysLevel();
-
-    if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
-      return false;
-
-    // GCC extension, only allowed to represent a FAM.
-    if (Size.isZero())
-      return true;
-
-    if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete && Size.uge(1))
-      return false;
-
-    if (StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete && Size.uge(2))
-      return false;
-  } else if (!Ctx.getAsIncompleteArrayType(Ty)) {
-    return false;
-  }
-
-  if (const auto *OID = dyn_cast_if_present<ObjCIvarDecl>(D))
-    return OID->getNextIvar() == nullptr;
-
-  const auto *FD = dyn_cast_if_present<FieldDecl>(D);
-  if (!FD)
-    return false;
-
-  if (CAT) {
-    // GCC treats an array memeber of a union as an FAM if the size is one or
-    // zero.
-    llvm::APInt Size = CAT->getSize();
-    if (FD->getParent()->isUnion() && (Size.isZero() || Size.isOne()))
-      return true;
-  }
-
-  // Don't consider sizes resulting from macro expansions or template argument
-  // substitution to form C89 tail-padded arrays.
-  if (IgnoreTemplateOrMacroSubstitution) {
-    TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
-    while (TInfo) {
-      TypeLoc TL = TInfo->getTypeLoc();
-
-      // Look through typedefs.
-      if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
-        const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
-        TInfo = TDL->getTypeSourceInfo();
-        continue;
-      }
-
-      if (auto CTL = TL.getAs<ConstantArrayTypeLoc>()) {
-        const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
-        if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
-          return false;
-      }
-
-      break;
-    }
-  }
-
-  // Test that the field is the last in the structure.
-  RecordDecl::field_iterator FI(
-      DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
-  return ++FI == FD->getParent()->field_end();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
