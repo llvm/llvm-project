@@ -18,50 +18,50 @@ define void @arm_cmplx_dot_prod_q15(ptr noundef %pSrcA, ptr noundef %pSrcB, i32 
 ; CHECK-NEXT:    csel r7, r6, r5, hs
 ; CHECK-NEXT:    add.w lr, r7, #1
 ; CHECK-NEXT:    mov r4, r5
-; CHECK-NEXT:    vldrh.u16 q0, [r0], #32
+; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
 ; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    mov r8, r5
-; CHECK-NEXT:    vldrh.u16 q1, [r1], #32
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q0, q1
-; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
-; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q0, q1
+; CHECK-NEXT:    vldrh.u16 q2, [r1], #32
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q1, q2
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #-16]
+; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q1, q2
 ; CHECK-NEXT:    vldrh.u16 q3, [r1, #-16]
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q3
-; CHECK-NEXT:    vldrh.u16 q0, [r1], #32
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q0, q3
+; CHECK-NEXT:    vldrh.u16 q1, [r1], #32
 ; CHECK-NEXT:    sub.w lr, lr, #1
 ; CHECK-NEXT:    cmp.w lr, #0
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
+; CHECK-NEXT:    vldrh.u16 q2, [r0], #32
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB0_2: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q2, q3
+; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q0, q3
 ; CHECK-NEXT:    vldrh.u16 q3, [r1, #-16]
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q1, q0
-; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
-; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q1, q0
-; CHECK-NEXT:    vldrh.u16 q1, [r0], #32
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q3
-; CHECK-NEXT:    vldrh.u16 q0, [r1], #32
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q1
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #-16]
+; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q2, q1
+; CHECK-NEXT:    vldrh.u16 q2, [r0], #32
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q0, q3
+; CHECK-NEXT:    vldrh.u16 q1, [r1], #32
 ; CHECK-NEXT:    le lr, .LBB0_2
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q2, q3
+; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q0, q3
 ; CHECK-NEXT:    movs r6, #14
 ; CHECK-NEXT:    and.w r2, r6, r2, lsl #1
-; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q1, q0
-; CHECK-NEXT:    vldrh.u16 q2, [r0, #-16]
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q1, q0
-; CHECK-NEXT:    vldrh.u16 q0, [r1, #-16]
-; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q2, q0
+; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q2, q1
+; CHECK-NEXT:    vldrh.u16 q0, [r0, #-16]
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q1
+; CHECK-NEXT:    vldrh.u16 q1, [r1, #-16]
+; CHECK-NEXT:    vmlaldavax.s16 r8, r5, q0, q1
 ; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    vmlsldava.s16 r4, r7, q2, q0
+; CHECK-NEXT:    vmlsldava.s16 r4, r7, q0, q1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrht.u16 q1, [r0]
+; CHECK-NEXT:    vldrht.u16 q2, [r0]
 ; CHECK-NEXT:    cmp r2, #9
 ; CHECK-NEXT:    vpsttt
 ; CHECK-NEXT:    vldrht.u16 q0, [r1]
-; CHECK-NEXT:    vmlsldavat.s16 r4, r7, q1, q0
-; CHECK-NEXT:    vmlaldavaxt.s16 r8, r5, q1, q0
+; CHECK-NEXT:    vmlsldavat.s16 r4, r7, q2, q0
+; CHECK-NEXT:    vmlaldavaxt.s16 r8, r5, q2, q0
 ; CHECK-NEXT:    blo .LBB0_10
 ; CHECK-NEXT:  @ %bb.4: @ %do.body.1
 ; CHECK-NEXT:    subs r2, #8

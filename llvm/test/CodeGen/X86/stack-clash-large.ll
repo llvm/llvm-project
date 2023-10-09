@@ -141,16 +141,16 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X86-NEXT:    .cfi_offset %edx, -12
 ; CHECK-X86-NEXT:    .cfi_offset %esi, -8
 ; CHECK-X86-NEXT:    movl 72056(%esp), %eax
-; CHECK-X86-NEXT:    movl 72048(%esp), %edx
-; CHECK-X86-NEXT:    movl 72040(%esp), %ecx
+; CHECK-X86-NEXT:    movl 72048(%esp), %ecx
+; CHECK-X86-NEXT:    movl 72040(%esp), %edx
 ; CHECK-X86-NEXT:    movl 72032(%esp), %esi
 ; CHECK-X86-NEXT:    addl 72036(%esp), %esi
-; CHECK-X86-NEXT:    addl 72044(%esp), %ecx
-; CHECK-X86-NEXT:    addl %esi, %ecx
-; CHECK-X86-NEXT:    addl 72052(%esp), %edx
+; CHECK-X86-NEXT:    addl 72044(%esp), %edx
+; CHECK-X86-NEXT:    addl %esi, %edx
+; CHECK-X86-NEXT:    addl 72052(%esp), %ecx
 ; CHECK-X86-NEXT:    addl 72060(%esp), %eax
-; CHECK-X86-NEXT:    addl %edx, %eax
 ; CHECK-X86-NEXT:    addl %ecx, %eax
+; CHECK-X86-NEXT:    addl %edx, %eax
 ; CHECK-X86-NEXT:    movl %eax, 392(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 28792(%esp)
 ; CHECK-X86-NEXT:    addl $72012, %esp # imm = 0x1194C

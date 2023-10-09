@@ -141,29 +141,29 @@ define <8 x float> @qux(<8 x float> %t, <8 x float> %u) {
 ; CHECK-NEXT:    subq $104, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm2, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    movaps %xmm2, %xmm1
 ; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm2[3,3]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload

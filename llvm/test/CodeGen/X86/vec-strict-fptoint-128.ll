@@ -280,13 +280,13 @@ define <2 x i64> @strict_vector_fptoui_v2f64_to_v2i64(<2 x double> %a) #0 {
 ;
 ; SSE-64-LABEL: strict_vector_fptoui_v2f64_to_v2i64:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; SSE-64-NEXT:    comisd %xmm3, %xmm0
-; SSE-64-NEXT:    xorpd %xmm2, %xmm2
+; SSE-64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-64-NEXT:    comisd %xmm2, %xmm0
+; SSE-64-NEXT:    xorpd %xmm3, %xmm3
 ; SSE-64-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-64-NEXT:    jb .LBB1_2
 ; SSE-64-NEXT:  # %bb.1:
-; SSE-64-NEXT:    movapd %xmm3, %xmm1
+; SSE-64-NEXT:    movapd %xmm2, %xmm1
 ; SSE-64-NEXT:  .LBB1_2:
 ; SSE-64-NEXT:    movapd %xmm0, %xmm4
 ; SSE-64-NEXT:    subsd %xmm1, %xmm4
@@ -297,12 +297,12 @@ define <2 x i64> @strict_vector_fptoui_v2f64_to_v2i64(<2 x double> %a) #0 {
 ; SSE-64-NEXT:    xorq %rax, %rcx
 ; SSE-64-NEXT:    movq %rcx, %xmm1
 ; SSE-64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-64-NEXT:    comisd %xmm3, %xmm0
+; SSE-64-NEXT:    comisd %xmm2, %xmm0
 ; SSE-64-NEXT:    jb .LBB1_4
 ; SSE-64-NEXT:  # %bb.3:
-; SSE-64-NEXT:    movapd %xmm3, %xmm2
+; SSE-64-NEXT:    movapd %xmm2, %xmm3
 ; SSE-64-NEXT:  .LBB1_4:
-; SSE-64-NEXT:    subsd %xmm2, %xmm0
+; SSE-64-NEXT:    subsd %xmm3, %xmm0
 ; SSE-64-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-64-NEXT:    setae %cl
 ; SSE-64-NEXT:    movzbl %cl, %ecx
@@ -951,13 +951,13 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64(<2 x float> %a) #0 {
 ;
 ; SSE-64-LABEL: strict_vector_fptoui_v2f32_to_v2i64:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-64-NEXT:    comiss %xmm3, %xmm0
-; SSE-64-NEXT:    xorps %xmm2, %xmm2
+; SSE-64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE-64-NEXT:    comiss %xmm2, %xmm0
+; SSE-64-NEXT:    xorps %xmm3, %xmm3
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
 ; SSE-64-NEXT:    jb .LBB4_2
 ; SSE-64-NEXT:  # %bb.1:
-; SSE-64-NEXT:    movaps %xmm3, %xmm1
+; SSE-64-NEXT:    movaps %xmm2, %xmm1
 ; SSE-64-NEXT:  .LBB4_2:
 ; SSE-64-NEXT:    movaps %xmm0, %xmm4
 ; SSE-64-NEXT:    subss %xmm1, %xmm4
@@ -968,12 +968,12 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64(<2 x float> %a) #0 {
 ; SSE-64-NEXT:    xorq %rax, %rcx
 ; SSE-64-NEXT:    movq %rcx, %xmm1
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE-64-NEXT:    comiss %xmm3, %xmm0
+; SSE-64-NEXT:    comiss %xmm2, %xmm0
 ; SSE-64-NEXT:    jb .LBB4_4
 ; SSE-64-NEXT:  # %bb.3:
-; SSE-64-NEXT:    movaps %xmm3, %xmm2
+; SSE-64-NEXT:    movaps %xmm2, %xmm3
 ; SSE-64-NEXT:  .LBB4_4:
-; SSE-64-NEXT:    subss %xmm2, %xmm0
+; SSE-64-NEXT:    subss %xmm3, %xmm0
 ; SSE-64-NEXT:    cvttss2si %xmm0, %rax
 ; SSE-64-NEXT:    setae %cl
 ; SSE-64-NEXT:    movzbl %cl, %ecx
@@ -1260,13 +1260,13 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; SSE-64-LABEL: strict_vector_fptoui_v2f32_to_v2i64_load128:
 ; SSE-64:       # %bb.0:
 ; SSE-64-NEXT:    movaps (%rdi), %xmm1
-; SSE-64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-64-NEXT:    comiss %xmm3, %xmm1
-; SSE-64-NEXT:    xorps %xmm2, %xmm2
+; SSE-64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE-64-NEXT:    comiss %xmm2, %xmm1
+; SSE-64-NEXT:    xorps %xmm3, %xmm3
 ; SSE-64-NEXT:    xorps %xmm0, %xmm0
 ; SSE-64-NEXT:    jb .LBB5_2
 ; SSE-64-NEXT:  # %bb.1:
-; SSE-64-NEXT:    movaps %xmm3, %xmm0
+; SSE-64-NEXT:    movaps %xmm2, %xmm0
 ; SSE-64-NEXT:  .LBB5_2:
 ; SSE-64-NEXT:    movaps %xmm1, %xmm4
 ; SSE-64-NEXT:    subss %xmm0, %xmm4
@@ -1277,12 +1277,12 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64_load128(ptr %x) strictfp {
 ; SSE-64-NEXT:    xorq %rax, %rcx
 ; SSE-64-NEXT:    movq %rcx, %xmm0
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE-64-NEXT:    comiss %xmm3, %xmm1
+; SSE-64-NEXT:    comiss %xmm2, %xmm1
 ; SSE-64-NEXT:    jb .LBB5_4
 ; SSE-64-NEXT:  # %bb.3:
-; SSE-64-NEXT:    movaps %xmm3, %xmm2
+; SSE-64-NEXT:    movaps %xmm2, %xmm3
 ; SSE-64-NEXT:  .LBB5_4:
-; SSE-64-NEXT:    subss %xmm2, %xmm1
+; SSE-64-NEXT:    subss %xmm3, %xmm1
 ; SSE-64-NEXT:    cvttss2si %xmm1, %rax
 ; SSE-64-NEXT:    setae %cl
 ; SSE-64-NEXT:    movzbl %cl, %ecx
@@ -2442,13 +2442,13 @@ define <2 x i1> @strict_vector_fptoui_v2f64_to_v2i1(<2 x double> %a) #0 {
 ;
 ; SSE-64-LABEL: strict_vector_fptoui_v2f64_to_v2i1:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; SSE-64-NEXT:    comisd %xmm3, %xmm0
-; SSE-64-NEXT:    xorpd %xmm2, %xmm2
+; SSE-64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-64-NEXT:    comisd %xmm2, %xmm0
+; SSE-64-NEXT:    xorpd %xmm3, %xmm3
 ; SSE-64-NEXT:    xorpd %xmm1, %xmm1
 ; SSE-64-NEXT:    jb .LBB19_2
 ; SSE-64-NEXT:  # %bb.1:
-; SSE-64-NEXT:    movapd %xmm3, %xmm1
+; SSE-64-NEXT:    movapd %xmm2, %xmm1
 ; SSE-64-NEXT:  .LBB19_2:
 ; SSE-64-NEXT:    movapd %xmm0, %xmm4
 ; SSE-64-NEXT:    subsd %xmm1, %xmm4
@@ -2459,12 +2459,12 @@ define <2 x i1> @strict_vector_fptoui_v2f64_to_v2i1(<2 x double> %a) #0 {
 ; SSE-64-NEXT:    xorq %rax, %rcx
 ; SSE-64-NEXT:    movq %rcx, %xmm1
 ; SSE-64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-64-NEXT:    comisd %xmm3, %xmm0
+; SSE-64-NEXT:    comisd %xmm2, %xmm0
 ; SSE-64-NEXT:    jb .LBB19_4
 ; SSE-64-NEXT:  # %bb.3:
-; SSE-64-NEXT:    movapd %xmm3, %xmm2
+; SSE-64-NEXT:    movapd %xmm2, %xmm3
 ; SSE-64-NEXT:  .LBB19_4:
-; SSE-64-NEXT:    subsd %xmm2, %xmm0
+; SSE-64-NEXT:    subsd %xmm3, %xmm0
 ; SSE-64-NEXT:    cvttsd2si %xmm0, %rax
 ; SSE-64-NEXT:    setae %cl
 ; SSE-64-NEXT:    movzbl %cl, %ecx
@@ -2816,13 +2816,13 @@ define <2 x i1> @strict_vector_fptoui_v2f32_to_v2i1(<2 x float> %a) #0 {
 ;
 ; SSE-64-LABEL: strict_vector_fptoui_v2f32_to_v2i1:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE-64-NEXT:    comiss %xmm3, %xmm0
-; SSE-64-NEXT:    xorps %xmm2, %xmm2
+; SSE-64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE-64-NEXT:    comiss %xmm2, %xmm0
+; SSE-64-NEXT:    xorps %xmm3, %xmm3
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
 ; SSE-64-NEXT:    jb .LBB21_2
 ; SSE-64-NEXT:  # %bb.1:
-; SSE-64-NEXT:    movaps %xmm3, %xmm1
+; SSE-64-NEXT:    movaps %xmm2, %xmm1
 ; SSE-64-NEXT:  .LBB21_2:
 ; SSE-64-NEXT:    movaps %xmm0, %xmm4
 ; SSE-64-NEXT:    subss %xmm1, %xmm4
@@ -2833,12 +2833,12 @@ define <2 x i1> @strict_vector_fptoui_v2f32_to_v2i1(<2 x float> %a) #0 {
 ; SSE-64-NEXT:    xorq %rax, %rcx
 ; SSE-64-NEXT:    movq %rcx, %xmm1
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE-64-NEXT:    comiss %xmm3, %xmm0
+; SSE-64-NEXT:    comiss %xmm2, %xmm0
 ; SSE-64-NEXT:    jb .LBB21_4
 ; SSE-64-NEXT:  # %bb.3:
-; SSE-64-NEXT:    movaps %xmm3, %xmm2
+; SSE-64-NEXT:    movaps %xmm2, %xmm3
 ; SSE-64-NEXT:  .LBB21_4:
-; SSE-64-NEXT:    subss %xmm2, %xmm0
+; SSE-64-NEXT:    subss %xmm3, %xmm0
 ; SSE-64-NEXT:    cvttss2si %xmm0, %rax
 ; SSE-64-NEXT:    setae %cl
 ; SSE-64-NEXT:    movzbl %cl, %ecx

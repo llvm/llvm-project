@@ -34,16 +34,16 @@ define arm_aapcs_vfpcc <4 x double> @complex_mul_v4f64(<4 x double> %a, <4 x dou
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmul.f64 d9, d7, d2
-; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmul.f64 d8, d3, d7
-; CHECK-NEXT:    vfma.f64 d9, d6, d3
-; CHECK-NEXT:    vfnms.f64 d8, d6, d2
-; CHECK-NEXT:    vmul.f64 d1, d5, d10
-; CHECK-NEXT:    vmov q1, q4
-; CHECK-NEXT:    vmul.f64 d0, d11, d5
-; CHECK-NEXT:    vfma.f64 d1, d4, d11
-; CHECK-NEXT:    vfnms.f64 d0, d4, d10
+; CHECK-NEXT:    vmul.f64 d9, d5, d0
+; CHECK-NEXT:    vmul.f64 d8, d1, d5
+; CHECK-NEXT:    vmul.f64 d11, d7, d2
+; CHECK-NEXT:    vmul.f64 d10, d3, d7
+; CHECK-NEXT:    vfma.f64 d9, d4, d1
+; CHECK-NEXT:    vfnms.f64 d8, d4, d0
+; CHECK-NEXT:    vfma.f64 d11, d6, d3
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vfnms.f64 d10, d6, d2
+; CHECK-NEXT:    vmov q1, q5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:

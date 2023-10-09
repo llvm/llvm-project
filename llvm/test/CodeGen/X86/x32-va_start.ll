@@ -100,22 +100,22 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ; 32BITABI-LABEL: foo:
 ; 32BITABI:       # %bb.0: # %entry
 ; 32BITABI-NEXT:    subl $28, %esp
-; 32BITABI-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; 32BITABI-NEXT:    movl %ecx, (%esp)
-; 32BITABI-NEXT:    cmpl $40, %ecx
+; 32BITABI-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; 32BITABI-NEXT:    movl %eax, (%esp)
+; 32BITABI-NEXT:    cmpl $40, %eax
 ; 32BITABI-NEXT:    ja .LBB0_2
 ; 32BITABI-NEXT:  # %bb.1: # %vaarg.in_reg
-; 32BITABI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; 32BITABI-NEXT:    addl %ecx, %eax
-; 32BITABI-NEXT:    addl $8, %ecx
-; 32BITABI-NEXT:    movl %ecx, (%esp)
+; 32BITABI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; 32BITABI-NEXT:    addl %eax, %ecx
+; 32BITABI-NEXT:    addl $8, %eax
+; 32BITABI-NEXT:    movl %eax, (%esp)
 ; 32BITABI-NEXT:    jmp .LBB0_3
 ; 32BITABI-NEXT:  .LBB0_2: # %vaarg.in_mem
-; 32BITABI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; 32BITABI-NEXT:    leal 8(%eax), %ecx
-; 32BITABI-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; 32BITABI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; 32BITABI-NEXT:    leal 8(%ecx), %eax
+; 32BITABI-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; 32BITABI-NEXT:  .LBB0_3: # %vaarg.end
-; 32BITABI-NEXT:    movl (%eax), %eax
+; 32BITABI-NEXT:    movl (%ecx), %eax
 ; 32BITABI-NEXT:    addl $28, %esp
 ; 32BITABI-NEXT:    retl
 entry:

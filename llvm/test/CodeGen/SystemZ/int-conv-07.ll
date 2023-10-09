@@ -108,7 +108,7 @@ define i64 @f9(i64 %src, i64 %index) {
 ; to use LGH if possible.
 define void @f10(ptr %ptr) {
 ; CHECK-LABEL: f10:
-; CHECK: lgh {{%r[0-9]+}}, 198(%r15)
+; CHECK: lgh {{%r[0-9]+}}, 182(%r15)
 ; CHECK: br %r14
   %val0 = load volatile i64, ptr %ptr
   %val1 = load volatile i64, ptr %ptr

@@ -93,14 +93,14 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $14, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    cltd
-; X86-NEXT:    idivl %edi
-; X86-NEXT:    leal -1(%eax), %esi
-; X86-NEXT:    testl %edi, %edi
+; X86-NEXT:    idivl %esi
+; X86-NEXT:    leal -1(%eax), %edi
+; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    sets %bl
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    sets %cl
@@ -108,9 +108,9 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    setne %dl
 ; X86-NEXT:    testb %cl, %dl
-; X86-NEXT:    cmovel %eax, %esi
-; X86-NEXT:    addl %esi, %esi
-; X86-NEXT:    movswl %si, %eax
+; X86-NEXT:    cmovel %eax, %edi
+; X86-NEXT:    addl %edi, %edi
+; X86-NEXT:    movswl %di, %eax
 ; X86-NEXT:    shrl %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
@@ -218,33 +218,31 @@ define i4 @func4(i4 %x, i4 %y) nounwind {
 ;
 ; X86-LABEL: func4:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shlb $4, %cl
-; X86-NEXT:    sarb $4, %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shlb $4, %dl
 ; X86-NEXT:    sarb $4, %dl
-; X86-NEXT:    shlb $2, %dl
-; X86-NEXT:    movsbl %dl, %eax
-; X86-NEXT:    idivb %cl
-; X86-NEXT:    movsbl %ah, %ebx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
+; X86-NEXT:    shlb $4, %dh
+; X86-NEXT:    sarb $4, %dh
+; X86-NEXT:    shlb $2, %dh
+; X86-NEXT:    movsbl %dh, %eax
+; X86-NEXT:    idivb %dl
+; X86-NEXT:    movsbl %ah, %ecx
 ; X86-NEXT:    movzbl %al, %esi
 ; X86-NEXT:    decb %al
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    sets %cl
 ; X86-NEXT:    testb %dl, %dl
 ; X86-NEXT:    sets %dl
-; X86-NEXT:    xorb %cl, %dl
-; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    testb %dh, %dh
+; X86-NEXT:    sets %dh
+; X86-NEXT:    xorb %dl, %dh
+; X86-NEXT:    testb %cl, %cl
 ; X86-NEXT:    setne %cl
-; X86-NEXT:    testb %dl, %cl
+; X86-NEXT:    testb %dh, %cl
 ; X86-NEXT:    cmovel %esi, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
   %tmp = call i4 @llvm.sdiv.fix.i4(i4 %x, i4 %y, i32 2)
   ret i4 %tmp
@@ -334,11 +332,10 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __divti3
 ; X86-NEXT:    addl $32, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    subl $1, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    sbbl $0, %ebx
@@ -453,7 +450,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rcx
 ; X64-NEXT:    movq %rax, %rsi
-; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    movq %rdx, %r9
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
 ; X64-NEXT:    movq %xmm3, %rcx
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
@@ -474,14 +471,14 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rcx
 ; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    movq %rdx, %r9
+; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; X64-NEXT:    movq %xmm4, %r11
 ; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; X64-NEXT:    movq %xmm4, %rax
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %r11
-; X64-NEXT:    movq %r8, %xmm5
+; X64-NEXT:    movq %r9, %xmm5
 ; X64-NEXT:    movq %r10, %xmm6
 ; X64-NEXT:    pxor %xmm4, %xmm4
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
@@ -499,33 +496,33 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %rdi, %xmm5
 ; X64-NEXT:    pandn %xmm2, %xmm6
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
-; X64-NEXT:    movdqa %xmm6, %xmm5
-; X64-NEXT:    pandn %xmm0, %xmm5
-; X64-NEXT:    pcmpeqd %xmm2, %xmm2
-; X64-NEXT:    paddq %xmm2, %xmm0
+; X64-NEXT:    movdqa %xmm6, %xmm2
+; X64-NEXT:    pandn %xmm0, %xmm2
+; X64-NEXT:    pcmpeqd %xmm5, %xmm5
+; X64-NEXT:    paddq %xmm5, %xmm0
 ; X64-NEXT:    pand %xmm6, %xmm0
-; X64-NEXT:    por %xmm5, %xmm0
-; X64-NEXT:    movq %r9, %xmm5
+; X64-NEXT:    por %xmm2, %xmm0
+; X64-NEXT:    movq %r8, %xmm2
 ; X64-NEXT:    movq %rdx, %xmm6
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
-; X64-NEXT:    pcmpeqd %xmm4, %xmm5
-; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[1,0,3,2]
-; X64-NEXT:    pand %xmm5, %xmm6
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
-; X64-NEXT:    pxor %xmm5, %xmm5
-; X64-NEXT:    pcmpgtd %xmm3, %xmm5
+; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm6[0]
+; X64-NEXT:    pcmpeqd %xmm4, %xmm2
+; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm2[1,0,3,2]
+; X64-NEXT:    pand %xmm2, %xmm6
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,0,1,1]
+; X64-NEXT:    pxor %xmm3, %xmm3
+; X64-NEXT:    pcmpgtd %xmm2, %xmm3
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; X64-NEXT:    pcmpgtd %xmm1, %xmm4
-; X64-NEXT:    pxor %xmm5, %xmm4
+; X64-NEXT:    pxor %xmm3, %xmm4
 ; X64-NEXT:    pandn %xmm4, %xmm6
 ; X64-NEXT:    movq %rcx, %xmm1
-; X64-NEXT:    movq %rax, %xmm3
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; X64-NEXT:    movdqa %xmm6, %xmm3
-; X64-NEXT:    pandn %xmm1, %xmm3
-; X64-NEXT:    paddq %xmm2, %xmm1
+; X64-NEXT:    movq %rax, %xmm2
+; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-NEXT:    movdqa %xmm6, %xmm2
+; X64-NEXT:    pandn %xmm1, %xmm2
+; X64-NEXT:    paddq %xmm5, %xmm1
 ; X64-NEXT:    pand %xmm6, %xmm1
-; X64-NEXT:    por %xmm3, %xmm1
+; X64-NEXT:    por %xmm2, %xmm1
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X64-NEXT:    retq
 ;

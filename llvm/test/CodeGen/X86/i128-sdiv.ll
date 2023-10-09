@@ -12,23 +12,23 @@ define i128 @test1(i128 %x) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    sarl $31, %esi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrl $30, %edx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shrl $30, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    addl %esi, %edi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    addl %edx, %edi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    adcl $0, %ecx
-; X86-NEXT:    shrdl $2, %ecx, %edx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    sarl $2, %esi
+; X86-NEXT:    shrdl $2, %ecx, %esi
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $2, %edx
 ; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    movl %ecx, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4

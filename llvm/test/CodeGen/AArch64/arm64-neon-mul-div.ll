@@ -1482,16 +1482,16 @@ define <2 x float> @frem2f32(<2 x float> %A, <2 x float> %B) {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    mov s1, v1.s[1]
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    str d0, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; CHECK-NEXT:    str d0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-NEXT:    bl fmodf
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
@@ -1565,16 +1565,16 @@ define <2 x double> @frem2d64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    stp q0, q1, [sp, #16] // 32-byte Folded Spill
 ; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    bl fmod
-; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]

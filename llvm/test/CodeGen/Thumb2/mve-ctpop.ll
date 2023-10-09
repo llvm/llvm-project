@@ -7,50 +7,50 @@ define arm_aapcs_vfpcc <2 x i64> @ctpop_2i64_t(<2 x i64> %src){
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r1, r2, d1
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    mov.w lr, #1431655765
 ; CHECK-NEXT:    vmov r3, r4, d0
 ; CHECK-NEXT:    mov.w r12, #858993459
 ; CHECK-NEXT:    vldr s1, .LCPI0_0
 ; CHECK-NEXT:    vmov.f32 s3, s1
-; CHECK-NEXT:    and.w r0, lr, r2, lsr #1
-; CHECK-NEXT:    subs r0, r2, r0
-; CHECK-NEXT:    and.w r2, r12, r0, lsr #2
-; CHECK-NEXT:    bic r0, r0, #-858993460
-; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    and.w r2, lr, r1, lsr #1
 ; CHECK-NEXT:    subs r1, r1, r2
-; CHECK-NEXT:    add.w r0, r0, r0, lsr #4
 ; CHECK-NEXT:    and.w r2, r12, r1, lsr #2
 ; CHECK-NEXT:    bic r1, r1, #-858993460
 ; CHECK-NEXT:    add r1, r2
+; CHECK-NEXT:    and.w r2, lr, r0, lsr #1
+; CHECK-NEXT:    subs r0, r0, r2
+; CHECK-NEXT:    add.w r1, r1, r1, lsr #4
+; CHECK-NEXT:    and.w r2, r12, r0, lsr #2
+; CHECK-NEXT:    bic r0, r0, #-858993460
+; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    and.w r2, lr, r3, lsr #1
 ; CHECK-NEXT:    subs r2, r3, r2
-; CHECK-NEXT:    bic r5, r0, #-252645136
-; CHECK-NEXT:    add.w r1, r1, r1, lsr #4
-; CHECK-NEXT:    mov.w r0, #16843009
+; CHECK-NEXT:    bic r5, r1, #-252645136
+; CHECK-NEXT:    add.w r0, r0, r0, lsr #4
+; CHECK-NEXT:    mov.w r1, #16843009
 ; CHECK-NEXT:    and.w r3, r12, r2, lsr #2
 ; CHECK-NEXT:    bic r2, r2, #-858993460
 ; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    and.w r3, lr, r4, lsr #1
 ; CHECK-NEXT:    subs r3, r4, r3
-; CHECK-NEXT:    bic r1, r1, #-252645136
+; CHECK-NEXT:    bic r0, r0, #-252645136
 ; CHECK-NEXT:    add.w r2, r2, r2, lsr #4
-; CHECK-NEXT:    muls r5, r0, r5
+; CHECK-NEXT:    muls r5, r1, r5
 ; CHECK-NEXT:    and.w r4, r12, r3, lsr #2
 ; CHECK-NEXT:    bic r3, r3, #-858993460
-; CHECK-NEXT:    bic r2, r2, #-252645136
+; CHECK-NEXT:    muls r0, r1, r0
 ; CHECK-NEXT:    add r3, r4
-; CHECK-NEXT:    muls r1, r0, r1
+; CHECK-NEXT:    bic r2, r2, #-252645136
 ; CHECK-NEXT:    add.w r3, r3, r3, lsr #4
-; CHECK-NEXT:    muls r2, r0, r2
 ; CHECK-NEXT:    bic r3, r3, #-252645136
-; CHECK-NEXT:    muls r0, r3, r0
-; CHECK-NEXT:    lsrs r1, r1, #24
-; CHECK-NEXT:    add.w r1, r1, r5, lsr #24
+; CHECK-NEXT:    muls r2, r1, r2
+; CHECK-NEXT:    muls r1, r3, r1
+; CHECK-NEXT:    lsrs r0, r0, #24
+; CHECK-NEXT:    add.w r0, r0, r5, lsr #24
+; CHECK-NEXT:    vmov s2, r0
 ; CHECK-NEXT:    lsrs r2, r2, #24
-; CHECK-NEXT:    vmov s2, r1
-; CHECK-NEXT:    add.w r0, r2, r0, lsr #24
+; CHECK-NEXT:    add.w r0, r2, r1, lsr #24
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2

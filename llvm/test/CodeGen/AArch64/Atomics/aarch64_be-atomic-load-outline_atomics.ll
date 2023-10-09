@@ -232,8 +232,8 @@ define dso_local i128 @load_atomic_i128_aligned_unordered(ptr %ptr) {
 ; -O0:    bl __aarch64_cas16_relax
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_unordered:
-; -O1:    ldxp x1, x0, [x8]
-; -O1:    stxp w9, x1, x0, [x8]
+; -O1:    ldxp x1, x8, [x0]
+; -O1:    stxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr unordered, align 16
     ret i128 %r
 }
@@ -243,8 +243,8 @@ define dso_local i128 @load_atomic_i128_aligned_unordered_const(ptr readonly %pt
 ; -O0:    bl __aarch64_cas16_relax
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_unordered_const:
-; -O1:    ldxp x1, x0, [x8]
-; -O1:    stxp w9, x1, x0, [x8]
+; -O1:    ldxp x1, x8, [x0]
+; -O1:    stxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr unordered, align 16
     ret i128 %r
 }
@@ -254,8 +254,8 @@ define dso_local i128 @load_atomic_i128_aligned_monotonic(ptr %ptr) {
 ; -O0:    bl __aarch64_cas16_relax
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_monotonic:
-; -O1:    ldxp x1, x0, [x8]
-; -O1:    stxp w9, x1, x0, [x8]
+; -O1:    ldxp x1, x8, [x0]
+; -O1:    stxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr monotonic, align 16
     ret i128 %r
 }
@@ -265,8 +265,8 @@ define dso_local i128 @load_atomic_i128_aligned_monotonic_const(ptr readonly %pt
 ; -O0:    bl __aarch64_cas16_relax
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_monotonic_const:
-; -O1:    ldxp x1, x0, [x8]
-; -O1:    stxp w9, x1, x0, [x8]
+; -O1:    ldxp x1, x8, [x0]
+; -O1:    stxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr monotonic, align 16
     ret i128 %r
 }
@@ -276,8 +276,8 @@ define dso_local i128 @load_atomic_i128_aligned_acquire(ptr %ptr) {
 ; -O0:    bl __aarch64_cas16_acq
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_acquire:
-; -O1:    ldaxp x1, x0, [x8]
-; -O1:    stxp w9, x1, x0, [x8]
+; -O1:    ldaxp x1, x8, [x0]
+; -O1:    stxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr acquire, align 16
     ret i128 %r
 }
@@ -287,8 +287,8 @@ define dso_local i128 @load_atomic_i128_aligned_acquire_const(ptr readonly %ptr)
 ; -O0:    bl __aarch64_cas16_acq
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_acquire_const:
-; -O1:    ldaxp x1, x0, [x8]
-; -O1:    stxp w9, x1, x0, [x8]
+; -O1:    ldaxp x1, x8, [x0]
+; -O1:    stxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr acquire, align 16
     ret i128 %r
 }
@@ -298,8 +298,8 @@ define dso_local i128 @load_atomic_i128_aligned_seq_cst(ptr %ptr) {
 ; -O0:    bl __aarch64_cas16_acq_rel
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_seq_cst:
-; -O1:    ldaxp x1, x0, [x8]
-; -O1:    stlxp w9, x1, x0, [x8]
+; -O1:    ldaxp x1, x8, [x0]
+; -O1:    stlxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr seq_cst, align 16
     ret i128 %r
 }
@@ -309,8 +309,8 @@ define dso_local i128 @load_atomic_i128_aligned_seq_cst_const(ptr readonly %ptr)
 ; -O0:    bl __aarch64_cas16_acq_rel
 ;
 ; -O1-LABEL: load_atomic_i128_aligned_seq_cst_const:
-; -O1:    ldaxp x1, x0, [x8]
-; -O1:    stlxp w9, x1, x0, [x8]
+; -O1:    ldaxp x1, x8, [x0]
+; -O1:    stlxp w9, x1, x8, [x0]
     %r = load atomic i128, ptr %ptr seq_cst, align 16
     ret i128 %r
 }

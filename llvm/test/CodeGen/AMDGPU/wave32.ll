@@ -1532,33 +1532,33 @@ define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GFX1032-LABEL: test_invert_true_phi_cond_break_loop:
 ; GFX1032:       ; %bb.0: ; %bb
 ; GFX1032-NEXT:    s_load_dword s0, s[0:1], 0x24
-; GFX1032-NEXT:    ; implicit-def: $sgpr1
 ; GFX1032-NEXT:    ; implicit-def: $sgpr2
+; GFX1032-NEXT:    ; implicit-def: $sgpr1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_subrev_nc_u32_e32 v0, s0, v0
 ; GFX1032-NEXT:    s_mov_b32 s0, 0
 ; GFX1032-NEXT:    s_branch .LBB27_2
 ; GFX1032-NEXT:  .LBB27_1: ; %Flow
 ; GFX1032-NEXT:    ; in Loop: Header=BB27_2 Depth=1
-; GFX1032-NEXT:    s_xor_b32 s3, s1, -1
-; GFX1032-NEXT:    s_add_i32 s2, s2, 1
+; GFX1032-NEXT:    s_xor_b32 s3, s2, -1
+; GFX1032-NEXT:    s_add_i32 s1, s1, 1
 ; GFX1032-NEXT:    s_and_b32 s3, exec_lo, s3
 ; GFX1032-NEXT:    s_or_b32 s0, s3, s0
 ; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_cbranch_execz .LBB27_4
 ; GFX1032-NEXT:  .LBB27_2: ; %bb1
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1032-NEXT:    s_or_b32 s1, s1, exec_lo
-; GFX1032-NEXT:    s_cmp_gt_i32 s2, -1
+; GFX1032-NEXT:    s_or_b32 s2, s2, exec_lo
+; GFX1032-NEXT:    s_cmp_gt_i32 s1, -1
 ; GFX1032-NEXT:    s_cbranch_scc1 .LBB27_1
 ; GFX1032-NEXT:  ; %bb.3: ; %bb4
 ; GFX1032-NEXT:    ; in Loop: Header=BB27_2 Depth=1
 ; GFX1032-NEXT:    global_load_dword v1, v[0:1], off glc dlc
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
-; GFX1032-NEXT:    s_andn2_b32 s1, s1, exec_lo
+; GFX1032-NEXT:    s_andn2_b32 s2, s2, exec_lo
 ; GFX1032-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v1
 ; GFX1032-NEXT:    s_and_b32 s3, vcc_lo, exec_lo
-; GFX1032-NEXT:    s_or_b32 s1, s1, s3
+; GFX1032-NEXT:    s_or_b32 s2, s2, s3
 ; GFX1032-NEXT:    s_branch .LBB27_1
 ; GFX1032-NEXT:  .LBB27_4: ; %bb9
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s0

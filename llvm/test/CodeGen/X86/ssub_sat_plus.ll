@@ -12,14 +12,14 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: func32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    imull {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl %edx, %eax
-; X86-NEXT:    setns %cl
-; X86-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X86-NEXT:    subl %edx, %eax
-; X86-NEXT:    cmovol %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imull {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    setns %dl
+; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    cmovol %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func32:
@@ -75,14 +75,14 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; X86-LABEL: func16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    imulw {{[0-9]+}}(%esp), %dx
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpw %dx, %ax
-; X86-NEXT:    setns %cl
-; X86-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    subw %dx, %ax
-; X86-NEXT:    cmovol %ecx, %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imulw {{[0-9]+}}(%esp), %cx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    cmpw %cx, %ax
+; X86-NEXT:    setns %dl
+; X86-NEXT:    addl $32767, %edx # imm = 0x7FFF
+; X86-NEXT:    subw %cx, %ax
+; X86-NEXT:    cmovol %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -105,16 +105,16 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mulb {{[0-9]+}}(%esp)
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpb %al, %dl
-; X86-NEXT:    setns %cl
-; X86-NEXT:    addl $127, %ecx
-; X86-NEXT:    subb %al, %dl
-; X86-NEXT:    movzbl %dl, %eax
-; X86-NEXT:    cmovol %ecx, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    cmpb %al, %cl
+; X86-NEXT:    setns %dl
+; X86-NEXT:    addl $127, %edx
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    cmovol %edx, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;

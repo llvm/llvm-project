@@ -43,21 +43,21 @@ define arm_aapcs_vfpcc <4 x float> @add_mul(<4 x float> %a, <4 x float> %b, <4 x
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vsub.f32 q3, q1, q2
 ; CHECK-NEXT:    vsub.f32 q0, q1, q0
-; CHECK-NEXT:    vmov.f32 s16, s9
+; CHECK-NEXT:    vmov.f32 s4, s9
 ; CHECK-NEXT:    vmov.f32 s13, s14
-; CHECK-NEXT:    vmov.f32 s17, s11
+; CHECK-NEXT:    vmov.f32 s5, s11
 ; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vmul.f32 q1, q3, q4
+; CHECK-NEXT:    vmul.f32 q4, q3, q1
 ; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vmov.f32 s9, s10
-; CHECK-NEXT:    vfma.f32 q1, q2, q0
-; CHECK-NEXT:    vmul.f32 q0, q4, q0
-; CHECK-NEXT:    vneg.f32 q4, q0
-; CHECK-NEXT:    vmov.f32 s1, s4
-; CHECK-NEXT:    vfma.f32 q4, q2, q3
-; CHECK-NEXT:    vmov.f32 s3, s5
-; CHECK-NEXT:    vmov.f32 s0, s16
-; CHECK-NEXT:    vmov.f32 s2, s17
+; CHECK-NEXT:    vfma.f32 q4, q2, q0
+; CHECK-NEXT:    vmul.f32 q0, q1, q0
+; CHECK-NEXT:    vneg.f32 q1, q0
+; CHECK-NEXT:    vmov.f32 s1, s16
+; CHECK-NEXT:    vfma.f32 q1, q2, q3
+; CHECK-NEXT:    vmov.f32 s3, s17
+; CHECK-NEXT:    vmov.f32 s0, s4
+; CHECK-NEXT:    vmov.f32 s2, s5
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -81,41 +81,35 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @mul_mul270_mul(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: mul_mul270_mul:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d12}
-; CHECK-NEXT:    vpush {d12}
-; CHECK-NEXT:    .vsave {d10}
-; CHECK-NEXT:    vpush {d10}
-; CHECK-NEXT:    .vsave {d8}
-; CHECK-NEXT:    vpush {d8}
-; CHECK-NEXT:    vmov.f32 s20, s4
-; CHECK-NEXT:    vmov.f32 s16, s8
-; CHECK-NEXT:    vmov.f32 s17, s10
-; CHECK-NEXT:    vmov.f32 s21, s6
-; CHECK-NEXT:    vmul.f32 q3, q5, q4
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    vmov.f32 s12, s8
+; CHECK-NEXT:    vmov.f32 s16, s4
+; CHECK-NEXT:    vmov.f32 s13, s10
+; CHECK-NEXT:    vmov.f32 s17, s6
+; CHECK-NEXT:    vmul.f32 q5, q4, q3
+; CHECK-NEXT:    vmov.f32 s8, s9
 ; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vneg.f32 q3, q3
-; CHECK-NEXT:    vmov.f32 s24, s9
-; CHECK-NEXT:    vmov.f32 s25, s11
+; CHECK-NEXT:    vneg.f32 q5, q5
+; CHECK-NEXT:    vmov.f32 s9, s11
 ; CHECK-NEXT:    vmov.f32 s5, s7
-; CHECK-NEXT:    vmul.f32 q2, q1, q4
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vfma.f32 q3, q1, q6
-; CHECK-NEXT:    vmov.f32 s17, s2
+; CHECK-NEXT:    vfma.f32 q5, q1, q2
+; CHECK-NEXT:    vmul.f32 q1, q1, q3
+; CHECK-NEXT:    vfma.f32 q1, q4, q2
+; CHECK-NEXT:    vmov.f32 s8, s0
+; CHECK-NEXT:    vmov.f32 s9, s2
 ; CHECK-NEXT:    vmov.f32 s0, s1
-; CHECK-NEXT:    vfma.f32 q2, q5, q6
-; CHECK-NEXT:    vmul.f32 q1, q3, q4
+; CHECK-NEXT:    vmul.f32 q3, q5, q2
 ; CHECK-NEXT:    vmov.f32 s1, s3
-; CHECK-NEXT:    vfma.f32 q1, q2, q0
-; CHECK-NEXT:    vmul.f32 q0, q3, q0
-; CHECK-NEXT:    vneg.f32 q3, q0
-; CHECK-NEXT:    vmov.f32 s1, s4
-; CHECK-NEXT:    vfma.f32 q3, q2, q4
-; CHECK-NEXT:    vmov.f32 s3, s5
-; CHECK-NEXT:    vmov.f32 s0, s12
-; CHECK-NEXT:    vmov.f32 s2, s13
-; CHECK-NEXT:    vpop {d8}
-; CHECK-NEXT:    vpop {d10}
-; CHECK-NEXT:    vpop {d12}
+; CHECK-NEXT:    vfma.f32 q3, q1, q0
+; CHECK-NEXT:    vmul.f32 q0, q5, q0
+; CHECK-NEXT:    vneg.f32 q4, q0
+; CHECK-NEXT:    vmov.f32 s1, s12
+; CHECK-NEXT:    vfma.f32 q4, q1, q2
+; CHECK-NEXT:    vmov.f32 s3, s13
+; CHECK-NEXT:    vmov.f32 s0, s16
+; CHECK-NEXT:    vmov.f32 s2, s17
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <4 x float> %c, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -274,29 +268,29 @@ define arm_aapcs_vfpcc <4 x float> @mul_triangle_addmul(<4 x float> %a, <4 x flo
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vmov.f32 s16, s0
-; CHECK-NEXT:    vmov.f32 s20, s5
-; CHECK-NEXT:    vmov.f32 s17, s2
-; CHECK-NEXT:    vmov.f32 s21, s7
+; CHECK-NEXT:    vmov.f32 s12, s0
+; CHECK-NEXT:    vmov.f32 s16, s5
+; CHECK-NEXT:    vmov.f32 s13, s2
+; CHECK-NEXT:    vmov.f32 s17, s7
 ; CHECK-NEXT:    vmov.f32 s5, s6
-; CHECK-NEXT:    vmul.f32 q3, q5, q4
-; CHECK-NEXT:    vmul.f32 q4, q1, q4
+; CHECK-NEXT:    vmul.f32 q5, q4, q3
+; CHECK-NEXT:    vmul.f32 q3, q1, q3
 ; CHECK-NEXT:    vmov.f32 s0, s1
 ; CHECK-NEXT:    vmov.f32 s1, s3
-; CHECK-NEXT:    vmov q6, q4
-; CHECK-NEXT:    vfms.f32 q6, q5, q0
-; CHECK-NEXT:    vmov q7, q3
-; CHECK-NEXT:    vfma.f32 q3, q1, q0
-; CHECK-NEXT:    vmov.f32 s20, s8
-; CHECK-NEXT:    vmov.f32 s21, s10
+; CHECK-NEXT:    vmov q6, q3
+; CHECK-NEXT:    vfms.f32 q6, q4, q0
+; CHECK-NEXT:    vmov q7, q5
+; CHECK-NEXT:    vfma.f32 q5, q1, q0
+; CHECK-NEXT:    vmov.f32 s16, s8
+; CHECK-NEXT:    vmov.f32 s17, s10
 ; CHECK-NEXT:    vmov.f32 s4, s9
-; CHECK-NEXT:    vfma.f32 q7, q5, q0
+; CHECK-NEXT:    vfma.f32 q7, q4, q0
 ; CHECK-NEXT:    vmov.f32 s5, s11
-; CHECK-NEXT:    vadd.f32 q5, q7, q6
-; CHECK-NEXT:    vfms.f32 q4, q1, q0
-; CHECK-NEXT:    vmov.f32 s1, s20
-; CHECK-NEXT:    vsub.f32 q1, q4, q3
-; CHECK-NEXT:    vmov.f32 s3, s21
+; CHECK-NEXT:    vadd.f32 q4, q7, q6
+; CHECK-NEXT:    vfms.f32 q3, q1, q0
+; CHECK-NEXT:    vmov.f32 s1, s16
+; CHECK-NEXT:    vsub.f32 q1, q3, q5
+; CHECK-NEXT:    vmov.f32 s3, s17
 ; CHECK-NEXT:    vmov.f32 s0, s4
 ; CHECK-NEXT:    vmov.f32 s2, s5
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -335,32 +329,32 @@ define arm_aapcs_vfpcc <4 x float> @mul_triangle_multiuses(<4 x float> %a, <4 x 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vmov.f32 s16, s4
+; CHECK-NEXT:    vmov.f32 s12, s4
 ; CHECK-NEXT:    vmov.f32 s8, s1
-; CHECK-NEXT:    vmov.f32 s17, s6
+; CHECK-NEXT:    vmov.f32 s13, s6
 ; CHECK-NEXT:    vmov.f32 s9, s3
 ; CHECK-NEXT:    vmov.f32 s4, s5
-; CHECK-NEXT:    vmul.f32 q3, q2, q4
+; CHECK-NEXT:    vmul.f32 q4, q2, q3
 ; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vmov.f32 s5, s7
-; CHECK-NEXT:    vfma.f32 q3, q1, q0
+; CHECK-NEXT:    vfma.f32 q4, q1, q0
 ; CHECK-NEXT:    vmul.f32 q1, q1, q2
 ; CHECK-NEXT:    vneg.f32 q1, q1
-; CHECK-NEXT:    vfma.f32 q1, q4, q0
-; CHECK-NEXT:    vmov.f32 s18, s12
-; CHECK-NEXT:    vmov.f32 s16, s4
-; CHECK-NEXT:    vmov.f32 s17, s5
-; CHECK-NEXT:    vmov.f32 s19, s13
-; CHECK-NEXT:    vstrw.32 q4, [r0]
-; CHECK-NEXT:    vmul.f32 q4, q3, q0
-; CHECK-NEXT:    vfma.f32 q4, q1, q2
-; CHECK-NEXT:    vmul.f32 q2, q3, q2
+; CHECK-NEXT:    vfma.f32 q1, q3, q0
+; CHECK-NEXT:    vmov.f32 s14, s16
+; CHECK-NEXT:    vmov.f32 s12, s4
+; CHECK-NEXT:    vmov.f32 s13, s5
+; CHECK-NEXT:    vmov.f32 s15, s17
+; CHECK-NEXT:    vstrw.32 q3, [r0]
+; CHECK-NEXT:    vmul.f32 q3, q4, q0
+; CHECK-NEXT:    vfma.f32 q3, q1, q2
+; CHECK-NEXT:    vmul.f32 q2, q4, q2
 ; CHECK-NEXT:    vneg.f32 q2, q2
 ; CHECK-NEXT:    vfma.f32 q2, q1, q0
-; CHECK-NEXT:    vmov.f32 s1, s16
+; CHECK-NEXT:    vmov.f32 s1, s12
 ; CHECK-NEXT:    vmov.f32 s0, s8
 ; CHECK-NEXT:    vmov.f32 s2, s9
-; CHECK-NEXT:    vmov.f32 s3, s17
+; CHECK-NEXT:    vmov.f32 s3, s13
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -503,24 +497,24 @@ define <4 x float> @mul_divequal(<4 x float> %a, <4 x float> %b, <4 x float> %c)
 ; CHECK-NEXT:    add r0, sp, #24
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vmov.f32 s16, s1
 ; CHECK-NEXT:    add.w r12, sp, #40
-; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s13, s7
-; CHECK-NEXT:    vmov.f32 s1, s2
+; CHECK-NEXT:    vmov.f32 s16, s1
 ; CHECK-NEXT:    vmov.f32 s8, s4
-; CHECK-NEXT:    vmul.f32 q5, q3, q0
+; CHECK-NEXT:    vldrw.u32 q3, [r12]
+; CHECK-NEXT:    vmov.f32 s4, s5
+; CHECK-NEXT:    vmov.f32 s5, s7
+; CHECK-NEXT:    vmov.f32 s1, s2
 ; CHECK-NEXT:    vmov.f32 s9, s6
-; CHECK-NEXT:    vldrw.u32 q1, [r12]
+; CHECK-NEXT:    vmul.f32 q5, q1, q0
 ; CHECK-NEXT:    vmov.f32 s17, s3
 ; CHECK-NEXT:    vfma.f32 q5, q2, q4
-; CHECK-NEXT:    vmul.f32 q3, q4, q3
-; CHECK-NEXT:    vdiv.f32 s3, s21, s7
-; CHECK-NEXT:    vneg.f32 q3, q3
-; CHECK-NEXT:    vfma.f32 q3, q2, q0
-; CHECK-NEXT:    vdiv.f32 s1, s20, s5
-; CHECK-NEXT:    vdiv.f32 s2, s13, s6
-; CHECK-NEXT:    vdiv.f32 s0, s12, s4
+; CHECK-NEXT:    vmul.f32 q1, q4, q1
+; CHECK-NEXT:    vdiv.f32 s3, s21, s15
+; CHECK-NEXT:    vneg.f32 q1, q1
+; CHECK-NEXT:    vfma.f32 q1, q2, q0
+; CHECK-NEXT:    vdiv.f32 s1, s20, s13
+; CHECK-NEXT:    vdiv.f32 s2, s5, s14
+; CHECK-NEXT:    vdiv.f32 s0, s4, s12
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    vpop {d8}

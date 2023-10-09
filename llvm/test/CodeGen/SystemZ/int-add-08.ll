@@ -114,7 +114,7 @@ define void @f7(ptr %aptr, i64 %base) {
 define void @f8(ptr %ptr0) {
 ; CHECK-LABEL: f8:
 ; CHECK: brasl %r14, foo@PLT
-; CHECK: alg {{%r[0-9]+}}, {{[0-9]+}}(%r15)
+; CHECK: alcg {{%r[0-9]+}}, {{[0-9]+}}(%r15)
 ; CHECK: alcg {{%r[0-9]+}}, {{[0-9]+}}(%r15)
 ; CHECK: br %r14
   %ptr1 = getelementptr i128, ptr %ptr0, i128 2
