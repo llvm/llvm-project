@@ -23,6 +23,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_EXPENSIVE_CHECKS
   LLVM_ENABLE_REVERSE_ITERATION
   LLVM_INCLUDE_DXIL_TESTS
+  LLVM_ENABLE_ONDISK_CAS
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_SIMULATOR_TESTS
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
@@ -73,6 +74,7 @@ set(LLVM_TEST_DEPENDS
           llvm-bcanalyzer
           llvm-bitcode-strip
           llvm-c-test
+          llvm-cas
           llvm-cat
           llvm-cfi-verify
           llvm-cgdata
