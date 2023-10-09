@@ -21,6 +21,9 @@ static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 static bool UseEMICallbacks = false;
 static bool UseTracing = false;
 
+// EventListener which will print OMPT events
+static OmptEventReporter EventReporter;
+
 // OMPT entry point handles
 static ompt_set_trace_ompt_t ompt_set_trace_ompt = 0;
 static ompt_start_trace_t ompt_start_trace = 0;
@@ -345,13 +348,13 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
     register_ompt_callback(ompt_callback_target_data_op);
   }
 
+  // Subscribe the reporter, so it will be notified of events
+  OmptCallbackHandler::get().subscribe(&EventReporter);
+
   return 1; // success
 }
 
-void ompt_finalize(ompt_data_t *tool_data) {
-  // Remove any current subscribers since we are about to shut down
-  OmptCallbackHandler::get().clearSubscribers();
-}
+void ompt_finalize(ompt_data_t *tool_data) {}
 
 #ifdef __cplusplus
 extern "C" {

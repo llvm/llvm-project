@@ -60,6 +60,15 @@ public:
   }
 
   void handleThreadEnd(ompt_data_t *ThreadData) {
+    // FixMe: Return early, because of an ordering issue which causes SEGFAULTS.
+    // Currently, the libomtest library will be evicted from memory before all
+    // OMPT events occurred. This will cause calls to handleX() on a dangling
+    // OmptCallbackHandler object.
+    // Observed ordering looks like this:
+    // __attribute__((destructor)) -> DTOR OmptCallbackHandler ->
+    // handleThreadEnd
+    return;
+
     if (RecordAndReplay) {
       recordEvent(omptest::OmptAssertEvent::ThreadEnd("Thread End"));
       return;
@@ -155,6 +164,15 @@ public:
   }
 
   void handleDeviceFinalize(int DeviceNum) {
+    // FixMe: Return early, because of an ordering issue which causes SEGFAULTS.
+    // Currently, the libomtest library will be evicted from memory before all
+    // OMPT events occurred. This will cause calls to handleX() on a dangling
+    // OmptCallbackHandler object. Note that the handler's DTOR is called even
+    // before ompt_finalize. Device finalization will happen even after that.
+    // Observed ordering looks like this:
+    // __attribute__((destructor)) -> DTOR OmptCallbackHandler ->
+    // handleThreadEnd -> ompt_finalize -> handleDeviceFinalize
+    return;
     if (RecordAndReplay) {
       recordEvent(omptest::OmptAssertEvent::DeviceFinalize(DeviceNum,
                                                            "Device Finalize"));
