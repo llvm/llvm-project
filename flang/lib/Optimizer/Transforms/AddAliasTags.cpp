@@ -35,13 +35,13 @@ namespace fir {
 static llvm::cl::opt<bool>
     enableDummyArgs("dummy-arg-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
                     llvm::cl::desc("Add TBAA tags to dummy arguments"));
-// These two are **known unsafe** (misscompare in spec2017/wrf_r). They should
+static llvm::cl::opt<bool>
+    enableGlobals("globals-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
+                  llvm::cl::desc("Add TBAA tags to global variables"));
+// This is **known unsafe** (misscompare in spec2017/wrf_r). It should
 // not be enabled by default.
 // The code is kept so that these may be tried with new benchmarks to see if
 // this is worth fixing in the future.
-static llvm::cl::opt<bool>
-    enableGlobals("globals-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
-                  llvm::cl::desc("Add TBAA tags to global variables. UNSAFE."));
 static llvm::cl::opt<bool> enableLocalAllocs(
     "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
     llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
@@ -151,7 +151,8 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
     // TBAA for global variables
   } else if (enableGlobals &&
-             source.kind == fir::AliasAnalysis::SourceKind::Global) {
+             (source.kind == fir::AliasAnalysis::SourceKind::Global ||
+              source.kind == fir::AliasAnalysis::SourceKind::Direct)) {
     mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
