@@ -57,8 +57,8 @@ MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
     StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType posTp,
+    StridedMemRefType<index_type, 1> *dim2lvlRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr);
 
 /// Tensor-storage method to obtain direct access to the values array.
@@ -85,6 +85,7 @@ MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
 #undef DECL_SPARSECOORDINATES
 
 /// Coordinate-scheme method for adding a new element.
+/// TODO: remove dim2lvl
 #define DECL_ADDELT(VNAME, V)                                                  \
   MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_addElt##VNAME(                   \
       void *lvlCOO, StridedMemRefType<V, 0> *vref,                             \
