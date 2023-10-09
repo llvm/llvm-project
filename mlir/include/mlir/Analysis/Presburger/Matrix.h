@@ -245,7 +245,8 @@ public:
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
 
-  // Return the integer inverse of the matrix, leaving the calling object unmodified.
+  // Return the integer inverse of the matrix, leaving the calling object
+  // unmodified.
   IntMatrix integerInverse();
 };
 
@@ -254,8 +255,8 @@ public:
 class FracMatrix : public Matrix<Fraction> {
 public:
   FracMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
-            unsigned reservedColumns = 0)
-      : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns) {};
+             unsigned reservedColumns = 0)
+      : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns){};
 
   FracMatrix(Matrix<Fraction> m)
       : Matrix<Fraction>(m.getNumRows(), m.getNumColumns(),
@@ -270,7 +271,6 @@ public:
 
   // Return the inverse of the matrix, leaving the calling object unmodified.
   FracMatrix inverse();
-
 };
 
 } // namespace presburger

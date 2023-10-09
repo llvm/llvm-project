@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/Analysis/Presburger/Fraction.h"
 #include "./Utils.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -210,7 +210,8 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   {
     // Hermite form of a unimodular matrix is the identity matrix.
     IntMatrix mat = makeIntMatrix(3, 3, {{2, 3, 6}, {3, 2, 3}, {17, 11, 16}});
-    IntMatrix hermiteForm = makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
+    IntMatrix hermiteForm =
+        makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
@@ -241,10 +242,10 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   }
 
   {
-    IntMatrix mat =
-        makeIntMatrix(3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
-    IntMatrix hermiteForm =
-        makeIntMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
+    IntMatrix mat = makeIntMatrix(
+        3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
+    IntMatrix hermiteForm = makeIntMatrix(
+        3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 }
@@ -265,28 +266,26 @@ TEST(MatrixTest, inverse) {
 }
 
 TEST(MatrixTest, intInverse) {
-    IntMatrix mat = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
-    IntMatrix inverse = makeIntMatrix(2, 2, {{0, -1}, {-7, 2}});
-    
-    IntMatrix inv = mat.integerInverse();
+  IntMatrix mat = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
+  IntMatrix inverse = makeIntMatrix(2, 2, {{0, -1}, {-7, 2}});
 
-    for (unsigned i = 0; i < 2u; i++)
-      for (unsigned j = 0; j < 2u; j++)
-        EXPECT_EQ(inv(i, j), inverse(i, j));
+  IntMatrix inv = mat.integerInverse();
 
-    mat = makeIntMatrix(4, 4, {{ 4, 14, 11,  3},
-                               {13,  5, 14, 12},
-                               {13,  9,  7, 14},
-                               { 2,  3, 12,  7}});
-    inverse = makeIntMatrix(4, 4, {{155, 1636, -579, -1713},
-                                   {725, -743, 537, -111},
-                                   {210, 735, -855, 360},
-                                   {-715, -1409, 1401, 1482}});
+  for (unsigned i = 0; i < 2u; i++)
+    for (unsigned j = 0; j < 2u; j++)
+      EXPECT_EQ(inv(i, j), inverse(i, j));
 
-    inv = mat.integerInverse();
+  mat = makeIntMatrix(
+      4, 4, {{4, 14, 11, 3}, {13, 5, 14, 12}, {13, 9, 7, 14}, {2, 3, 12, 7}});
+  inverse = makeIntMatrix(4, 4,
+                          {{155, 1636, -579, -1713},
+                           {725, -743, 537, -111},
+                           {210, 735, -855, 360},
+                           {-715, -1409, 1401, 1482}});
 
-    for (unsigned i = 0; i < 2u; i++)
-      for (unsigned j = 0; j < 2u; j++)
-        EXPECT_EQ(inv(i, j), inverse(i, j));
+  inv = mat.integerInverse();
 
+  for (unsigned i = 0; i < 2u; i++)
+    for (unsigned j = 0; j < 2u; j++)
+      EXPECT_EQ(inv(i, j), inverse(i, j));
 }
