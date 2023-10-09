@@ -32,7 +32,16 @@ transform.named_sequence @lower_to_cpu(
     partial_conversion
   } : !transform.any_op
 
-  %f6 = transform.apply_registered_pass "reconcile-unrealized-casts" to %f5 : (!transform.any_op) -> !transform.any_op
+  // Need to rematch here because:
+  //   1. applying reconcile-unrealized-casts on the whole module yields the
+  //      transform applies to transform, when called from a named sequence, at
+  //      this time.
+  //   2. apply_conversion patterns consumes the func but does not produce 
+  //      a new llvm.func.
+  %f6 = transform.structured.match ops{["llvm.func"]} in %module 
+    : (!transform.any_op) -> !transform.any_op
+  %f7 = transform.apply_registered_pass "reconcile-unrealized-casts" to %f6
+    : (!transform.any_op) -> !transform.any_op
   transform.yield %module : !transform.any_op
 }
 
