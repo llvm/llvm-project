@@ -539,9 +539,10 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
+    // Clear the StoreInstrCache, since we may invalidate it by erasing.
+    if (SinkDst->mayStore() && !SinkDst->hasOrderedMemoryRef())
+      StoreInstrCache.clear();
     SinkDst->eraseFromParent();
-    // Clear the StoreInstrCache, since we may have invalidated it by erasing.
-    StoreInstrCache.clear();
   }
 
   // Collect operands that need to be cleaned up because the registers no longer
