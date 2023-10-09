@@ -22,8 +22,8 @@ for.cond.cleanup:                                 ; preds = %for.body
   ret void
 }
 
-define void @wide_tc_8(ptr nocapture %dst, i32 %n, i64 %val){
-; CHECK-LABEL: define void @wide_tc_8(
+define void @clamped_tc_max_8(ptr nocapture %dst, i32 %n, i64 %val){
+; CHECK-LABEL: define void @clamped_tc_max_8(
 ; CHECK: call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> {{.*}}, ptr {{.*}}, i32 1, <vscale x 8 x i1> {{.*}})
 
 entry:
