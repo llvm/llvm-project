@@ -1,4 +1,4 @@
-//===- Lexer.h - Lexer for the Toy language -------------------------------===//
+//===- Lexer.h - Lexer for the Lisp language -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a simple Lexer for the Toy language.
+// This file implements a simple Lexer for the Lisp language.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TOY_LEXER_H
-#define TOY_LEXER_H
+#ifndef LISP_LEXER_H
+#define LISP_LEXER_H
 
 #include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <string>
 
-namespace toy {
+namespace lisp {
 
 /// Structure definition a location in a file.
 struct Location {
@@ -29,24 +29,11 @@ struct Location {
 
 // List of Token returned by the lexer.
 enum Token : int {
-  tok_semicolon = ';',
   tok_parenthese_open = '(',
   tok_parenthese_close = ')',
-  tok_bracket_open = '{',
-  tok_bracket_close = '}',
-  tok_sbracket_open = '[',
-  tok_sbracket_close = ']',
-
   tok_eof = -1,
-
-  // commands
-  tok_return = -2,
-  tok_var = -3,
-  tok_def = -4,
-
-  // primary
-  tok_identifier = -5,
-  tok_number = -6,
+  tok_number = -2,
+  tok_identifier = -3
 };
 
 /// The Lexer is an abstract base class providing all the facilities that the
@@ -138,13 +125,6 @@ private:
       identifierStr = (char)lastChar;
       while (isalnum((lastChar = Token(getNextChar()))) || lastChar == '_')
         identifierStr += (char)lastChar;
-
-      if (identifierStr == "return")
-        return tok_return;
-      if (identifierStr == "def")
-        return tok_def;
-      if (identifierStr == "var")
-        return tok_var;
       return tok_identifier;
     }
 
@@ -227,6 +207,6 @@ private:
   }
   const char *current, *end;
 };
-} // namespace toy
+} // namespace lisp
 
-#endif // TOY_LEXER_H
+#endif // LISP_LEXER_H

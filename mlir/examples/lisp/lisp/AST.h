@@ -1,4 +1,4 @@
-//===- AST.h - Node definition for the Toy AST ----------------------------===//
+//===- AST.h - Node definition for the Lisp AST ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the AST for the Toy language. It is optimized for
+// This file implements the AST for the Lisp language. It is optimized for
 // simplicity, not efficiency. The AST forms a tree structure where each node
 // references its children using std::unique_ptr<>.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TOY_AST_H
-#define TOY_AST_H
+#ifndef LISP_AST_H
+#define LISP_AST_H
 
-#include "toy/Lexer.h"
+#include "lisp/Lexer.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,7 +24,7 @@
 #include <vector>
 #include <optional>
 
-namespace toy {
+namespace lisp {
 
 /// A variable type with shape information.
 struct VarType {
@@ -241,6 +241,6 @@ public:
 
 void dump(ModuleAST &);
 
-} // namespace toy
+} // namespace lisp
 
-#endif // TOY_AST_H
+#endif // LISP_AST_H
