@@ -20,28 +20,20 @@ namespace test {
 void registerTestDialect(DialectRegistry &);
 } // namespace test
 
-namespace {
-TEST(SymbolTableTest, ReplaceAllSymbolUses) {
-  DialectRegistry registry;
-  ::test::registerTestDialect(registry);
-
-  MLIRContext context(registry);
-
+class ReplaceAllSymbolUsesTest : public ::testing::Test {
+protected:
   using ReplaceFnType = llvm::function_ref<LogicalResult(
       SymbolTable, ModuleOp, Operation *, Operation *)>;
-  auto testReplaceAllSymbolUses = [&](ReplaceFnType replaceFn) {
-    const static llvm::StringLiteral input = R"MLIR(
-      module {
-        test.conversion_func_op private @foo() {
-          "test.conversion_call_op"() { callee=@bar } : () -> ()
-          "test.return"() : () -> ()
-        }
-        test.conversion_func_op private @bar()
-      }
-    )MLIR";
 
+  void SetUp() override {
+    ::test::registerTestDialect(registry);
+    context = std::make_unique<MLIRContext>(registry);
+  }
+
+  void testReplaceAllSymbolUses(ReplaceFnType replaceFn) {
     // Set up IR and find func ops.
-    OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(input, &context);
+    OwningOpRef<ModuleOp> module =
+        parseSourceString<ModuleOp>(kInput, context.get());
     SymbolTable symbolTable(module.get());
     auto opIterator = module->getBody(0)->getOperations().begin();
     auto fooOp = cast<FunctionOpInterface>(opIterator++);
@@ -64,51 +56,80 @@ TEST(SymbolTableTest, ReplaceAllSymbolUses) {
       calleeFound = true;
     });
     EXPECT_TRUE(calleeFound);
-  };
+  }
 
+  std::unique_ptr<MLIRContext> context;
+
+private:
+  constexpr static llvm::StringLiteral kInput = R"MLIR(
+      module {
+        test.conversion_func_op private @foo() {
+          "test.conversion_call_op"() { callee=@bar } : () -> ()
+          "test.return"() : () -> ()
+        }
+        test.conversion_func_op private @bar()
+      }
+    )MLIR";
+
+  DialectRegistry registry;
+};
+
+namespace {
+
+TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleOp) {
   // Symbol as `Operation *`, rename within module.
-  testReplaceAllSymbolUses(
-      [&](auto symbolTable, auto module, auto fooOp, auto barOp) {
-        return symbolTable.replaceAllSymbolUses(
-            barOp, StringAttr::get(&context, "baz"), module);
-      });
+  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+                               auto barOp) -> LogicalResult {
+    return symbolTable.replaceAllSymbolUses(
+        barOp, StringAttr::get(context.get(), "baz"), module);
+  });
+}
 
+TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleOp) {
   // Symbol as `StringAttr`, rename within module.
   testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
-                               auto barOp) {
-    return symbolTable.replaceAllSymbolUses(StringAttr::get(&context, "bar"),
-                                            StringAttr::get(&context, "baz"),
-                                            module);
+                               auto barOp) -> LogicalResult {
+    return symbolTable.replaceAllSymbolUses(
+        StringAttr::get(context.get(), "bar"),
+        StringAttr::get(context.get(), "baz"), module);
   });
+}
 
+TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleBody) {
   // Symbol as `Operation *`, rename within module body.
-  testReplaceAllSymbolUses(
-      [&](auto symbolTable, auto module, auto fooOp, auto barOp) {
-        return symbolTable.replaceAllSymbolUses(
-            barOp, StringAttr::get(&context, "baz"), &module->getRegion(0));
-      });
+  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+                               auto barOp) -> LogicalResult {
+    return symbolTable.replaceAllSymbolUses(
+        barOp, StringAttr::get(context.get(), "baz"), &module->getRegion(0));
+  });
+}
 
+TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleBody) {
   // Symbol as `StringAttr`, rename within module body.
   testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
-                               auto barOp) {
-    return symbolTable.replaceAllSymbolUses(StringAttr::get(&context, "bar"),
-                                            StringAttr::get(&context, "baz"),
-                                            &module->getRegion(0));
+                               auto barOp) -> LogicalResult {
+    return symbolTable.replaceAllSymbolUses(
+        StringAttr::get(context.get(), "bar"),
+        StringAttr::get(context.get(), "baz"), &module->getRegion(0));
   });
+}
 
+TEST_F(ReplaceAllSymbolUsesTest, OperationInFuncOp) {
   // Symbol as `Operation *`, rename within function.
-  testReplaceAllSymbolUses(
-      [&](auto symbolTable, auto module, auto fooOp, auto barOp) {
-        return symbolTable.replaceAllSymbolUses(
-            barOp, StringAttr::get(&context, "baz"), fooOp);
-      });
+  testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
+                               auto barOp) -> LogicalResult {
+    return symbolTable.replaceAllSymbolUses(
+        barOp, StringAttr::get(context.get(), "baz"), fooOp);
+  });
+}
 
+TEST_F(ReplaceAllSymbolUsesTest, StringAttrInFuncOp) {
   // Symbol as `StringAttr`, rename within function.
   testReplaceAllSymbolUses([&](auto symbolTable, auto module, auto fooOp,
-                               auto barOp) {
-    return symbolTable.replaceAllSymbolUses(StringAttr::get(&context, "bar"),
-                                            StringAttr::get(&context, "baz"),
-                                            fooOp);
+                               auto barOp) -> LogicalResult {
+    return symbolTable.replaceAllSymbolUses(
+        StringAttr::get(context.get(), "bar"),
+        StringAttr::get(context.get(), "baz"), fooOp);
   });
 }
 
