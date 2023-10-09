@@ -574,11 +574,9 @@ public:
     }
 
     auto S = std::make_shared<DWOFile>();
-    S->File = std::move(Obj.get());
-    StringRef FileName = S->File.getBinary()->getFileName();
     // Allow multi-threaded access if there is a .dwp file as the CU index and
     // TU index might be accessed from multiple threads.
-    bool ThreadSafe = FileName.find(".dwp") != StringRef::npos;
+    bool ThreadSafe = isThreadSafe();
     S->Context = DWARFContext::create(
         *S->File.getBinary(), DWARFContext::ProcessDebugRelocations::Ignore,
         nullptr, "", WithColor::defaultErrorHandler,
@@ -587,6 +585,8 @@ public:
     auto *Ctxt = S->Context.get();
     return std::shared_ptr<DWARFContext>(std::move(S), Ctxt);
   }
+
+  bool isThreadSafe() override { return false; }
 
   const DenseMap<uint64_t, DWARFTypeUnit *> &getNormalTypeUnitMap() {
     if (!NormalTypeUnits) {
@@ -723,6 +723,9 @@ public:
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getDWOContext(AbsolutePath);
   }
+
+  bool isThreadSafe() override { return true; }
+
   const DenseMap<uint64_t, DWARFTypeUnit *> &
   getTypeUnitMap(bool IsDWO) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
