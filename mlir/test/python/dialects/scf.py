@@ -4,7 +4,6 @@ from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects import func
 from mlir.dialects import scf
-from mlir.dialects import builtin
 
 
 def constructAndPrintInModule(f):
@@ -52,6 +51,28 @@ def testInductionVar():
 # CHECK: func @induction_var(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
 # CHECK: scf.for %[[IV:.*]] = %[[ARG0]] to %[[ARG1]] step %[[ARG2]]
 # CHECK: scf.yield %[[IV]]
+
+
+# CHECK-LABEL: TEST: testForSugar
+@constructAndPrintInModule
+def testForSugar():
+    index_type = IndexType.get()
+    range = scf.for_
+
+    @func.FuncOp.from_py_func(index_type, index_type, index_type)
+    def range_loop(lb, ub, step):
+        for i in range(lb, ub, step):
+            add = arith.addi(i, i)
+            scf.yield_([])
+        return
+
+
+# CHECK: func.func @range_loop(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index) {
+# CHECK:   scf.for %[[IV:.*]] = %[[ARG0]] to %[[ARG1]] step %[[ARG2]]
+# CHECK:     %0 = arith.addi %[[IV]], %[[IV]] : index
+# CHECK:   }
+# CHECK:   return
+# CHECK: }
 
 
 @constructAndPrintInModule
