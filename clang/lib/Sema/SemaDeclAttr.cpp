@@ -2374,9 +2374,10 @@ static bool FunctionParamsAreMainLike(ASTContext &Context,
   const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
   QualType CharPP =
       Context.getPointerType(Context.getPointerType(Context.CharTy));
-  QualType Expected[] = {Context.IntTy, CharPP, CharPP, CharPP};
-
-  for (unsigned I = 0; I < FPT->getNumParams(); ++I) {
+  QualType Expected[] = {Context.IntTy, CharPP, CharPP, CharPP};  
+  for (unsigned I = 0;
+       I < sizeof(Expected) / sizeof(QualType) && I < FPT->getNumParams();
+       ++I) {
     QualType AT = FPT->getParamType(I);
 
     bool Mismatch = true;
