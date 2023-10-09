@@ -187,25 +187,38 @@ static Value genLvlPtrsBuffers(OpBuilder &builder, Location loc,
 
 /// This class abstracts over the API of `_mlir_ciface_newSparseTensor`:
 /// the "swiss army knife" method of the sparse runtime support library
-/// for materializing sparse tensors into the computation.  This abstraction
-/// reduces the need to make modifications to client code whenever that
-/// API changes.
+/// for materializing sparse tensors into the computation. This abstraction
+/// reduces the need for modifications when the API changes.
 class NewCallParams final {
 public:
-  /// Allocates the `ValueRange` for the `func::CallOp` parameters,
-  /// but does not initialize them.
+  /// Allocates the `ValueRange` for the `func::CallOp` parameters.
   NewCallParams(OpBuilder &builder, Location loc)
       : builder(builder), loc(loc), pTp(getOpaquePointerType(builder)) {}
 
   /// Initializes all static parameters (i.e., those which indicate
   /// type-level information such as the encoding and sizes), generating
   /// MLIR buffers as needed, and returning `this` for method chaining.
-  /// This method does not set the action and pointer arguments, since
-  /// those are handled by `genNewCall` instead.
-  NewCallParams &genBuffers(SparseTensorType stt, ValueRange dimSizes);
+  NewCallParams &genBuffers(SparseTensorType stt,
+                            ArrayRef<Value> dimSizesValues) {
+    const Dimension dimRank = stt.getDimRank();
+    assert(dimSizesValues.size() == static_cast<size_t>(dimRank));
+    // Sparsity annotations.
+    params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
+    // Construct dimSizes, lvlSizes, dim2lvl, and lvl2dim buffers.
+    params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizesValues);
+    params[kParamLvlSizes] = genReaderBuffers(
+        builder, loc, stt, dimSizesValues, params[kParamDimSizes],
+        params[kParamDim2Lvl], params[kParamLvl2Dim]);
+    // Secondary and primary types encoding.
+    setTemplateTypes(stt);
+    // Finally, make note that initialization is complete.
+    assert(isInitialized() && "Initialization failed");
+    // And return `this` for method chaining.
+    return *this;
+  }
 
   /// (Re)sets the C++ template type parameters, and returns `this`
-  /// for method chaining.  This is already done as part of `genBuffers`,
+  /// for method chaining. This is already done as part of `genBuffers`,
   /// but is factored out so that it can also be called independently
   /// whenever subsequent `genNewCall` calls want to reuse the same
   /// buffers but different type parameters.
@@ -236,7 +249,7 @@ public:
   // this one-off getter, and to avoid potential mixups)?
   Value getDimToLvl() const {
     assert(isInitialized() && "Must initialize before getDimToLvl");
-    return params[kParamDimToLvl];
+    return params[kParamDim2Lvl];
   }
 
   /// Generates a function call, with the current static parameters
@@ -257,8 +270,8 @@ private:
   static constexpr unsigned kParamDimSizes = 0;
   static constexpr unsigned kParamLvlSizes = 1;
   static constexpr unsigned kParamLvlTypes = 2;
-  static constexpr unsigned kParamLvlToDim = 3;
-  static constexpr unsigned kParamDimToLvl = 4;
+  static constexpr unsigned kParamDim2Lvl = 3;
+  static constexpr unsigned kParamLvl2Dim = 4;
   static constexpr unsigned kParamPosTp = 5;
   static constexpr unsigned kParamCrdTp = 6;
   static constexpr unsigned kParamValTp = 7;
@@ -270,62 +283,6 @@ private:
   Type pTp;
   Value params[kNumParams];
 };
-
-// TODO: see the note at `_mlir_ciface_newSparseTensor` about how
-// the meaning of the various arguments (e.g., "sizes" vs "shapes")
-// is inconsistent between the different actions.
-NewCallParams &NewCallParams::genBuffers(SparseTensorType stt,
-                                         ValueRange dimSizes) {
-  const Level lvlRank = stt.getLvlRank();
-  const Dimension dimRank = stt.getDimRank();
-  // Sparsity annotations.
-  params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
-  // Dimension-sizes array of the enveloping tensor.  Useful for either
-  // verification of external data, or for construction of internal data.
-  assert(dimSizes.size() == static_cast<size_t>(dimRank) &&
-         "Dimension-rank mismatch");
-  params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizes);
-  // The level-sizes array must be passed as well, since for arbitrary
-  // dimToLvl mappings it cannot be trivially reconstructed at runtime.
-  // For now however, since we're still assuming permutations, we will
-  // initialize this parameter alongside the `dimToLvl` and `lvlToDim`
-  // parameters below.  We preinitialize `lvlSizes` for code symmetry.
-  SmallVector<Value> lvlSizes(lvlRank);
-  // The dimension-to-level mapping and its inverse.  We must preinitialize
-  // `dimToLvl` so that the true branch below can perform random-access
-  // `operator[]` assignment.  We preinitialize `lvlToDim` for code symmetry.
-  SmallVector<Value> dimToLvl(dimRank);
-  SmallVector<Value> lvlToDim(lvlRank);
-  if (!stt.isIdentity()) {
-    const auto dimToLvlMap = stt.getDimToLvl();
-    assert(dimToLvlMap.isPermutation());
-    for (Level l = 0; l < lvlRank; l++) {
-      // The `d`th source variable occurs in the `l`th result position.
-      const Dimension d = dimToLvlMap.getDimPosition(l);
-      dimToLvl[d] = constantIndex(builder, loc, l);
-      lvlToDim[l] = constantIndex(builder, loc, d);
-      lvlSizes[l] = dimSizes[d];
-    }
-  } else {
-    // The `SparseTensorType` ctor already ensures `dimRank == lvlRank`
-    // when `isIdentity`; so no need to re-assert it here.
-    for (Level l = 0; l < lvlRank; l++) {
-      dimToLvl[l] = lvlToDim[l] = constantIndex(builder, loc, l);
-      lvlSizes[l] = dimSizes[l];
-    }
-  }
-  params[kParamLvlSizes] = allocaBuffer(builder, loc, lvlSizes);
-  params[kParamLvlToDim] = allocaBuffer(builder, loc, lvlToDim);
-  params[kParamDimToLvl] = stt.isIdentity()
-                               ? params[kParamLvlToDim]
-                               : allocaBuffer(builder, loc, dimToLvl);
-  // Secondary and primary types encoding.
-  setTemplateTypes(stt);
-  // Finally, make note that initialization is complete.
-  assert(isInitialized() && "Initialization failed");
-  // And return `this` for method chaining.
-  return *this;
-}
 
 /// Generates a call to obtain the values array.
 static Value genValuesCall(OpBuilder &builder, Location loc, ShapedType tp,
