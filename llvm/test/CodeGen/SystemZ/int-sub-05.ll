@@ -123,7 +123,7 @@ define void @f7(i64 %base) {
 define void @f8(ptr %ptr0) {
 ; CHECK-LABEL: f8:
 ; CHECK: brasl %r14, foo@PLT
-; CHECK: slg {{%r[0-9]+}}, {{[0-9]+}}(%r15)
+; CHECK: slbg {{%r[0-9]+}}, {{[0-9]+}}(%r15)
 ; CHECK: slbg {{%r[0-9]+}}, {{[0-9]+}}(%r15)
 ; CHECK: br %r14
   %ptr1 = getelementptr i128, ptr %ptr0, i128 2

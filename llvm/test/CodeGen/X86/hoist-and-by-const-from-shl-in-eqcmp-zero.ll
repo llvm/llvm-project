@@ -346,16 +346,16 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; X86-BMI1-NEXT:    pushl %esi
 ; X86-BMI1-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI1-NEXT:    movl $1, %eax
-; X86-BMI1-NEXT:    xorl %esi, %esi
 ; X86-BMI1-NEXT:    xorl %edx, %edx
-; X86-BMI1-NEXT:    shldl %cl, %eax, %edx
+; X86-BMI1-NEXT:    xorl %esi, %esi
+; X86-BMI1-NEXT:    shldl %cl, %eax, %esi
 ; X86-BMI1-NEXT:    shll %cl, %eax
 ; X86-BMI1-NEXT:    testb $32, %cl
-; X86-BMI1-NEXT:    cmovnel %eax, %edx
-; X86-BMI1-NEXT:    cmovnel %esi, %eax
-; X86-BMI1-NEXT:    andl {{[0-9]+}}(%esp), %edx
+; X86-BMI1-NEXT:    cmovnel %eax, %esi
+; X86-BMI1-NEXT:    cmovnel %edx, %eax
+; X86-BMI1-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-BMI1-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-BMI1-NEXT:    orl %edx, %eax
+; X86-BMI1-NEXT:    orl %esi, %eax
 ; X86-BMI1-NEXT:    sete %al
 ; X86-BMI1-NEXT:    popl %esi
 ; X86-BMI1-NEXT:    retl
@@ -364,17 +364,17 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    pushl %esi
 ; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movl $1, %edx
+; X86-BMI2-NEXT:    movl $1, %eax
+; X86-BMI2-NEXT:    xorl %edx, %edx
 ; X86-BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI2-NEXT:    xorl %eax, %eax
-; X86-BMI2-NEXT:    shldl %cl, %edx, %eax
-; X86-BMI2-NEXT:    shlxl %ecx, %edx, %edx
+; X86-BMI2-NEXT:    shldl %cl, %eax, %esi
+; X86-BMI2-NEXT:    shlxl %ecx, %eax, %eax
 ; X86-BMI2-NEXT:    testb $32, %cl
+; X86-BMI2-NEXT:    cmovnel %eax, %esi
 ; X86-BMI2-NEXT:    cmovnel %edx, %eax
-; X86-BMI2-NEXT:    cmovnel %esi, %edx
+; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    orl %eax, %edx
+; X86-BMI2-NEXT:    orl %esi, %eax
 ; X86-BMI2-NEXT:    sete %al
 ; X86-BMI2-NEXT:    popl %esi
 ; X86-BMI2-NEXT:    retl

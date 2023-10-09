@@ -2634,9 +2634,9 @@ define <32 x float> @expandload_v32f32_v32i32(ptr %base, <32 x float> %src0, <32
 ;
 ; AVX512-LABEL: expandload_v32f32_v32i32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vptestnmd %zmm3, %zmm3, %k2
-; AVX512-NEXT:    vptestnmd %zmm2, %zmm2, %k1
-; AVX512-NEXT:    kmovw %k1, %eax
+; AVX512-NEXT:    vptestnmd %zmm3, %zmm3, %k1
+; AVX512-NEXT:    vptestnmd %zmm2, %zmm2, %k2
+; AVX512-NEXT:    kmovw %k2, %eax
 ; AVX512-NEXT:    movl %eax, %ecx
 ; AVX512-NEXT:    shrl %ecx
 ; AVX512-NEXT:    andl $21845, %ecx ## imm = 0x5555
@@ -2652,8 +2652,8 @@ define <32 x float> @expandload_v32f32_v32i32(ptr %base, <32 x float> %src0, <32
 ; AVX512-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
 ; AVX512-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
 ; AVX512-NEXT:    shrl $24, %eax
-; AVX512-NEXT:    vexpandps (%rdi,%rax,4), %zmm1 {%k2}
-; AVX512-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; AVX512-NEXT:    vexpandps (%rdi,%rax,4), %zmm1 {%k1}
+; AVX512-NEXT:    vexpandps (%rdi), %zmm0 {%k2}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <32 x i32> %trigger, zeroinitializer
   %res = call <32 x float> @llvm.masked.expandload.v32f32(ptr %base, <32 x i1> %mask, <32 x float> %src0)

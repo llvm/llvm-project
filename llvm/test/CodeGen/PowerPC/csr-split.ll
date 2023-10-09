@@ -108,9 +108,9 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    cmpldi r30, 0
 ; CHECK-PWR9-NEXT:    beq cr0, .LBB1_3
 ; CHECK-PWR9-NEXT:  # %bb.1: # %if.end
-; CHECK-PWR9-NEXT:    addis r4, r2, a@toc@ha
-; CHECK-PWR9-NEXT:    lwa r4, a@toc@l(r4)
-; CHECK-PWR9-NEXT:    cmpld r4, r30
+; CHECK-PWR9-NEXT:    addis r5, r2, a@toc@ha
+; CHECK-PWR9-NEXT:    lwa r5, a@toc@l(r5)
+; CHECK-PWR9-NEXT:    cmpld r5, r30
 ; CHECK-PWR9-NEXT:    bne cr0, .LBB1_3
 ; CHECK-PWR9-NEXT:  # %bb.2: # %if.then2
 ; CHECK-PWR9-NEXT:    bl callVoid
@@ -139,9 +139,9 @@ define dso_local signext i32 @test2(ptr %p1) local_unnamed_addr  {
 ; CHECK-NEXT:    cmpldi r30, 0
 ; CHECK-NEXT:    beq cr0, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    addis r4, r2, a@toc@ha
-; CHECK-NEXT:    lwa r4, a@toc@l(r4)
-; CHECK-NEXT:    cmpld r4, r30
+; CHECK-NEXT:    addis r5, r2, a@toc@ha
+; CHECK-NEXT:    lwa r5, a@toc@l(r5)
+; CHECK-NEXT:    cmpld r5, r30
 ; CHECK-NEXT:    bne cr0, .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # %if.then2
 ; CHECK-NEXT:    bl callVoid
