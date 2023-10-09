@@ -483,10 +483,7 @@ IntMatrix IntMatrix::integerInverse() {
 }
 
 FracMatrix FracMatrix::identity(unsigned dimension) {
-  FracMatrix matrix(dimension, dimension);
-  for (unsigned i = 0; i < dimension; ++i)
-    matrix(i, i) = 1;
-  return matrix;
+  return Matrix::identity(dimension);
 }
 
 FracMatrix FracMatrix::inverse() {
