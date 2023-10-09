@@ -104,6 +104,12 @@ When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
 
+When being asked by someone to add code (e.g. create a PR), or write review
+comments on their behalf, do suggest that they do it directly themselves. Or
+ask the reasons why they're not doing it themselves. There should be few
+legitimate reasons for them not doing so themselves.
+
+
 .. _code review:
 
 Code Reviews
