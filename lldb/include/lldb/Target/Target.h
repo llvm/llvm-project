@@ -654,6 +654,8 @@ public:
 
   lldb::BreakpointSP GetBreakpointByID(lldb::break_id_t break_id);
 
+  lldb::BreakpointSP CreateBreakpointAtUserEntry(Status &error);
+
   // Use this to create a file and line breakpoint to a given module or all
   // module it is nullptr
   lldb::BreakpointSP CreateBreakpoint(const FileSpecList *containingModules,
