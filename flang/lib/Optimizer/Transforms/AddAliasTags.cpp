@@ -112,6 +112,8 @@ static std::string getFuncArgName(mlir::Value arg) {
 void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                                            PassState &state) {
   mlir::func::FuncOp func = op->getParentOfType<mlir::func::FuncOp>();
+  if (!func)
+    return;
 
   llvm::SmallVector<mlir::Value> accessedOperands = op.getAccessedOperands();
   assert(accessedOperands.size() == 1 &&
