@@ -231,8 +231,8 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
     StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType posTp,
+    StridedMemRefType<index_type, 1> *dim2lvlRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr) {
   ASSERT_NO_STRIDE(dimSizesRef);
   ASSERT_NO_STRIDE(lvlSizesRef);
@@ -249,6 +249,9 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
   const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
+
+  // Prepare map.
+  // TODO: start using MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim) below
 
   // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
   // This is safe because of the static_assert above.
@@ -400,6 +403,7 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATES)
 #undef IMPL_GETOVERHEAD
 
 // TODO: use MapRef here for translation of coordinates
+// TOOD: remove dim2lvl
 #define IMPL_ADDELT(VNAME, V)                                                  \
   void *_mlir_ciface_addElt##VNAME(                                            \
       void *lvlCOO, StridedMemRefType<V, 0> *vref,                             \
@@ -540,13 +544,13 @@ void *_mlir_ciface_newSparseTensorFromReader(
   SparseTensorReader &reader = *static_cast<SparseTensorReader *>(p);
   ASSERT_NO_STRIDE(lvlSizesRef);
   ASSERT_NO_STRIDE(lvlTypesRef);
-  ASSERT_NO_STRIDE(lvl2dimRef);
   ASSERT_NO_STRIDE(dim2lvlRef);
+  ASSERT_NO_STRIDE(lvl2dimRef);
   const uint64_t dimRank = reader.getRank();
   const uint64_t lvlRank = MEMREF_GET_USIZE(lvlSizesRef);
   ASSERT_USIZE_EQ(lvlTypesRef, lvlRank);
-  ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
   ASSERT_USIZE_EQ(dim2lvlRef, dimRank);
+  ASSERT_USIZE_EQ(lvl2dimRef, lvlRank);
   (void)dimRank;
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
