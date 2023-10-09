@@ -574,6 +574,7 @@ public:
     }
 
     auto S = std::make_shared<DWOFile>();
+    S->File = std::move(Obj.get());
     // Allow multi-threaded access if there is a .dwp file as the CU index and
     // TU index might be accessed from multiple threads.
     bool ThreadSafe = isThreadSafe();
