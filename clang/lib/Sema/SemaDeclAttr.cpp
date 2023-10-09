@@ -2380,24 +2380,26 @@ static bool FunctionParamsAreMainLike(ASTContext &Context,
        ++I) {
     QualType AT = FPT->getParamType(I);
 
-    bool Mismatch = true;
-    if (!Context.hasSameUnqualifiedType(AT, Expected[I]) &&
-        Expected[I] == CharPP) {
-      // As an extension, the following forms are okay:
-      //   char const **
-      //   char const * const *
-      //   char * const *
+    if (!Context.hasSameUnqualifiedType(AT, Expected[I])) {
+      if (Expected[I] == CharPP) {
+        // As an extension, the following forms are okay:
+        //   char const **
+        //   char const * const *
+        //   char * const *
 
-      QualifierCollector Qs;
-      const PointerType *PT;
-      if ((PT = Qs.strip(AT)->getAs<PointerType>()) &&
-          (PT = Qs.strip(PT->getPointeeType())->getAs<PointerType>()) &&
-          Context.hasSameType(QualType(Qs.strip(PT->getPointeeType()), 0),
-                              Context.CharTy)) {
-        Qs.removeConst();
-        if (!Qs.empty())
-          return false;
+        QualifierCollector Qs;
+        const PointerType *PT;
+        if ((PT = Qs.strip(AT)->getAs<PointerType>()) &&
+            (PT = Qs.strip(PT->getPointeeType())->getAs<PointerType>()) &&
+            Context.hasSameType(QualType(Qs.strip(PT->getPointeeType()), 0),
+                                Context.CharTy)) {
+          Qs.removeConst();
+          if (!Qs.empty())
+            return false;
+          continue; // Accepted as an extension.
+        }
       }
+      return false;
     }
   }
   return true;
