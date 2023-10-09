@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=x86_64-apple-darwin < %s -o /dev/null -stats -info-output-file - | grep "hoisted out of loops" | grep 7
+; RUN: llc -mtriple=x86_64-apple-darwin < %s -o /dev/null -stats -info-output-file - | grep "hoisted out of loops" | grep 3
 
 ; MachineLICM should be able to hoist the symbolic addresses out of
 ; the inner loops.

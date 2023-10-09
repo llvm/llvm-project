@@ -137,8 +137,8 @@ define i32 @test_control_flow(ptr %p, i32 %i, i32 %j) nounwind {
 ; 32-ALL-NEXT:    # Parent Loop BB1_2 Depth=1
 ; 32-ALL-NEXT:    # => This Inner Loop Header: Depth=2
 ; 32-ALL-NEXT:    movl %edx, %eax
-; 32-ALL-NEXT:    testl %edx, %edx
-; 32-ALL-NEXT:    movl $0, %edx
+; 32-ALL-NEXT:    xorl %edx, %edx
+; 32-ALL-NEXT:    testl %eax, %eax
 ; 32-ALL-NEXT:    je .LBB1_3
 ; 32-ALL-NEXT:  # %bb.4: # %while.body.i
 ; 32-ALL-NEXT:    # in Loop: Header=BB1_2 Depth=1
@@ -148,6 +148,33 @@ define i32 @test_control_flow(ptr %p, i32 %i, i32 %j) nounwind {
 ; 32-ALL-NEXT:    xorl %eax, %eax
 ; 32-ALL-NEXT:  .LBB1_6: # %cond.end
 ; 32-ALL-NEXT:    retl
+;
+; 64-ALL-LABEL: test_control_flow:
+; 64-ALL:       # %bb.0: # %entry
+; 64-ALL-NEXT:    movl %esi, %eax
+; 64-ALL-NEXT:    cmpl %edx, %esi
+; 64-ALL-NEXT:    jle .LBB1_5
+; 64-ALL-NEXT:    .p2align 4, 0x90
+; 64-ALL-NEXT:  .LBB1_1: # %while.condthread-pre-split.i
+; 64-ALL-NEXT:    # =>This Loop Header: Depth=1
+; 64-ALL-NEXT:    # Child Loop BB1_2 Depth 2
+; 64-ALL-NEXT:    movl (%rdi), %ecx
+; 64-ALL-NEXT:    .p2align 4, 0x90
+; 64-ALL-NEXT:  .LBB1_2: # %while.cond.i
+; 64-ALL-NEXT:    # Parent Loop BB1_1 Depth=1
+; 64-ALL-NEXT:    # => This Inner Loop Header: Depth=2
+; 64-ALL-NEXT:    movl %ecx, %eax
+; 64-ALL-NEXT:    xorl %ecx, %ecx
+; 64-ALL-NEXT:    testl %eax, %eax
+; 64-ALL-NEXT:    je .LBB1_2
+; 64-ALL-NEXT:  # %bb.3: # %while.body.i
+; 64-ALL-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; 64-ALL-NEXT:    lock cmpxchgl %eax, (%rdi)
+; 64-ALL-NEXT:    jne .LBB1_1
+; 64-ALL-NEXT:  # %bb.4:
+; 64-ALL-NEXT:    xorl %eax, %eax
+; 64-ALL-NEXT:  .LBB1_5: # %cond.end
+; 64-ALL-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %i, %j
   br i1 %cmp, label %loop_start, label %cond.end
