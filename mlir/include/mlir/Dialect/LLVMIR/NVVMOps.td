@@ -574,6 +574,26 @@ def NVVM_SyncWarpOp :
 }
 
 
+def NVVM_ElectSyncOp : NVVM_Op<"elect.sync", 
+                  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>
+{  
+  let results = (outs I1:$pred);
+  let assemblyFormat = "attr-dict `->` type(results)";  
+  let extraClassDefinition = [{        
+    std::string $cppClass::getPtx() { 
+      return std::string(
+        "{                                  \n"
+        ".reg .u32 rx;                      \n"
+        ".reg .pred px;                     \n"
+        " mov.u32 %0, 0;                    \n"
+        "    elect.sync rx | px, 0xFFFFFFFF;\n"
+        "@px mov.u32 %0, 1;                 \n"
+        "}\n"
+      ); 
+    }
+  }];
+}
+
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
 def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
 def LoadCacheModifierCS : I32EnumAttrCase<"CS", 2, "cs">;
