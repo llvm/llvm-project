@@ -796,10 +796,134 @@ conversionLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, Type *ToType,
                        {{MI.getOperand(1).getReg(), FromType, 0}});
 }
 
+static RTLIB::Libcall
+getStateLibraryFunctionFor(MachineInstr &MI, const TargetLowering &TLI) {
+  RTLIB::Libcall RTLibcall;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_GET_FPMODE:
+    RTLibcall = RTLIB::FEGETMODE;
+    break;
+  case TargetOpcode::G_SET_FPMODE:
+  case TargetOpcode::G_RESET_FPMODE:
+    RTLibcall = RTLIB::FESETMODE;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+  return RTLibcall;
+}
+
+// Some library functions that read FP state (fegetmode, fegetenv) write the
+// state into a region in memory. IR intrinsics that do the same operations
+// (get_fpmode, get_fpenv) return the state as integer value. To implement these
+// intrinsics via the library functions, we need to use temporary variable,
+// for example:
+//
+//     %0:_(s32) = G_GET_FPMODE
+//
+// is transformed to:
+//
+//     %1:_(p0) = G_FRAME_INDEX %stack.0
+//     BL &fegetmode
+//     %0:_(s32) = G_LOAD % 1
+//
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                       MachineInstr &MI) {
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  auto &MF = MIRBuilder.getMF();
+  auto &MRI = *MIRBuilder.getMRI();
+  auto &Ctx = MF.getFunction().getContext();
+
+  // Create temporary, where library function will put the read state.
+  Register Dst = MI.getOperand(0).getReg();
+  LLT StateTy = MRI.getType(Dst);
+  TypeSize StateSize = StateTy.getSizeInBytes();
+  Align TempAlign = getStackTemporaryAlignment(StateTy);
+  MachinePointerInfo TempPtrInfo;
+  auto Temp = createStackTemporary(StateSize, TempAlign, TempPtrInfo);
+
+  // Create a call to library function, with the temporary as an argument.
+  unsigned TempAddrSpace = DL.getAllocaAddrSpace();
+  Type *StatePtrTy = PointerType::get(Ctx, TempAddrSpace);
+  RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
+  auto Res =
+      createLibcall(MIRBuilder, RTLibcall,
+                    CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
+                    CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}));
+  if (Res != LegalizerHelper::Legalized)
+    return Res;
+
+  // Create a load from the temporary.
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      TempPtrInfo, MachineMemOperand::MOLoad, StateTy, TempAlign);
+  MIRBuilder.buildLoadInstr(TargetOpcode::G_LOAD, Dst, Temp, *MMO);
+
+  return LegalizerHelper::Legalized;
+}
+
+// Similar to `createGetStateLibcall` the function calls a library function
+// using transient space in stack. In this case the library function reads
+// content of memory region.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                       MachineInstr &MI) {
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  auto &MF = MIRBuilder.getMF();
+  auto &MRI = *MIRBuilder.getMRI();
+  auto &Ctx = MF.getFunction().getContext();
+
+  // Create temporary, where library function will get the new state.
+  Register Src = MI.getOperand(0).getReg();
+  LLT StateTy = MRI.getType(Src);
+  TypeSize StateSize = StateTy.getSizeInBytes();
+  Align TempAlign = getStackTemporaryAlignment(StateTy);
+  MachinePointerInfo TempPtrInfo;
+  auto Temp = createStackTemporary(StateSize, TempAlign, TempPtrInfo);
+
+  // Put the new state into the temporary.
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      TempPtrInfo, MachineMemOperand::MOStore, StateTy, TempAlign);
+  MIRBuilder.buildStore(Src, Temp, *MMO);
+
+  // Create a call to library function, with the temporary as an argument.
+  unsigned TempAddrSpace = DL.getAllocaAddrSpace();
+  Type *StatePtrTy = PointerType::get(Ctx, TempAddrSpace);
+  RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
+  return createLibcall(MIRBuilder, RTLibcall,
+                       CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
+                       CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}));
+}
+
+// The function is used to legalize operations that set default environment
+// state. In C library a call like `fesetmode(FE_DFL_MODE)` is used for that.
+// On most targets supported in glibc FE_DFL_MODE is defined as
+// `((const femode_t *) -1)`. Such assumption is used here. If for some target
+// it is not true, the target must provide custom lowering.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createResetStateLibcall(MachineIRBuilder &MIRBuilder,
+                                         MachineInstr &MI) {
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  auto &MF = MIRBuilder.getMF();
+  auto &Ctx = MF.getFunction().getContext();
+
+  // Create an argument for the library function.
+  unsigned AddrSpace = DL.getDefaultGlobalsAddressSpace();
+  Type *StatePtrTy = PointerType::get(Ctx, AddrSpace);
+  unsigned PtrSize = DL.getPointerSizeInBits(AddrSpace);
+  LLT MemTy = LLT::pointer(AddrSpace, PtrSize);
+  auto DefValue = MIRBuilder.buildConstant(LLT::scalar(PtrSize), -1LL);
+  DstOp Dest(MRI.createGenericVirtualRegister(MemTy));
+  MIRBuilder.buildIntToPtr(Dest, DefValue);
+
+  RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
+  return createLibcall(MIRBuilder, RTLibcall,
+                       CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
+                       CallLowering::ArgInfo({ Dest.getReg(), StatePtrTy, 0}));
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
-  LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
-  unsigned Size = LLTy.getSizeInBits();
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   switch (MI.getOpcode()) {
@@ -811,6 +935,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
     Type *HLTy = IntegerType::get(Ctx, Size);
     auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);
     if (Status != Legalized)
@@ -841,6 +967,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
     Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
     if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
       LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
@@ -902,6 +1030,24 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return Result;
     MI.eraseFromParent();
     return Result;
+  }
+  case TargetOpcode::G_GET_FPMODE: {
+    LegalizeResult Result = createGetStateLibcall(MIRBuilder, MI);
+    if (Result != Legalized)
+      return Result;
+    break;
+  }
+  case TargetOpcode::G_SET_FPMODE: {
+    LegalizeResult Result = createSetStateLibcall(MIRBuilder, MI);
+    if (Result != Legalized)
+      return Result;
+    break;
+  }
+  case TargetOpcode::G_RESET_FPMODE: {
+    LegalizeResult Result = createResetStateLibcall(MIRBuilder, MI);
+    if (Result != Legalized)
+      return Result;
+    break;
   }
   }
 

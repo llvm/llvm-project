@@ -26,11 +26,11 @@
 ; CHECK-NEXT:     CU[0]: 0x00000000
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Abbreviations [
-; CHECK-NEXT:     Abbreviation 0x34 {
+; CHECK-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_variable
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:     }
-; CHECK-NEXT:     Abbreviation 0x24 {
+; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_base_type
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:     }
@@ -40,7 +40,7 @@
 ; CHECK-NEXT:       Hash: 0xB888030
 ; CHECK-NEXT:       String: {{.+}} "int"
 ; CHECK-NEXT:       Entry @ {{.+}} {
-; CHECK-NEXT:         Abbrev: 0x24
+; CHECK-NEXT:         Abbrev: [[ABBREV]]
 ; CHECK-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-NEXT:         DW_IDX_die_offset: [[TYPEDIE]]
 ; CHECK-NEXT:       }
@@ -51,7 +51,7 @@
 ; CHECK-NEXT:       Hash: 0xB887389
 ; CHECK-NEXT:       String: {{.+}} "foo"
 ; CHECK-NEXT:       Entry @ {{.+}} {
-; CHECK-NEXT:         Abbrev: 0x34
+; CHECK-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-NEXT:         Tag: DW_TAG_variable
 ; CHECK-NEXT:         DW_IDX_die_offset: [[VARDIE]]
 ; CHECK-NEXT:       }
