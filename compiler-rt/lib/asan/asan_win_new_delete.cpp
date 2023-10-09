@@ -12,10 +12,14 @@
 //===----------------------------------------------------------------------===//
 #include <stddef.h>
 
+#include "asan_win_thunk_common.h"
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+
+
+using __asan_win_new_delete_data = __asan_win_stack_data;
 
 // Fake std::align_val_t to avoid including <new>.
 namespace std {
@@ -23,15 +27,6 @@ enum class align_val_t : size_t {};
 }
 
 using namespace __asan;
-
-struct __asan_win_new_delete_data {
-  size_t size;        // Size of this struct (it travels over the DLL boundary).
-  int extra_context;  // Number of extra frames we need to collect in the
-                      // backtrace.
-  __sanitizer::uptr pc;
-  __sanitizer::uptr bp;
-  __sanitizer::uptr caller_pc;
-};
 
 #define OPERATOR_NEW_BODY(type, nothrow)                          \
   GET_STACK_TRACE_MALLOC_WIN(data->pc, data->bp, data->caller_pc, \
