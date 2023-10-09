@@ -65,6 +65,7 @@ def : Pat<(i64 0), (COPY (i64 G0))>,
   Requires<[Is64Bit]>;
 
 // The ALU instructions want their simm13 operands as i32 immediates.
+// FIXME: This is no longer true, they are now pointer-sized.
 def as_i32imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
@@ -173,8 +174,8 @@ def TLS_ADDXrr : F3_1<2, 0b000000, (outs I64Regs:$rd),
                        (tlsadd i64:$rs1, i64:$rs2, tglobaltlsaddr:$sym))]>;
 }
 
-def : Pat<(SPcmpicc i64:$a, i64:$b), (CMPrr $a, $b)>;
-def : Pat<(SPcmpicc i64:$a, (i64 simm13:$b)), (CMPri $a, (as_i32imm $b))>;
+def : Pat<(SPcmpicc i64:$lhs, i64:$rhs), (SUBCCrr $lhs, $rhs)>;
+def : Pat<(SPcmpicc i64:$lhs, (i64 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
 def : Pat<(i64 (ctpop i64:$src)), (POPCrr $src)>;
 
 } // Predicates = [Is64Bit]
