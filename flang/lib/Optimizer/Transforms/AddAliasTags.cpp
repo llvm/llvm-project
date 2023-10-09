@@ -15,7 +15,7 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/TBAAForest.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FirAliasAnalysisOpInterface.h"
+#include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
@@ -75,9 +75,8 @@ public:
 
 private:
   /// The real workhorse of the pass. This is a runOnOperation() which
-  /// operates on fir::FirAliasAnalysisOpInterface, using some extra state
-  void runOnAliasInterface(fir::FirAliasAnalysisOpInterface op,
-                           PassState &state);
+  /// operates on fir::FirAliasTagOpInterface, using some extra state
+  void runOnAliasInterface(fir::FirAliasTagOpInterface op, PassState &state);
 };
 
 } // namespace
@@ -98,7 +97,7 @@ static std::string getFuncArgName(mlir::Value arg) {
   return attr.str();
 }
 
-void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasAnalysisOpInterface op,
+void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                                            PassState &state) {
   mlir::func::FuncOp func = op->getParentOfType<mlir::func::FuncOp>();
 
@@ -186,9 +185,8 @@ void AddAliasTagsPass::runOnOperation() {
   PassState state;
 
   mlir::ModuleOp mod = getOperation();
-  mod.walk([&](fir::FirAliasAnalysisOpInterface op) {
-    runOnAliasInterface(op, state);
-  });
+  mod.walk(
+      [&](fir::FirAliasTagOpInterface op) { runOnAliasInterface(op, state); });
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
