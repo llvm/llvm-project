@@ -1217,6 +1217,9 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
+  if (MF->getFunction().hasOptSize())
+    return false;
+
   // Don't allow repeated splitting as a safe guard against looping.
   if (ExtraInfo->getStage(VirtReg) >= RS_Split2)
     return false;
