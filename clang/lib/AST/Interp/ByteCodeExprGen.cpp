@@ -171,14 +171,17 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
+
     if (!FromT || !ToT)
       return false;
 
     if (!this->visit(SubExpr))
       return false;
 
-    if (FromT == ToT)
+    if (FromT == ToT) {
+      assert(ToT != PT_IntAP && ToT != PT_IntAPS);
       return true;
+    }
 
     return this->emitCast(*FromT, *ToT, CE);
   }
@@ -558,7 +561,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
         if (!this->visitInitializer(Init))
           return false;
 
-        if (!this->emitPopPtr(E))
+        if (!this->emitInitPtrPop(E))
           return false;
         // Base initializers don't increase InitIndex, since they don't count
         // into the Record's fields.
@@ -881,8 +884,8 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
   // If the initializer string is too long, a diagnostic has already been
   // emitted. Read only the array length from the string literal.
-  unsigned N =
-      std::min(unsigned(CAT->getSize().getZExtValue()), E->getLength());
+  unsigned ArraySize = CAT->getSize().getZExtValue();
+  unsigned N = std::min(ArraySize, E->getLength());
   size_t CharWidth = E->getCharByteWidth();
 
   for (unsigned I = 0; I != N; ++I) {
@@ -901,6 +904,23 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
       llvm_unreachable("unsupported character width");
     }
   }
+
+  // Fill up the rest of the char array with NUL bytes.
+  for (unsigned I = N; I != ArraySize; ++I) {
+    if (CharWidth == 1) {
+      this->emitConstSint8(0, E);
+      this->emitInitElemSint8(I, E);
+    } else if (CharWidth == 2) {
+      this->emitConstUint16(0, E);
+      this->emitInitElemUint16(I, E);
+    } else if (CharWidth == 4) {
+      this->emitConstUint32(0, E);
+      this->emitInitElemUint32(I, E);
+    } else {
+      llvm_unreachable("unsupported character width");
+    }
+  }
+
   return true;
 }
 
@@ -1621,6 +1641,10 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(QualType QT,
     return this->emitZeroSint64(E);
   case PT_Uint64:
     return this->emitZeroUint64(E);
+  case PT_IntAP:
+  case PT_IntAPS:
+    assert(false);
+    return false;
   case PT_Ptr:
     return this->emitNullPtr(E);
   case PT_FnPtr:
@@ -1694,7 +1718,7 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
       return false;
     if (!this->visitZeroRecordInitializer(B.R, E))
       return false;
-    if (!this->emitPopPtr(E))
+    if (!this->emitInitPtrPop(E))
       return false;
   }
 
@@ -1860,6 +1884,10 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
     return this->emitConstSint64(Value, E);
   case PT_Uint64:
     return this->emitConstUint64(Value, E);
+  case PT_IntAP:
+  case PT_IntAPS:
+    assert(false);
+    return false;
   case PT_Bool:
     return this->emitConstBool(Value, E);
   case PT_Ptr:
@@ -2277,6 +2305,10 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
+
+  if (this->LambdaThisCapture > 0)
+    return this->emitGetThisFieldPtr(this->LambdaThisCapture, E);
+
   return this->emitThis(E);
 }
 
@@ -2508,7 +2540,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // This happens in C.
   if (!Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && VD->getAnyInitializer()) {
+        VD && VD->hasGlobalStorage() && VD->getAnyInitializer() &&
+        VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.

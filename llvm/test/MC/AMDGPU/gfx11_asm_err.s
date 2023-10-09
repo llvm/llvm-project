@@ -50,6 +50,15 @@ v_add3_u32_e64_dpp v5, v1, v2, 49812340 dpp8:[7,6,5,4,3,2,1,0]
 v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
+v_add3_u32_e64_dpp v5, v1, 42, v0 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_add3_u32_e64_dpp v5, v1, s2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_add3_u32_e64_dpp v5, v1, 42, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
 v_cvt_f32_i32_e64_dpp v5, s1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 

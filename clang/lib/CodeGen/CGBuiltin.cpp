@@ -866,6 +866,57 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
   }
 
+  if (IsDynamic) {
+    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+        getLangOpts().getStrictFlexArraysLevel();
+    const Expr *Base = E->IgnoreParenImpCasts();
+
+    if (FieldDecl *FD = FindCountedByField(Base, StrictFlexArraysLevel)) {
+      const auto *ME = dyn_cast<MemberExpr>(Base);
+      llvm::Value *ObjectSize = nullptr;
+
+      if (!ME) {
+        const auto *DRE = dyn_cast<DeclRefExpr>(Base);
+        ValueDecl *VD = nullptr;
+
+        ObjectSize = ConstantInt::get(
+            ResType,
+            getContext().getTypeSize(DRE->getType()->getPointeeType()) / 8,
+            true);
+
+        if (auto *RD = DRE->getType()->getPointeeType()->getAsRecordDecl())
+          VD = RD->getLastField();
+
+        Expr *ICE = ImplicitCastExpr::Create(
+            getContext(), DRE->getType(), CK_LValueToRValue,
+            const_cast<Expr *>(cast<Expr>(DRE)), nullptr, VK_PRValue,
+            FPOptionsOverride());
+        ME = MemberExpr::CreateImplicit(getContext(), ICE, true, VD,
+                                        VD->getType(), VK_LValue, OK_Ordinary);
+      }
+
+      // At this point, we know that \p ME is a flexible array member.
+      const auto *ArrayTy = getContext().getAsArrayType(ME->getType());
+      unsigned Size = getContext().getTypeSize(ArrayTy->getElementType());
+
+      llvm::Value *CountField =
+          EmitAnyExprToTemp(MemberExpr::CreateImplicit(
+                                getContext(), const_cast<Expr *>(ME->getBase()),
+                                ME->isArrow(), FD, FD->getType(), VK_LValue,
+                                OK_Ordinary))
+              .getScalarVal();
+
+      llvm::Value *Mul = Builder.CreateMul(
+          CountField, llvm::ConstantInt::get(CountField->getType(), Size / 8));
+      Mul = Builder.CreateZExtOrTrunc(Mul, ResType);
+
+      if (ObjectSize)
+        return Builder.CreateAdd(ObjectSize, Mul);
+
+      return Mul;
+    }
+  }
+
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate E for side-effects. In either case, we shouldn't lower to
   // @llvm.objectsize.
@@ -13537,7 +13588,7 @@ CodeGenFunction::EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask) {
 Value *CodeGenFunction::EmitAArch64CpuInit() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
   llvm::FunctionCallee Func =
-      CGM.CreateRuntimeFunction(FTy, "init_cpu_features_resolver");
+      CGM.CreateRuntimeFunction(FTy, "__init_cpu_features_resolver");
   cast<llvm::GlobalValue>(Func.getCallee())->setDSOLocal(true);
   cast<llvm::GlobalValue>(Func.getCallee())
       ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);

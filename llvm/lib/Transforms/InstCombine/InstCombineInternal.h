@@ -219,22 +219,21 @@ public:
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                         const Instruction *CtxI) const;
 
-  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
+  Constant *getLosslessTrunc(Constant *C, Type *TruncTy, unsigned ExtOp) {
     Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
     Constant *ExtTruncC =
-        ConstantFoldCastOperand(Instruction::ZExt, TruncC, C->getType(), DL);
+        ConstantFoldCastOperand(ExtOp, TruncC, C->getType(), DL);
     if (ExtTruncC && ExtTruncC == C)
       return TruncC;
     return nullptr;
   }
 
+  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::ZExt);
+  }
+
   Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
-    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
-    Constant *ExtTruncC =
-        ConstantFoldCastOperand(Instruction::SExt, TruncC, C->getType(), DL);
-    if (ExtTruncC && ExtTruncC == C)
-      return TruncC;
-    return nullptr;
+    return getLosslessTrunc(C, TruncTy, Instruction::SExt);
   }
 
 private:
@@ -548,6 +547,15 @@ public:
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &UndefElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
+
+  /// Attempts to replace V with a simpler value based on the demanded
+  /// floating-point classes
+  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
+                                    KnownFPClass &Known, unsigned Depth,
+                                    Instruction *CxtI);
+  bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
+                               FPClassTest DemandedMask, KnownFPClass &Known,
+                               unsigned Depth = 0);
 
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);

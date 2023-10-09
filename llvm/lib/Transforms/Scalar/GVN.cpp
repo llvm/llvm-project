@@ -1472,6 +1472,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
   // Perform PHI construction.
   Value *V = ConstructSSAForLoadSet(Load, ValuesPerBlock, *this);
   // ConstructSSAForLoadSet is responsible for combining metadata.
+  ICF->removeUsersOf(Load);
   Load->replaceAllUsesWith(V);
   if (isa<PHINode>(V))
     V->takeName(Load);
@@ -1891,6 +1892,7 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load) {
     // Perform PHI construction.
     Value *V = ConstructSSAForLoadSet(Load, ValuesPerBlock, *this);
     // ConstructSSAForLoadSet is responsible for combining metadata.
+    ICF->removeUsersOf(Load);
     Load->replaceAllUsesWith(V);
 
     if (isa<PHINode>(V))
@@ -2165,6 +2167,7 @@ bool GVNPass::processLoad(LoadInst *L) {
   Value *AvailableValue = AV->MaterializeAdjustedValue(L, L, *this);
 
   // MaterializeAdjustedValue is responsible for combining metadata.
+  ICF->removeUsersOf(L);
   L->replaceAllUsesWith(AvailableValue);
   markInstructionForDeletion(L);
   if (MSSAU)

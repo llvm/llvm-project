@@ -26,7 +26,8 @@ static bool isSplatZero(Type elemType, DenseElementsAttr val) {
 }
 
 /// Generates a for loop over ZA tile slices where the induction variable is
-/// the tile slice index.
+/// the tile slice index. Sets the IR Builder insertion point as the loop body.
+/// Callers of this method are responsible for restoring it if needed.
 static scf::ForOp getLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
                                         Type eltType) {
   auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -226,8 +227,6 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
         loc, tileType, constantOp1D, tile, tileSliceIndex);
 
-    rewriter.setInsertionPointAfter(forOp);
-
     rewriter.replaceOp(constantOp, tile);
 
     return success();
@@ -292,8 +291,6 @@ struct BroadcastOpToArmSMELowering
     // tile slice.
     rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
         loc, tileType, broadcastOp1D, tile, tileSliceIndex);
-
-    rewriter.setInsertionPointAfter(forOp);
 
     rewriter.replaceOp(broadcastOp, tile);
 
@@ -434,9 +431,8 @@ struct TransposeOpToArmSMELowering
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<TransferReadPermutationToArmSMELowering,
-               TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, ConstantOpToArmSMELowering,
-               BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
-               TransposeOpToArmSMELowering>(&ctx);
+  patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
+               SplatOpToArmSMELowering, TransferReadPermutationToArmSMELowering,
+               TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering>(&ctx);
 }

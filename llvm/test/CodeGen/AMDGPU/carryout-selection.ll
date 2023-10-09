@@ -2043,12 +2043,12 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CISI-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; CISI-NEXT:    s_sub_u32 s0, 0, s2
 ; CISI-NEXT:    s_subb_u32 s1, 0, s3
-; CISI-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; CISI-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; CISI-NEXT:    v_rcp_f32_e32 v0, v0
 ; CISI-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; CISI-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; CISI-NEXT:    v_trunc_f32_e32 v1, v1
-; CISI-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; CISI-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; CISI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; CISI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; CISI-NEXT:    v_mul_lo_u32 v2, s0, v1
@@ -2193,12 +2193,12 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; VI-NEXT:    s_sub_u32 s8, 0, s2
 ; VI-NEXT:    s_subb_u32 s9, 0, s3
-; VI-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; VI-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; VI-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; VI-NEXT:    v_trunc_f32_e32 v1, v1
-; VI-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; VI-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v4, v1
 ; VI-NEXT:    v_cvt_u32_f32_e32 v5, v0
 ; VI-NEXT:    v_mul_lo_u32 v2, s8, v4
@@ -2350,12 +2350,12 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; GFX9-NEXT:    s_sub_u32 s0, 0, s2
 ; GFX9-NEXT:    s_subb_u32 s1, 0, s3
-; GFX9-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GFX9-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s10, v1
@@ -2518,12 +2518,12 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1010-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; GFX1010-NEXT:    s_sub_u32 s9, 0, s2
 ; GFX1010-NEXT:    s_subb_u32 s10, 0, s3
-; GFX1010-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GFX1010-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GFX1010-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1010-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1010-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX1010-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1010-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GFX1010-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GFX1010-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1010-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1010-NEXT:    v_readfirstlane_b32 s0, v1
@@ -2680,12 +2680,12 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W32-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; GFX1030W32-NEXT:    s_sub_u32 s9, 0, s2
 ; GFX1030W32-NEXT:    s_subb_u32 s10, 0, s3
-; GFX1030W32-NEXT:    v_fmac_f32_e32 v0, 0x4f800000, v1
+; GFX1030W32-NEXT:    v_fmamk_f32 v0, v1, 0x4f800000, v0
 ; GFX1030W32-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1030W32-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1030W32-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX1030W32-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1030W32-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX1030W32-NEXT:    v_fmamk_f32 v0, v1, 0xcf800000, v0
 ; GFX1030W32-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1030W32-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1030W32-NEXT:    v_readfirstlane_b32 s0, v1
@@ -2842,12 +2842,12 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1030W64-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; GFX1030W64-NEXT:    s_sub_u32 s9, 0, s2
 ; GFX1030W64-NEXT:    s_subb_u32 s10, 0, s3
-; GFX1030W64-NEXT:    v_fmac_f32_e32 v0, 0x4f800000, v1
+; GFX1030W64-NEXT:    v_fmamk_f32 v0, v1, 0x4f800000, v0
 ; GFX1030W64-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1030W64-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1030W64-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX1030W64-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1030W64-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX1030W64-NEXT:    v_fmamk_f32 v0, v1, 0xcf800000, v0
 ; GFX1030W64-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1030W64-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1030W64-NEXT:    v_readfirstlane_b32 s8, v1
@@ -3005,7 +3005,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_sub_u32 s9, 0, s2
 ; GFX11-NEXT:    s_subb_u32 s10, 0, s3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_fmac_f32_e32 v0, 0x4f800000, v1
+; GFX11-NEXT:    v_fmamk_f32 v0, v1, 0x4f800000, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
@@ -3013,7 +3013,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX11-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_fmac_f32_e32 v0, 0xcf800000, v1
+; GFX11-NEXT:    v_fmamk_f32 v0, v1, 0xcf800000, v0
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)

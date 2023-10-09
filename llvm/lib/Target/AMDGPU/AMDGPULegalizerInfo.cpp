@@ -6059,6 +6059,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   Register VData = MI.getOperand(NumDefs == 0 ? 1 : 0).getReg();
   LLT Ty = MRI->getType(VData);
 
+  const bool IsAtomicPacked16Bit =
+      (BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
+       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16);
+
   // Check for 16 bit addresses and pack if true.
   LLT GradTy =
       MRI->getType(MI.getOperand(ArgOffset + Intr->GradientStart).getReg());
@@ -6067,7 +6071,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const bool IsG16 =
       ST.hasG16() ? (BaseOpcode->Gradients && GradTy == S16) : GradTy == S16;
   const bool IsA16 = AddrTy == S16;
-  const bool IsD16 = Ty.getScalarType() == S16;
+  const bool IsD16 = !IsAtomicPacked16Bit && Ty.getScalarType() == S16;
 
   int DMaskLanes = 0;
   if (!BaseOpcode->Atomic) {
@@ -6109,7 +6113,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     LLT Ty = MRI->getType(VData0);
 
     // TODO: Allow atomic swap and bit ops for v2s16/v4s16
-    if (Ty.isVector())
+    if (Ty.isVector() && !IsAtomicPacked16Bit)
       return false;
 
     if (BaseOpcode->AtomicX2) {
@@ -6245,9 +6249,18 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   if (NumElts > 4 || DMaskLanes > 4)
     return false;
 
+  // Image atomic instructions are using DMask to specify how many bits
+  // input/output data will have. 32-bits (s32, v2s16) or 64-bits (s64, v4s16).
+  // DMaskLanes for image atomic has default value '0'.
+  // We must be sure that atomic variants (especially packed) will not be
+  // truncated from v2s16 or v4s16 to s16 type.
+  //
+  // ChangeElementCount will be needed for image load where Ty is always scalar.
   const unsigned AdjustedNumElts = DMaskLanes == 0 ? 1 : DMaskLanes;
   const LLT AdjustedTy =
-      Ty.changeElementCount(ElementCount::getFixed(AdjustedNumElts));
+      DMaskLanes == 0
+          ? Ty
+          : Ty.changeElementCount(ElementCount::getFixed(AdjustedNumElts));
 
   // The raw dword aligned data component of the load. The only legal cases
   // where this matters should be when using the packed D16 format, for

@@ -1051,6 +1051,9 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   defm int_amdgcn_image_atomic_cmpswap :
       AMDGPUImageDimAtomicX<"ATOMIC_CMPSWAP", [AMDGPUArg<LLVMMatchType<0>, "src">,
                                                AMDGPUArg<LLVMMatchType<0>, "cmp">]>;
+
+  defm int_amdgcn_image_atomic_pk_add_f16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_F16">;
+  defm int_amdgcn_image_atomic_pk_add_bf16 : AMDGPUImageDimAtomic<"ATOMIC_PK_ADD_BF16">;
 }
 
 //////////////////////////////////////////////////////////////////////////

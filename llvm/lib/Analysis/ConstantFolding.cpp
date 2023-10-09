@@ -383,7 +383,7 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
         Cast = Instruction::PtrToInt;
 
       if (CastInst::castIsValid(Cast, C, DestTy))
-        return ConstantExpr::getCast(Cast, C, DestTy);
+        return ConstantFoldCastOperand(Cast, C, DestTy, DL);
     }
 
     // If this isn't an aggregate type, there is nothing we can do to drill down
@@ -588,7 +588,7 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
         if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
           // Be careful not to replace a load of an addrspace value with an inttoptr here
           return nullptr;
-        Res = ConstantExpr::getCast(Instruction::IntToPtr, Res, LoadTy);
+        Res = ConstantExpr::getIntToPtr(Res, LoadTy);
       }
       return Res;
     }
@@ -846,14 +846,14 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
              SrcElemTy, Ops.slice(1, i - 1)))) &&
         Ops[i]->getType()->getScalarType() != IntIdxScalarTy) {
       Any = true;
-      Type *NewType = Ops[i]->getType()->isVectorTy()
-                          ? IntIdxTy
-                          : IntIdxScalarTy;
-      NewIdxs.push_back(ConstantExpr::getCast(CastInst::getCastOpcode(Ops[i],
-                                                                      true,
-                                                                      NewType,
-                                                                      true),
-                                              Ops[i], NewType));
+      Type *NewType =
+          Ops[i]->getType()->isVectorTy() ? IntIdxTy : IntIdxScalarTy;
+      Constant *NewIdx = ConstantFoldCastOperand(
+          CastInst::getCastOpcode(Ops[i], true, NewType, true), Ops[i], NewType,
+          DL);
+      if (!NewIdx)
+        return nullptr;
+      NewIdxs.push_back(NewIdx);
     } else
       NewIdxs.push_back(Ops[i]);
   }
@@ -1435,7 +1435,7 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
                                             /*IsSigned=*/false);
       }
     }
-    return ConstantExpr::getCast(Opcode, C, DestTy);
+    break;
   case Instruction::IntToPtr:
     // If the input is a ptrtoint, turn the pair into a ptr to ptr bitcast if
     // the int size is >= the ptr size and the address spaces are the same.
@@ -1454,8 +1454,7 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
         }
       }
     }
-
-    return ConstantExpr::getCast(Opcode, C, DestTy);
+    break;
   case Instruction::Trunc:
   case Instruction::ZExt:
   case Instruction::SExt:
@@ -1466,10 +1465,14 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   case Instruction::FPToUI:
   case Instruction::FPToSI:
   case Instruction::AddrSpaceCast:
-      return ConstantExpr::getCast(Opcode, C, DestTy);
+    break;
   case Instruction::BitCast:
     return FoldBitCast(C, DestTy, DL);
   }
+
+  if (ConstantExpr::isDesirableCastOp(Opcode))
+    return ConstantExpr::getCast(Opcode, C, DestTy);
+  return ConstantFoldCastInstruction(Opcode, C, DestTy);
 }
 
 //===----------------------------------------------------------------------===//

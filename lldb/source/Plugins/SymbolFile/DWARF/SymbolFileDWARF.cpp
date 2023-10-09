@@ -58,7 +58,6 @@
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
 #include "DWARFCompileUnit.h"
-#include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugMacro.h"
@@ -74,6 +73,7 @@
 #include "SymbolFileDWARFDwo.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -511,7 +511,8 @@ bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
   return version >= 2 && version <= 5;
 }
 
-static std::set<dw_form_t> GetUnsupportedForms(DWARFDebugAbbrev *debug_abbrev) {
+static std::set<dw_form_t>
+GetUnsupportedForms(llvm::DWARFDebugAbbrev *debug_abbrev) {
   if (!debug_abbrev)
     return {};
 
@@ -553,7 +554,7 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       if (section)
         debug_abbrev_file_size = section->GetFileSize();
 
-      DWARFDebugAbbrev *abbrev = DebugAbbrev();
+      llvm::DWARFDebugAbbrev *abbrev = DebugAbbrev();
       std::set<dw_form_t> unsupported_forms = GetUnsupportedForms(abbrev);
       if (!unsupported_forms.empty()) {
         StreamString error;
@@ -624,7 +625,7 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_objfile_sp->ReadSectionData(section_sp.get(), data);
 }
 
-DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
+llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (m_abbr)
     return m_abbr.get();
 
@@ -632,7 +633,8 @@ DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
-  auto abbr = std::make_unique<DWARFDebugAbbrev>(debug_abbrev_data);
+  auto abbr =
+      std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();
   if (error) {
     Log *log = GetLog(DWARFLog::DebugInfo);

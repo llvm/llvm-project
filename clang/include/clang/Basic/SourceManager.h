@@ -43,6 +43,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/PagedVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -649,7 +650,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// This map allows us to merge ContentCache entries based
   /// on their FileEntry*.  All ContentCache objects will thus have unique,
   /// non-null, FileEntry pointers.
-  llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*> FileInfos;
+  llvm::DenseMap<FileEntryRef, SrcMgr::ContentCache*> FileInfos;
 
   /// True if the ContentCache for files that are overridden by other
   /// files, should report the original file name. Defaults to true.
@@ -699,7 +700,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Negative FileIDs are indexes into this table. To get from ID to an index,
   /// use (-ID - 2).
-  SmallVector<SrcMgr::SLocEntry, 0> LoadedSLocEntryTable;
+  llvm::PagedVector<SrcMgr::SLocEntry> LoadedSLocEntryTable;
 
   /// The starting offset of the next local SLocEntry.
   ///
@@ -876,13 +877,6 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
-  ///
-  /// This translates NULL into standard input.
-  FileID createFileID(const FileEntry *SourceFile, SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind FileCharacter,
-                      int LoadedID = 0,
-                      SourceLocation::UIntTy LoadedOffset = 0);
-
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0,
@@ -908,7 +902,7 @@ public:
 
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
   /// new FileID for the \p SourceFile.
-  FileID getOrCreateFileID(const FileEntry *SourceFile,
+  FileID getOrCreateFileID(FileEntryRef SourceFile,
                            SrcMgr::CharacteristicKind FileCharacter);
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
@@ -942,12 +936,12 @@ public:
   ///
   /// Returns std::nullopt if the buffer is not valid.
   std::optional<llvm::MemoryBufferRef>
-  getMemoryBufferForFileOrNone(const FileEntry *File);
+  getMemoryBufferForFileOrNone(FileEntryRef File);
 
   /// Retrieve the memory buffer associated with the given file.
   ///
   /// Returns a fake buffer if there isn't a real one.
-  llvm::MemoryBufferRef getMemoryBufferForFileOrFake(const FileEntry *File) {
+  llvm::MemoryBufferRef getMemoryBufferForFileOrFake(FileEntryRef File) {
     if (auto B = getMemoryBufferForFileOrNone(File))
       return *B;
     return getFakeBufferForRecovery();
@@ -960,7 +954,7 @@ public:
   ///
   /// \param Buffer the memory buffer whose contents will be used as the
   /// data in the given source file.
-  void overrideFileContents(const FileEntry *SourceFile,
+  void overrideFileContents(FileEntryRef SourceFile,
                             const llvm::MemoryBufferRef &Buffer) {
     overrideFileContents(SourceFile, llvm::MemoryBuffer::getMemBuffer(Buffer));
   }
@@ -972,12 +966,8 @@ public:
   ///
   /// \param Buffer the memory buffer whose contents will be used as the
   /// data in the given source file.
-  void overrideFileContents(const FileEntry *SourceFile,
-                            std::unique_ptr<llvm::MemoryBuffer> Buffer);
   void overrideFileContents(FileEntryRef SourceFile,
-                            std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-    overrideFileContents(&SourceFile.getFileEntry(), std::move(Buffer));
-  }
+                            std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
   /// Override the given source file with another one.
   ///
@@ -1680,12 +1670,12 @@ public:
 
   // Iterators over FileInfos.
   using fileinfo_iterator =
-      llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*>::const_iterator;
+      llvm::DenseMap<FileEntryRef, SrcMgr::ContentCache *>::const_iterator;
 
   fileinfo_iterator fileinfo_begin() const { return FileInfos.begin(); }
   fileinfo_iterator fileinfo_end() const { return FileInfos.end(); }
   bool hasFileInfo(const FileEntry *File) const {
-    return FileInfos.contains(File);
+    return FileInfos.find_as(File) != FileInfos.end();
   }
 
   /// Print statistics to stderr.

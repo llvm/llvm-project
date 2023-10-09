@@ -2890,7 +2890,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          Mod->InferExportWildcard,
                                          Mod->ConfigMacrosExhaustive,
                                          Mod->ModuleMapIsPrivate,
-                                         Mod->NamedModuleHasNoInit};
+                                         Mod->NamedModuleHasInit};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -4622,12 +4622,12 @@ time_t ASTWriter::getTimestampForOutput(const FileEntry *E) const {
 
 ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
                                      Module *WritingModule, StringRef isysroot,
-                                     bool hasErrors,
                                      bool ShouldCacheASTInMemory) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  ASTHasCompilerErrors = hasErrors;
+  ASTHasCompilerErrors =
+      SemaRef.PP.getDiagnostics().hasUncompilableErrorOccurred();
 
   // Emit the file header.
   Stream.Emit((unsigned)'C', 8);
@@ -7257,6 +7257,8 @@ void OMPClauseWriter::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getEndLoc());
 }
+
+void OMPClauseWriter::VisitOMPXBareClause(OMPXBareClause *C) {}
 
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());

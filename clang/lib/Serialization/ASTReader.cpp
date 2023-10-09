@@ -1907,10 +1907,10 @@ unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
 }
 
 HeaderFileInfoTrait::internal_key_type
-HeaderFileInfoTrait::GetInternalKey(const FileEntry *FE) {
-  internal_key_type ikey = {FE->getSize(),
-                            M.HasTimestamps ? FE->getModificationTime() : 0,
-                            FE->getName(), /*Imported*/ false};
+HeaderFileInfoTrait::GetInternalKey(external_key_type FE) {
+  internal_key_type ikey = {FE.getSize(),
+                            M.HasTimestamps ? FE.getModificationTime() : 0,
+                            FE.getName(), /*Imported*/ false};
   return ikey;
 }
 
@@ -5685,7 +5685,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       bool InferExportWildcard = Record[Idx++];
       bool ConfigMacrosExhaustive = Record[Idx++];
       bool ModuleMapIsPrivate = Record[Idx++];
-      bool NamedModuleHasNoInit = Record[Idx++];
+      bool NamedModuleHasInit = Record[Idx++];
 
       Module *ParentModule = nullptr;
       if (Parent)
@@ -5736,7 +5736,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->InferExportWildcard = InferExportWildcard;
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
-      CurrentModule->NamedModuleHasNoInit = NamedModuleHasNoInit;
+      CurrentModule->NamedModuleHasInit = NamedModuleHasInit;
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
@@ -6399,11 +6399,11 @@ namespace {
 
   /// Visitor used to search for information about a header file.
   class HeaderFileInfoVisitor {
-    const FileEntry *FE;
+  FileEntryRef FE;
     std::optional<HeaderFileInfo> HFI;
 
   public:
-    explicit HeaderFileInfoVisitor(const FileEntry *FE) : FE(FE) {}
+    explicit HeaderFileInfoVisitor(FileEntryRef FE) : FE(FE) {}
 
     bool operator()(ModuleFile &M) {
       HeaderFileInfoLookupTable *Table
@@ -6425,7 +6425,7 @@ namespace {
 
 } // namespace
 
-HeaderFileInfo ASTReader::GetHeaderFileInfo(const FileEntry *FE) {
+HeaderFileInfo ASTReader::GetHeaderFileInfo(FileEntryRef FE) {
   HeaderFileInfoVisitor Visitor(FE);
   ModuleMgr.visit(Visitor);
   if (std::optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())
@@ -7946,9 +7946,10 @@ void ASTReader::PrintStats() {
   std::fprintf(stderr, "*** AST File Statistics:\n");
 
   unsigned NumTypesLoaded =
-      TypesLoaded.size() - llvm::count(TypesLoaded, QualType());
+      TypesLoaded.size() - llvm::count(TypesLoaded.materialized(), QualType());
   unsigned NumDeclsLoaded =
-      DeclsLoaded.size() - llvm::count(DeclsLoaded, (Decl *)nullptr);
+      DeclsLoaded.size() -
+      llvm::count(DeclsLoaded.materialized(), (Decl *)nullptr);
   unsigned NumIdentifiersLoaded =
       IdentifiersLoaded.size() -
       llvm::count(IdentifiersLoaded, (IdentifierInfo *)nullptr);
@@ -10446,6 +10447,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_ompx_attribute:
     C = new (Context) OMPXAttributeClause();
     break;
+  case llvm::omp::OMPC_ompx_bare:
+    C = new (Context) OMPXBareClause();
+    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -11546,6 +11550,8 @@ void OMPClauseReader::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
   C->setLocEnd(Record.readSourceLocation());
 }
+
+void OMPClauseReader::VisitOMPXBareClause(OMPXBareClause *C) {}
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
   OMPTraitInfo &TI = getContext().getNewOMPTraitInfo();

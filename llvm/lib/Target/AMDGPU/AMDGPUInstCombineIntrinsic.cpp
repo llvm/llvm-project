@@ -862,7 +862,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Constant *CCmp = ConstantExpr::getCompare(CCVal, CSrc0, CSrc1);
         if (CCmp->isNullValue()) {
           return IC.replaceInstUsesWith(
-              II, ConstantExpr::getSExt(CCmp, II.getType()));
+              II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
 
         // The result of V_ICMP/V_FCMP assembly instructions (which this

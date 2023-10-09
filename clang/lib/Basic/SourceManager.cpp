@@ -324,8 +324,7 @@ SourceManager::~SourceManager() {
       ContentCacheAlloc.Deallocate(MemBufferInfos[i]);
     }
   }
-  for (llvm::DenseMap<const FileEntry*, SrcMgr::ContentCache*>::iterator
-       I = FileInfos.begin(), E = FileInfos.end(); I != E; ++I) {
+  for (auto I = FileInfos.begin(), E = FileInfos.end(); I != E; ++I) {
     if (I->second) {
       I->second->~ContentCache();
       ContentCacheAlloc.Deallocate(I->second);
@@ -528,17 +527,6 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 
 /// Create a new FileID that represents the specified file
 /// being \#included from the specified IncludePosition.
-///
-/// This translates NULL into standard input.
-FileID SourceManager::createFileID(const FileEntry *SourceFile,
-                                   SourceLocation IncludePos,
-                                   SrcMgr::CharacteristicKind FileCharacter,
-                                   int LoadedID,
-                                   SourceLocation::UIntTy LoadedOffset) {
-  return createFileID(SourceFile->getLastRef(), IncludePos, FileCharacter,
-                      LoadedID, LoadedOffset);
-}
-
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
@@ -586,7 +574,7 @@ FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
 /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
 /// new FileID for the \p SourceFile.
 FileID
-SourceManager::getOrCreateFileID(const FileEntry *SourceFile,
+SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
                                  SrcMgr::CharacteristicKind FileCharacter) {
   FileID ID = translateFile(SourceFile);
   return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
@@ -682,14 +670,14 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
 }
 
 std::optional<llvm::MemoryBufferRef>
-SourceManager::getMemoryBufferForFileOrNone(const FileEntry *File) {
-  SrcMgr::ContentCache &IR = getOrCreateContentCache(File->getLastRef());
+SourceManager::getMemoryBufferForFileOrNone(FileEntryRef File) {
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(File);
   return IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
 }
 
 void SourceManager::overrideFileContents(
-    const FileEntry *SourceFile, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile->getLastRef());
+    FileEntryRef SourceFile, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile);
 
   IR.setBuffer(std::move(Buffer));
   IR.BufferOverridden = true;
@@ -702,7 +690,7 @@ void SourceManager::overrideFileContents(const FileEntry *SourceFile,
   assert(SourceFile->getSize() == NewFile.getSize() &&
          "Different sizes, use the FileManager to create a virtual file with "
          "the correct size");
-  assert(FileInfos.count(SourceFile) == 0 &&
+  assert(FileInfos.find_as(SourceFile) == FileInfos.end() &&
          "This function should be called at the initialization stage, before "
          "any parsing occurs.");
   // FileEntryRef is not default-constructible.
@@ -2344,11 +2332,11 @@ SourceManager::MemoryBufferSizes SourceManager::getMemoryBufferSizes() const {
 }
 
 size_t SourceManager::getDataStructureSizes() const {
-  size_t size = llvm::capacity_in_bytes(MemBufferInfos)
-    + llvm::capacity_in_bytes(LocalSLocEntryTable)
-    + llvm::capacity_in_bytes(LoadedSLocEntryTable)
-    + llvm::capacity_in_bytes(SLocEntryLoaded)
-    + llvm::capacity_in_bytes(FileInfos);
+  size_t size = llvm::capacity_in_bytes(MemBufferInfos) +
+                llvm::capacity_in_bytes(LocalSLocEntryTable) +
+                llvm::capacity_in_bytes(LoadedSLocEntryTable) +
+                llvm::capacity_in_bytes(SLocEntryLoaded) +
+                llvm::capacity_in_bytes(FileInfos);
 
   if (OverriddenFilesInfo)
     size += llvm::capacity_in_bytes(OverriddenFilesInfo->OverriddenFiles);
@@ -2376,8 +2364,9 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
       new DiagnosticOptions);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
-  FileID ID = SourceMgr->createFileID(*FileMgr->getFile(FileName),
-                                      SourceLocation(), clang::SrcMgr::C_User);
+  FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
+  FileID ID =
+      SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
 }

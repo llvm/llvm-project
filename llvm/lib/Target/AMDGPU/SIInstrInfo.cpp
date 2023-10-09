@@ -3263,9 +3263,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     MachineOperand *Src2 = getNamedOperand(UseMI, AMDGPU::OpName::src2);
 
     // Multiplied part is the constant: Use v_madmk_{f16, f32}.
-    // We should only expect these to be on src0 due to canonicalization.
-    if (Src0->isReg() && Src0->getReg() == Reg) {
-      if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
+    if ((Src0->isReg() && Src0->getReg() == Reg) ||
+        (Src1->isReg() && Src1->getReg() == Reg)) {
+      MachineOperand *RegSrc =
+          Src1->isReg() && Src1->getReg() == Reg ? Src0 : Src1;
+      if (!RegSrc->isReg() ||
+          RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())))
         return false;
 
       if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
@@ -3279,18 +3282,22 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
-      // We need to swap operands 0 and 1 since madmk constant is at operand 1.
+      // V_FMAMK_F16_t16 takes VGPR_32_Lo128 operands, so the rewrite
+      // would also require restricting their register classes. For now
+      // just bail out.
+      if (NewOpc == AMDGPU::V_FMAMK_F16_t16)
+        return false;
 
       const int64_t Imm = ImmOp->getImm();
 
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
 
-      Register Src1Reg = Src1->getReg();
-      unsigned Src1SubReg = Src1->getSubReg();
-      Src0->setReg(Src1Reg);
-      Src0->setSubReg(Src1SubReg);
-      Src0->setIsKill(Src1->isKill());
+      Register SrcReg = RegSrc->getReg();
+      unsigned SrcSubReg = RegSrc->getSubReg();
+      Src0->setReg(SrcReg);
+      Src0->setSubReg(SrcSubReg);
+      Src0->setIsKill(RegSrc->isKill());
 
       if (Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
           Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_t16_e64 ||
@@ -3357,6 +3364,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                             : AMDGPU::V_FMAAK_F16)
                 : (IsF32 ? AMDGPU::V_MADAK_F32 : AMDGPU::V_MADAK_F16);
       if (pseudoToMCOpcode(NewOpc) == -1)
+        return false;
+
+      // V_FMAAK_F16_t16 takes VGPR_32_Lo128 operands, so the rewrite
+      // would also require restricting their register classes. For now
+      // just bail out.
+      if (NewOpc == AMDGPU::V_FMAAK_F16_t16)
         return false;
 
       const int64_t Imm = ImmOp->getImm();

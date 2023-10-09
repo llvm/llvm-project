@@ -1051,7 +1051,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Set required alignment.
   setMinFunctionAlignment(Align(4));
   // Set preferred alignments.
-  setPrefLoopAlignment(STI.getPrefLoopAlignment());
+
+  // Don't align loops on Windows. The SEH unwind info generation needs to
+  // know the exact length of functions before the alignments have been
+  // expanded.
+  if (!Subtarget->isTargetWindows())
+    setPrefLoopAlignment(STI.getPrefLoopAlignment());
   setMaxBytesForAlignment(STI.getMaxBytesForLoopAlignment());
   setPrefFunctionAlignment(STI.getPrefFunctionAlignment());
 
@@ -5705,11 +5710,11 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
     // legalization will break up 256 bit inputs.
     ElementCount EC = MemVT.getVectorElementCount();
     if (StoreNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
-        EC.isKnownEven() &&
-        ((MemVT.getScalarSizeInBits() == 8u ||
-          MemVT.getScalarSizeInBits() == 16u ||
-          MemVT.getScalarSizeInBits() == 32u ||
-          MemVT.getScalarSizeInBits() == 64u))) {
+        EC.isKnownEven() && DAG.getDataLayout().isLittleEndian() &&
+        (MemVT.getScalarSizeInBits() == 8u ||
+         MemVT.getScalarSizeInBits() == 16u ||
+         MemVT.getScalarSizeInBits() == 32u ||
+         MemVT.getScalarSizeInBits() == 64u)) {
       SDValue Lo =
           DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl,
                       MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
@@ -5769,6 +5774,8 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   SDLoc DL(Op);
   auto StoreValue = DAG.SplitScalar(Value, DL, MVT::i64, MVT::i64);
   unsigned Opcode = IsStoreRelease ? AArch64ISD::STILP : AArch64ISD::STP;
+  if (DAG.getDataLayout().isBigEndian())
+    std::swap(StoreValue.first, StoreValue.second);
   SDValue Result = DAG.getMemIntrinsicNode(
       Opcode, DL, DAG.getVTList(MVT::Other),
       {StoreNode->getChain(), StoreValue.first, StoreValue.second,
@@ -7360,10 +7367,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue NumZaSaveSlices;
     if (!CalleeAttrs.preservesZA()) {
       // Set up a lazy save mechanism by storing the runtime live slices
-      // (worst-case SVL*SVL) to the TPIDR2 stack object.
-      SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                                DAG.getConstant(1, DL, MVT::i32));
-      NumZaSaveSlices = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+      // (worst-case SVL) to the TPIDR2 stack object.
+      NumZaSaveSlices = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                    DAG.getConstant(1, DL, MVT::i32));
     } else if (CalleeAttrs.preservesZA()) {
       NumZaSaveSlices = DAG.getConstant(0, DL, MVT::i64);
     }
@@ -10052,18 +10058,22 @@ static PredicateConstraint parsePredicateConstraint(StringRef Constraint) {
 
 static const TargetRegisterClass *
 getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
-  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+  if (VT != MVT::aarch64svcount &&
+      (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1))
     return nullptr;
 
   switch (Constraint) {
   default:
     return nullptr;
   case PredicateConstraint::Uph:
-    return &AArch64::PPR_p8to15RegClass;
+    return VT == MVT::aarch64svcount ? &AArch64::PNR_p8to15RegClass
+                                     : &AArch64::PPR_p8to15RegClass;
   case PredicateConstraint::Upl:
-    return &AArch64::PPR_3bRegClass;
+    return VT == MVT::aarch64svcount ? &AArch64::PNR_3bRegClass
+                                     : &AArch64::PPR_3bRegClass;
   case PredicateConstraint::Upa:
-    return &AArch64::PPRRegClass;
+    return VT == MVT::aarch64svcount ? &AArch64::PNRRegClass
+                                     : &AArch64::PPRRegClass;
   }
 }
 
@@ -11802,7 +11812,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   if (((VT.getVectorNumElements() == 8 && VT.getScalarSizeInBits() == 16) ||
        (VT.getVectorNumElements() == 16 && VT.getScalarSizeInBits() == 8)) &&
-      ShuffleVectorInst::isReverseMask(ShuffleMask)) {
+      ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
     SDValue Rev = DAG.getNode(AArch64ISD::REV64, dl, VT, V1);
     return DAG.getNode(AArch64ISD::EXT, dl, VT, Rev, Rev,
                        DAG.getConstant(8, dl, MVT::i32));
@@ -24158,8 +24168,11 @@ void AArch64TargetLowering::ReplaceNodeResults(
           {LoadNode->getChain(), LoadNode->getBasePtr()},
           LoadNode->getMemoryVT(), LoadNode->getMemOperand());
 
-      SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
-                                 Result.getValue(0), Result.getValue(1));
+      unsigned FirstRes = DAG.getDataLayout().isBigEndian() ? 1 : 0;
+
+      SDValue Pair =
+          DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
+                      Result.getValue(FirstRes), Result.getValue(1 - FirstRes));
       Results.append({Pair, Result.getValue(2) /* Chain */});
     }
     return;
@@ -25816,6 +25829,79 @@ AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
   }
 }
 
+static SDValue GenerateFixedLengthSVETBL(SDValue Op, SDValue Op1, SDValue Op2,
+                                         ArrayRef<int> ShuffleMask, EVT VT,
+                                         EVT ContainerVT, SelectionDAG &DAG) {
+  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  SDLoc DL(Op);
+  unsigned MinSVESize = Subtarget.getMinSVEVectorSizeInBits();
+  unsigned MaxSVESize = Subtarget.getMaxSVEVectorSizeInBits();
+  bool IsSingleOp =
+      ShuffleVectorInst::isSingleSourceMask(ShuffleMask, ShuffleMask.size());
+
+  // Ignore two operands if no SVE2 or all index numbers couldn't
+  // be represented.
+  if (!IsSingleOp && (!Subtarget.hasSVE2() || MinSVESize != MaxSVESize))
+    return SDValue();
+
+  EVT VTOp1 = Op.getOperand(0).getValueType();
+  unsigned BitsPerElt = VTOp1.getVectorElementType().getSizeInBits();
+  unsigned IndexLen = MinSVESize / BitsPerElt;
+  unsigned ElementsPerVectorReg = VTOp1.getVectorNumElements();
+  unsigned MaskSize = ShuffleMask.size();
+  uint64_t MaxOffset = APInt(BitsPerElt, -1, false).getZExtValue();
+  assert(ElementsPerVectorReg <= IndexLen && MaskSize <= IndexLen &&
+         "Incorrectly legalised shuffle operation");
+  (void)MaskSize;
+
+  SmallVector<SDValue, 8> TBLMask;
+  for (int Index : ShuffleMask) {
+    // Handling poison index value.
+    if (Index < 0)
+      Index = 0;
+    // If we refer to the second operand then we have to add elements
+    // number in hardware register minus number of elements in a type.
+    if ((unsigned)Index >= ElementsPerVectorReg)
+      Index += IndexLen - ElementsPerVectorReg;
+    // For 8-bit elements and 1024-bit SVE registers and MaxOffset equals
+    // to 255, this might point to the last element of in the second operand
+    // of the shufflevector, thus we are rejecting this transform.
+    if ((unsigned)Index >= MaxOffset)
+      return SDValue();
+    TBLMask.push_back(DAG.getConstant(Index, DL, MVT::i64));
+  }
+
+  // Choosing an out-of-range index leads to the lane being zeroed vs zero
+  // value where it would perform first lane duplication for out of
+  // index elements. For i8 elements an out-of-range index could be a valid
+  // for 2048-bit vector register size.
+  for (unsigned i = 0; i < IndexLen - ElementsPerVectorReg; ++i)
+    TBLMask.push_back(DAG.getConstant((int)MaxOffset, DL, MVT::i64));
+
+  EVT MaskEltType = EVT::getIntegerVT(*DAG.getContext(), BitsPerElt);
+  EVT MaskType = EVT::getVectorVT(*DAG.getContext(), MaskEltType, IndexLen);
+  EVT MaskContainerVT = getContainerForFixedLengthVector(DAG, MaskType);
+  SDValue VecMask =
+      DAG.getBuildVector(MaskType, DL, ArrayRef(TBLMask.data(), IndexLen));
+  SDValue SVEMask = convertToScalableVector(DAG, MaskContainerVT, VecMask);
+
+  SDValue Shuffle;
+  if (IsSingleOp)
+    Shuffle =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+                    DAG.getConstant(Intrinsic::aarch64_sve_tbl, DL, MVT::i32),
+                    Op1, SVEMask);
+  else if (Subtarget.hasSVE2())
+    Shuffle =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+                    DAG.getConstant(Intrinsic::aarch64_sve_tbl2, DL, MVT::i32),
+                    Op1, Op2, SVEMask);
+  else
+    llvm_unreachable("Cannot lower shuffle without SVE2 TBL");
+  Shuffle = convertFromScalableVector(DAG, VT, Shuffle);
+  return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Shuffle);
+}
+
 SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -25935,7 +26021,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
   unsigned MaxSVESize = Subtarget->getMaxSVEVectorSizeInBits();
   if (MinSVESize == MaxSVESize && MaxSVESize == VT.getSizeInBits()) {
-    if (ShuffleVectorInst::isReverseMask(ShuffleMask) && Op2.isUndef()) {
+    if (ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size()) &&
+        Op2.isUndef()) {
       Op = DAG.getNode(ISD::VECTOR_REVERSE, DL, ContainerVT, Op1);
       return convertFromScalableVector(DAG, VT, Op);
     }
@@ -25960,6 +26047,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op1));
     }
   }
+
+  // Avoid producing TBL instruction if we don't know SVE register minimal size.
+  if (MinSVESize)
+    return GenerateFixedLengthSVETBL(Op, Op1, Op2, ShuffleMask, VT, ContainerVT,
+                                     DAG);
 
   return SDValue();
 }
