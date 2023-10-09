@@ -59,13 +59,6 @@ constexpr llvm::StringLiteral MsgSanitizeSystemArgs =
     "Untrusted data is passed to a system call "
     "(CERT/STR02-C. Sanitize data passed to complex subsystems)";
 
-/// Check if tainted data is used as a buffer size in strn.. functions,
-/// and allocators.
-constexpr llvm::StringLiteral MsgTaintedBufferSize =
-    "Untrusted data is used to specify the buffer size "
-    "(CERT/STR31-C. Guarantee that storage for strings has sufficient space "
-    "for character data and the null terminator)";
-
 /// Check if tainted data is used as a custom sink's parameter.
 constexpr llvm::StringLiteral MsgCustomSink =
     "Untrusted data is passed to a user-defined sink";
@@ -733,13 +726,23 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{CDF_MaybeBuiltin, {{"stpcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strcat"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+       TR::Prop({{0,1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"wcsncat"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdupa"}}},
        TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"wcsdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, BI.getName(Builtin::BImemcpy)},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BImemmove)}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrncpy)}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrndup)}},
+       TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {"bcopy"}},
+       TR::Prop({{0, 2}}, {{1}})},
 
       // Sinks
       {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
@@ -753,32 +756,16 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
       {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
       {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{CDF_MaybeBuiltin, {{"malloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"calloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"alloca"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"memccpy"}}},
-       TR::Sink({{3}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"realloc"}}},
-       TR::Sink({{1}}, MsgTaintedBufferSize)},
+       // malloc, calloc, alloca, realloc, memccpy
+       // are intentionally left out as taint sinks
+       // because unconditional reporting for these functions
+       // generate many false positives.
+       // These taint sinks should be implemented in other checkers
+       // with more sophisticated sanitation heuristics.
       {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
       {{{{"setproctitle_fast"}}},
        TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-
-      // SinkProps
-      {{CDF_MaybeBuiltin, BI.getName(Builtin::BImemcpy)},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BImemmove)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrncpy)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrndup)}},
-       TR::SinkProp({{1}}, {{0, 1}}, {{ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {{"bcopy"}}},
-       TR::SinkProp({{2}}, {{0, 2}}, {{1}}, MsgTaintedBufferSize)}};
+       };
 
   // `getenv` returns taint only in untrusted environments.
   if (TR::UntrustedEnv(C)) {
