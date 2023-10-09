@@ -2374,16 +2374,15 @@ static bool FunctionParamsAreMainLike(ASTContext &Context,
   const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
   QualType CharPP =
       Context.getPointerType(Context.getPointerType(Context.CharTy));
-  QualType Expected[] = {Context.IntTy, CharPP, CharPP, CharPP};  
+  QualType Expected[] = {Context.IntTy, CharPP, CharPP, CharPP};
   for (unsigned I = 0;
        I < sizeof(Expected) / sizeof(QualType) && I < FPT->getNumParams();
        ++I) {
     QualType AT = FPT->getParamType(I);
 
     bool Mismatch = true;
-    if (Context.hasSameUnqualifiedType(AT, Expected[I]))
-      Mismatch = false;
-    else if (Expected[I] == CharPP) {
+    if (!Context.hasSameUnqualifiedType(AT, Expected[I]) &&
+        Expected[I] == CharPP) {
       // As an extension, the following forms are okay:
       //   char const **
       //   char const * const *
@@ -2396,12 +2395,10 @@ static bool FunctionParamsAreMainLike(ASTContext &Context,
           Context.hasSameType(QualType(Qs.strip(PT->getPointeeType()), 0),
                               Context.CharTy)) {
         Qs.removeConst();
-        Mismatch = !Qs.empty();
+        if (!Qs.empty())
+          return false;
       }
     }
-
-    if (Mismatch)
-      return false;
   }
   return true;
 }
