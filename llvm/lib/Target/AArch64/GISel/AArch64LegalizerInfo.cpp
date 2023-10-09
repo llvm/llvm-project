@@ -896,10 +896,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_MUL)
-      .clampMaxNumElements(1, s64, 2)
-      .clampMaxNumElements(1, s32, 4)
-      .clampMaxNumElements(1, s16, 8)
-      .clampMaxNumElements(1, s8, 16)
+      .clampMaxNumElements(1, s64, 1)
+      .clampMaxNumElements(1, s32, 2)
+      .clampMaxNumElements(1, s16, 4)
+      .clampMaxNumElements(1, s8, 8)
       .scalarize(1)
       .lower();
 
