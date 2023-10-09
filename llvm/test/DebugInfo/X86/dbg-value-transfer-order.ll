@@ -31,8 +31,8 @@
 ; CHECK:         movl    $1, %[[reg:[^ ]*]]
 ; CHECK:         shll    %cl, %[[reg]]
 ; CHECK: .LBB0_2:                                # %while.body
-; CHECK:         testl   {{.*}}
 ; CHECK:         movl    $32, %ecx
+; CHECK:         testl   {{.*}}
 ; CHECK:         jne     .LBB0_4
 ; CHECK: # %bb.3:                                 # %if.then
 ; CHECK:         callq   if_then
