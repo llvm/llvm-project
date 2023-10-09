@@ -48,9 +48,9 @@
 // CHECK: #[[ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
 // CHECK: #[[ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
 // CHECK: #[[ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANY_DATA]], 0>}>
-// CHECK: #[[ARG_LOW:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/low", members = {<#[[ANY_ARG]], 0>}>
-// CHECK: #[[ARG_Z:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/z", members = {<#[[ANY_ARG]], 0>}>
-// CHECK: #[[ARG_Y:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/y", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[ARG_LOW:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeElow", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[ARG_Z:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEz", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[ARG_Y:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEy", members = {<#[[ANY_ARG]], 0>}>
 // CHECK: #[[ARG_LOW_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_LOW]], access_type = #[[ARG_LOW]], offset = 0>
 // CHECK: #[[ARG_Z_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_Z]], access_type = #[[ARG_Z]], offset = 0>
 // CHECK: #[[ARG_Y_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_Y]], access_type = #[[ARG_Y]], offset = 0>

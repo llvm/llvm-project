@@ -20,7 +20,7 @@
 // CHECK: #[[ONE_ARG_ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ONE_ARG_ROOT]], 0>}>
 // CHECK: #[[ONE_ARG_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ONE_ARG_ANY_ACCESS]], 0>}>
 // CHECK: #[[ONE_ARG_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ONE_ARG_ANY_DATA]], 0>}>
-// CHECK: #[[ONE_ARG_A:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/a", members = {<#[[ONE_ARG_ANY_ARG]], 0>}>
+// CHECK: #[[ONE_ARG_A:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFoneargEa", members = {<#[[ONE_ARG_ANY_ARG]], 0>}>
 // CHECK: #[[ONE_ARG_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ONE_ARG_A]], access_type = #[[ONE_ARG_A]], offset = 0>
 
 // CHECK-LABEL:   func.func @_QPonearg(
@@ -59,8 +59,8 @@
 // CHECK: #[[TWO_ARG_ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[TWO_ARG_ROOT]], 0>}>
 // CHECK: #[[TWO_ARG_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TWO_ARG_ANY_ACCESS]], 0>}>
 // CHECK: #[[TWO_ARG_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[TWO_ARG_ANY_DATA]], 0>}>
-// CHECK: #[[TWO_ARG_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/b", members = {<#[[TWO_ARG_ANY_ARG]], 0>}>
-// CHECK: #[[TWO_ARG_A:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/a", members = {<#[[TWO_ARG_ANY_ARG]], 0>}>
+// CHECK: #[[TWO_ARG_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtwoargEb", members = {<#[[TWO_ARG_ANY_ARG]], 0>}>
+// CHECK: #[[TWO_ARG_A:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtwoargEa", members = {<#[[TWO_ARG_ANY_ARG]], 0>}>
 // CHECK: #[[TWO_ARG_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TWO_ARG_B]], access_type = #[[TWO_ARG_B]], offset = 0>
 // CHECK: #[[TWO_ARG_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TWO_ARG_A]], access_type = #[[TWO_ARG_A]], offset = 0>
 
@@ -103,7 +103,7 @@
 // CHECK: #[[TARGET_ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[TARGET_ROOT]], 0>}>
 // CHECK: #[[TARGET_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TARGET_ANY_ACCESS]], 0>}>
 // CHECK: #[[TARGET_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[TARGET_ANY_DATA]], 0>}>
-// CHECK: #[[TARGET_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/b", members = {<#[[TARGET_ANY_ARG]], 0>}>
+// CHECK: #[[TARGET_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtargetargEb", members = {<#[[TARGET_ANY_ARG]], 0>}>
 // CHECK: #[[TARGET_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGET_B]], access_type = #[[TARGET_B]], offset = 0>
 // No entry for "dummy arg data/a" because that pointer should get "any data access" becase it has the TARGET attribute
 
@@ -150,7 +150,7 @@
 // CHECK: #[[POINTER_ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[POINTER_ROOT]], 0>}>
 // CHECK: #[[POINTER_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[POINTER_ANY_ACCESS]], 0>}>
 // CHECK: #[[POINTER_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[POINTER_ANY_DATA]], 0>}>
-// CHECK: #[[POINTER_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/b", members = {<#[[POINTER_ANY_ARG]], 0>}>
+// CHECK: #[[POINTER_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFpointerargEb", members = {<#[[POINTER_ANY_ARG]], 0>}>
 // CHECK: #[[POINTER_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[POINTER_B]], access_type = #[[POINTER_B]], offset = 0>
 // No entry for "dummy arg data/a" because that pointer should get "any data access" becase it has the POINTER attribute
 

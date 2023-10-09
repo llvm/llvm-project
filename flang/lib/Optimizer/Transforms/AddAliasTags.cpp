@@ -81,15 +81,27 @@ private:
 
 } // namespace
 
+static fir::DeclareOp getDeclareOp(mlir::Value arg) {
+  for (mlir::Operation *use : arg.getUsers())
+    if (fir::DeclareOp declare = mlir::dyn_cast<fir::DeclareOp>(use))
+      return declare;
+  return nullptr;
+}
+
 /// Get the name of a function argument using the "fir.bindc_name" attribute,
 /// or ""
 static std::string getFuncArgName(mlir::Value arg) {
+  // first try getting the name from the hlfir.declare
+  if (fir::DeclareOp declare = getDeclareOp(arg))
+    return declare.getUniqName().str();
+
+  // get from attribute on function argument
   // always succeeds because arg is a function argument
   mlir::BlockArgument blockArg = mlir::cast<mlir::BlockArgument>(arg);
   assert(blockArg.getOwner() && blockArg.getOwner()->isEntryBlock() &&
          "arg is a function argument");
-  mlir::FunctionOpInterface func =
-      mlir::cast<mlir::FunctionOpInterface>(blockArg.getOwner()->getParentOp());
+  mlir::FunctionOpInterface func = mlir::dyn_cast<mlir::FunctionOpInterface>(
+      blockArg.getOwner()->getParentOp());
   mlir::StringAttr attr = func.getArgAttrOfType<mlir::StringAttr>(
       blockArg.getArgNumber(), "fir.bindc_name");
   if (!attr)
