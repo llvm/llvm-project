@@ -9,6 +9,7 @@
 #ifndef SCUDO_PRIMARY64_H_
 #define SCUDO_PRIMARY64_H_
 
+#include "allocator_common.h"
 #include "bytemap.h"
 #include "common.h"
 #include "list.h"
@@ -55,8 +56,11 @@ public:
   static const uptr GroupScale = GroupSizeLog - CompactPtrScale;
   typedef SizeClassAllocator64<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
-  typedef typename CacheT::TransferBatch TransferBatch;
-  typedef typename CacheT::BatchGroup BatchGroup;
+  typedef TransferBatch<ThisT> TransferBatch;
+  typedef BatchGroup<ThisT> BatchGroup;
+
+  static_assert(sizeof(BatchGroup) <= sizeof(TransferBatch),
+                "BatchGroup uses the same class size as TransferBatch");
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
@@ -201,6 +205,21 @@ public:
     const uptr BlocksInUse =
         Region->FreeListInfo.PoppedBlocks - Region->FreeListInfo.PushedBlocks;
     DCHECK_EQ(BlocksInUse, BatchClassUsedInFreeLists);
+  }
+
+  u16 popBlocks(CacheT *C, uptr ClassId, CompactPtrT *ToArray) {
+    TransferBatch *B = popBatch(C, ClassId);
+    if (!B)
+      return 0;
+
+    const u16 Count = B->getCount();
+    DCHECK_GT(Count, 0U);
+    B->moveToArray(ToArray);
+
+    if (ClassId != SizeClassMap::BatchClassId)
+      C->deallocate(SizeClassMap::BatchClassId, B);
+
+    return Count;
   }
 
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
@@ -630,8 +649,8 @@ private:
       // from `CreateGroup` in `pushBlocksImpl`
       BG->PushedBlocks = 1;
       BG->BytesInBGAtLastCheckpoint = 0;
-      BG->MaxCachedPerBatch = TransferBatch::getMaxCached(
-          getSizeByClassId(SizeClassMap::BatchClassId));
+      BG->MaxCachedPerBatch =
+          CacheT::getMaxCached(getSizeByClassId(SizeClassMap::BatchClassId));
 
       Region->FreeListInfo.BlockList.push_front(BG);
     }
@@ -709,17 +728,17 @@ private:
     DCHECK_GT(Size, 0U);
 
     auto CreateGroup = [&](uptr CompactPtrGroupBase) {
-      BatchGroup *BG = C->createGroup();
+      BatchGroup *BG = reinterpret_cast<BatchGroup *>(C->getBatchClassBlock());
       BG->Batches.clear();
-      TransferBatch *TB = C->createBatch(ClassId, nullptr);
+      TransferBatch *TB =
+          reinterpret_cast<TransferBatch *>(C->getBatchClassBlock());
       TB->clear();
 
       BG->CompactPtrGroupBase = CompactPtrGroupBase;
       BG->Batches.push_front(TB);
       BG->PushedBlocks = 0;
       BG->BytesInBGAtLastCheckpoint = 0;
-      BG->MaxCachedPerBatch =
-          TransferBatch::getMaxCached(getSizeByClassId(ClassId));
+      BG->MaxCachedPerBatch = CacheT::getMaxCached(getSizeByClassId(ClassId));
 
       return BG;
     };
@@ -734,9 +753,7 @@ private:
         u16 UnusedSlots =
             static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
         if (UnusedSlots == 0) {
-          CurBatch = C->createBatch(
-              ClassId,
-              reinterpret_cast<void *>(decompactPtr(ClassId, Array[I])));
+          CurBatch = reinterpret_cast<TransferBatch *>(C->getBatchClassBlock());
           CurBatch->clear();
           Batches.push_front(CurBatch);
           UnusedSlots = BG->MaxCachedPerBatch;
@@ -867,7 +884,7 @@ private:
                                                       RegionInfo *Region)
       REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
     const uptr Size = getSizeByClassId(ClassId);
-    const u16 MaxCount = TransferBatch::getMaxCached(Size);
+    const u16 MaxCount = CacheT::getMaxCached(Size);
 
     const uptr RegionBeg = Region->RegionBeg;
     const uptr MappedUser = Region->MemMapInfo.MappedUser;
