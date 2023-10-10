@@ -252,10 +252,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const Function &F = MF.getFunction();
   CallingConv::ID CC = F.getCallingConv();
 
-  // TODO: Support vararg functions.
-  if (Info.IsVarArg)
-    return false;
-
   // TODO: Support all argument types.
   for (auto &AInfo : Info.OrigArgs) {
     if (AInfo.Ty->isIntegerTy())
