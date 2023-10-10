@@ -17,10 +17,14 @@ int __attribute__((target("avx,sse4.2,arch=hiss"))) meow(void) {  return 4; }
 int __attribute__((target("woof"))) bark(void) {  return 4; }
 // no warning, same as saying 'nothing'.
 int __attribute__((target("arch="))) turtle(void) { return 4; }
+// no warning, same as saying 'nothing'.
+int __attribute__((target("cpu="))) equus(void) { return 4; }
 //expected-warning@+1 {{unknown CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("arch=hiss,arch=woof"))) pine_tree(void) { return 4; }
 //expected-warning@+1 {{duplicate 'arch=' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("arch=ivybridge,arch=haswell"))) oak_tree(void) { return 4; }
+//expected-warning@+1 {{duplicate 'cpu=' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("arch=ivybridge,cpu=haswell"))) cypress_tree(void) { return 4; }
 //expected-warning@+1 {{unsupported 'branch-protection' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 5; }
 //expected-warning@+1 {{unknown tune CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
