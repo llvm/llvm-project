@@ -954,7 +954,6 @@ set(files
   latch
   libcxx.imp
   limits
-  limits.h
   list
   locale
   locale.h
