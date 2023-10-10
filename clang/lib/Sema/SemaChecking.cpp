@@ -3895,6 +3895,7 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     break;
+  // Basic intrinsics.
   case LoongArch::BI__builtin_loongarch_cacop_d:
   case LoongArch::BI__builtin_loongarch_cacop_w: {
     SemaBuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(5));
@@ -3923,8 +3924,234 @@ bool Sema::CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
   case LoongArch::BI__builtin_loongarch_movfcsr2gr:
   case LoongArch::BI__builtin_loongarch_movgr2fcsr:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, llvm::maxUIntN(2));
-  }
 
+  // LSX intrinsics.
+  case LoongArch::BI__builtin_lsx_vbitclri_b:
+  case LoongArch::BI__builtin_lsx_vbitrevi_b:
+  case LoongArch::BI__builtin_lsx_vbitseti_b:
+  case LoongArch::BI__builtin_lsx_vsat_b:
+  case LoongArch::BI__builtin_lsx_vsat_bu:
+  case LoongArch::BI__builtin_lsx_vslli_b:
+  case LoongArch::BI__builtin_lsx_vsrai_b:
+  case LoongArch::BI__builtin_lsx_vsrari_b:
+  case LoongArch::BI__builtin_lsx_vsrli_b:
+  case LoongArch::BI__builtin_lsx_vsllwil_h_b:
+  case LoongArch::BI__builtin_lsx_vsllwil_hu_bu:
+  case LoongArch::BI__builtin_lsx_vrotri_b:
+  case LoongArch::BI__builtin_lsx_vsrlri_b:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case LoongArch::BI__builtin_lsx_vbitclri_h:
+  case LoongArch::BI__builtin_lsx_vbitrevi_h:
+  case LoongArch::BI__builtin_lsx_vbitseti_h:
+  case LoongArch::BI__builtin_lsx_vsat_h:
+  case LoongArch::BI__builtin_lsx_vsat_hu:
+  case LoongArch::BI__builtin_lsx_vslli_h:
+  case LoongArch::BI__builtin_lsx_vsrai_h:
+  case LoongArch::BI__builtin_lsx_vsrari_h:
+  case LoongArch::BI__builtin_lsx_vsrli_h:
+  case LoongArch::BI__builtin_lsx_vsllwil_w_h:
+  case LoongArch::BI__builtin_lsx_vsllwil_wu_hu:
+  case LoongArch::BI__builtin_lsx_vrotri_h:
+  case LoongArch::BI__builtin_lsx_vsrlri_h:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case LoongArch::BI__builtin_lsx_vssrarni_b_h:
+  case LoongArch::BI__builtin_lsx_vssrarni_bu_h:
+  case LoongArch::BI__builtin_lsx_vssrani_b_h:
+  case LoongArch::BI__builtin_lsx_vssrani_bu_h:
+  case LoongArch::BI__builtin_lsx_vsrarni_b_h:
+  case LoongArch::BI__builtin_lsx_vsrlni_b_h:
+  case LoongArch::BI__builtin_lsx_vsrlrni_b_h:
+  case LoongArch::BI__builtin_lsx_vssrlni_b_h:
+  case LoongArch::BI__builtin_lsx_vssrlni_bu_h:
+  case LoongArch::BI__builtin_lsx_vssrlrni_b_h:
+  case LoongArch::BI__builtin_lsx_vssrlrni_bu_h:
+  case LoongArch::BI__builtin_lsx_vsrani_b_h:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case LoongArch::BI__builtin_lsx_vslei_bu:
+  case LoongArch::BI__builtin_lsx_vslei_hu:
+  case LoongArch::BI__builtin_lsx_vslei_wu:
+  case LoongArch::BI__builtin_lsx_vslei_du:
+  case LoongArch::BI__builtin_lsx_vslti_bu:
+  case LoongArch::BI__builtin_lsx_vslti_hu:
+  case LoongArch::BI__builtin_lsx_vslti_wu:
+  case LoongArch::BI__builtin_lsx_vslti_du:
+  case LoongArch::BI__builtin_lsx_vmaxi_bu:
+  case LoongArch::BI__builtin_lsx_vmaxi_hu:
+  case LoongArch::BI__builtin_lsx_vmaxi_wu:
+  case LoongArch::BI__builtin_lsx_vmaxi_du:
+  case LoongArch::BI__builtin_lsx_vmini_bu:
+  case LoongArch::BI__builtin_lsx_vmini_hu:
+  case LoongArch::BI__builtin_lsx_vmini_wu:
+  case LoongArch::BI__builtin_lsx_vmini_du:
+  case LoongArch::BI__builtin_lsx_vaddi_bu:
+  case LoongArch::BI__builtin_lsx_vaddi_hu:
+  case LoongArch::BI__builtin_lsx_vaddi_wu:
+  case LoongArch::BI__builtin_lsx_vaddi_du:
+  case LoongArch::BI__builtin_lsx_vbitclri_w:
+  case LoongArch::BI__builtin_lsx_vbitrevi_w:
+  case LoongArch::BI__builtin_lsx_vbitseti_w:
+  case LoongArch::BI__builtin_lsx_vsat_w:
+  case LoongArch::BI__builtin_lsx_vsat_wu:
+  case LoongArch::BI__builtin_lsx_vslli_w:
+  case LoongArch::BI__builtin_lsx_vsrai_w:
+  case LoongArch::BI__builtin_lsx_vsrari_w:
+  case LoongArch::BI__builtin_lsx_vsrli_w:
+  case LoongArch::BI__builtin_lsx_vsllwil_d_w:
+  case LoongArch::BI__builtin_lsx_vsllwil_du_wu:
+  case LoongArch::BI__builtin_lsx_vsrlri_w:
+  case LoongArch::BI__builtin_lsx_vrotri_w:
+  case LoongArch::BI__builtin_lsx_vsubi_bu:
+  case LoongArch::BI__builtin_lsx_vsubi_hu:
+  case LoongArch::BI__builtin_lsx_vbsrl_v:
+  case LoongArch::BI__builtin_lsx_vbsll_v:
+  case LoongArch::BI__builtin_lsx_vsubi_wu:
+  case LoongArch::BI__builtin_lsx_vsubi_du:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case LoongArch::BI__builtin_lsx_vssrarni_h_w:
+  case LoongArch::BI__builtin_lsx_vssrarni_hu_w:
+  case LoongArch::BI__builtin_lsx_vssrani_h_w:
+  case LoongArch::BI__builtin_lsx_vssrani_hu_w:
+  case LoongArch::BI__builtin_lsx_vsrarni_h_w:
+  case LoongArch::BI__builtin_lsx_vsrani_h_w:
+  case LoongArch::BI__builtin_lsx_vfrstpi_b:
+  case LoongArch::BI__builtin_lsx_vfrstpi_h:
+  case LoongArch::BI__builtin_lsx_vsrlni_h_w:
+  case LoongArch::BI__builtin_lsx_vsrlrni_h_w:
+  case LoongArch::BI__builtin_lsx_vssrlni_h_w:
+  case LoongArch::BI__builtin_lsx_vssrlni_hu_w:
+  case LoongArch::BI__builtin_lsx_vssrlrni_h_w:
+  case LoongArch::BI__builtin_lsx_vssrlrni_hu_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case LoongArch::BI__builtin_lsx_vbitclri_d:
+  case LoongArch::BI__builtin_lsx_vbitrevi_d:
+  case LoongArch::BI__builtin_lsx_vbitseti_d:
+  case LoongArch::BI__builtin_lsx_vsat_d:
+  case LoongArch::BI__builtin_lsx_vsat_du:
+  case LoongArch::BI__builtin_lsx_vslli_d:
+  case LoongArch::BI__builtin_lsx_vsrai_d:
+  case LoongArch::BI__builtin_lsx_vsrli_d:
+  case LoongArch::BI__builtin_lsx_vsrari_d:
+  case LoongArch::BI__builtin_lsx_vrotri_d:
+  case LoongArch::BI__builtin_lsx_vsrlri_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 63);
+  case LoongArch::BI__builtin_lsx_vssrarni_w_d:
+  case LoongArch::BI__builtin_lsx_vssrarni_wu_d:
+  case LoongArch::BI__builtin_lsx_vssrani_w_d:
+  case LoongArch::BI__builtin_lsx_vssrani_wu_d:
+  case LoongArch::BI__builtin_lsx_vsrarni_w_d:
+  case LoongArch::BI__builtin_lsx_vsrlni_w_d:
+  case LoongArch::BI__builtin_lsx_vsrlrni_w_d:
+  case LoongArch::BI__builtin_lsx_vssrlni_w_d:
+  case LoongArch::BI__builtin_lsx_vssrlni_wu_d:
+  case LoongArch::BI__builtin_lsx_vssrlrni_w_d:
+  case LoongArch::BI__builtin_lsx_vssrlrni_wu_d:
+  case LoongArch::BI__builtin_lsx_vsrani_w_d:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 63);
+  case LoongArch::BI__builtin_lsx_vssrarni_d_q:
+  case LoongArch::BI__builtin_lsx_vssrarni_du_q:
+  case LoongArch::BI__builtin_lsx_vssrani_d_q:
+  case LoongArch::BI__builtin_lsx_vssrani_du_q:
+  case LoongArch::BI__builtin_lsx_vsrarni_d_q:
+  case LoongArch::BI__builtin_lsx_vssrlni_d_q:
+  case LoongArch::BI__builtin_lsx_vssrlni_du_q:
+  case LoongArch::BI__builtin_lsx_vssrlrni_d_q:
+  case LoongArch::BI__builtin_lsx_vssrlrni_du_q:
+  case LoongArch::BI__builtin_lsx_vsrani_d_q:
+  case LoongArch::BI__builtin_lsx_vsrlrni_d_q:
+  case LoongArch::BI__builtin_lsx_vsrlni_d_q:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 127);
+  case LoongArch::BI__builtin_lsx_vseqi_b:
+  case LoongArch::BI__builtin_lsx_vseqi_h:
+  case LoongArch::BI__builtin_lsx_vseqi_w:
+  case LoongArch::BI__builtin_lsx_vseqi_d:
+  case LoongArch::BI__builtin_lsx_vslti_b:
+  case LoongArch::BI__builtin_lsx_vslti_h:
+  case LoongArch::BI__builtin_lsx_vslti_w:
+  case LoongArch::BI__builtin_lsx_vslti_d:
+  case LoongArch::BI__builtin_lsx_vslei_b:
+  case LoongArch::BI__builtin_lsx_vslei_h:
+  case LoongArch::BI__builtin_lsx_vslei_w:
+  case LoongArch::BI__builtin_lsx_vslei_d:
+  case LoongArch::BI__builtin_lsx_vmaxi_b:
+  case LoongArch::BI__builtin_lsx_vmaxi_h:
+  case LoongArch::BI__builtin_lsx_vmaxi_w:
+  case LoongArch::BI__builtin_lsx_vmaxi_d:
+  case LoongArch::BI__builtin_lsx_vmini_b:
+  case LoongArch::BI__builtin_lsx_vmini_h:
+  case LoongArch::BI__builtin_lsx_vmini_w:
+  case LoongArch::BI__builtin_lsx_vmini_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -16, 15);
+  case LoongArch::BI__builtin_lsx_vandi_b:
+  case LoongArch::BI__builtin_lsx_vnori_b:
+  case LoongArch::BI__builtin_lsx_vori_b:
+  case LoongArch::BI__builtin_lsx_vshuf4i_b:
+  case LoongArch::BI__builtin_lsx_vshuf4i_h:
+  case LoongArch::BI__builtin_lsx_vshuf4i_w:
+  case LoongArch::BI__builtin_lsx_vxori_b:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 255);
+  case LoongArch::BI__builtin_lsx_vbitseli_b:
+  case LoongArch::BI__builtin_lsx_vshuf4i_d:
+  case LoongArch::BI__builtin_lsx_vextrins_b:
+  case LoongArch::BI__builtin_lsx_vextrins_h:
+  case LoongArch::BI__builtin_lsx_vextrins_w:
+  case LoongArch::BI__builtin_lsx_vextrins_d:
+  case LoongArch::BI__builtin_lsx_vpermi_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 255);
+  case LoongArch::BI__builtin_lsx_vpickve2gr_b:
+  case LoongArch::BI__builtin_lsx_vpickve2gr_bu:
+  case LoongArch::BI__builtin_lsx_vreplvei_b:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case LoongArch::BI__builtin_lsx_vinsgr2vr_b:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 15);
+  case LoongArch::BI__builtin_lsx_vpickve2gr_h:
+  case LoongArch::BI__builtin_lsx_vpickve2gr_hu:
+  case LoongArch::BI__builtin_lsx_vreplvei_h:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case LoongArch::BI__builtin_lsx_vinsgr2vr_h:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case LoongArch::BI__builtin_lsx_vpickve2gr_w:
+  case LoongArch::BI__builtin_lsx_vpickve2gr_wu:
+  case LoongArch::BI__builtin_lsx_vreplvei_w:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case LoongArch::BI__builtin_lsx_vinsgr2vr_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 3);
+  case LoongArch::BI__builtin_lsx_vpickve2gr_d:
+  case LoongArch::BI__builtin_lsx_vpickve2gr_du:
+  case LoongArch::BI__builtin_lsx_vreplvei_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case LoongArch::BI__builtin_lsx_vinsgr2vr_d:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 1);
+  case LoongArch::BI__builtin_lsx_vstelm_b:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -128, 127) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 15);
+  case LoongArch::BI__builtin_lsx_vstelm_h:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -256, 254) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case LoongArch::BI__builtin_lsx_vstelm_w:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -512, 508) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 3);
+  case LoongArch::BI__builtin_lsx_vstelm_d:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -1024, 1016) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, 0, 1);
+  case LoongArch::BI__builtin_lsx_vldrepl_b:
+  case LoongArch::BI__builtin_lsx_vld:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2047);
+  case LoongArch::BI__builtin_lsx_vldrepl_h:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2046);
+  case LoongArch::BI__builtin_lsx_vldrepl_w:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2044);
+  case LoongArch::BI__builtin_lsx_vldrepl_d:
+    return SemaBuiltinConstantArgRange(TheCall, 1, -2048, 2040);
+  case LoongArch::BI__builtin_lsx_vst:
+    return SemaBuiltinConstantArgRange(TheCall, 2, -2048, 2047);
+  case LoongArch::BI__builtin_lsx_vldi:
+    return SemaBuiltinConstantArgRange(TheCall, 0, -4096, 4095);
+  case LoongArch::BI__builtin_lsx_vrepli_b:
+  case LoongArch::BI__builtin_lsx_vrepli_h:
+  case LoongArch::BI__builtin_lsx_vrepli_w:
+  case LoongArch::BI__builtin_lsx_vrepli_d:
+    return SemaBuiltinConstantArgRange(TheCall, 0, -512, 511);
+  }
   return false;
 }
 
