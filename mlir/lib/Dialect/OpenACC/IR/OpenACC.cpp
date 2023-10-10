@@ -459,7 +459,7 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
     return emitOpError() << "expects non-empty copy region";
 
   Block &firstBlock = getCopyRegion().front();
-  if (firstBlock.getNumArguments() != 2 ||
+  if (firstBlock.getNumArguments() < 2 ||
       firstBlock.getArgument(0).getType() != getType())
     return emitOpError() << "expects copy region with two arguments of the "
                             "privatization type";
