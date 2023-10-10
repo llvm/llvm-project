@@ -398,7 +398,8 @@ define i32 @constant_range_and_undef_and(i1 %c0, i1 %c1, i8 %v1, i8 %v2) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[V2_I32:%.*]] = zext i8 [[V2:%.*]] to i32
 ; CHECK-NEXT:    [[Y:%.*]] = or i32 [[X]], [[V2_I32]]
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y]], 255
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
 start:
   br i1 %c0, label %bb0, label %bb1
