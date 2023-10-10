@@ -461,6 +461,10 @@ void dropDebugUsers(Instruction &I);
 void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                               BasicBlock *BB);
 
+/// Given a constant, create a debug information expression.
+DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
+                                       Type &Ty);
+
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching
 //
@@ -514,14 +518,6 @@ Value *invertCondition(Value *Condition);
 /// If we can infer one attribute from another on the declaration of a
 /// function, explicitly materialize the maximal set in the IR.
 bool inferAttributesFromOthers(Function &F);
-
-///===---------------------------------------------------------------------===//
-///  DebugInfo utilities
-///
-
-/// Given a constant, create a debug information expression.
-DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant *C,
-                                       Type *Ty);
 
 } // end namespace llvm
 

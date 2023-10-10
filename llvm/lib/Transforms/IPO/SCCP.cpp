@@ -107,14 +107,14 @@ static void findReturnsToZap(Function &F,
   }
 }
 
-static bool
-runIPSCCP(Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
-          std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-          std::function<TargetTransformInfo &(Function &)> GetTTI,
-          std::function<AssumptionCache &(Function &)> GetAC,
-          std::function<DominatorTree &(Function &)> GetDT,
-          std::function<BlockFrequencyInfo &(Function &)> GetBFI,
-          bool IsFuncSpecEnabled) {
+static bool runIPSCCP(
+    Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
+    std::function<const TargetLibraryInfo &(Function &)> GetTLI,
+    std::function<TargetTransformInfo &(Function &)> GetTTI,
+    std::function<AssumptionCache &(Function &)> GetAC,
+    std::function<DominatorTree &(Function &)> GetDT,
+    std::function<BlockFrequencyInfo &(Function &)> GetBFI,
+    bool IsFuncSpecEnabled) {
   SCCPSolver Solver(DL, GetTLI, M.getContext());
   FunctionSpecializer Specializer(Solver, M, FAM, GetBFI, GetTLI, GetTTI,
                                   GetAC);
@@ -380,7 +380,7 @@ runIPSCCP(Module &M, const DataLayout &DL, FunctionAnalysisManager *FAM,
     if (GVEs.size() == 1) {
       DIBuilder DIB(M);
       if (DIExpression *InitExpr = getExpressionForConstant(
-              DIB, GV->getInitializer(), GV->getValueType()))
+              DIB, *GV->getInitializer(), *GV->getValueType()))
         GVEs[0]->replaceOperandWith(1, InitExpr);
     }
 
