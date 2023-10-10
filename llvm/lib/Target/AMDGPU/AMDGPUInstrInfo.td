@@ -58,6 +58,11 @@ def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
   [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, i1>]
 >;
 
+def AMDGPUBrcondzOp : SDTypeProfile<0, 3, [
+  // cond, bb, cc
+  SDTCisInt<0>, SDTCisVT<1, OtherVT>, SDTCisVT<2, OtherVT>
+]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU DAG Nodes
 //
@@ -65,6 +70,7 @@ def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
 def AMDGPUif : SDNode<"AMDGPUISD::IF", AMDGPUIfOp, [SDNPHasChain]>;
 def AMDGPUelse : SDNode<"AMDGPUISD::ELSE", AMDGPUElseOp, [SDNPHasChain]>;
 def AMDGPUloop : SDNode<"AMDGPUISD::LOOP", AMDGPULoopOp, [SDNPHasChain]>;
+def AMDGPUbrcondz: SDNode<"AMDGPUISD::BRCONDZ", AMDGPUBrcondzOp, [SDNPHasChain]>;
 
 def callseq_start : SDNode<"ISD::CALLSEQ_START",
   SDCallSeqStart<[ SDTCisVT<0, i32>, SDTCisVT<1, i32> ]>,
