@@ -133,48 +133,6 @@ Value lowerExtendedMultiplication(Operation *mulOp, PatternRewriter &rewriter,
       loc, mulOp->getResultTypes().front(), llvm::ArrayRef({low, high}));
 }
 
-Value lowerCarryAddition(Operation *addOp, PatternRewriter &rewriter, Value lhs,
-                         Value rhs) {
-  Location loc = addOp->getLoc();
-  Type argTy = lhs.getType();
-  // Emulate 64-bit addition by splitting each input element of type i32 to
-  // i16 similar to above in lowerExtendedMultiplication. We then expand
-  // to 3 additions:
-  //    - Add two low digits into low resut
-  //    - Add two high digits into high result
-  //    - Add the carry from low result to high result
-  Value cstLowMask = rewriter.create<ConstantOp>(
-      loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
-  auto getLowDigit = [&rewriter, loc, cstLowMask](Value val) {
-    return rewriter.create<BitwiseAndOp>(loc, val, cstLowMask);
-  };
-
-  Value cst16 = rewriter.create<ConstantOp>(loc, lhs.getType(),
-                                            getScalarOrSplatAttr(argTy, 16));
-  auto getHighDigit = [&rewriter, loc, cst16](Value val) {
-    return rewriter.create<ShiftRightLogicalOp>(loc, val, cst16);
-  };
-
-  Value lhsLow = getLowDigit(lhs);
-  Value lhsHigh = getHighDigit(lhs);
-  Value rhsLow = getLowDigit(rhs);
-  Value rhsHigh = getHighDigit(rhs);
-
-  Value low = rewriter.create<IAddOp>(loc, lhsLow, rhsLow);
-  Value high = rewriter.create<IAddOp>(loc, lhsHigh, rhsHigh);
-  Value highWithCarry = rewriter.create<IAddOp>(loc, high, getHighDigit(low));
-
-  auto combineDigits = [loc, cst16, &rewriter](Value low, Value high) {
-    Value highBits = rewriter.create<ShiftLeftLogicalOp>(loc, high, cst16);
-    return rewriter.create<BitwiseOrOp>(loc, low, highBits);
-  };
-  Value out = combineDigits(getLowDigit(highWithCarry), getLowDigit(low));
-  Value carry = getHighDigit(highWithCarry);
-
-  return rewriter.create<CompositeConstructOp>(
-      loc, addOp->getResultTypes().front(), llvm::ArrayRef({out, carry}));
-}
-
 //===----------------------------------------------------------------------===//
 // Rewrite Patterns
 //===----------------------------------------------------------------------===//
@@ -220,13 +178,26 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
 
     // Currently, WGSL only supports 32-bit integer types. Any other integer
     // types should already have been promoted/demoted to i32.
-    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(lhs.getType()));
+    Type argTy = lhs.getType();
+    auto elemTy = cast<IntegerType>(getElementTypeOrSelf(argTy));
     if (elemTy.getIntOrFloatBitWidth() != 32)
       return rewriter.notifyMatchFailure(
           loc,
           llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
 
-    Value add = lowerCarryAddition(op, rewriter, lhs, rhs);
+    Value one =
+        rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 1));
+    Value zero =
+        rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 0));
+
+    // Emulate 64-bit unsigned addition by allowing our addition to overflow,
+    // and then set the carry accordingly.
+    Value out = rewriter.create<IAddOp>(loc, lhs, rhs);
+    Value cmp = rewriter.create<ULessThanOp>(loc, out, lhs);
+    Value carry = rewriter.create<SelectOp>(loc, cmp, one, zero);
+
+    Value add = rewriter.create<CompositeConstructOp>(
+        loc, op->getResultTypes().front(), llvm::ArrayRef({out, carry}));
 
     rewriter.replaceOp(op, add);
     return success();

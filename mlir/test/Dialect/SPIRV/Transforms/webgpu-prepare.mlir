@@ -147,47 +147,26 @@ spirv.func @smul_extended_i16(%arg : i16) -> !spirv.struct<(i16, i16)> "None" {
 
 // CHECK-LABEL: func @iaddcarry_i32
 // CHECK-SAME:       ([[A:%.+]]: i32, [[B:%.+]]: i32)
-// CHECK-NEXT:       [[CSTMASK:%.+]] = spirv.Constant 65535 : i32
-// CHECK-NEXT:       [[CST16:%.+]]   = spirv.Constant 16 : i32
-// CHECK-NEXT:       [[LHSLOW:%.+]]  = spirv.BitwiseAnd [[A]], [[CSTMASK]] : i32
-// CHECK-NEXT:       [[LHSHI:%.+]]   = spirv.ShiftRightLogical [[A]], [[CST16]] : i32
-// CHECK-DAG:        [[RHSLOW:%.+]]  = spirv.BitwiseAnd [[B]], [[CSTMASK]] : i32
-// CHECK-DAG:        [[RHSHI:%.+]]   = spirv.ShiftRightLogical [[B]], [[CST16]] : i32
-// CHECK-DAG:        [[LOW:%.+]]     = spirv.IAdd [[LHSLOW]], [[RHSLOW]] : i32
-// CHECK-DAG:        [[HI:%.+]]      = spirv.IAdd [[LHSHI]], [[RHSHI]]
-// CHECK-DAG:        [[LOWCRY:%.+]]  = spirv.ShiftRightLogical [[LOW]], [[CST16]] : i32
-// CHECK-DAG:        [[HI_TTL:%.+]]  = spirv.IAdd [[HI]], [[LOWCRY]]
-// CHECK-DAG:                          spirv.ShiftRightLogical
-// CHECK-DAG:                          spirv.BitwiseAnd
-// CHECK-DAG:                          spirv.BitwiseAnd
-// CHECK-DAG:                          spirv.ShiftLeftLogical {{%.+}}, [[CST16]] : i32
-// CHECK-DAG:                          spirv.BitwiseOr
-// CHECK-NEXT:       [[RES:%.+]]     = spirv.CompositeConstruct [[RESLO:%.+]], [[RESHI:%.+]] : (i32, i32) -> !spirv.struct<(i32, i32)>
+// CHECK-NEXT:       [[ONE:%.+]]    = spirv.Constant 1 : i32
+// CHECK-NEXT:       [[ZERO:%.+]]   = spirv.Constant 0 : i32
+// CHECK-NEXT:       [[OUT:%.+]]    = spirv.IAdd [[A]], [[B]]
+// CHECK-NEXT:       [[CMP:%.+]]    = spirv.ULessThan [[OUT]], [[A]]
+// CHECK-NEXT:       [[CARRY:%.+]]  = spirv.Select [[CMP]], [[ONE]], [[ZERO]]
+// CHECK-NEXT:       [[RES:%.+]]     = spirv.CompositeConstruct [[OUT]], [[CARRY]] : (i32, i32) -> !spirv.struct<(i32, i32)>
 // CHECK-NEXT:       spirv.ReturnValue [[RES]] : !spirv.struct<(i32, i32)>
 spirv.func @iaddcarry_i32(%a : i32, %b : i32) -> !spirv.struct<(i32, i32)> "None" {
   %0 = spirv.IAddCarry %a, %b : !spirv.struct<(i32, i32)>
   spirv.ReturnValue %0 : !spirv.struct<(i32, i32)>
 }
 
-
 // CHECK-LABEL: func @iaddcarry_vector_i32
 // CHECK-SAME:       ([[A:%.+]]: vector<3xi32>, [[B:%.+]]: vector<3xi32>)
-// CHECK-NEXT:       [[CSTMASK:%.+]] = spirv.Constant dense<65535> : vector<3xi32>
-// CHECK-NEXT:       [[CST16:%.+]]   = spirv.Constant dense<16> : vector<3xi32>
-// CHECK-NEXT:       [[LHSLOW:%.+]]  = spirv.BitwiseAnd [[A]], [[CSTMASK]] : vector<3xi32>
-// CHECK-NEXT:       [[LHSHI:%.+]]   = spirv.ShiftRightLogical [[A]], [[CST16]] : vector<3xi32>
-// CHECK-DAG:        [[RHSLOW:%.+]]  = spirv.BitwiseAnd [[B]], [[CSTMASK]] : vector<3xi32>
-// CHECK-DAG:        [[RHSHI:%.+]]   = spirv.ShiftRightLogical [[B]], [[CST16]] : vector<3xi32>
-// CHECK-DAG:        [[LOW:%.+]]     = spirv.IAdd [[LHSLOW]], [[RHSLOW]] : vector<3xi32>
-// CHECK-DAG:        [[HI:%.+]]      = spirv.IAdd [[LHSHI]], [[RHSHI]]
-// CHECK-DAG:        [[LOWCRY:%.+]]  = spirv.ShiftRightLogical [[LOW]], [[CST16]] : vector<3xi32>
-// CHECK-DAG:        [[HI_TTL:%.+]]  = spirv.IAdd [[HI]], [[LOWCRY]]
-// CHECK-DAG:                          spirv.ShiftRightLogical
-// CHECK-DAG:                          spirv.BitwiseAnd
-// CHECK-DAG:                          spirv.BitwiseAnd
-// CHECK-DAG:                          spirv.ShiftLeftLogical {{%.+}}, [[CST16]] : vector<3xi32>
-// CHECK-DAG:                          spirv.BitwiseOr
-// CHECK-NEXT:       [[RES:%.+]]     = spirv.CompositeConstruct [[RESLO:%.+]], [[RESHI:%.+]] : (vector<3xi32>, vector<3xi32>) -> !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+// CHECK-NEXT:       [[ONE:%.+]]    = spirv.Constant dense<1> : vector<3xi32>
+// CHECK-NEXT:       [[ZERO:%.+]]   = spirv.Constant dense<0> : vector<3xi32>
+// CHECK-NEXT:       [[OUT:%.+]]    = spirv.IAdd [[A]], [[B]]
+// CHECK-NEXT:       [[CMP:%.+]]    = spirv.ULessThan [[OUT]], [[A]]
+// CHECK-NEXT:       [[CARRY:%.+]]  = spirv.Select [[CMP]], [[ONE]], [[ZERO]]
+// CHECK-NEXT:       [[RES:%.+]]    = spirv.CompositeConstruct [[OUT]], [[CARRY]] : (vector<3xi32>, vector<3xi32>) -> !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 // CHECK-NEXT:       spirv.ReturnValue [[RES]] : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 spirv.func @iaddcarry_vector_i32(%a : vector<3xi32>, %b : vector<3xi32>)
   -> !spirv.struct<(vector<3xi32>, vector<3xi32>)> "None" {
