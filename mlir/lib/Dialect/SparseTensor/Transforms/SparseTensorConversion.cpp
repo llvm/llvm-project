@@ -205,9 +205,9 @@ public:
     params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
     // Construct dimSizes, lvlSizes, dim2lvl, and lvl2dim buffers.
     params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizesValues);
-    params[kParamLvlSizes] = genReaderBuffers(
-        builder, loc, stt, dimSizesValues, params[kParamDimSizes],
-        params[kParamDim2Lvl], params[kParamLvl2Dim]);
+    params[kParamLvlSizes] =
+        genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
+                      params[kParamDim2Lvl], params[kParamLvl2Dim]);
     // Secondary and primary types encoding.
     setTemplateTypes(stt);
     // Finally, make note that initialization is complete.
@@ -446,8 +446,8 @@ public:
     Value dim2lvlBuffer;
     Value lvl2dimBuffer;
     Value lvlSizesBuffer =
-        genReaderBuffers(rewriter, loc, stt, dimShapesValues, dimSizesBuffer,
-                         dim2lvlBuffer, lvl2dimBuffer);
+        genMapBuffers(rewriter, loc, stt, dimShapesValues, dimSizesBuffer,
+                      dim2lvlBuffer, lvl2dimBuffer);
     // Use the `reader` to parse the file.
     Type opaqueTp = getOpaquePointerType(rewriter);
     Type eltTp = stt.getElementType();

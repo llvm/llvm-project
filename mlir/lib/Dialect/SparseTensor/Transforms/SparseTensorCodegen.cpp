@@ -1478,8 +1478,8 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     // Now construct the dim2lvl and lvl2dim buffers.
     Value dim2lvlBuffer;
     Value lvl2dimBuffer;
-    genReaderBuffers(rewriter, loc, dstTp, dimShapesValues, dimSizesBuffer,
-                     dim2lvlBuffer, lvl2dimBuffer);
+    genMapBuffers(rewriter, loc, dstTp, dimShapesValues, dimSizesBuffer,
+                  dim2lvlBuffer, lvl2dimBuffer);
 
     // Read the COO tensor data.
     Value xs = desc.getAOSMemRef();
