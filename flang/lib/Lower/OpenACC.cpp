@@ -566,7 +566,7 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
                                  recipe.getCopyRegion().front().getArgument(1));
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
     if (seqTy.hasDynamicExtents())
-      TODO(loc, "private recipe of array with dynamic extents");
+      TODO(loc, "firstprivate recipe of array with dynamic extents");
     mlir::Type idxTy = builder.getIndexType();
     mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
     mlir::Value arraySrc = recipe.getCopyRegion().front().getArgument(0);
@@ -598,7 +598,7 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
     fir::SequenceType seqTy =
         mlir::dyn_cast_or_null<fir::SequenceType>(innerTy);
     if (!seqTy)
-      TODO(loc, "Unsupported boxed type in OpenACC reduction");
+      TODO(loc, "Unsupported boxed type in OpenACC firstprivate");
 
     if (allConstantBound) {
       for (auto bound : llvm::reverse(bounds)) {
@@ -916,7 +916,7 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
     return declareOp.getBase();
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
     if (seqTy.hasDynamicExtents())
-      TODO(loc, "private recipe of array with dynamic extents");
+      TODO(loc, "reduction recipe of array with dynamic extents");
     if (fir::isa_trivial(seqTy.getEleTy())) {
       mlir::Value alloca = builder.create<fir::AllocaOp>(loc, seqTy);
       auto shapeOp = genShapeOp(builder, seqTy, loc);
