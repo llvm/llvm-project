@@ -14935,7 +14935,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         CXXMethodDecl *Method = cast<CXXMethodDecl>(FnDecl);
         SmallVector<Expr *, 2> MethodArgs;
 
-        // Initialize the explicit / implicit object parameter.
+        // Initialize the object parameter.
         if (Method->isExplicitObjectMemberFunction()) {
           ExprResult Res =
               InitializeExplicitObjectArgument(*this, Args[0], Method);
@@ -15601,7 +15601,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   bool IsError = false;
 
-  // Initialize the explicit / implicit object parameter.
+  // Initialize the object parameter.
   llvm::SmallVector<Expr *, 8> NewArgs;
   if (Method->isExplicitObjectMemberFunction()) {
     // FIXME: we should do that during the definition of the lambda when we can.
