@@ -122,7 +122,7 @@ USAGE: :program:`llvm-remarkutil` count [*options*] <input file>
 Summary
 ^^^^^^^
 
-:program:`llvm-remarkutil count` counts `remakrs <https://llvm.org/docs/Remarks.html>` based on specified properties. 
+:program:`llvm-remarkutil count` counts `remarks <https://llvm.org/docs/Remarks.html>` based on specified properties. 
 By default the tool counts remarks based on how many occour in a source file or function or total for the generated remark file.
 The tool also supports collecting count based on specific remark arguments. The specified arguments should have an integer value to be able to report a count.
 
@@ -143,9 +143,9 @@ OPTIONS
 
 .. option:: --group-by=<value>
   group count of remarks by property.
-  * ``source``: Count will be collected per source path. Requires remarks to have debug loc info
+  * ``source``: Count will be collected per source path. Remarks with no debug location will not be counted. 
   * ``function``: Count is collected per function.
-  * ``function-with-loc``: Count is collected per function per source. Requires remarks to have debug loc info 
+  * ``function-with-loc``: Count is collected per function per source. Remarks with no debug location will not be counted. 
   * ``Total``: Report a count for the provided remark file.
 
 .. option:: --args[=arguments]

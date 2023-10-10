@@ -173,9 +173,14 @@ struct ArgumentCounter : Counter {
     return AC;
   }
 
-  /// collect remark count for the passed remark.
+  /// Update the internal count map based on the remark integer arguments that
+  /// correspond the the user specified argument keys to collect for.
   void collect(const Remark &) override;
 
+  /// Print a CSV table consisting of an index which is specified by \p
+  /// `GroupBy` and can be a function name, source file name or function name
+  /// with the full source path and columns of user specified remark arguments
+  /// to collect the count for.
   Error print(StringRef OutputFileName) override;
 
 private:
@@ -185,7 +190,7 @@ private:
   /// information for.
   Error getAllMatchingArgumentsInRemark(StringRef Buffer,
                                         ArrayRef<FilterMatcher> Arguments,
-                            Filters &Filter);
+                                        Filters &Filter);
 };
 
 /// Collect remarks based by counting the existance of individual remarks. The
@@ -195,7 +200,15 @@ private:
 struct RemarkCounter : Counter {
   std::map<std::string, unsigned> CountedByRemarksMap;
   RemarkCounter(enum GroupBy GroupBy) : Counter(GroupBy) {}
+
+  /// Advance the internal map count broken by \p GroupBy when
+  /// seeing \p Remark.
   void collect(const Remark &) override;
+
+  /// Print a CSV table consisting of an index which is specified by \p
+  /// `GroupBy` and can be a function name, source file name or function name
+  /// with the full source path and a counts column corresponding to the count
+  /// of each individual remark at th index.
   Error print(StringRef OutputFileName) override;
 };
 } // namespace remarks
