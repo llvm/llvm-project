@@ -7301,4 +7301,6 @@ libcxx/utils/ci/Dockerfile
 libcxx/utils/ci/macos-ci-setup
 libcxx/utils/ci/run-buildbot
 libcxx/utils/ci/run-buildbot-container
+libcxx/utils/ci/vendor/android/Dockerfile
+libcxx/utils/ci/vendor/android/run-buildbot-container
 libcxx/utils/libcxx-lit
