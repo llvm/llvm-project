@@ -14,6 +14,7 @@
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Process.h"
@@ -21,8 +22,6 @@
 
 // FIXME: we should not need this
 #include "Plugins/Language/ObjC/Cocoa.h"
-
-#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -281,7 +280,10 @@ bool SwiftSyntheticFrontEndBufferHandler::IsValid() {
 }
 
 std::unique_ptr<SwiftArrayBufferHandler>
-SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
+SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
+  lldb::ValueObjectSP valobj_sp =
+      static_valobj.GetDynamicValue(lldb::eDynamicCanRunTarget);
+  ValueObject &valobj = valobj_sp ? *valobj_sp : static_valobj;
   llvm::StringRef valobj_typename(
       valobj.GetCompilerType().GetTypeName().AsCString(""));
 
@@ -325,22 +327,24 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     if (error.Fail() || argmetadata_ptr == LLDB_INVALID_ADDRESS)
       return nullptr;
 
+    // Get the type of the array elements.
+    CompilerType argument_type;
+    auto scratch_ctx_reader = valobj.GetSwiftScratchContext();
+    if (!scratch_ctx_reader)
+      return nullptr;
+    auto *ts = scratch_ctx_reader->get();
+    if (!ts)
+      return nullptr;
     auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
     if (!swift_runtime)
       return nullptr;
 
-    CompilerType argument_type;
+    if (CompilerType type =
+            swift_runtime->GetTypeFromMetadata(*ts, argmetadata_ptr))
+      if (auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
+        argument_type = ts->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
 
-    SwiftLanguageRuntime::MetadataPromiseSP promise_sp(
-        swift_runtime->GetMetadataPromise(argmetadata_ptr, valobj));
-    if (promise_sp)
-      if (CompilerType type = promise_sp->FulfillTypePromise())
-        if (auto type_system =
-                type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
-          argument_type =
-              type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
-
-    if (!argument_type.IsValid())
+    if (!argument_type)
       return nullptr;
 
     auto handler = std::unique_ptr<SwiftArrayBufferHandler>(

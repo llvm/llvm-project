@@ -1,8 +1,8 @@
-//===-- SwiftMetatype.cpp ---------------------------------------*- C++ -*-===//
+//===-- SwiftMetatype.cpp -------------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -12,12 +12,7 @@
 
 #include "SwiftMetatype.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Target/Process.h"
-
-#include "swift/AST/Type.h"
-#include "swift/AST/Types.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,30 +21,18 @@ using namespace lldb_private::formatters::swift;
 
 bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ConstString name;
   lldb::addr_t metadata_ptr = valobj.GetPointerValue();
   if (metadata_ptr == LLDB_INVALID_ADDRESS || metadata_ptr == 0) {
     CompilerType compiler_metatype_type(valobj.GetCompilerType());
     CompilerType instancetype =
       TypeSystemSwift::GetInstanceType(compiler_metatype_type);
-
-    const char *ptr = instancetype.GetDisplayTypeName().AsCString(nullptr);
-    if (ptr && *ptr) {
-      stream.Printf("%s", ptr);
-      return true;
-    }
-  } else {
-    auto swift_runtime = SwiftLanguageRuntime::Get(valobj.GetProcessSP());
-    if (!swift_runtime)
-      return false;
-    SwiftLanguageRuntime::MetadataPromiseSP metadata_promise_sp =
-      swift_runtime->GetMetadataPromise(metadata_ptr, valobj);
-    if (!metadata_promise_sp)
-      return false;
-    if (CompilerType resolved_type =
-            metadata_promise_sp->FulfillTypePromise()) {
-      stream.Printf("%s", resolved_type.GetDisplayTypeName().AsCString());
-      return true;
-    }
+    name = instancetype.GetDisplayTypeName();
+  } else if (CompilerType meta_type = valobj.GetCompilerType()) {
+    name = meta_type.GetDisplayTypeName();
   }
-  return false;
+  if (!name)
+    return false;
+  stream << name;
+  return true;
 }

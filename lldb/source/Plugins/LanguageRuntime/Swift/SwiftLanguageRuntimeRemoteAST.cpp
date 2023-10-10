@@ -423,14 +423,14 @@ CompilerType SwiftLanguageRuntimeImpl::BindGenericTypeParametersRemoteAST(
   return base_type;
 }
 
-SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
+SwiftLanguageRuntimeImpl::MetadataPromise::MetadataPromise(
     ValueObject &for_object, SwiftLanguageRuntimeImpl &runtime,
     lldb::addr_t location)
     : m_for_object_sp(for_object.GetSP()), m_swift_runtime(runtime),
       m_metadata_location(location) {}
 
 CompilerType
-SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
+SwiftLanguageRuntimeImpl::MetadataPromise::FulfillTypePromise(Status *error) {
   if (error)
     error->Clear();
 
@@ -483,7 +483,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   }
 }
 
-SwiftLanguageRuntime::MetadataPromiseSP
+SwiftLanguageRuntimeImpl::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
                                              ValueObject &for_object) {
   llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
@@ -506,13 +506,13 @@ SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
   if (iter != m_promises_map.end())
     return iter->second;
 
-  SwiftLanguageRuntime::MetadataPromiseSP promise_sp(
-      new SwiftLanguageRuntime::MetadataPromise(for_object, *this, addr));
+  SwiftLanguageRuntimeImpl::MetadataPromiseSP promise_sp(
+      new SwiftLanguageRuntimeImpl::MetadataPromise(for_object, *this, addr));
   m_promises_map.insert({key, promise_sp});
   return promise_sp;
 }
 
-SwiftLanguageRuntime::MetadataPromiseSP
+SwiftLanguageRuntimeImpl::MetadataPromiseSP
 SwiftLanguageRuntimeImpl::GetPromiseForTypeNameAndFrame(const char *type_name,
                                                         StackFrame *frame) {
   if (!frame || !type_name || !type_name[0])
