@@ -7,6 +7,7 @@
 # ===----------------------------------------------------------------------===##
 import sys
 import re
+import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
@@ -320,7 +321,7 @@ DEFAULT_PARAMETERS = [
     Parameter(
         name="executor",
         type=str,
-        default=f"{sys.executable} {Path(__file__).resolve().parent.parent.parent / 'run.py'}",
+        default=f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
     )

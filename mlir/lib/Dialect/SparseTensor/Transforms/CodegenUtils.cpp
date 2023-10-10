@@ -774,12 +774,12 @@ Value sparse_tensor::genReader(OpBuilder &builder, Location loc,
   return reader;
 }
 
-Value sparse_tensor::genReaderBuffers(OpBuilder &builder, Location loc,
-                                      SparseTensorType stt,
-                                      ArrayRef<Value> dimShapesValues,
-                                      Value dimSizesBuffer,
-                                      /*out*/ Value &dim2lvlBuffer,
-                                      /*out*/ Value &lvl2dimBuffer) {
+Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
+                                   SparseTensorType stt,
+                                   ArrayRef<Value> dimShapesValues,
+                                   Value dimSizesBuffer,
+                                   /*out*/ Value &dim2lvlBuffer,
+                                   /*out*/ Value &lvl2dimBuffer) {
   const Dimension dimRank = stt.getDimRank();
   const Level lvlRank = stt.getLvlRank();
   // For an identity mapping, the dim2lvl and lvl2dim mappings are
