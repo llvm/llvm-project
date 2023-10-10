@@ -876,6 +876,26 @@ void State::addInfoForInductions(BasicBlock &BB) {
   else
     return;
 
+  // Handle negative steps.
+  if (StepOffset.isNegative()) {
+    // TODO: Extend to allow steps > -1.
+    if (!(-StepOffset).isOne())
+      return;
+
+    // AR may wrap.
+    // Add StartValue >= PN conditional on B <= StartValue which guarantees that
+    // the loop exits before wrapping with a step of -1.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, StartValue, PN,
+        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    // Add PN > B conditional on B <= StartValue which guarantees that the loop
+    // exits when reaching B with a step of -1.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGT, PN, B,
+        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    return;
+  }
+
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the
   // step size, to guarantee that the induction will reach the value.
