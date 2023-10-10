@@ -235,6 +235,12 @@ New checks
   Finds return statements with ``void`` values used within functions with
   ``void`` result types.
 
+- New :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check.
+
+  Detects explicit type casting operations that involve the same source and
+  destination types, and subsequently recommend their removal.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
