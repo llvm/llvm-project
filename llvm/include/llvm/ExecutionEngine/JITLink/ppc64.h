@@ -61,6 +61,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   RequestCallNoTOC,
   RequestTLSDescInGOTAndTransformToTOCDelta16HA,
   RequestTLSDescInGOTAndTransformToTOCDelta16LO,
+  RequestTLSDescInGOTAndTransformToDelta34,
 };
 
 enum PLTCallStubKind {
