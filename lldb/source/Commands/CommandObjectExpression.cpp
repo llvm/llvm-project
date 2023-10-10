@@ -439,11 +439,11 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   ExpressionResults success = target.EvaluateExpression(
       expr, frame, result_valobj_sp, eval_options, &m_fixed_expression);
 
-  // Only mention Fix-Its if the expression evaluator applied them.
-  // Compiler errors refer to the final expression after applying Fix-It(s).
+  // We only tell you about the FixIt if we applied it.  The compiler errors
+  // will suggest the FixIt if it parsed.
   if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
-    error_stream << "  Evaluated this expression after applying Fix-It(s):\n";
-    error_stream << "    " << m_fixed_expression << "\n";
+    error_stream.Printf("  Fix-it applied, fixed expression was: \n    %s\n",
+                        m_fixed_expression.c_str());
   }
 
   if (result_valobj_sp) {
