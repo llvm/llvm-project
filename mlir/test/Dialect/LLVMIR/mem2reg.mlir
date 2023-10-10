@@ -690,9 +690,9 @@ llvm.func @no_inner_alloca_promotion(%arg: i64) -> i64 {
 llvm.func @transitive_reaching_def() -> !llvm.ptr {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK-NOT: alloca
-  %3 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %6 = llvm.load %3 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
-  llvm.store %6, %3 {alignment = 8 : i64} : !llvm.ptr, !llvm.ptr
-  %7 = llvm.load %3 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
-  llvm.return %7 : !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
+  llvm.store %2, %1 {alignment = 8 : i64} : !llvm.ptr, !llvm.ptr
+  %3 = llvm.load %1 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
+  llvm.return %3 : !llvm.ptr
 }

@@ -96,6 +96,9 @@ using namespace mlir;
 
 namespace {
 
+using BlockingUsesMap =
+    llvm::MapVector<Operation *, SmallPtrSet<OpOperand *, 4>>;
+
 /// Information computed during promotion analysis used to perform actual
 /// promotion.
 struct MemorySlotPromotionInfo {
@@ -106,7 +109,7 @@ struct MemorySlotPromotionInfo {
   /// its uses, it is because the defining ops of the blocking uses requested
   /// it. The defining ops therefore must also have blocking uses or be the
   /// starting point of the bloccking uses.
-  llvm::MapVector<Operation *, SmallPtrSet<OpOperand *, 4>> userToBlockingUses;
+  BlockingUsesMap userToBlockingUses;
 };
 
 /// Computes information for basic slot promotion. This will check that direct
@@ -129,9 +132,7 @@ private:
   /// uses (typically, removing its users because it will delete itself to
   /// resolve its own blocking uses). This will fail if one of the transitive
   /// users cannot remove a requested use, and should prevent promotion.
-  LogicalResult
-  computeBlockingUses(llvm::MapVector<Operation *, SmallPtrSet<OpOperand *, 4>>
-                          &userToBlockingUses);
+  LogicalResult computeBlockingUses(BlockingUsesMap &userToBlockingUses);
 
   /// Computes in which blocks the value stored in the slot is actually used,
   /// meaning blocks leading to a load. This method uses `definingBlocks`, the
@@ -234,8 +235,7 @@ Value MemorySlotPromoter::getLazyDefaultValue() {
 }
 
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
-    llvm::MapVector<Operation *, SmallPtrSet<OpOperand *, 4>>
-        &userToBlockingUses) {
+    BlockingUsesMap &userToBlockingUses) {
   // The promotion of an operation may require the promotion of further
   // operations (typically, removing operations that use an operation that must
   // delete itself). We thus need to start from the use of the slot pointer and
@@ -522,8 +522,8 @@ void MemorySlotPromoter::removeBlockingUses() {
       llvm::make_first_range(info.userToBlockingUses));
   // The uses need to be traversed in *reverse dominance* order to ensure that
   // transitive replacements are performed correctly.
-  llvm::sort(usersToRemoveUses, [&](Operation *a, Operation *b) {
-    return dominance.properlyDominates(b, a);
+  llvm::sort(usersToRemoveUses, [&](Operation *lhs, Operation *rhs) {
+    return dominance.properlyDominates(rhs, lhs);
   });
 
   llvm::SmallVector<Operation *> toErase;
