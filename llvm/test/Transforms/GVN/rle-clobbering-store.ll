@@ -7,8 +7,7 @@ define i1 @test_i1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i1, ptr [[A]], align 1
 ; CHECK-NEXT:    store i1 [[TMP0]], ptr [[B]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr [[A]], align 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
   %0 = load i1, ptr %a, align 1
@@ -23,8 +22,7 @@ define i8 @test_i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    store i8 [[TMP0]], ptr [[B]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A]], align 1
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
   %0 = load i8, ptr %a, align 1
@@ -39,8 +37,7 @@ define i32 @test_i32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   %0 = load i32, ptr %a, align 4
@@ -55,8 +52,7 @@ define float @test_float(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    store float [[TMP0]], ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
   %0 = load float, ptr %a, align 4
