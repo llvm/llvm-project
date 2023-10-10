@@ -18,23 +18,8 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-
+#include <sanitizer_common/sanitizer_internal_defs.h>
 namespace __sanitizer {
-#if defined(_WIN64)
-typedef unsigned long long uptr;
-#else
-typedef unsigned long uptr;
-#endif
-}  // namespace __sanitizer
-
-extern "C" void* _ReturnAddress(void);
-extern "C" void* _AddressOfReturnAddress(void);
-#pragma intrinsic(_ReturnAddress)
-#pragma intrinsic(_AddressOfReturnAddress)
-
-#define GET_CALLER_PC() (__sanitizer::uptr) _ReturnAddress()
-#define GET_CURRENT_FRAME() \
-  (((__sanitizer::uptr)_AddressOfReturnAddress()) + sizeof(__sanitizer::uptr))
 
 __declspec(noinline) inline __sanitizer::uptr __asan_GetCurrentPc() {
   return GET_CALLER_PC();
@@ -62,3 +47,5 @@ struct __asan_win_stack_data {
   __sanitizer::uptr bp;
   __sanitizer::uptr caller_pc;
 };
+
+}

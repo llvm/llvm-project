@@ -35,7 +35,7 @@ void* operator new[](size_t, std::align_val_t);
 void operator delete(void* ptr, std::align_val_t align);
 void operator delete[](void* ptr, std::align_val_t align);
 
-using __asan_win_new_delete_data = __asan_win_stack_data;
+using __asan_win_new_delete_data = __sanitizer::__asan_win_stack_data;
 
 ////////////////////////////////////
 // clang-format off

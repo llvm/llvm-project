@@ -19,7 +19,7 @@
 #include "asan_stack.h"
 
 
-using __asan_win_new_delete_data = __asan_win_stack_data;
+using __asan_win_new_delete_data = __sanitizer::__asan_win_stack_data;
 
 // Fake std::align_val_t to avoid including <new>.
 namespace std {
