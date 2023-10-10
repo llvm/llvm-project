@@ -845,7 +845,8 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
-    LOG2
+    LOG2,
+    REPR
   };
 
 private:
