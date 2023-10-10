@@ -1768,8 +1768,8 @@ define void @PR51226() {
 ; X86-AVX2-LABEL: PR51226:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X86-AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vmovups %ymm0, (%eax)
@@ -1779,8 +1779,8 @@ define void @PR51226() {
 ; X86-AVX512-LABEL: PR51226:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X86-AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX512-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax)
@@ -1801,8 +1801,8 @@ define void @PR51226() {
 ; X64-AVX2-LABEL: PR51226:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vmovups %ymm0, (%rax)
@@ -1812,8 +1812,8 @@ define void @PR51226() {
 ; X64-AVX512-LABEL: PR51226:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX512-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vmovups %ymm0, (%rax)
