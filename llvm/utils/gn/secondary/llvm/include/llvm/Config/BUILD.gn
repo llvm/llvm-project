@@ -374,12 +374,6 @@ write_cmake_config("llvm-config") {
     ]
   }
 
-  if (llvm_enable_libxar) {
-    values += [ "LLVM_HAVE_LIBXAR=1" ]
-  } else {
-    values += [ "LLVM_HAVE_LIBXAR=" ]
-  }
-
   if (llvm_enable_dia_sdk) {
     values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
