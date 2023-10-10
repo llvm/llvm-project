@@ -29,8 +29,8 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class SymbolTable;
 
-/// Convert input FuncOp to LLVMFuncOp by using the provided LLVMTypeConverter.
-/// Returns failure if failed to so.
+/// Convert input FunctionOpInterface operation to LLVMFuncOp by using the
+/// provided LLVMTypeConverter. Return failure if failed to so.
 FailureOr<LLVM::LLVMFuncOp>
 convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                           ConversionPatternRewriter &rewriter,
