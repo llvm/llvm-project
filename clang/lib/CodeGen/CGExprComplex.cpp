@@ -761,6 +761,21 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
 
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (Op.LHS.second && Op.RHS.second) {
+      // (a+ib)*(c+id) = (ac-bd)+i(bc+ad)
+      if (Op.FPFeatures.getCxLimitedRange() ||
+          CGF.getLangOpts().CxLimitedRange) {
+        llvm::Value *LHSr = Op.LHS.first, *LHSi = Op.LHS.second;
+        llvm::Value *RHSr = Op.RHS.first, *RHSi = Op.RHS.second;
+
+        llvm::Value *AC = Builder.CreateFMul(LHSr, RHSr); // ac
+        llvm::Value *BD = Builder.CreateFMul(LHSi, RHSi); // bd
+        llvm::Value *DSTr = Builder.CreateFSub(AC, BD);   // ac-bd
+
+        llvm::Value *BC = Builder.CreateFMul(LHSi, RHSr); // bc
+        llvm::Value *AD = Builder.CreateFMul(LHSr, RHSi); // ad
+        llvm::Value *DSTi = Builder.CreateFAdd(BC, AD);   // bc+ad
+        return ComplexPairTy(DSTr, DSTi);
+      }
       // If both operands are complex, emit the core math directly, and then
       // test for NaNs. If we find NaNs in the result, we delegate to a libcall
       // to carefully re-compute the correct infinity representation if
@@ -851,9 +866,30 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
 ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
   llvm::Value *LHSr = Op.LHS.first, *LHSi = Op.LHS.second;
   llvm::Value *RHSr = Op.RHS.first, *RHSi = Op.RHS.second;
-
   llvm::Value *DSTr, *DSTi;
   if (LHSr->getType()->isFloatingPointTy()) {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
+    if (RHSi && (Op.FPFeatures.getCxLimitedRange() ||
+                 CGF.getLangOpts().CxLimitedRange)) {
+      if (!LHSi)
+        LHSi = llvm::Constant::getNullValue(RHSi->getType());
+
+      // (a+ib) / (c+id) = ((ac+bd)/(cc+dd)) + i((bc-ad)/(cc+dd))
+      llvm::Value *AC = Builder.CreateFMul(LHSr, RHSr); // a*c
+      llvm::Value *BD = Builder.CreateFMul(LHSi, RHSi); // b*d
+      llvm::Value *ACpBD = Builder.CreateFAdd(AC, BD);  // ac+bd
+
+      llvm::Value *CC = Builder.CreateFMul(RHSr, RHSr); // c*c
+      llvm::Value *DD = Builder.CreateFMul(RHSi, RHSi); // d*d
+      llvm::Value *CCpDD = Builder.CreateFAdd(CC, DD);  // cc+dd
+
+      llvm::Value *BC = Builder.CreateFMul(LHSi, RHSr); // b*c
+      llvm::Value *AD = Builder.CreateFMul(LHSr, RHSi); // a*d
+      llvm::Value *BCmAD = Builder.CreateFSub(BC, AD);  // bc-ad
+
+      DSTr = Builder.CreateFDiv(ACpBD, CCpDD);
+      DSTi = Builder.CreateFDiv(BCmAD, CCpDD);
+    } else if (RHSi && !CGF.getLangOpts().FastMath) {
     // If we have a complex operand on the RHS and FastMath is not allowed, we
     // delegate to a libcall to handle all of the complexities and minimize
     // underflow/overflow cases. When FastMath is allowed we construct the
@@ -861,8 +897,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     //
     // FIXME: We would be able to avoid the libcall in many places if we
     // supported imaginary types in addition to complex types.
-    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
-    if (RHSi && !CGF.getLangOpts().FastMath) {
       BinOpInfo LibCallOp = Op;
       // If LHS was a real, supply a null imaginary part.
       if (!LHSi)
@@ -884,25 +918,6 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       case llvm::Type::FP128TyID:
         return EmitComplexBinOpLibCall("__divtc3", LibCallOp);
       }
-    } else if (RHSi) {
-      if (!LHSi)
-        LHSi = llvm::Constant::getNullValue(RHSi->getType());
-
-      // (a+ib) / (c+id) = ((ac+bd)/(cc+dd)) + i((bc-ad)/(cc+dd))
-      llvm::Value *AC = Builder.CreateFMul(LHSr, RHSr); // a*c
-      llvm::Value *BD = Builder.CreateFMul(LHSi, RHSi); // b*d
-      llvm::Value *ACpBD = Builder.CreateFAdd(AC, BD); // ac+bd
-
-      llvm::Value *CC = Builder.CreateFMul(RHSr, RHSr); // c*c
-      llvm::Value *DD = Builder.CreateFMul(RHSi, RHSi); // d*d
-      llvm::Value *CCpDD = Builder.CreateFAdd(CC, DD); // cc+dd
-
-      llvm::Value *BC = Builder.CreateFMul(LHSi, RHSr); // b*c
-      llvm::Value *AD = Builder.CreateFMul(LHSr, RHSi); // a*d
-      llvm::Value *BCmAD = Builder.CreateFSub(BC, AD); // bc-ad
-
-      DSTr = Builder.CreateFDiv(ACpBD, CCpDD);
-      DSTi = Builder.CreateFDiv(BCmAD, CCpDD);
     } else {
       assert(LHSi && "Can have at most one non-complex operand!");
 
