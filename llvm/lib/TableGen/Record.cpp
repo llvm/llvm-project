@@ -3119,6 +3119,16 @@ void Record::checkRecordAssertions() {
   }
 }
 
+void Record::checkRecordDumps() {
+  RecordResolver R(*this);
+  R.setFinal(true);
+
+  for (const auto &Dump : getDumps()) {
+    Init *Message = Dump.Message->resolveReferences(R);
+    CheckDump(Dump.Loc, Message);
+  }
+}
+
 // Report a warning if the record has unused template arguments.
 void Record::checkUnusedTemplateArgs() {
   for (const Init *TA : getTemplateArgs()) {
