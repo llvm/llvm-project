@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AssumeInst;
@@ -28,6 +29,7 @@ class AssumptionCache;
 class DominatorTree;
 
 extern cl::opt<bool> EnableKnowledgeRetention;
+extern cl::opt<bool> ShouldPreserveAllAttributes;
 
 /// Build a call to llvm.assume to preserve informations that can be derived
 /// from the given instruction.
