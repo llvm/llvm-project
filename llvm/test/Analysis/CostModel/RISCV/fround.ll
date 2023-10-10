@@ -202,7 +202,7 @@ define void @lrint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i64> @llvm.lrint.nxv2i64.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x i64> @llvm.lrint.nxv4i64.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x i64> @llvm.lrint.nxv8i64.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i64 @llvm.lrint.i64.f32(float undef)
   call <2 x i64> @llvm.lrint.v2i64.v2f32(<2 x float> undef)
@@ -247,7 +247,7 @@ define void @llrint() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i64> @llvm.llrint.nxv2i64.nxv2f64(<vscale x 2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = call <vscale x 4 x i64> @llvm.llrint.nxv4i64.nxv4f64(<vscale x 4 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = call <vscale x 8 x i64> @llvm.llrint.nxv8i64.nxv8f64(<vscale x 8 x double> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call i64 @llvm.llrint.i64.f32(float undef)
   call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> undef)
