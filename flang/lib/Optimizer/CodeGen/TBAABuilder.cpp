@@ -48,9 +48,10 @@ static llvm::cl::opt<unsigned>
 
 namespace fir {
 
-TBAABuilder::TBAABuilder(MLIRContext *context, bool applyTBAA)
+TBAABuilder::TBAABuilder(MLIRContext *context, bool applyTBAA,
+                         bool forceUnifiedTree)
     : enableTBAA(applyTBAA && !disableTBAA),
-      trees(/*separatePerFunction=*/perFunctionTBAATrees) {
+      trees(/*separatePerFunction=*/perFunctionTBAATrees && !forceUnifiedTree) {
   if (!enableTBAA)
     return;
 }

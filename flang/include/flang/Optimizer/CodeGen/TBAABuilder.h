@@ -167,7 +167,9 @@ namespace fir {
 // (before CodeGen)
 class TBAABuilder {
 public:
-  TBAABuilder(mlir::MLIRContext *context, bool applyTBAA);
+  /// if forceUnifiedTree is true, functions will not have different TBAA trees
+  TBAABuilder(mlir::MLIRContext *context, bool applyTBAA,
+              bool forceUnifiedTree = false);
   TBAABuilder(TBAABuilder const &) = delete;
   TBAABuilder &operator=(TBAABuilder const &) = delete;
 
