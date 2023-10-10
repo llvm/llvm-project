@@ -18448,6 +18448,177 @@ will be on any later loop iteration.
 This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
 
+Complex Intrinsics
+------------------
+
+Complex numbers are currently represented, for intrinsic purposes, as vectors of
+floating-point numbers. A scalar complex type is represented using the type
+``<2 x floatty>``, with index ``0`` corresponding to the real part of the number
+and index ``1`` corresponding the imaginary part of the number. A vector complex
+type can be represented by an even-length vector of floating-point numbers,
+with even indices (``0``, ``2``, etc.) corresponding to real parts of numbers
+and the indices one larger (``1``, ``3``, etc.) the corresponding imaginary
+parts.
+
+The precise semantics of these intrinsics depends on the value of the
+``complex-range`` attribute provided as a call-site attribute. This attribute
+takes on three possible values:
+
+``"full"``
+  The semantics has the full expansion as given in Annex G of the C
+  specification. In general, this means it needs to be expanded using the call
+  to the appropriate routine in compiler-rt (e.g., __mulsc3).
+
+``"no-nan"``
+  This code is permitted to allow complex infinities to be represented as NaNs
+  instead, as if the code for the appropriate routine were compiled in a manner
+  that allowed ``isnan(x)`` or ``isinf(x)`` to be optimized as false.
+
+``"limited"``
+  The semantics are equivalent to the naive arithmetic expansion operations
+  (specific expansion is detailed for each arithmetic expression).
+
+When this attribute is not present, it is presumed to be ``"full"`` if no
+fast-math flags are set, and ``"no-nan"`` if ``nnan`` or ``ninf`` flags are
+present.
+
+Fast-math flags are additionally relevant for these intrinsics, particularly in
+the case of ``complex-range=limited`` variants, as those will be likely to be
+expanded in code generation and fast-math flags will propagate to the expanded
+IR in such circumstances.
+
+Intrinsics for complex addition and subtraction are not provided, as these are
+equivalent to ``fadd`` and ``fsub`` instructions, respectively.
+
+'``llvm.experimental.complex.fmul.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x float> @llvm.experimental.complex.fmul.v2f32(<2 x float> <op1>, <2 x float> <op2>)
+      declare <2 x double> @llvm.experimental.complex.fmul.v2f64(<2 x double> <op1>, <2 x double> <op2>)
+      declare <4 x float> @llvm.experimental.complex.fmul.v4f32(<4 x float> <op1>, <4 x float> <op2>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.complex.fmul``' intrinsic returns the product of its
+two operands.
+
+Arguments:
+""""""""""
+
+The arguments to the '``llvm.experimental.complex.fmul``' intrinsic must be a
+:ref:`vector <t_vector>` of :ref:`floating-point <t_floating>` types of length
+divisible by 2.
+
+Semantics:
+""""""""""
+
+The value produced is the complex product of the two inputs.
+
+If the value of ``complex-range`` attribute is ``no-nan`` or ``limited``, or if
+the ``noinf`` or ``nonan`` fast math flags are provided, the output may be
+equivalent to the following code:
+
+.. code-block:: llvm
+
+      declare <2 x float> limited_complex_mul(<2 x float> %op1, <2 x float> %op2) {
+        %x = extractelement <2 x float> %op1, i32 0 ; real of %op1
+        %y = extractelement <2 x float> %op1, i32 1 ; imag of %op1
+        %u = extractelement <2 x float> %op2, i32 0 ; real of %op2
+        %v = extractelement <2 x float> %op2, i32 1 ; imag of %op2
+        %xu = fmul float %x, %u
+        %yv = fmul float %y, %v
+        %yu = fmul float %y, %u
+        %xv = fmul float %x, %v
+        %out_real = fsub float %xu, %yv
+        %out_imag = fadd float %yu, %xv
+        %ret.0 = insertelement <2 x float> undef, i32 0, %out_real
+        %ret.1 = insertelement <2 x float> %ret.0, i32 1, %out_imag
+        return <2 x float> %ret.1
+      }
+
+When the ``complex-range`` attribute is set to ``full`` or is missing, the above
+code is insufficient to handle the result. Instead, code must be added to
+check for infinities if either the real or imaginary component of the result is
+a NaN value.
+
+
+'``llvm.experimental.complex.fdiv.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x float> @llvm.experimental.complex.fdiv.v2f32(<2 x float> <op1>, <2 x float> <op2>)
+      declare <2 x double> @llvm.experimental.complex.fdiv.v2f64(<2 x double> <op1>, <2 x double> <op2>)
+      declare <4 x float> @llvm.experimental.complex.fdiv.v4f32(<4 x float> <op1>, <4 x float> <op2>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.complex.fdiv``' intrinsic returns the quotient of its
+two operands.
+
+Arguments:
+""""""""""
+
+The arguments to the '``llvm.experimental.complex.fdiv``' intrinsic must be a
+:ref:`vector <t_vector>` of :ref:`floating-point <t_floating>` types of length
+divisible by 2.
+
+Semantics:
+""""""""""
+
+The value produced is the complex quotient of the two inputs.
+
+If the ``complex-range`` attribute is set to ``limited``, the output will be
+equivalent to the following code:
+
+.. code-block:: llvm
+
+      declare <2 x float> limited_complex_div(<2 x float> %op1, <2 x float> %op2) {
+        %x = extractelement <2 x float> %op1, i32 0 ; real of %op1
+        %y = extractelement <2 x float> %op1, i32 1 ; imag of %op1
+        %u = extractelement <2 x float> %op2, i32 0 ; real of %op2
+        %v = extractelement <2 x float> %op2, i32 1 ; imag of %op2
+        %xu = fmul float %x, %u
+        %yv = fmul float %y, %v
+        %yu = fmul float %y, %u
+        %xv = fmul float %x, %v
+        %uu = fmul float %u, %u
+        %vv = fmul float %v, %v
+        %unscaled_real = fadd float %xu, %yv
+        %unscaled_imag = fsub float %yu, %xv
+        %scale = fadd float %uu, %vv
+        %out_real = fdiv float %unscaled_real, %scale
+        %out_imag = fdiv float %unscaled_imag, %scale
+        %ret.0 = insertelement <2 x float> undef, i32 0, %out_real
+        %ret.1 = insertelement <2 x float> %ret.0, i32 1, %out_imag
+        return <2 x float> %ret.1
+      }
+
+If the ``complex-range`` attribute is set to ``no-nan`` (or the ``nnan`` or
+``ninf`` flags are specified), an additional range reduction step is necessary.
+
+If the ``complex-range`` attribute is set to ``full``, or is missing entirely,
+then an additional check is necessary after the computation that is necessary
+to recover infinites that are instead represented as NaN values.
+
+Note that when ``complex-range`` is set to ``limited``, and the code is being
+expanded to the IR provided above, the fast-math flags are duplicated onto the
+expanded code. In particular, the ``arcp`` fast math flag may also be useful, as
+it will permit the divisions to be replaced with multiplications with a
+reciprocal instead.
+
 Matrix Intrinsics
 -----------------
 

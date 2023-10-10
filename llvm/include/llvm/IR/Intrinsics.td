@@ -2350,6 +2350,16 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
                                          [llvm_anyvector_ty]>;
 }
 
+//===----- Complex math intrinsics ----------------------------------------===//
+
+def int_experimental_complex_fmul: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                            [LLVMMatchType<0>,LLVMMatchType<0>],
+                                            [IntrNoMem]>;
+
+def int_experimental_complex_fdiv: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                            [LLVMMatchType<0>,LLVMMatchType<0>],
+                                            [IntrNoMem]>;
+
 //===----- Matrix intrinsics ---------------------------------------------===//
 
 def int_matrix_transpose
