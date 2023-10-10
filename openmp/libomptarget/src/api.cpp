@@ -242,9 +242,8 @@ static int libomp_target_memcpy_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
 }
 
 static int libomp_target_memset_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
-  if (!Task) {
+  if (!Task)
     return OFFLOAD_FAIL;
-  }
 
   auto *Args = reinterpret_cast<TargetMemsetArgsTy *>(Task->shareds);
   if (!Args) {
@@ -302,20 +301,20 @@ static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
   return Rc;
 }
 
-EXTERN void *omp_target_memset(void *Ptr, int C, size_t N, int DeviceNum) {
+EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes, int DeviceNum) {
   TIMESCOPE();
   DP("Call to omp_target_memset, device %d, device pointer %p, size %zu\n",
-     DeviceNum, Ptr, N);
+     DeviceNum, Ptr, NumBytes);
 
   // Behave as a no-op if N==0 or if Ptr is nullptr (as a useful implementation
   // of unspecified behavior, see OpenMP spec).
-  if (!Ptr || N == 0) {
+  if (!Ptr || NumBytes == 0) {
     return Ptr;
   }
 
   if (DeviceNum == omp_get_initial_device()) {
     DP("filling memory on host via memset");
-    memset(Ptr, C, N); // ignore return value, memset() cannot fail
+    memset(Ptr, ByteVal, NumBytes); // ignore return value, memset() cannot fail
   } else {
     // TODO: replace the omp_target_memset() slow path with the fast path.
     // That will require the ability to execute a kernel from within
@@ -324,9 +323,9 @@ EXTERN void *omp_target_memset(void *Ptr, int C, size_t N, int DeviceNum) {
     // This is a very slow path: create a filled array on the host and upload
     // it to the GPU device.
     int InitialDevice = omp_get_initial_device();
-    void *Shadow = omp_target_alloc(N, InitialDevice);
-    (void)memset(Shadow, C, N);
-    (void)omp_target_memcpy(Ptr, Shadow, N, 0, 0, DeviceNum, InitialDevice);
+    void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
+    (void)memset(Shadow, ByteVal, NumBytes);
+    (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum, InitialDevice);
     (void)omp_target_free(Shadow, InitialDevice);
   }
 
@@ -334,20 +333,20 @@ EXTERN void *omp_target_memset(void *Ptr, int C, size_t N, int DeviceNum) {
   return Ptr;
 }
 
-EXTERN void *omp_target_memset_async(void *Ptr, int C, size_t N, int DeviceNum,
+EXTERN void *omp_target_memset_async(void *Ptr, int ByteVal, size_t NumBytes, int DeviceNum,
                                      int DepObjCount,
                                      omp_depend_t *DepObjList) {
   DP("Call to omp_target_memset_async, device %d, device pointer %p, size %zu",
-     DeviceNum, Ptr, N);
+     DeviceNum, Ptr, NumBytes);
 
   // Behave as a no-op if N==0 or if Ptr is nullptr (as a useful implementation
   // of unspecified behavior, see OpenMP spec).
-  if (!Ptr || N == 0) {
+  if (!Ptr || NumBytes == 0) {
     return Ptr;
   }
 
   // Create the task object to deal with the async invocation
-  auto *Args = new TargetMemsetArgsTy{Ptr, C, N, DeviceNum};
+  auto *Args = new TargetMemsetArgsTy{Ptr, ByteVal, NumBytes, DeviceNum};
 
   // omp_target_memset_async() cannot fail via a return code, so ignore the
   // return code of the helper function
