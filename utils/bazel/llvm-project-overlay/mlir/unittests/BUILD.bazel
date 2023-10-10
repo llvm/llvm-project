@@ -22,7 +22,6 @@ cc_test(
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:Debug",
-        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Support",
         "//third-party/unittest:gmock",
@@ -40,6 +39,7 @@ cc_test(
     ]),
     deps = [
         "//llvm:Support",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Support",
