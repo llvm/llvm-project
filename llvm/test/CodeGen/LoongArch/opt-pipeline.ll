@@ -67,6 +67,7 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Expand complex intrinsics
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation

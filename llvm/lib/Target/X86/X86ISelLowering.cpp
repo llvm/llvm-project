@@ -2324,6 +2324,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasFP16()) {
+    for (auto VT : {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v16f16}) {
+      if (Subtarget.hasVLX())
+        setOperationAction(ISD::COMPLEX_MUL, VT, Custom);
+      setOperationAction(ISD::COMPLEX_MUL, MVT::v32f16, Custom);
+    }
+  }
+  if (Subtarget.hasAnyFMA() || (Subtarget.hasAVX512() && Subtarget.hasVLX())) {
+    for (auto VT : {MVT::v2f32, MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64})
+      setOperationAction(ISD::COMPLEX_MUL, VT, Custom);
+  }
+  if (Subtarget.hasAVX512()) {
+    setOperationAction(ISD::COMPLEX_MUL, MVT::v8f64, Custom);
+    setOperationAction(ISD::COMPLEX_MUL, MVT::v16f32, Custom);
+  }
+
   if (Subtarget.hasAMXTILE()) {
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
@@ -2529,6 +2545,46 @@ X86TargetLowering::getPreferredVectorAction(MVT VT) const {
     return TypeWidenVector;
 
   return TargetLoweringBase::getPreferredVectorAction(VT);
+}
+
+TargetLoweringBase::ComplexABI
+X86TargetLowering::getComplexReturnABI(Type *ScalarFloatTy) const {
+  // Windows ABIs don't have dedicated _Complex rules, so they work as regular
+  // structs. These return as integers if the size is 8 bytes or fewer, or
+  // structs via memory if larger. (The size threshold is the same for both
+  // 32 and 64-bit ABIs).
+  if (Subtarget.isOSWindows()) {
+    unsigned FloatSize =
+      ScalarFloatTy->getPrimitiveSizeInBits().getFixedValue();
+    if (FloatSize <= 32) {
+      return ComplexABI::Integer;
+    } else {
+      return ComplexABI::Memory;
+    }
+  }
+  if (Subtarget.is32Bit()) {
+    if (ScalarFloatTy->isFloatTy()) {
+      return ComplexABI::Integer;
+    } else if (ScalarFloatTy->isHalfTy()) {
+      return ComplexABI::Vector;
+    } else {
+      return ComplexABI::Memory;
+    }
+  } else {
+    // The x86-64 ABI specifies that (save for x86-fp80), this is handled as a
+    // regular C struct. This means that float and smaller get packed into a
+    // single vector in xmm0; double and x86-fp80 (by special case) return two
+    // values; and larger types than x86-fp80 (i.e., fp128) returns via memory.
+    unsigned FloatSize =
+      ScalarFloatTy->getPrimitiveSizeInBits().getFixedValue();
+    if (FloatSize <= 32) {
+      return ComplexABI::Vector;
+    } else if (FloatSize <= 80) {
+      return ComplexABI::Struct;
+    } else {
+      return ComplexABI::Memory;
+    }
+  }
 }
 
 FastISel *
@@ -31750,6 +31806,68 @@ bool X86TargetLowering::isInlineAsmTargetBranch(
   return Inst.equals_insensitive("call") || Inst.equals_insensitive("jmp");
 }
 
+bool X86TargetLowering::CustomLowerComplexMultiply(Type *FloatTy) const {
+  auto VecTy = cast<FixedVectorType>(FloatTy);
+  unsigned VecSize = VecTy->getNumElements() * VecTy->getScalarSizeInBits();
+  Type *ElementTy = VecTy->getElementType();
+  if (ElementTy->isHalfTy()) {
+    // All the half type need avx512fp16 enabled.
+    if (VecSize == 512)
+      // For 512-bt vector type, just avx512fp16 needed.
+      return Subtarget.hasFP16();
+    else
+      // 128-bit, 256-bit vector type are legal and other vector type can
+      // be widened or split. AVX512VL should be enabled.
+      return Subtarget.hasFP16() && Subtarget.hasVLX();
+  }
+  if (ElementTy->isFloatTy() || ElementTy->isDoubleTy()) {
+    if (VecSize == 512)
+      // For 512-bt vector type, they are legal or can be split.
+      return Subtarget.hasAVX512() || Subtarget.hasAnyFMA();
+    // 128-bit, 256-bit vector type are legal or and other type can
+    // be widened or split.
+    return Subtarget.hasAnyFMA() ||
+           (Subtarget.hasAVX512() && Subtarget.hasVLX());
+  }
+  return false;
+}
+
+static SDValue LowerComplexMUL(SDValue Op, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  MVT ElementTy = VT.getScalarType();
+  SDLoc DL(Op);
+  // Custom handling for half type since we have corresponding complex half
+  // multiply instructions.
+  // FIXME: We use vfmulcph for sclar complex multiply here, use vfmulcsh
+  // instead.
+  if (ElementTy == MVT::f16) {
+    // Transform llvm.experimental.complex.fmul.vxf16 to vfmulcph instruction.
+    MVT BitCastTy = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
+    SDValue LHS = DAG.getNode(ISD::BITCAST, DL, BitCastTy, Op.getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::BITCAST, DL, BitCastTy, Op.getOperand(1));
+    return DAG.getNode(ISD::BITCAST, DL, VT,
+                       DAG.getNode(X86ISD::VFMULC, DL, BitCastTy, LHS, RHS));
+  }
+  assert((ElementTy == MVT::f32 || ElementTy == MVT::f64) &&
+         "Unexpected element type");
+  // llvm.experimental.complex.fmul.vxf{32,64} are transformed to SHUFFLE and
+  // FMA instructions.
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  unsigned Imm = ElementTy == MVT::SimpleValueType::f32 ? 0xb1 : 0x55;
+  SDValue V1, V2, V3, V4;
+  // Swap vcetor elements in pairs. E.g: [1,2,3,4] ---> [2,1,4,3]
+  V1 = DAG.getNode(X86ISD::VPERMILPI, DL, VT, LHS,
+                   DAG.getTargetConstant(Imm, DL, MVT::i8));
+  // Duplicate the odd index elements, which is real part.
+  V2 = DAG.getNode(X86ISD::MOVSHDUP, DL, VT, RHS);
+  V3 = DAG.getNode(ISD::FMUL, DL, VT, V1, V2);
+  // Duplicate the evem index elements, which is imaginary part.
+  V4 = DAG.getNode(X86ISD::MOVSLDUP, DL, VT, RHS);
+  return DAG.getNode(X86ISD::FMADDSUB, DL, VT, LHS, V4, V3);
+}
+
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -31904,6 +32022,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
+  case ISD::COMPLEX_MUL:        return LowerComplexMUL(Op, DAG, Subtarget);
   }
 }
 
@@ -33004,6 +33123,22 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // We can use VPPERM by copying to a vector register and back. We'll need
     // to move the scalar in two i32 pieces.
     Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
+    return;
+  case ISD::COMPLEX_MUL:
+    // Widen the vector size smaller than 128 to 128
+    MVT VT = N->getSimpleValueType(0);
+    // FIXME: (COMPLEX_MUL v2f16, v2f16) should be lowered to VFMULCSH but we
+    // mix the v2f16 and v4f16 here.
+    assert((VT == MVT::v2f32 || VT == MVT::v2f16 ||
+           VT == MVT::v4f16) && "Unexpected Value type of COMPLEX_MUL!");
+    MVT WideVT =
+        VT.getVectorElementType() == MVT::f16 ? MVT::v8f16 : MVT::v4f32;
+    SmallVector<SDValue, 4> Ops(VT == MVT::v2f16 ? 4 : 2, DAG.getUNDEF(VT));
+    Ops[0] = N->getOperand(0);
+    SDValue LHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Ops);
+    Ops[0] = N->getOperand(1);
+    SDValue RHS = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Ops);
+    Results.push_back(DAG.getNode(N->getOpcode(), dl, WideVT, LHS, RHS));
     return;
   }
   case ISD::EXTRACT_VECTOR_ELT: {

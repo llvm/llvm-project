@@ -1017,6 +1017,8 @@ namespace llvm {
 
     bool isMemoryAccessFast(EVT VT, Align Alignment) const;
 
+    ComplexABI getComplexReturnABI(Type *ScalarFloatTy) const override;
+
     /// Returns true if the target allows unaligned memory accesses of the
     /// specified type. Returns whether it is "fast" in the last argument.
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
@@ -1548,6 +1550,8 @@ namespace llvm {
 
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
+
+    bool CustomLowerComplexMultiply(Type *FloatTy) const override;
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.

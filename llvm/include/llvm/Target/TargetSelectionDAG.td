@@ -770,6 +770,7 @@ def assertsext : SDNode<"ISD::AssertSext", SDT_assert>;
 def assertzext : SDNode<"ISD::AssertZext", SDT_assert>;
 def assertalign : SDNode<"ISD::AssertAlign", SDT_assert>;
 
+def COMPLEX_MUL : SDNode<"ISD::COMPLEX_MUL", SDTFPBinOp, [SDNPCommutative]>;
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes
 

@@ -46,6 +46,7 @@
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
+; GCN-O0-NEXT:      Expand complex intrinsics
 ; GCN-O0-NEXT:    CallGraph Construction
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      AMDGPU Annotate Kernel Features
@@ -225,6 +226,7 @@
 ; GCN-O1-NEXT:      Expand reduction intrinsics
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      TLS Variable Hoist
+; GCN-O1-NEXT:      Expand complex intrinsics
 ; GCN-O1-NEXT:    CallGraph Construction
 ; GCN-O1-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-NEXT:      AMDGPU Annotate Kernel Features
@@ -504,6 +506,7 @@
 ; GCN-O1-OPTS-NEXT:      Expand reduction intrinsics
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      TLS Variable Hoist
+; GCN-O1-OPTS-NEXT:      Expand complex intrinsics
 ; GCN-O1-OPTS-NEXT:      Early CSE
 ; GCN-O1-OPTS-NEXT:    CallGraph Construction
 ; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
@@ -808,6 +811,7 @@
 ; GCN-O2-NEXT:      Expand reduction intrinsics
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      TLS Variable Hoist
+; GCN-O2-NEXT:      Expand complex intrinsics
 ; GCN-O2-NEXT:      Early CSE
 ; GCN-O2-NEXT:    CallGraph Construction
 ; GCN-O2-NEXT:    Call Graph SCC Pass Manager
@@ -1120,6 +1124,7 @@
 ; GCN-O3-NEXT:      Expand reduction intrinsics
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      TLS Variable Hoist
+; GCN-O3-NEXT:      Expand complex intrinsics
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory Dependence Analysis

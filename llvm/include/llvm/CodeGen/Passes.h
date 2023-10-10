@@ -506,6 +506,12 @@ namespace llvm {
   /// printing assembly.
   ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
 
+  /// This pass expands the experimental complex intrinsics into regular
+  /// floating-point arithmetic or calls to __mulsc3 (or similar) functions.
+  FunctionPass *createExpandComplexPass();
+
+  /// This pass expands the experimental reduction intrinsics into sequences of
+  /// shuffles.
   /// This pass expands the reduction intrinsics into sequences of shuffles.
   FunctionPass *createExpandReductionsPass();
 

@@ -919,6 +919,10 @@ void TargetPassConfig::addIRPasses() {
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
+
+  // If the target doesn't support complex intrinsics, or if they need to be
+  // expanded into more complex calls, generate the expansion to complex calls.
+  addPass(createExpandComplexPass());
 }
 
 /// Turn exception handling constructs into something the code generators can

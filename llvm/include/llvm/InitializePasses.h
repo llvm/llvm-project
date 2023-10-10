@@ -111,6 +111,7 @@ void initializeEdgeBundlesPass(PassRegistry&);
 void initializeEHContGuardCatchretPass(PassRegistry &);
 void initializeExpandLargeFpConvertLegacyPassPass(PassRegistry&);
 void initializeExpandLargeDivRemLegacyPassPass(PassRegistry&);
+void initializeExpandComplexPass(PassRegistry &);
 void initializeExpandMemCmpPassPass(PassRegistry&);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeExpandReductionsPass(PassRegistry&);
