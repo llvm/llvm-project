@@ -1851,8 +1851,8 @@ and non-0 as true.
     Equivalent to ``!range(0, !size(list))``.
 
 ``!repr(``\ *value*` ``)``
-    Represents *value* as a string. In particular, it allows to print
-    the content of records for debugging purposes.
+    Represents *value* as a string. String format for the value is not
+    guaranteed to be stable. Intended for debugging purposes only.
 
 ``!setdagarg(``\ *dag*\ ``,``\ *key*\ ``,``\ *arg*\ ``)``
     This operator produces a DAG node with the same operator and arguments as
