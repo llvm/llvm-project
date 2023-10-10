@@ -3416,6 +3416,17 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_ompx_attribute:
     Clause = ParseOpenMPOMPXAttributesClause(WrongDirective);
     break;
+  case OMPC_ompx_bare:
+    if (WrongDirective)
+      Diag(Tok, diag::note_ompx_bare_clause)
+          << getOpenMPClauseName(CKind) << "target teams";
+    if (!ErrorFound && !getLangOpts().OpenMPExtensions) {
+      Diag(Tok, diag::err_omp_unexpected_clause_extension_only)
+          << getOpenMPClauseName(CKind) << getOpenMPDirectiveName(DKind);
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
   default:
     break;
   }
@@ -3739,7 +3750,8 @@ OMPClause *Parser::ParseOpenMPOMPXAttributesClause(bool ParseOnly) {
         continue;
       if (auto *A = Actions.CreateLaunchBoundsAttr(
               PA, PA.getArgAsExpr(0),
-              PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr))
+              PA.getNumArgs() > 1 ? PA.getArgAsExpr(1) : nullptr,
+              PA.getNumArgs() > 2 ? PA.getArgAsExpr(2) : nullptr))
         Attrs.push_back(A);
       continue;
     default:

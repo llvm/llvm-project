@@ -115,7 +115,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
     case 0x665e7ca6U: // x = 0x1.bcf94cp+77f
       return fputil::round_result_slightly_up(0x1.af66cp+5f);
     case 0x79e7ec37U: // x = 0x1.cfd86ep+116f
-      return fputil::round_result_slightly_up(0x1.43ff6ep+6);
+      return fputil::round_result_slightly_up(0x1.43ff6ep+6f);
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
 

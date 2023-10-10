@@ -18,7 +18,7 @@
         <template data-if="v.value_id"><span class="address">#{{v.value_id}}</span></template>
       </span>
       <template data-if="v.location">
-        <span>{{v.type}} <span class="address">@{{v.location}}</span></span>
+        <span class="location">{{v.type}} <span class="address">@{{v.location}}</span></span>
       </template>
     </summary>
     <template
@@ -45,6 +45,7 @@
     {{entry.block}}
     <template data-if="entry.post_visit">(post-visit)</template>
     <template data-if="!entry.post_visit">({{entry.iter}})</template>
+    <template data-if="entry.converged"> &#x2192;&#x7c;<!--Rightwards arrow, vertical line--></template>
   </div>
 </template>
 </section>
@@ -62,6 +63,7 @@
     <a class="chooser {{selection.bb}}:{{iter.iter}}" data-iter="{{selection.bb}}:{{iter.iter}}">
       <template data-if="iter.post_visit">Post-visit</template>
       <template data-if="!iter.post_visit">Iteration {{iter.iter}}</template>
+      <template data-if="iter.converged"> &#x2192;&#x7c;<!--Rightwards arrow, vertical line--></template>
     </a>
   </template>
 </div>

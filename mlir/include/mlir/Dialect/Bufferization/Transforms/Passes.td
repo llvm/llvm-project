@@ -219,20 +219,10 @@ def OwnershipBasedBufferDeallocation : Pass<
   }];
   let options = [
     Option<"privateFuncDynamicOwnership", "private-function-dynamic-ownership",
-           "bool", /*default=*/"true",
+           "bool", /*default=*/"false",
            "Allows to add additional arguments to private functions to "
            "dynamically pass ownership of memrefs to callees. This can enable "
            "earlier deallocations.">,
-    Option<"verifyFunctionBoundaryABI", "verify-function-boundary-abi",
-           "bool", /*default=*/"true",
-           "Inserts `cf.assert` operations to verify the function boundary ABI "
-           "at runtime. Currently, it is only checked that the ownership of "
-           "returned MemRefs is 'true'. This makes sure that ownership is "
-           "yielded and the returned MemRef does not originate from the same "
-           "allocation as a function argument. "
-           "If it can be determined statically that the ABI is not adhered "
-           "to, an error will already be emitted at compile time. This cannot "
-           "be changed with this option.">,
   ];
   let constructor = "mlir::bufferization::createOwnershipBasedBufferDeallocationPass()";
 

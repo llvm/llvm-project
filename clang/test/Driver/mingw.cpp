@@ -77,3 +77,6 @@
 // CHECK_NO_SUBSYS-NOT: "--subsystem"
 // CHECK_SUBSYS_CONSOLE: "--subsystem" "console"
 // CHECK_SUBSYS_WINDOWS: "--subsystem" "windows"
+
+// RUN: %clang -target i686-windows-gnu -### %s 2>&1 | FileCheck -check-prefix=CHECK_NO_INIT_ARRAY %s
+// CHECK_NO_INIT_ARRAY: "-fno-use-init-array"

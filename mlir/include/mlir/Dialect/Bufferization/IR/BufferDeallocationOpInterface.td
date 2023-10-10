@@ -55,38 +55,8 @@ def BufferDeallocationOpInterface :
           ownership indicator when needed, it should be implemented using this
           method (which is especially important if operations are created that
           cannot be easily canonicalized away anymore).
-          Ownership indicators have to be materialized when
-            * needed for the condition operands of a `bufferization.dealloc` op
-            * passing them as additional operands to nested regions (e.g.,
-              init_args of `scf.for`)
-            * passing them as additional operands to a call operation when
-              `private-function-dynamic-ownership` is enabled
-
-          In the following example, the deallocation pass would add an
-          additional block argument to `^bb1` for passing the ownership of `%0`
-          along and thus the ownership indicator has to be materialized before
-          the `cf.br` operation and added as a forwarded operand.
-          ```mlir
-            %0 = arith.select %cond, %m1, %m2 : memref<f32>
-            cf.br ^bb1(%0 : memref<f32>)
-          ^bb1(%arg0: memref<f32>)
-            ...
-          ```
-          The `arith.select` operation could implement this interface method to
-          materialize another `arith.select` operation to select the
-          corresponding ownership indicator.
-          ```mlir
-            %0 = arith.select %cond, %m1, %m2 : memref<f32>
-            %0_ownership = arith.select %cond, %m1_ownership, %m2_ownership : i1
-            cf.br ^bb1(%0, %0_ownership : memref<f32>, i1)
-          ^bb1(%arg0: memref<f32>, %arg1: i1)
-            ...
-          ```
-
-          The default implementation assumes that all MemRef operands already
-          have 'Unique' ownership.
         }],
-        /*retType=*/"Value",
+        /*retType=*/"std::pair<Value, Value>",
         /*methodName=*/"materializeUniqueOwnershipForMemref",
         /*args=*/(ins "DeallocationState &":$state,
                       "const DeallocationOptions &":$options,
@@ -94,8 +64,8 @@ def BufferDeallocationOpInterface :
                       "Value":$memref),
         /*methodBody=*/[{}],
         /*defaultImplementation=*/[{
-          return deallocation_impl::defaultComputeMemRefOwnership(
-            options, state, builder, memref, memref.getParentBlock());
+          return state.getMemrefWithUniqueOwnership(
+            builder, memref, memref.getParentBlock());
         }]>,
   ];
 }

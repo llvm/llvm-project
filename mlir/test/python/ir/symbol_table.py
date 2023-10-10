@@ -106,15 +106,26 @@ def testSymbolTableRAUW():
       """
         )
         foo, bar = list(m.operation.regions[0].blocks[0].operations)[0:2]
+
+        # Do renaming just within `foo`.
         SymbolTable.set_symbol_name(bar, "bam")
-        # Note that module.operation counts as a "nested symbol table" which won't
-        # be traversed into, so it is necessary to traverse its children.
         SymbolTable.replace_all_symbol_uses("bar", "bam", foo)
         # CHECK: call @bam()
         # CHECK: func private @bam
         print(m)
         # CHECK: Foo symbol: StringAttr("foo")
         # CHECK: Bar symbol: StringAttr("bam")
+        print(f"Foo symbol: {repr(SymbolTable.get_symbol_name(foo))}")
+        print(f"Bar symbol: {repr(SymbolTable.get_symbol_name(bar))}")
+
+        # Do renaming within the module.
+        SymbolTable.set_symbol_name(bar, "baz")
+        SymbolTable.replace_all_symbol_uses("bam", "baz", m.operation)
+        # CHECK: call @baz()
+        # CHECK: func private @baz
+        print(m)
+        # CHECK: Foo symbol: StringAttr("foo")
+        # CHECK: Bar symbol: StringAttr("baz")
         print(f"Foo symbol: {repr(SymbolTable.get_symbol_name(foo))}")
         print(f"Bar symbol: {repr(SymbolTable.get_symbol_name(bar))}")
 

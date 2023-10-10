@@ -647,7 +647,8 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringRef":$callee,
-                   CArg<"ValueRange", "{}">:$args)>
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "Value":$callee, "ValueRange":$args)>
   ];
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
@@ -1394,6 +1395,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 
   let arguments = (ins
     StrAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     TypeAttrOf<LLVM_FunctionType>:$function_type,
     DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
     UnitAttr:$dso_local,

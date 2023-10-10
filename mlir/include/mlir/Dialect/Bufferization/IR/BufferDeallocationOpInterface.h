@@ -95,20 +95,7 @@ struct DeallocationOptions {
   // A pass option indicating whether private functions should be modified to
   // pass the ownership of MemRef values instead of adhering to the function
   // boundary ABI.
-  bool privateFuncDynamicOwnership = true;
-
-  /// Inserts `cf.assert` operations to verify the function boundary ABI at
-  /// runtime. Currently, it is only checked that the ownership of returned
-  /// MemRefs is 'true'. This also ensures that the returned memref does not
-  /// originate from the same allocation as a function argument.
-  /// Note: The function boundary ABI is disabled for non-external private
-  /// functions if `privateFuncDynamicOwnership` is enabled and thus this option
-  /// does not apply to them.
-  /// TODO: check that returned MemRefs don't alias each other.
-  /// If it can be determined statically that the ABI is not adhered
-  /// to, an error will already be emitted at compile time. This cannot be
-  /// changed with this option.
-  bool verifyFunctionBoundaryABI = true;
+  bool privateFuncDynamicOwnership = false;
 };
 
 /// This class collects all the state that we need to perform the buffer
@@ -151,12 +138,12 @@ public:
   void getLiveMemrefsIn(Block *block, SmallVectorImpl<Value> &memrefs);
 
   /// Given an SSA value of MemRef type, this function queries the ownership and
-  /// if it is not already in the 'Unique' state, potentially inserts IR to
-  /// determine the ownership (which might involve expensive aliasing checks at
-  /// runtime).
-  Value materializeMemRefOwnership(const DeallocationOptions &options,
-                                   OpBuilder &builder, Value memref,
-                                   Block *block);
+  /// if it is not already in the 'Unique' state, potentially inserts IR to get
+  /// a new SSA value, returned as the first element of the pair, which has
+  /// 'Unique' ownership and can be used instead of the passed Value with the
+  /// the ownership indicator returned as the second element of the pair.
+  std::pair<Value, Value>
+  getMemrefWithUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
 
   /// Given two basic blocks and the values passed via block arguments to the
   /// destination block, compute the list of MemRefs that have to be retained in
@@ -233,16 +220,6 @@ FailureOr<Operation *>
 insertDeallocOpForReturnLike(DeallocationState &state, Operation *op,
                              ValueRange operands,
                              SmallVectorImpl<Value> &updatedOperandOwnerships);
-
-/// Materializes IR that extracts the allocated pointers of the MemRef operands
-/// of the defining operation of `memref` as indices and compares them. The
-/// ownership of the first one that matches is returned and intended to be
-/// assigned to `memref`.
-Value defaultComputeMemRefOwnership(const DeallocationOptions &options,
-                                    DeallocationState &state,
-                                    OpBuilder &builder, Value memref,
-                                    Block *block);
-
 } // namespace deallocation_impl
 
 } // namespace bufferization

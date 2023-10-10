@@ -171,6 +171,7 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
       }
       break;
     case AArch64::ANDXri:
+    case AArch64::EORXri:
       if (I->Op1 == 0) {
         MIBS.push_back(BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
                            .add(MI.getOperand(0))
@@ -1005,10 +1006,12 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // expected value for the callee (0 for a normal callee and 1 for a streaming
   // callee).
   auto PStateSM = MI.getOperand(2).getReg();
+  auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+  unsigned SMReg32 = TRI->getSubReg(PStateSM, AArch64::sub_32);
   bool IsStreamingCallee = MI.getOperand(3).getImm();
-  unsigned Opc = IsStreamingCallee ? AArch64::TBZX : AArch64::TBNZX;
+  unsigned Opc = IsStreamingCallee ? AArch64::TBZW : AArch64::TBNZW;
   MachineInstrBuilder Tbx =
-      BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(PStateSM).addImm(0);
+      BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(SMReg32).addImm(0);
 
   // Split MBB and create two new blocks:
   //  - MBB now contains all instructions before MSRcond_pstatesvcrImm1.

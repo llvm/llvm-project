@@ -3,10 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
-; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb,+m -target-abi=ilp32d \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
-; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb,+m -target-abi=lp64d \
-; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
+; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvkb,+m -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVKB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvkb,+m -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVKB
 
 declare <vscale x 1 x i16> @llvm.vp.bswap.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i1>, i32)
 
@@ -19,11 +19,11 @@ define <vscale x 1 x i16> @vp_bswap_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 1 x i16> @llvm.vp.bswap.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i16> %v
 }
@@ -37,11 +37,11 @@ define <vscale x 1 x i16> @vp_bswap_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i16> @llvm.vp.bswap.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -59,11 +59,11 @@ define <vscale x 2 x i16> @vp_bswap_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv2i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv2i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.bswap.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
 }
@@ -77,11 +77,11 @@ define <vscale x 2 x i16> @vp_bswap_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv2i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv2i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i16> @llvm.vp.bswap.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -99,11 +99,11 @@ define <vscale x 4 x i16> @vp_bswap_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv4i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv4i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.vp.bswap.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i16> %v
 }
@@ -117,11 +117,11 @@ define <vscale x 4 x i16> @vp_bswap_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32
 ; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv4i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv4i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i16> @llvm.vp.bswap.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -139,11 +139,11 @@ define <vscale x 8 x i16> @vp_bswap_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 
 ; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv8i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv8i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.bswap.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i16> %v
 }
@@ -157,11 +157,11 @@ define <vscale x 8 x i16> @vp_bswap_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32
 ; CHECK-NEXT:    vor.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv8i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv8i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i16> @llvm.vp.bswap.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -179,11 +179,11 @@ define <vscale x 16 x i16> @vp_bswap_nxv16i16(<vscale x 16 x i16> %va, <vscale x
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv16i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv16i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.bswap.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i16> %v
 }
@@ -197,11 +197,11 @@ define <vscale x 16 x i16> @vp_bswap_nxv16i16_unmasked(<vscale x 16 x i16> %va, 
 ; CHECK-NEXT:    vor.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv16i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv16i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i16> @llvm.vp.bswap.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -219,11 +219,11 @@ define <vscale x 32 x i16> @vp_bswap_nxv32i16(<vscale x 32 x i16> %va, <vscale x
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv32i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv32i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.bswap.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i16> %v
 }
@@ -237,11 +237,11 @@ define <vscale x 32 x i16> @vp_bswap_nxv32i16_unmasked(<vscale x 32 x i16> %va, 
 ; CHECK-NEXT:    vor.vv v8, v8, v16
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv32i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv32i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
   %v = call <vscale x 32 x i16> @llvm.vp.bswap.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
@@ -251,85 +251,53 @@ define <vscale x 32 x i16> @vp_bswap_nxv32i16_unmasked(<vscale x 32 x i16> %va, 
 declare <vscale x 1 x i32> @llvm.vp.bswap.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i32> @vp_bswap_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv1i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV32-NEXT:    vsrl.vi v9, v8, 8, v0.t
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v9, v9, a0, v0.t
-; RV32-NEXT:    vsrl.vi v10, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v9, v9, v10, v0.t
-; RV32-NEXT:    vand.vx v10, v8, a0, v0.t
-; RV32-NEXT:    vsll.vi v10, v10, 8, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv1i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsrl.vi v9, v8, 8, v0.t
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v9, v9, a0, v0.t
+; CHECK-NEXT:    vsrl.vi v10, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v9, v9, v10, v0.t
+; CHECK-NEXT:    vand.vx v10, v8, a0, v0.t
+; CHECK-NEXT:    vsll.vi v10, v10, 8, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv1i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV64-NEXT:    vsrl.vi v9, v8, 8, v0.t
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v9, v9, a0, v0.t
-; RV64-NEXT:    vsrl.vi v10, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v9, v9, v10, v0.t
-; RV64-NEXT:    vand.vx v10, v8, a0, v0.t
-; RV64-NEXT:    vsll.vi v10, v10, 8, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i32:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i32:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 1 x i32> @llvm.vp.bswap.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i32> %v
 }
 
 define <vscale x 1 x i32> @vp_bswap_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv1i32_unmasked:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV32-NEXT:    vsrl.vi v9, v8, 8
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v9, v9, a0
-; RV32-NEXT:    vsrl.vi v10, v8, 24
-; RV32-NEXT:    vor.vv v9, v9, v10
-; RV32-NEXT:    vand.vx v10, v8, a0
-; RV32-NEXT:    vsll.vi v10, v10, 8
-; RV32-NEXT:    vsll.vi v8, v8, 24
-; RV32-NEXT:    vor.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv1i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsrl.vi v9, v8, 8
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v9, v9, a0
+; CHECK-NEXT:    vsrl.vi v10, v8, 24
+; CHECK-NEXT:    vor.vv v9, v9, v10
+; CHECK-NEXT:    vand.vx v10, v8, a0
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 24
+; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv1i32_unmasked:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV64-NEXT:    vsrl.vi v9, v8, 8
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v9, v9, a0
-; RV64-NEXT:    vsrl.vi v10, v8, 24
-; RV64-NEXT:    vor.vv v9, v9, v10
-; RV64-NEXT:    vand.vx v10, v8, a0
-; RV64-NEXT:    vsll.vi v10, v10, 8
-; RV64-NEXT:    vsll.vi v8, v8, 24
-; RV64-NEXT:    vor.vv v8, v8, v10
-; RV64-NEXT:    vor.vv v8, v8, v9
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i32_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i32_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i32> @llvm.vp.bswap.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -339,85 +307,53 @@ define <vscale x 1 x i32> @vp_bswap_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32
 declare <vscale x 2 x i32> @llvm.vp.bswap.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i32> @vp_bswap_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv2i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV32-NEXT:    vsrl.vi v9, v8, 8, v0.t
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v9, v9, a0, v0.t
-; RV32-NEXT:    vsrl.vi v10, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v9, v9, v10, v0.t
-; RV32-NEXT:    vand.vx v10, v8, a0, v0.t
-; RV32-NEXT:    vsll.vi v10, v10, 8, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsrl.vi v9, v8, 8, v0.t
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v9, v9, a0, v0.t
+; CHECK-NEXT:    vsrl.vi v10, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v9, v9, v10, v0.t
+; CHECK-NEXT:    vand.vx v10, v8, a0, v0.t
+; CHECK-NEXT:    vsll.vi v10, v10, 8, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv2i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV64-NEXT:    vsrl.vi v9, v8, 8, v0.t
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v9, v9, a0, v0.t
-; RV64-NEXT:    vsrl.vi v10, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v9, v9, v10, v0.t
-; RV64-NEXT:    vand.vx v10, v8, a0, v0.t
-; RV64-NEXT:    vsll.vi v10, v10, 8, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v9, v0.t
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv2i32:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv2i32:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.bswap.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i32> %v
 }
 
 define <vscale x 2 x i32> @vp_bswap_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv2i32_unmasked:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV32-NEXT:    vsrl.vi v9, v8, 8
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v9, v9, a0
-; RV32-NEXT:    vsrl.vi v10, v8, 24
-; RV32-NEXT:    vor.vv v9, v9, v10
-; RV32-NEXT:    vand.vx v10, v8, a0
-; RV32-NEXT:    vsll.vi v10, v10, 8
-; RV32-NEXT:    vsll.vi v8, v8, 24
-; RV32-NEXT:    vor.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv2i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsrl.vi v9, v8, 8
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v9, v9, a0
+; CHECK-NEXT:    vsrl.vi v10, v8, 24
+; CHECK-NEXT:    vor.vv v9, v9, v10
+; CHECK-NEXT:    vand.vx v10, v8, a0
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 24
+; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv2i32_unmasked:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV64-NEXT:    vsrl.vi v9, v8, 8
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v9, v9, a0
-; RV64-NEXT:    vsrl.vi v10, v8, 24
-; RV64-NEXT:    vor.vv v9, v9, v10
-; RV64-NEXT:    vand.vx v10, v8, a0
-; RV64-NEXT:    vsll.vi v10, v10, 8
-; RV64-NEXT:    vsll.vi v8, v8, 24
-; RV64-NEXT:    vor.vv v8, v8, v10
-; RV64-NEXT:    vor.vv v8, v8, v9
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv2i32_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv2i32_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i32> @llvm.vp.bswap.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -427,85 +363,53 @@ define <vscale x 2 x i32> @vp_bswap_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32
 declare <vscale x 4 x i32> @llvm.vp.bswap.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i32> @vp_bswap_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv4i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV32-NEXT:    vsrl.vi v10, v8, 8, v0.t
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v10, v10, a0, v0.t
-; RV32-NEXT:    vsrl.vi v12, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v10, v10, v12, v0.t
-; RV32-NEXT:    vand.vx v12, v8, a0, v0.t
-; RV32-NEXT:    vsll.vi v12, v12, 8, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsrl.vi v10, v8, 8, v0.t
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v10, v10, a0, v0.t
+; CHECK-NEXT:    vsrl.vi v12, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v10, v10, v12, v0.t
+; CHECK-NEXT:    vand.vx v12, v8, a0, v0.t
+; CHECK-NEXT:    vsll.vi v12, v12, 8, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv4i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV64-NEXT:    vsrl.vi v10, v8, 8, v0.t
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v10, v10, a0, v0.t
-; RV64-NEXT:    vsrl.vi v12, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v10, v10, v12, v0.t
-; RV64-NEXT:    vand.vx v12, v8, a0, v0.t
-; RV64-NEXT:    vsll.vi v12, v12, 8, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v10, v0.t
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv4i32:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv4i32:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.bswap.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %v
 }
 
 define <vscale x 4 x i32> @vp_bswap_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv4i32_unmasked:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV32-NEXT:    vsrl.vi v10, v8, 8
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v10, v10, a0
-; RV32-NEXT:    vsrl.vi v12, v8, 24
-; RV32-NEXT:    vor.vv v10, v10, v12
-; RV32-NEXT:    vand.vx v12, v8, a0
-; RV32-NEXT:    vsll.vi v12, v12, 8
-; RV32-NEXT:    vsll.vi v8, v8, 24
-; RV32-NEXT:    vor.vv v8, v8, v12
-; RV32-NEXT:    vor.vv v8, v8, v10
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv4i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsrl.vi v10, v8, 8
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v10, v10, a0
+; CHECK-NEXT:    vsrl.vi v12, v8, 24
+; CHECK-NEXT:    vor.vv v10, v10, v12
+; CHECK-NEXT:    vand.vx v12, v8, a0
+; CHECK-NEXT:    vsll.vi v12, v12, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 24
+; CHECK-NEXT:    vor.vv v8, v8, v12
+; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv4i32_unmasked:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV64-NEXT:    vsrl.vi v10, v8, 8
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v10, v10, a0
-; RV64-NEXT:    vsrl.vi v12, v8, 24
-; RV64-NEXT:    vor.vv v10, v10, v12
-; RV64-NEXT:    vand.vx v12, v8, a0
-; RV64-NEXT:    vsll.vi v12, v12, 8
-; RV64-NEXT:    vsll.vi v8, v8, 24
-; RV64-NEXT:    vor.vv v8, v8, v12
-; RV64-NEXT:    vor.vv v8, v8, v10
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv4i32_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv4i32_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i32> @llvm.vp.bswap.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -515,85 +419,53 @@ define <vscale x 4 x i32> @vp_bswap_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32
 declare <vscale x 8 x i32> @llvm.vp.bswap.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i32> @vp_bswap_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv8i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV32-NEXT:    vsrl.vi v12, v8, 8, v0.t
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v12, v12, a0, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v12, v12, v16, v0.t
-; RV32-NEXT:    vand.vx v16, v8, a0, v0.t
-; RV32-NEXT:    vsll.vi v16, v16, 8, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsrl.vi v12, v8, 8, v0.t
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v12, v12, a0, v0.t
+; CHECK-NEXT:    vsrl.vi v16, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v12, v12, v16, v0.t
+; CHECK-NEXT:    vand.vx v16, v8, a0, v0.t
+; CHECK-NEXT:    vsll.vi v16, v16, 8, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv8i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV64-NEXT:    vsrl.vi v12, v8, 8, v0.t
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v12, v12, a0, v0.t
-; RV64-NEXT:    vsrl.vi v16, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v12, v12, v16, v0.t
-; RV64-NEXT:    vand.vx v16, v8, a0, v0.t
-; RV64-NEXT:    vsll.vi v16, v16, 8, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv8i32:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv8i32:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.bswap.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i32> %v
 }
 
 define <vscale x 8 x i32> @vp_bswap_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv8i32_unmasked:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV32-NEXT:    vsrl.vi v12, v8, 8
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v12, v12, a0
-; RV32-NEXT:    vsrl.vi v16, v8, 24
-; RV32-NEXT:    vor.vv v12, v12, v16
-; RV32-NEXT:    vand.vx v16, v8, a0
-; RV32-NEXT:    vsll.vi v16, v16, 8
-; RV32-NEXT:    vsll.vi v8, v8, 24
-; RV32-NEXT:    vor.vv v8, v8, v16
-; RV32-NEXT:    vor.vv v8, v8, v12
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv8i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsrl.vi v12, v8, 8
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v12, v12, a0
+; CHECK-NEXT:    vsrl.vi v16, v8, 24
+; CHECK-NEXT:    vor.vv v12, v12, v16
+; CHECK-NEXT:    vand.vx v16, v8, a0
+; CHECK-NEXT:    vsll.vi v16, v16, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 24
+; CHECK-NEXT:    vor.vv v8, v8, v16
+; CHECK-NEXT:    vor.vv v8, v8, v12
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv8i32_unmasked:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV64-NEXT:    vsrl.vi v12, v8, 8
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v12, v12, a0
-; RV64-NEXT:    vsrl.vi v16, v8, 24
-; RV64-NEXT:    vor.vv v12, v12, v16
-; RV64-NEXT:    vand.vx v16, v8, a0
-; RV64-NEXT:    vsll.vi v16, v16, 8
-; RV64-NEXT:    vsll.vi v8, v8, 24
-; RV64-NEXT:    vor.vv v8, v8, v16
-; RV64-NEXT:    vor.vv v8, v8, v12
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv8i32_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv8i32_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i32> @llvm.vp.bswap.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -603,85 +475,53 @@ define <vscale x 8 x i32> @vp_bswap_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32
 declare <vscale x 16 x i32> @llvm.vp.bswap.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i32> @vp_bswap_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv16i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vsrl.vi v16, v8, 8, v0.t
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v16, v16, a0, v0.t
-; RV32-NEXT:    vsrl.vi v24, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v16, v16, v24, v0.t
-; RV32-NEXT:    vand.vx v24, v8, a0, v0.t
-; RV32-NEXT:    vsll.vi v24, v24, 8, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v24, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv16i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vsrl.vi v16, v8, 8, v0.t
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v16, v16, a0, v0.t
+; CHECK-NEXT:    vsrl.vi v24, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v16, v16, v24, v0.t
+; CHECK-NEXT:    vand.vx v24, v8, a0, v0.t
+; CHECK-NEXT:    vsll.vi v24, v24, 8, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 24, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v24, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv16i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    vsrl.vi v16, v8, 8, v0.t
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v16, v16, a0, v0.t
-; RV64-NEXT:    vsrl.vi v24, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v16, v16, v24, v0.t
-; RV64-NEXT:    vand.vx v24, v8, a0, v0.t
-; RV64-NEXT:    vsll.vi v24, v24, 8, v0.t
-; RV64-NEXT:    vsll.vi v8, v8, 24, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v24, v0.t
-; RV64-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv16i32:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv16i32:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.bswap.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i32> %v
 }
 
 define <vscale x 16 x i32> @vp_bswap_nxv16i32_unmasked(<vscale x 16 x i32> %va, i32 zeroext %evl) {
-; RV32-LABEL: vp_bswap_nxv16i32_unmasked:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vsrl.vi v16, v8, 8
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, -256
-; RV32-NEXT:    vand.vx v16, v16, a0
-; RV32-NEXT:    vsrl.vi v24, v8, 24
-; RV32-NEXT:    vor.vv v16, v16, v24
-; RV32-NEXT:    vand.vx v24, v8, a0
-; RV32-NEXT:    vsll.vi v24, v24, 8
-; RV32-NEXT:    vsll.vi v8, v8, 24
-; RV32-NEXT:    vor.vv v8, v8, v24
-; RV32-NEXT:    vor.vv v8, v8, v16
-; RV32-NEXT:    ret
+; CHECK-LABEL: vp_bswap_nxv16i32_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vsrl.vi v16, v8, 8
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addi a0, a0, -256
+; CHECK-NEXT:    vand.vx v16, v16, a0
+; CHECK-NEXT:    vsrl.vi v24, v8, 24
+; CHECK-NEXT:    vor.vv v16, v16, v24
+; CHECK-NEXT:    vand.vx v24, v8, a0
+; CHECK-NEXT:    vsll.vi v24, v24, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 24
+; CHECK-NEXT:    vor.vv v8, v8, v24
+; CHECK-NEXT:    vor.vv v8, v8, v16
+; CHECK-NEXT:    ret
 ;
-; RV64-LABEL: vp_bswap_nxv16i32_unmasked:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-NEXT:    vsrl.vi v16, v8, 8
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, -256
-; RV64-NEXT:    vand.vx v16, v16, a0
-; RV64-NEXT:    vsrl.vi v24, v8, 24
-; RV64-NEXT:    vor.vv v16, v16, v24
-; RV64-NEXT:    vand.vx v24, v8, a0
-; RV64-NEXT:    vsll.vi v24, v24, 8
-; RV64-NEXT:    vsll.vi v8, v8, 24
-; RV64-NEXT:    vor.vv v8, v8, v24
-; RV64-NEXT:    vor.vv v8, v8, v16
-; RV64-NEXT:    ret
-;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv16i32_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv16i32_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i32> @llvm.vp.bswap.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -765,11 +605,11 @@ define <vscale x 1 x i64> @vp_bswap_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i64:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i64:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 1 x i64> @llvm.vp.bswap.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
@@ -849,11 +689,11 @@ define <vscale x 1 x i64> @vp_bswap_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i64_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i64_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i64> @llvm.vp.bswap.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -937,11 +777,11 @@ define <vscale x 2 x i64> @vp_bswap_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 
 ; RV64-NEXT:    vor.vv v8, v10, v8, v0.t
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv2i64:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv2i64:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.bswap.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
 }
@@ -1021,11 +861,11 @@ define <vscale x 2 x i64> @vp_bswap_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32
 ; RV64-NEXT:    vor.vv v8, v10, v8
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv2i64_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv2i64_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i64> @llvm.vp.bswap.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -1109,11 +949,11 @@ define <vscale x 4 x i64> @vp_bswap_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 
 ; RV64-NEXT:    vor.vv v8, v12, v8, v0.t
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv4i64:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv4i64:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.bswap.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %v
 }
@@ -1193,11 +1033,11 @@ define <vscale x 4 x i64> @vp_bswap_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32
 ; RV64-NEXT:    vor.vv v8, v12, v8
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv4i64_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv4i64_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i64> @llvm.vp.bswap.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -1345,11 +1185,11 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv7i64:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv7i64:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 7 x i64> @llvm.vp.bswap.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
   ret <vscale x 7 x i64> %v
 }
@@ -1442,11 +1282,11 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv7i64_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv7i64_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 7 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> poison, <vscale x 7 x i32> zeroinitializer
   %v = call <vscale x 7 x i64> @llvm.vp.bswap.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
@@ -1594,11 +1434,11 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv8i64:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv8i64:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.bswap.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
 }
@@ -1691,11 +1531,11 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv8i64_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv8i64_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i64> @llvm.vp.bswap.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -1757,28 +1597,28 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv64i16:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
-; CHECK-ZVBB-NEXT:    csrr a1, vlenb
-; CHECK-ZVBB-NEXT:    srli a2, a1, 1
-; CHECK-ZVBB-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-ZVBB-NEXT:    slli a1, a1, 2
-; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
-; CHECK-ZVBB-NEXT:    addi a3, a3, -1
-; CHECK-ZVBB-NEXT:    and a2, a3, a2
-; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v16, v16, v0.t
-; CHECK-ZVBB-NEXT:    bltu a0, a1, .LBB32_2
-; CHECK-ZVBB-NEXT:  # %bb.1:
-; CHECK-ZVBB-NEXT:    mv a0, a1
-; CHECK-ZVBB-NEXT:  .LBB32_2:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v0, v24
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv64i16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vmv1r.v v24, v0
+; CHECK-ZVKB-NEXT:    csrr a1, vlenb
+; CHECK-ZVKB-NEXT:    srli a2, a1, 1
+; CHECK-ZVKB-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-ZVKB-NEXT:    slli a1, a1, 2
+; CHECK-ZVKB-NEXT:    sub a2, a0, a1
+; CHECK-ZVKB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVKB-NEXT:    addi a3, a3, -1
+; CHECK-ZVKB-NEXT:    and a2, a3, a2
+; CHECK-ZVKB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v16, v16, v0.t
+; CHECK-ZVKB-NEXT:    bltu a0, a1, .LBB32_2
+; CHECK-ZVKB-NEXT:  # %bb.1:
+; CHECK-ZVKB-NEXT:    mv a0, a1
+; CHECK-ZVKB-NEXT:  .LBB32_2:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vmv1r.v v0, v24
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 64 x i16> @llvm.vp.bswap.nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i16> %v
 }
@@ -1806,23 +1646,23 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16_unmasked(<vscale x 64 x i16> %va, 
 ; CHECK-NEXT:    vor.vv v8, v8, v24
 ; CHECK-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv64i16_unmasked:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    csrr a1, vlenb
-; CHECK-ZVBB-NEXT:    slli a1, a1, 2
-; CHECK-ZVBB-NEXT:    sub a2, a0, a1
-; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
-; CHECK-ZVBB-NEXT:    addi a3, a3, -1
-; CHECK-ZVBB-NEXT:    and a2, a3, a2
-; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v16, v16
-; CHECK-ZVBB-NEXT:    bltu a0, a1, .LBB33_2
-; CHECK-ZVBB-NEXT:  # %bb.1:
-; CHECK-ZVBB-NEXT:    mv a0, a1
-; CHECK-ZVBB-NEXT:  .LBB33_2:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv64i16_unmasked:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    csrr a1, vlenb
+; CHECK-ZVKB-NEXT:    slli a1, a1, 2
+; CHECK-ZVKB-NEXT:    sub a2, a0, a1
+; CHECK-ZVKB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVKB-NEXT:    addi a3, a3, -1
+; CHECK-ZVKB-NEXT:    and a2, a3, a2
+; CHECK-ZVKB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v16, v16
+; CHECK-ZVKB-NEXT:    bltu a0, a1, .LBB33_2
+; CHECK-ZVKB-NEXT:  # %bb.1:
+; CHECK-ZVKB-NEXT:    mv a0, a1
+; CHECK-ZVKB-NEXT:  .LBB33_2:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8
+; CHECK-ZVKB-NEXT:    ret
   %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
   %v = call <vscale x 64 x i16> @llvm.vp.bswap.nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> %m, i32 %evl)
@@ -1908,12 +1748,12 @@ define <vscale x 1 x i48> @vp_bswap_nxv1i48(<vscale x 1 x i48> %va, <vscale x 1 
 ; RV64-NEXT:    vsrl.vi v8, v8, 16, v0.t
 ; RV64-NEXT:    ret
 ;
-; CHECK-ZVBB-LABEL: vp_bswap_nxv1i48:
-; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vrev8.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    vsrl.vi v8, v8, 16, v0.t
-; CHECK-ZVBB-NEXT:    ret
+; CHECK-ZVKB-LABEL: vp_bswap_nxv1i48:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVKB-NEXT:    vrev8.v v8, v8, v0.t
+; CHECK-ZVKB-NEXT:    vsrl.vi v8, v8, 16, v0.t
+; CHECK-ZVKB-NEXT:    ret
   %v = call <vscale x 1 x i48> @llvm.vp.bswap.nxv1i48(<vscale x 1 x i48> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i48> %v
 }

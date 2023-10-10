@@ -40,6 +40,13 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+// This function is explicity instantiated in ARM.cpp, don't do it here to avoid
+// warnings with MSVC.
+extern template void ObjFile<ELF32LE>::importCmseSymbols();
+extern template void ObjFile<ELF32BE>::importCmseSymbols();
+extern template void ObjFile<ELF64LE>::importCmseSymbols();
+extern template void ObjFile<ELF64BE>::importCmseSymbols();
+
 bool InputFile::isInGroup;
 uint32_t InputFile::nextGroupId;
 
@@ -314,6 +321,13 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
 // Add symbols in File to the symbol table.
 void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
+
+// This function is explicity instantiated in ARM.cpp. Mark it extern here,
+// to avoid warnings when building with MSVC.
+extern template void ObjFile<ELF32LE>::importCmseSymbols();
+extern template void ObjFile<ELF32BE>::importCmseSymbols();
+extern template void ObjFile<ELF64LE>::importCmseSymbols();
+extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
 template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
   cast<ObjFile<ELFT>>(file)->importCmseSymbols();
@@ -608,6 +622,16 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           this->sections[i] = in.attributes.get();
         }
       }
+    }
+
+    // Producing a static binary with MTE globals is not currently supported,
+    // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
+    // medatada, and we don't want them to end up in the output file for static
+    // executables.
+    if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
+        !canHaveMemtagGlobals()) {
+      this->sections[i] = &InputSection::discarded;
+      continue;
     }
 
     if (sec.sh_type != SHT_GROUP)

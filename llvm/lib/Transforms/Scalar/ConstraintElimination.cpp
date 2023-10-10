@@ -859,18 +859,18 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
-  if (!AR)
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!AR || !LoopPred)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
   Value *StartValue = nullptr;
-  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV))
+  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
     StartValue = C->getValue();
-  else if (auto *U = dyn_cast<SCEVUnknown>(StartSCEV))
-    StartValue = U->getValue();
-
-  if (!StartValue)
-    return;
+  } else {
+    StartValue = PN->getIncomingValueForBlock(LoopPred);
+    assert(SE.getSCEV(StartValue) == StartSCEV && "inconsistent start value");
+  }
 
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
   auto Inc = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
@@ -888,6 +888,26 @@ void State::addInfoForInductions(BasicBlock &BB) {
     StepOffset = C->getAPInt();
   else
     return;
+
+  // Handle negative steps.
+  if (StepOffset.isNegative()) {
+    // TODO: Extend to allow steps > -1.
+    if (!(-StepOffset).isOne())
+      return;
+
+    // AR may wrap.
+    // Add StartValue >= PN conditional on B <= StartValue which guarantees that
+    // the loop exits before wrapping with a step of -1.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, StartValue, PN,
+        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    // Add PN > B conditional on B <= StartValue which guarantees that the loop
+    // exits when reaching B with a step of -1.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGT, PN, B,
+        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    return;
+  }
 
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the

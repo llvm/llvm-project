@@ -861,10 +861,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
-      .legalFor(
-          {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .legalFor({{s8, v16s8},
+                 {s8, v8s8},
+                 {s16, v8s16},
+                 {s16, v4s16},
+                 {s32, v4s32},
+                 {s32, v2s32},
+                 {s64, v2s64}})
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s8, 16)
       .lower();
 
   getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX,
@@ -966,6 +973,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FCOPYSIGN).customFor({{s32, s32}, {s64, s64}});
 
   getActionDefinitionsBuilder(G_FMAD).lower();
+
+  // Access to floating-point environment.
+  getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
+      .libcall();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

@@ -132,6 +132,26 @@ def frmarg : Operand<XLenVT> {
   let DecoderMethod = "decodeFRMArg";
 }
 
+// Variants of the rounding mode operand that default to 'rne'. This is used
+// for historical/legacy reasons. fcvt functions where the rounding mode
+// doesn't affect the output originally always set it to 0b000 ('rne'). As old
+// versions of LLVM and GCC will fail to decode versions of these instructions
+// with the rounding mode set to something other than 'rne', we retain this
+// default.
+def FRMArgLegacy : AsmOperandClass {
+  let Name = "FRMArgLegacy";
+  let RenderMethod = "addFRMArgOperands";
+  let ParserMethod = "parseFRMArg";
+  let IsOptional = 1;
+  let DefaultMethod = "defaultFRMArgLegacyOp";
+}
+
+def frmarglegacy : Operand<XLenVT> {
+  let ParserMatchClass = FRMArgLegacy;
+  let PrintMethod = "printFRMArgLegacy";
+  let DecoderMethod = "decodeFRMArg";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -224,6 +244,24 @@ multiclass FPUnaryOp_r_frm_m<bits<7> funct7, bits<5> rs2val,
       DecoderNamespace = Ext.Space in
   def Ext.Suffix : FPUnaryOp_r_frm<funct7, rs2val, rdty, rs1ty,
                                    opcodestr>;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
+    UseNamedOperandTable = 1, hasPostISelHook = 1 in
+class FPUnaryOp_r_frmlegacy<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
+                            DAGOperand rs1ty, string opcodestr>
+    : RVInstRFrm<funct7, OPC_OP_FP, (outs rdty:$rd),
+                 (ins rs1ty:$rs1, frmarglegacy:$frm), opcodestr,
+                  "$rd, $rs1$frm"> {
+  let rs2 = rs2val;
+}
+multiclass FPUnaryOp_r_frmlegacy_m<bits<7> funct7, bits<5> rs2val,
+                                   ExtInfo Ext, DAGOperand rdty, DAGOperand rs1ty,
+                                   string opcodestr, list<Predicate> ExtraPreds = []> {
+  let Predicates = !listconcat(Ext.Predicates, ExtraPreds),
+      DecoderNamespace = Ext.Space in
+  def Ext.Suffix : FPUnaryOp_r_frmlegacy<funct7, rs2val, rdty, rs1ty,
+                                         opcodestr>;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
@@ -443,10 +481,10 @@ class PatSetCC<DAGOperand Ty, SDPatternOperator OpNode, CondCode Cond,
                RVInst Inst, ValueType vt>
     : Pat<(XLenVT (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
 multiclass PatSetCC_m<SDPatternOperator OpNode, CondCode Cond,
-                      RVInst Inst, ExtInfo Ext, ValueType vt> {
+                      RVInst Inst, ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatSetCC<Ext.PrimaryTy, OpNode, Cond,
-                            !cast<RVInst>(Inst#Ext.Suffix), vt>;
+                            !cast<RVInst>(Inst#Ext.Suffix), Ext.PrimaryVT>;
 }
 
 class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
@@ -568,12 +606,12 @@ foreach Ext = FExts in {
 
 // Match non-signaling FEQ_S
 foreach Ext = FExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_S,            Ext, f32>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_S,            Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_S, Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_S, Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_S, Ext, f32>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_S,            Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_S,            Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_S, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_S, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_S, Ext>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_S, Ext>;
 }
 
 let Predicates = [HasStdExtF] in {
@@ -607,10 +645,10 @@ def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETOEQ)),
 } // Predicates = [HasStdExtZfinx]
 
 foreach Ext = FExts in {
-  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_S, Ext, f32>;
-  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_S, Ext, f32>;
-  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_S, Ext, f32>;
-  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_S, Ext>;
 }
 
 let Predicates = [HasStdExtF] in {

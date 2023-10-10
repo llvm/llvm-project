@@ -166,8 +166,13 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           if (!this->visit(InitExpr))
             return false;
 
-          if (!this->emitInitThisField(*T, F->Offset, InitExpr))
-            return false;
+          if (F->isBitField()) {
+            if (!this->emitInitThisBitField(*T, F, InitExpr))
+              return false;
+          } else {
+            if (!this->emitInitThisField(*T, F->Offset, InitExpr))
+              return false;
+          }
         } else {
           // Non-primitive case. Get a pointer to the field-to-initialize
           // on the stack and call visitInitialzer() for it.
@@ -191,7 +196,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           return false;
         if (!this->visitInitializer(InitExpr))
           return false;
-        if (!this->emitPopPtr(InitExpr))
+        if (!this->emitInitPtrPop(InitExpr))
           return false;
       }
     }

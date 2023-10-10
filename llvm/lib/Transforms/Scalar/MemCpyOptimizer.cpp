@@ -1043,12 +1043,13 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Since we're changing the parameter to the callsite, we need to make sure
   // that what would be the new parameter dominates the callsite.
+  bool NeedMoveGEP = false;
   if (!DT->dominates(cpyDest, C)) {
     // Support moving a constant index GEP before the call.
     auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
     if (GEP && GEP->hasAllConstantIndices() &&
         DT->dominates(GEP->getPointerOperand(), C))
-      GEP->moveBefore(C);
+      NeedMoveGEP = true;
     else
       return false;
   }
@@ -1099,6 +1100,11 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
     cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+  }
+
+  if (NeedMoveGEP) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
+    GEP->moveBefore(C);
   }
 
   if (SkippedLifetimeStart) {
@@ -1432,7 +1438,7 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
 // allocas that aren't captured.
 bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
                                           AllocaInst *DestAlloca,
-                                          AllocaInst *SrcAlloca, uint64_t Size,
+                                          AllocaInst *SrcAlloca, TypeSize Size,
                                           BatchAAResults &BAA) {
   LLVM_DEBUG(dbgs() << "Stack Move: Attempting to optimize:\n"
                     << *Store << "\n");
@@ -1446,13 +1452,12 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Check that copy is full with static size.
   const DataLayout &DL = DestAlloca->getModule()->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || SrcSize->isScalable() || Size != SrcSize->getFixedValue()) {
+  if (!SrcSize || Size != *SrcSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
     return false;
   }
   std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || DestSize->isScalable() ||
-      Size != DestSize->getFixedValue()) {
+  if (!DestSize || Size != *DestSize) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
   }
@@ -1770,8 +1775,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   ConstantInt *Len = dyn_cast<ConstantInt>(M->getLength());
   if (Len == nullptr)
     return false;
-  if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca, Len->getZExtValue(),
-                            BAA)) {
+  if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
+                            TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
     BBI = M->getNextNonDebugInstruction()->getIterator();
     eraseInstruction(M);

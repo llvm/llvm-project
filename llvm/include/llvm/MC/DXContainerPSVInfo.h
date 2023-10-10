@@ -86,6 +86,34 @@ struct PSVRuntimeInfo {
   }
 };
 
+class Signature {
+  struct Parameter {
+    uint32_t Stream;
+    StringRef Name;
+    uint32_t Index;
+    dxbc::D3DSystemValue SystemValue;
+    dxbc::SigComponentType CompType;
+    uint32_t Register;
+    uint8_t Mask;
+    uint8_t ExclusiveMask;
+    dxbc::SigMinPrecision MinPrecision;
+  };
+
+  SmallVector<Parameter> Params;
+
+public:
+  void addParam(uint32_t Stream, StringRef Name, uint32_t Index,
+                dxbc::D3DSystemValue SystemValue,
+                dxbc::SigComponentType CompType, uint32_t Register,
+                uint8_t Mask, uint8_t ExclusiveMask,
+                dxbc::SigMinPrecision MinPrecision) {
+    Params.push_back(Parameter{Stream, Name, Index, SystemValue, CompType,
+                               Register, Mask, ExclusiveMask, MinPrecision});
+  }
+
+  void write(raw_ostream &OS);
+};
+
 } // namespace mcdxbc
 } // namespace llvm
 

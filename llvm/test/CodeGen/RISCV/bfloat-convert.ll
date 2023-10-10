@@ -404,7 +404,7 @@ define i32 @fcvt_wu_bf16_sat(bfloat %a) nounwind {
 ; CHECK64ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    feq.s a1, fa5, fa5
 ; CHECK64ZFBFMIN-NEXT:    seqz a1, a1
-; CHECK64ZFBFMIN-NEXT:    addiw a1, a1, -1
+; CHECK64ZFBFMIN-NEXT:    addi a1, a1, -1
 ; CHECK64ZFBFMIN-NEXT:    and a0, a0, a1
 ; CHECK64ZFBFMIN-NEXT:    slli a0, a0, 32
 ; CHECK64ZFBFMIN-NEXT:    srli a0, a0, 32
@@ -420,7 +420,7 @@ define i32 @fcvt_wu_bf16_sat(bfloat %a) nounwind {
 ; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64ID-NEXT:    feq.s a1, fa5, fa5
 ; RV64ID-NEXT:    seqz a1, a1
-; RV64ID-NEXT:    addiw a1, a1, -1
+; RV64ID-NEXT:    addi a1, a1, -1
 ; RV64ID-NEXT:    and a0, a0, a1
 ; RV64ID-NEXT:    slli a0, a0, 32
 ; RV64ID-NEXT:    srli a0, a0, 32
@@ -1722,7 +1722,7 @@ define zeroext i32 @fcvt_wu_bf16_sat_zext(bfloat %a) nounwind {
 ; CHECK64ZFBFMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    feq.s a1, fa5, fa5
 ; CHECK64ZFBFMIN-NEXT:    seqz a1, a1
-; CHECK64ZFBFMIN-NEXT:    addiw a1, a1, -1
+; CHECK64ZFBFMIN-NEXT:    addi a1, a1, -1
 ; CHECK64ZFBFMIN-NEXT:    and a0, a0, a1
 ; CHECK64ZFBFMIN-NEXT:    slli a0, a0, 32
 ; CHECK64ZFBFMIN-NEXT:    srli a0, a0, 32
@@ -1738,7 +1738,7 @@ define zeroext i32 @fcvt_wu_bf16_sat_zext(bfloat %a) nounwind {
 ; RV64ID-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV64ID-NEXT:    feq.s a1, fa5, fa5
 ; RV64ID-NEXT:    seqz a1, a1
-; RV64ID-NEXT:    addiw a1, a1, -1
+; RV64ID-NEXT:    addi a1, a1, -1
 ; RV64ID-NEXT:    and a0, a0, a1
 ; RV64ID-NEXT:    slli a0, a0, 32
 ; RV64ID-NEXT:    srli a0, a0, 32

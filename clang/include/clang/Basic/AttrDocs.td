@@ -1405,6 +1405,10 @@ Example usage:
 
 ``[[no_unique_address]]`` is a standard C++20 attribute. Clang supports its use
 in C++11 onwards.
+
+On MSVC targets, ``[[no_unique_address]]`` is ignored; use
+``[[msvc::no_unique_address]]`` instead. Currently there is no guarantee of ABI
+compatibility or stability with MSVC.
   }];
 }
 
