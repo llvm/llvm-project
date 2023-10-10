@@ -5223,8 +5223,8 @@ static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
     // LLVM loves to convert `add` of operands with no common bits
     // into an `or`. But SCEV really doesn't deal with `or` that well,
     // so try extra hard to recognize this `or` as an `add`.
-    if (haveNoCommonBitsSet(Op->getOperand(0), Op->getOperand(1), DL, &AC, CxtI,
-                            &DT, /*UseInstrInfo=*/true))
+    if (haveNoCommonBitsSet(Op->getOperand(0), Op->getOperand(1),
+                            SimplifyQuery(DL, &DT, &AC, CxtI)))
       return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1),
                       /*IsNSW=*/true, /*IsNUW=*/true);
     return BinaryOp(Op);
