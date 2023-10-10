@@ -15,6 +15,7 @@
 #include "common.h"
 #include "internal_defs.h"
 #include "linux.h"
+#include "linux_common.h"
 #include "mutex.h"
 #include "string_utils.h"
 
@@ -64,7 +65,7 @@ static void *mmapWrapper(uptr Addr, uptr Size, const char *Name, uptr Flags) {
       mmap(reinterpret_cast<void *>(Addr), Size, MmapProt, MmapFlags, -1, 0);
   if (P == MAP_FAILED) {
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
+      dieOnMapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
@@ -101,21 +102,21 @@ void MemMapLinux::unmapImpl(uptr Addr, uptr Size) {
   }
 
   if (munmap(reinterpret_cast<void *>(Addr), Size) != 0)
-    dieOnMapUnmapError();
+    dieOnUnmapError(Addr, Size);
 }
 
 bool MemMapLinux::remapImpl(uptr Addr, uptr Size, const char *Name,
                             uptr Flags) {
   void *P = mmapWrapper(Addr, Size, Name, Flags);
   if (reinterpret_cast<uptr>(P) != Addr)
-    dieOnMapUnmapError();
+    dieOnMapError();
   return true;
 }
 
 void MemMapLinux::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
   if (mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
-    dieOnMapUnmapError();
+    dieOnProtectError(Addr, Size, Prot);
 }
 
 void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
@@ -139,7 +140,7 @@ bool ReservedMemoryLinux::createImpl(uptr Addr, uptr Size, const char *Name,
 
 void ReservedMemoryLinux::releaseImpl() {
   if (munmap(reinterpret_cast<void *>(getBase()), getCapacity()) != 0)
-    dieOnMapUnmapError();
+    dieOnUnmapError(getBase(), getCapacity());
 }
 
 ReservedMemoryLinux::MemMapT ReservedMemoryLinux::dispatchImpl(uptr Addr,

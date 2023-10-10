@@ -108,6 +108,7 @@ set(SCUDO_SOURCES
   flags.cpp
   fuchsia.cpp
   linux.cpp
+  linux_common.cpp
   mem_map.cpp
   mem_map_fuchsia.cpp
   mem_map_linux.cpp

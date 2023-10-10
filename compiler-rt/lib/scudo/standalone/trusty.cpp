@@ -11,6 +11,7 @@
 #if SCUDO_TRUSTY
 
 #include "common.h"
+#include "linux_common.h"
 #include "mutex.h"
 #include "trusty.h"
 
@@ -27,8 +28,6 @@
 namespace scudo {
 
 uptr getPageSize() { return getauxval(AT_PAGESZ); }
-
-void NORETURN die() { abort(); }
 
 void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {
@@ -51,7 +50,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   if (IS_ERR(P)) {
     errno = lk_err_to_errno(PTR_ERR(P));
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(Size);
+      dieOnMapError(Size);
     return nullptr;
   }
 
@@ -61,7 +60,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
 void unmap(UNUSED void *Addr, UNUSED uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (_trusty_munmap(Addr, Size) != 0)
-    dieOnMapUnmapError();
+    dieOnUnmapError(Addr, Size);
 }
 
 void setMemoryPermission(UNUSED uptr Addr, UNUSED uptr Size, UNUSED uptr Flags,

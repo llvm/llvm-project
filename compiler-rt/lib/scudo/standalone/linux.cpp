@@ -13,6 +13,7 @@
 #include "common.h"
 #include "internal_defs.h"
 #include "linux.h"
+#include "linux_common.h"
 #include "mutex.h"
 #include "string_utils.h"
 
@@ -41,8 +42,6 @@ namespace scudo {
 
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
 
-void NORETURN die() { abort(); }
-
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {
@@ -66,7 +65,7 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   void *P = mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
   if (P == MAP_FAILED) {
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
-      dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
+      dieOnMapError(errno == ENOMEM ? Size : 0);
     return nullptr;
   }
 #if SCUDO_ANDROID
@@ -80,7 +79,7 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
 void unmap(void *Addr, uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (munmap(Addr, Size) != 0)
-    dieOnMapUnmapError();
+    dieOnUnmapError(reinterpret_cast<uptr>(Addr), Size);
 }
 
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
@@ -88,7 +87,7 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
                          UNUSED MapPlatformData *Data) {
   int Prot = (Flags & MAP_NOACCESS) ? PROT_NONE : (PROT_READ | PROT_WRITE);
   if (mprotect(reinterpret_cast<void *>(Addr), Size, Prot) != 0)
-    dieOnMapUnmapError();
+    dieOnProtectError(Addr, Size, Prot);
 }
 
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
