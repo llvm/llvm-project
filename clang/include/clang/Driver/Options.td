@@ -2947,6 +2947,10 @@ def fno_modules_validate_textual_header_includes :
   MarshallingInfoNegativeFlag<LangOpts<"ModulesValidateTextualHeaderIncludes">>,
   HelpText<"Do not enforce -fmodules-decluse and private header restrictions for textual headers. "
            "This flag will be removed in a future Clang release.">;
+defm modules_skip_diagnostic_options : BoolFOption<"modules-skip-diagnostic-options",
+    HeaderSearchOpts<"ModulesSkipDiagnosticOptions">, DefaultFalse,
+    PosFlag<SetTrue, [], [], "Disable writing diagnostic options">,
+    NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
