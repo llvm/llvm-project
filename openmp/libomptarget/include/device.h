@@ -447,6 +447,10 @@ struct DeviceTy {
   /// - Data allocation failed;
   /// - The user tried to do an illegal mapping;
   /// - Data transfer issue fails.
+  /// If unified shared memory is enabled the data will not be transferred to
+  /// the device and will be used from the host. Data will be added to the
+  /// mapping table to allow checks to happen even when in unified shared
+  /// memory.
   TargetPointerResultTy getTargetPointer(
       HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
       int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,

@@ -788,7 +788,9 @@ postProcessingTargetDataEnd(DeviceTy *Device,
   int Ret = OFFLOAD_SUCCESS;
 
   for (auto &[HstPtrBegin, DataSize, ArgType, TPR] : EntriesInfo) {
-    bool DelEntry = !TPR.isHostPointer();
+    // Delete entry from the mapping table even when we are dealing with a
+    // host pointer.
+    bool DelEntry = true;
 
     // If the last element from the mapper (for end transfer args comes in
     // reverse order), do not remove the partial entry, the parent struct still
@@ -846,10 +848,12 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     Ret = Device->eraseMapEntry(HDTTMap, Entry, DataSize);
     // Entry is already remove from the map, we can unlock it now.
     HDTTMap.destroy();
-    Ret |= Device->deallocTgtPtrAndEntry(Entry, DataSize);
-    if (Ret != OFFLOAD_SUCCESS) {
-      REPORT("Deallocating data from device failed.\n");
-      break;
+    if (!TPR.Flags.IsHostPointer) {
+      Ret |= Device->deallocTgtPtrAndEntry(Entry, DataSize);
+      if (Ret != OFFLOAD_SUCCESS) {
+        REPORT("Deallocating data from device failed.\n");
+        break;
+      }
     }
   }
 
@@ -908,78 +912,92 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         Device.getTgtPtrBegin(HstPtrBegin, DataSize, UpdateRef, HasHoldModifier,
                               !IsImplicit, ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
-    if (!TPR.isPresent() && !TPR.isHostPointer() &&
-        (DataSize || HasPresentModifier)) {
-      DP("Mapping does not exist (%s)\n",
-         (HasPresentModifier ? "'present' map type modifier" : "ignored"));
-      if (HasPresentModifier) {
-        // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 350 L10-13:
-        // "If a map clause appears on a target, target data, target enter data
-        // or target exit data construct with a present map-type-modifier then
-        // on entry to the region if the corresponding list item does not appear
-        // in the device data environment then an error occurs and the program
-        // terminates."
-        //
-        // This should be an error upon entering an "omp target exit data".  It
-        // should not be an error upon exiting an "omp target data" or "omp
-        // target".  For "omp target data", Clang thus doesn't include present
-        // modifiers for end calls.  For "omp target", we have not found a valid
-        // OpenMP program for which the error matters: it appears that, if a
-        // program can guarantee that data is present at the beginning of an
-        // "omp target" region so that there's no error there, that data is also
-        // guaranteed to be present at the end.
-        MESSAGE("device mapping required by 'present' map type modifier does "
-                "not exist for host address " DPxMOD " (%" PRId64 " bytes)",
-                DPxPTR(HstPtrBegin), DataSize);
-        return OFFLOAD_FAIL;
-      }
-    } else {
-      DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
-         " - is%s last\n",
-         DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsLast ? "" : " not"));
-    }
 
-    // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 351 L14-16:
-    // "If the map clause appears on a target, target data, or target exit data
-    // construct and a corresponding list item of the original list item is not
-    // present in the device data environment on exit from the region then the
-    // list item is ignored."
-    if (!TPR.isPresent())
-      continue;
+    // Check if HstPtrBegin matches the State HstPtrBegin or if any HstPtrBegin
+    // values have been registered:
+    bool HostPointerMismatch = true;
+    if (TPR.getEntry())
+      HostPointerMismatch =
+          TPR.getEntry()->HstPtrBegin != (uintptr_t)HstPtrBegin;
 
-    // Move data back to the host
-    const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
-    const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
-    if (HasFrom && (HasAlways || TPR.Flags.IsLast) &&
-        !TPR.Flags.IsHostPointer && DataSize != 0) {
-      DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-         DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-
-      // Wait for any previous transfer if an event is present.
-      if (void *Event = TPR.getEntry()->getEvent()) {
-        if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-          REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
+    if (!TPR.isHostPointer()) {
+      if (!TPR.isPresent() && (DataSize || HasPresentModifier)) {
+        DP("Mapping does not exist (%s)\n",
+           (HasPresentModifier ? "'present' map type modifier" : "ignored"));
+        if (HasPresentModifier) {
+          // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 350 L10-13:
+          // "If a map clause appears on a target, target data, target enter
+          // data or target exit data construct with a present map-type-modifier
+          // then on entry to the region if the corresponding list item does not
+          // appear in the device data environment then an error occurs and the
+          // program terminates."
+          //
+          // This should be an error upon entering an "omp target exit data". It
+          // should not be an error upon exiting an "omp target data" or "omp
+          // target".  For "omp target data", Clang thus doesn't include present
+          // modifiers for end calls.  For "omp target", we have not found a
+          // valid OpenMP program for which the error matters: it appears that,
+          // if a program can guarantee that data is present at the beginning of
+          // an "omp target" region so that there's no error there, that data is
+          // also guaranteed to be present at the end.
+          MESSAGE("device mapping required by 'present' map type modifier does "
+                  "not exist for host address " DPxMOD " (%" PRId64 " bytes)",
+                  DPxPTR(HstPtrBegin), DataSize);
           return OFFLOAD_FAIL;
         }
+      } else {
+        DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
+           " - is%s last\n",
+           DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsLast ? "" : " not"));
       }
 
-      Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo,
-                                TPR.getEntry());
-      if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Copying data from device failed.\n");
-        return OFFLOAD_FAIL;
-      }
+      // OpenMP 5.1, sec. 2.21.7.1 "map Clause", p. 351 L14-16:
+      // "If the map clause appears on a target, target data, or target exit
+      // data construct and a corresponding list item of the original list item
+      // is not present in the device data environment on exit from the region
+      // then the list item is ignored."
+      if (!TPR.isPresent())
+        continue;
 
-      // As we are expecting to delete the entry the d2h copy might race
-      // with another one that also tries to delete the entry. This happens
-      // as the entry can be reused and the reuse might happen after the
-      // copy-back was issued but before it completed. Since the reuse might
-      // also copy-back a value we would race.
-      if (TPR.Flags.IsLast) {
-        if (TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
-            OFFLOAD_SUCCESS)
+      // Move data back to the host
+      const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
+      const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
+      if (HasFrom && (HasAlways || TPR.Flags.IsLast) && DataSize != 0) {
+        DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
+           DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+
+        // Wait for any previous transfer if an event is present.
+        if (void *Event = TPR.getEntry()->getEvent()) {
+          if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
+            REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
+            return OFFLOAD_FAIL;
+          }
+        }
+
+        Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo,
+                                  TPR.getEntry());
+        if (Ret != OFFLOAD_SUCCESS) {
+          REPORT("Copying data from device failed.\n");
           return OFFLOAD_FAIL;
+        }
+
+        // As we are expecting to delete the entry the d2h copy might race
+        // with another one that also tries to delete the entry. This happens
+        // as the entry can be reused and the reuse might happen after the
+        // copy-back was issued but before it completed. Since the reuse might
+        // also copy-back a value we would race.
+        if (TPR.Flags.IsLast) {
+          if (TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
+              OFFLOAD_SUCCESS)
+            return OFFLOAD_FAIL;
+        }
       }
+    } else {
+      // Some zero-sized arrays are not mapped or added to the mapping table so
+      // they do not need to be removed. These arrays are not part of the
+      // current entry.
+      if (DataSize == 0 && !TPR.isPresent() && HostPointerMismatch)
+        continue;
     }
 
     // Add pointer to the buffer for post-synchronize processing.

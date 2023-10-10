@@ -268,6 +268,27 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction,
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     LR.TPR.TargetPointer = (void *)Ptr;
+
+    // When the target pointer is retrieved again, then the condition for this
+    // branch can be true hence preventing the unified shared memory to be
+    // taken at all. This ensures that the IsHostPointer and IsPresent flags
+    // are correctly set even in that situation.
+    if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+        !HasCloseModifier && !LR.TPR.Flags.IsHostPointer) {
+      // This is a host pointer and is not present if the pointers match:
+      if (LR.TPR.getEntry()->TgtPtrBegin == LR.TPR.getEntry()->HstPtrBegin) {
+        LR.TPR.Flags.IsPresent = false;
+        LR.TPR.Flags.IsHostPointer = true;
+      }
+
+      // Catch the case where incoming HstPtrBegin is not consistent with the
+      // entry HstPtrBegin.
+      if (LR.TPR.Flags.IsHostPointer &&
+          ((uintptr_t)HstPtrBegin - LR.TPR.getEntry()->HstPtrBegin) != 0) {
+        assert(false &&
+               "Incoming HstPtrBegin different from entry HstPtrBegin");
+      }
+    }
   } else if ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
     MESSAGE("explicit extension not allowed: host address specified is " DPxMOD
@@ -289,13 +310,38 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
-      DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
-         "memory\n",
-         DPxPTR((uintptr_t)HstPtrBegin), Size);
-      LR.TPR.Flags.IsPresent = false;
+      LR.TPR.Flags.IsNewEntry = true;
+      assert(TgtPadding == 0 && "TgtPadding must always be zero in USM mode");
+      uintptr_t TgtPtrBegin = (uintptr_t)HstPtrBegin + TgtPadding;
+      LR.TPR.setEntry(
+          HDTTMap
+              ->emplace(new HostDataToTargetTy(
+                  (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                  (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                  TgtPtrBegin, HasHoldModifier, HstPtrName))
+              .first->HDTT);
+      INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
+           "Creating new map entry ONLY with HstPtrBase=" DPxMOD
+           ", HstPtrBegin=" DPxMOD ", TgtAllocBegin=" DPxMOD
+           ", TgtPtrBegin=" DPxMOD
+           ", Size=%ld, DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
+           DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(HstPtrBegin),
+           DPxPTR(TgtPtrBegin), Size,
+           LR.TPR.getEntry()->dynRefCountToStr().c_str(),
+           LR.TPR.getEntry()->holdRefCountToStr().c_str(),
+           (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
       LR.TPR.Flags.IsHostPointer = true;
+
+      // The following assert should catch any case in which the pointers
+      // do not match to understand if this case can ever happen.
+      assert((uintptr_t)HstPtrBegin == TgtPtrBegin &&
+             "Pointers must always match");
+
+      // If the above assert is ever hit the following should be changed to =
+      // TgtPtrBegin
       LR.TPR.TargetPointer = HstPtrBegin;
     }
+    LR.TPR.Flags.IsPresent = false;
   } else if (HasPresentModifier) {
     DP("Mapping required by 'present' map type modifier does not exist for "
        "HstPtrBegin=" DPxMOD ", Size=%" PRId64 "\n",
@@ -444,6 +490,29 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
+
+    // If this entry is not marked as being host pointer (the way the
+    // implementation works today this is never true, mistake?) then we
+    // have to check if this is a host pointer or not. This is a host pointer
+    // if the host address matches the target address.
+    if ((PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) &&
+        !LR.TPR.Flags.IsHostPointer) {
+      // If addresses match it means that we are dealing with a host pointer
+      // which has to be marked as one and present flag reset:
+      if (LR.TPR.getEntry()->TgtPtrBegin == LR.TPR.getEntry()->HstPtrBegin) {
+        LR.TPR.Flags.IsPresent = false;
+        LR.TPR.Flags.IsHostPointer = true;
+      }
+
+      // We want to catch the case where (uintptr_t)HstPtrBegin and
+      // LR.TPR.getEntry()->HstPtrBegin are not the same when LR is a host
+      // pointer. This case should never happen.
+      if (LR.TPR.Flags.IsHostPointer &&
+          ((uintptr_t)HstPtrBegin - LR.TPR.getEntry()->HstPtrBegin) != 0) {
+        assert(false &&
+               "Incoming HstPtrBegin different from entry HstPtrBegin");
+      }
+    }
   } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
