@@ -999,7 +999,7 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
    llvm_i32_ty,    // NumRecords / extent
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
-  [IntrNoMem, NoCapture<ArgIndex<0>>, ReadNone<ArgIndex<0>>,
+  [IntrNoMem, ReadNone<ArgIndex<0>>,
    IntrSpeculatable, IntrWillReturn]>;
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
@@ -1928,7 +1928,7 @@ def int_amdgcn_inverse_ballot :
             [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
-    [data_ty], 
+    [data_ty],
     [
       LLVMMatchType<0>,   // llvm value to reduce (SGPR/VGPR)
       llvm_i32_ty         // Reduction Strategy Switch for lowering ( 0: Default,
