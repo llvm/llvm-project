@@ -343,3 +343,10 @@ namespace TemplateUndefined {
   constexpr int l = consume(0);
   static_assert(l == 0, "");
 }
+
+namespace PtrReturn {
+  constexpr void *a() {
+    return nullptr;
+  }
+  static_assert(a() == nullptr, "");
+}

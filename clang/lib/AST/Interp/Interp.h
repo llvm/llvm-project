@@ -214,7 +214,8 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
     // FIXME: We could be calling isLive() here, but the emitted diagnostics
     // seem a little weird, at least if the returned expression is of
     // pointer type.
-    if (!Ret.isLive())
+    // Null pointers are considered live here.
+    if (!Ret.isZero() && !Ret.isLive())
       return false;
   }
 
