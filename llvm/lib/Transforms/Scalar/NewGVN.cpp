@@ -73,6 +73,7 @@
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -500,6 +501,7 @@ class NewGVN {
   AssumptionCache *AC = nullptr;
   const DataLayout &DL;
   std::unique_ptr<PredicateInfo> PredInfo;
+  ImplicitControlFlowTracking *ICF = nullptr;
 
   // These are the only two things the create* functions should have
   // side-effects on due to allocating memory.
@@ -915,6 +917,10 @@ private:
   // LoadCoercion map.
   bool tryAddLoadDepInsnIntoLoadCoercionMap(LoadInst *, Instruction *,
                                             BasicBlock *) const;
+  // Check if the candidate load can be optimized by another load which is also
+  // a live of entry definition and add it in LoadCoercion map.
+  bool findLiveOnEntryDependency(LoadInst *, LoadInst *, ArrayRef<BasicBlock *>,
+                                 bool) const;
   // Collect the load instructions that can be optimized with load coercion.
   // The filtering of the load instructions is based the type of their memory
   // access.
@@ -923,6 +929,8 @@ private:
                                                           MemoryAccess *) const;
   const Expression *performSymbolicLoadCoercionForConstantMemoryDef(
       Type *, Value *, LoadInst *, Instruction *, MemoryAccess *) const;
+  bool performSymbolicLoadCoercionForLiveOnEntryDef(LoadInst *,
+                                                    MemoryAccess *) const;
   // Code generation for load coercion. Replaces the load with the right
   // instruction or the right sequence of instructions.
   bool implementLoadCoercion();
@@ -1486,6 +1494,52 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) const {
   return createStoreExpression(SI, StoreAccess);
 }
 
+// A load can have one or more dependencies as the following examples show:
+//
+// Example 1:
+//  BB1:
+//   ...
+//   store i32 %V1, ptr %P
+//   ...
+//   %V2 = load i32, ptr %P
+//   ...
+//
+// Example 2:
+//  BB1:                       BB2:
+//   store i32 %V1, ptr %P     %V2 = load i32, ptr %P
+//   br label %BB3              br label %BB3
+//                      \      /
+//                     BB3:
+//                      %V3 = load i32, ptr %P
+//
+// In the first example, the load (%V2) has only one dependency. In the second
+// example, the load (%V3) has two dependencies. Therefore, we add the load
+// along with its two dependencies in LoadCoercion map. However, this is not
+// always the case as it is shown below:
+//
+// Example 3:
+//                   BB1:
+//                    %V1 = load <4 x i32>, ptr %P
+//                    br i1 %cond, label %BB2, label %BB3
+//                   /                          \
+//   BB2:                                      BB3:
+//    %V2 = load <2 x i32>, ptr %P              %V3 = load i32, ptr %P
+//    br label %BB4                             br label %BB4
+//		     \                         /
+//                  BB4:
+//                   %V4 = load i32, ptr %P
+//
+// The %V4 load can be optimized by any of the loads (%V1, %V2, %V3). The loads
+// %V2 and %V3 can also be optimized by %V1. For this reason, we do the
+// following checks before we add the load in the map:
+// 1. If the existing depending instruction dominates the current depending
+// instruction, then we keep the existing instruction (e.g. Example 3, the %V4
+// load has only one dependency (%V1) and weadd only this one in LoadCoercion
+// map).
+// 2. If the current instruction dominates the existing depending instruction,
+// then we replace the existing instruction with the current instruction.
+// 3. If none of the above, then we add the current depending instruction
+// alongside the existing instruction (e.g. Example 2 above).
 bool NewGVN::tryAddLoadDepInsnIntoLoadCoercionMap(
     LoadInst *LI, Instruction *CurrentDepI, BasicBlock *CurrentDepIBB) const {
   // Can't forward from non-atomic to atomic without violating memory model.
@@ -1500,10 +1554,163 @@ bool NewGVN::tryAddLoadDepInsnIntoLoadCoercionMap(
     if (LI->getAlign() < DepSI->getAlign())
       return false;
 
+  // Check if LI already exists in LoadCoercion map.
+  auto It = LoadCoercion.find(LI);
+  if (It != LoadCoercion.end()) {
+    auto &ExistingDepInsns = It->second;
+    // Iterate over all the existing depending instructions of LI.
+    for (auto &P : llvm::make_early_inc_range(ExistingDepInsns)) {
+      Instruction *ExistingDepI = P.first;
+      if (MSSAWalker->getClobberingMemoryAccess(getMemoryAccess(CurrentDepI)) ==
+              MSSAWalker->getClobberingMemoryAccess(
+                  getMemoryAccess(ExistingDepI)) &&
+          isa<LoadInst>(ExistingDepI) && isa<LoadInst>(CurrentDepI)) {
+        // If the existing depending instruction dominates the current depending
+        // instruction, then we should not add the current depending instruction
+        // in LoadCoercion map (Example 3).
+        if (DT->dominates(ExistingDepI, CurrentDepI))
+          return true;
+        // If the current depending instruction dominates the existing one, then
+        // we remove the existing depending instruction from the LoadCoercion
+        // map. Next, we add the current depending instruction in LoadCoercion
+        // map.
+        if (DT->dominates(CurrentDepI, ExistingDepI))
+          ExistingDepInsns.erase(P);
+      }
+    }
+  }
+
   // Add the load and the corresponding depending instruction in LoadCoercion
   // map.
   LoadCoercion[LI].insert(std::make_pair(CurrentDepI, CurrentDepIBB));
   return true;
+}
+
+// Check if it is possible to apply load coercion between CandidateLI and
+// DependingLoad.
+bool NewGVN::findLiveOnEntryDependency(LoadInst *CandidateLI,
+                                       LoadInst *DependingLoad,
+                                       ArrayRef<BasicBlock *> DependingBlocks,
+                                       bool IsMemoryPhiDep) const {
+  int Offset = -1;
+
+  if (!DependingLoad || CandidateLI == DependingLoad ||
+      DependingLoad->getNumUses() == 0)
+    return false;
+
+  BasicBlock *DependingLoadBB = DependingLoad->getParent();
+  if (!ReachableBlocks.count(DependingLoadBB) ||
+      ICF->isDominatedByICFIFromSameBlock(CandidateLI))
+    return false;
+
+  if (InstructionsToErase.count(DependingLoad))
+    return false;
+
+  // We do not look deep in the CFG. We consider either instructions that
+  // dominate CandidateLI or instructions that are in one of the predecessors of
+  // CandidateLI.
+  if (DT->dominates(DependingLoad, CandidateLI))
+    Offset = analyzeLoadFromClobberingLoad(CandidateLI->getType(),
+                                           CandidateLI->getPointerOperand(),
+                                           DependingLoad, DL);
+  else {
+    BasicBlock *CandidateLIBB = CandidateLI->getParent();
+    auto It1 = llvm::find(DependingBlocks, CandidateLIBB);
+    auto It2 = llvm::find(DependingBlocks, DependingLoadBB);
+    auto Ite = DependingBlocks.end();
+    if (It1 == Ite && It2 != Ite && !isBackedge(DependingLoadBB, CandidateLIBB))
+      Offset = analyzeLoadFromClobberingLoad(CandidateLI->getType(),
+                                             CandidateLI->getPointerOperand(),
+                                             DependingLoad, DL);
+  }
+
+  bool IsLoadCoercionCandidate = false;
+  if (Offset >= 0) {
+    // If the candidate load depends on a MemoryPhi, then we do not consider the
+    // parent block of the depending instruction, but instead it is more
+    // convenient to consider the basic block of the MemoryPhi from which the
+    // value comes e.g.:
+    //                            BB1:
+    //                             %V1 = load i32, ptr %P
+    //                             br i1 %Cond, label %BB2, label %BB3
+    //                           /    \
+    //      BB2:                      BB3:
+    //       store i32 100, ptr %P    br label %BB4
+    //       br label %BB4             /
+    //                           \    /
+    //                          BB4:
+    //                           %V2 = load i32, ptr %P
+    //
+    BasicBlock *BB = IsMemoryPhiDep ? DependingBlocks.back() : DependingLoadBB;
+    IsLoadCoercionCandidate |=
+        tryAddLoadDepInsnIntoLoadCoercionMap(CandidateLI, DependingLoad, BB);
+  }
+  return IsLoadCoercionCandidate;
+}
+
+// Find load coercion opportunities between instructions with live on entry
+// definitions.
+bool NewGVN::performSymbolicLoadCoercionForLiveOnEntryDef(
+    LoadInst *LI, MemoryAccess *DefiningAccess) const {
+  bool IsLoadCoercionCandidate = false;
+  for (const auto &U : MSSA->getLiveOnEntryDef()->uses()) {
+    if (auto *MemUse = dyn_cast<MemoryUse>(U.getUser())) {
+      // TODO: Add support for calls.
+      LoadInst *DependingLoad = dyn_cast<LoadInst>(MemUse->getMemoryInst());
+      if (!DependingLoad || LI == DependingLoad)
+        continue;
+
+      // If the two instructions have the same type, then there is a load
+      // coercion opportunity only if the LI and the DependingLoad are in
+      // different basic blocks and the basic block of the DependingLoad is one
+      // of the predecessors of the basic block of the LI. For any other case,
+      // the LI will be eliminated by adding the two loads in the same
+      // congruence class.
+      //
+      // Example 1: Here, we do not need to apply load coercion. The two load
+      // will be added in the same congruence class and %V2 will be eliminated.
+      //
+      //  BB1:
+      //   ...
+      //   %V1 = load i32, ptr %P
+      //   br label %BB2
+      //
+      //  BB2
+      //   ...
+      //   %V2 = load i32, ptr %P
+      //   ...
+      //
+      // Example 2: Here, %V2 can be replaced by a phi node.
+      //   BB1:                              BB2:
+      //    %V1 = load <2 x i32>, ptr %P      br label %BB3
+      //    br label %BB3                    /
+      //		     \              /
+      //                  BB3:
+      //                   %V2 = load i32, ptr %P
+      //
+      // Hence, the code will become:
+      //   BB1:                                BB2:
+      //    %V1 = load <2 x i32>, ptr %P        %V2' = load i32, ptr %P
+      //    %0 = bitcast <2 x i32> %V1 to i64  br label %BB3
+      //    %1 = trunc i64 %0 to i32            /
+      //    br label %BB3                      /
+      //		     \                /
+      //                  BB3:
+      //                   %V2 = phi i32 [ %1, %BB1], [ %V2', %BB2 ]
+      //
+      if (DependingLoad->getType() == LI->getType() &&
+          (DT->dominates(DependingLoad, LI) ||
+           LI->getParent() == DependingLoad->getParent()))
+        continue;
+
+      SmallVector<BasicBlock *, 2> Preds;
+      for (auto *BB : predecessors(LI->getParent()))
+        Preds.push_back(BB);
+      IsLoadCoercionCandidate |=
+          findLiveOnEntryDependency(LI, DependingLoad, Preds, false);
+    }
+  }
+  return IsLoadCoercionCandidate;
 }
 
 // Find load coercion opportunities between load (LI) and store instructions
@@ -1631,29 +1838,30 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) const {
   // Check if we can apply load coercion.
   bool IsLoadCoercionCandidate = false;
 
-  if (!MSSA->isLiveOnEntryDef(DefiningAccess)) {
-    if (auto *MD = dyn_cast<MemoryDef>(DefiningAccess)) {
-      Instruction *DefiningInst = MD->getMemoryInst();
-      // If the defining instruction is not reachable, replace with poison.
-      if (!ReachableBlocks.count(DefiningInst->getParent()))
-        return createConstantExpression(PoisonValue::get(LI->getType()));
-      // This will handle stores and memory insts.  We only do if it the
-      // defining access has a different type, or it is a pointer produced by
-      // certain memory operations that cause the memory to have a fixed value
-      // (IE things like calloc).
-      if (const auto *CoercionResult =
-              performSymbolicLoadCoercionForConstantMemoryDef(
-                  LI->getType(), LoadAddressLeader, LI, DefiningInst,
-                  DefiningAccess))
-        return CoercionResult;
+  if (MSSA->isLiveOnEntryDef(DefiningAccess) && EnableLoadCoercion)
+    IsLoadCoercionCandidate =
+        performSymbolicLoadCoercionForLiveOnEntryDef(LI, DefiningAccess);
+  else if (auto *MD = dyn_cast<MemoryDef>(DefiningAccess)) {
+    Instruction *DefiningInst = MD->getMemoryInst();
+    // If the defining instruction is not reachable, replace with poison.
+    if (!ReachableBlocks.count(DefiningInst->getParent()))
+      return createConstantExpression(PoisonValue::get(LI->getType()));
+    // This will handle stores and memory insts.  We only do if it the
+    // defining access has a different type, or it is a pointer produced by
+    // certain memory operations that cause the memory to have a fixed value
+    // (IE things like calloc).
+    if (const auto *CoercionResult =
+            performSymbolicLoadCoercionForConstantMemoryDef(
+                LI->getType(), LoadAddressLeader, LI, DefiningInst,
+                DefiningAccess))
+      return CoercionResult;
 
-      if (EnableLoadCoercion) {
-        if (auto *DepSI = dyn_cast<StoreInst>(DefiningInst)) {
-          if (!isa<Constant>(lookupOperandLeader(DepSI->getValueOperand()))) {
-            IsLoadCoercionCandidate =
-                performSymbolicLoadCoercionForNonConstantMemoryDef(
-                    LI, DepSI, DefiningAccess);
-          }
+    if (EnableLoadCoercion) {
+      if (auto *DepSI = dyn_cast<StoreInst>(DefiningInst)) {
+        if (!isa<Constant>(lookupOperandLeader(DepSI->getValueOperand()))) {
+          IsLoadCoercionCandidate =
+              performSymbolicLoadCoercionForNonConstantMemoryDef(
+                  LI, DepSI, DefiningAccess);
         }
       }
     }
@@ -3104,6 +3312,7 @@ void NewGVN::cleanupTables() {
   LoadCoercion.clear();
   NewLoadsInLoadCoercion.clear();
   NewlyGeneratedInsns.clear();
+  ICF->clear();
 }
 
 // Assign local DFS number mapping to instructions, and leave space for Value
@@ -3556,6 +3765,8 @@ bool NewGVN::runGVN() {
   NumFuncArgs = F.arg_size();
   MSSAWalker = MSSA->getWalker();
   SingletonDeadExpression = new (ExpressionAllocator) DeadExpression();
+  ImplicitControlFlowTracking ImplicitCFT;
+  ICF = &ImplicitCFT;
 
   // Count number of instructions for sizing of hash tables, and come
   // up with a global dfs numbering for instructions.
