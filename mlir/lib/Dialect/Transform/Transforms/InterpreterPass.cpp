@@ -38,7 +38,8 @@ public:
 
   void runOnOperation() override {
     if (failed(transform::applyTransformNamedSequence(
-            getOperation(), sharedTransformModule->get(), options.enableExpensiveChecks(true), entryPoint)))
+            getOperation(), sharedTransformModule->get(),
+            options.enableExpensiveChecks(true), entryPoint)))
       return signalPassFailure();
   }
 

@@ -1770,7 +1770,7 @@ transform::NamedSequenceOp::apply(transform::TransformRewriter &rewriter,
   // dangling top-level op that does not get "called".
   auto scope = state.make_region_scope(getBody());
   if (failed(detail::mapPossibleTopLevelTransformOpBlockArguments(
-      state, this->getOperation(), getBody())))
+          state, this->getOperation(), getBody())))
     return DiagnosedSilenceableFailure::definiteFailure();
 
   return applySequenceBlock(getBody().front(),
