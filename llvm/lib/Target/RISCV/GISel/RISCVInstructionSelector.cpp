@@ -49,6 +49,14 @@ private:
   // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
+  // A lowering phase that runs before any selection attempts.
+  // Returns true if the instruction was modified.
+  void preISelLower(MachineInstr &MI, MachineIRBuilder &MIB,
+                    MachineRegisterInfo &MRI);
+
+  bool replacePtrWithInt(MachineOperand &Op, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI);
+
   // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
@@ -148,11 +156,13 @@ bool RISCVInstructionSelector::earlySelectShift(
 }
 
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineIRBuilder MIB(MI);
+
+  preISelLower(MI, MIB, MRI);
+  const unsigned Opc = MI.getOpcode();
 
   if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
@@ -243,6 +253,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC:
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
@@ -261,6 +272,36 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   default:
     return false;
+  }
+}
+
+bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
+                                                 MachineIRBuilder &MIB,
+                                                 MachineRegisterInfo &MRI) {
+  Register PtrReg = Op.getReg();
+  assert(MRI.getType(PtrReg).isPointer() && "Operand is not a pointer!");
+
+  const LLT XLenLLT = LLT::scalar(STI.getXLen());
+  auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
+  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
+  MRI.setType(PtrReg, XLenLLT);
+  Op.setReg(PtrToInt.getReg(0));
+  return select(*PtrToInt);
+}
+
+void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
+                                            MachineIRBuilder &MIB,
+                                            MachineRegisterInfo &MRI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_PTR_ADD: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT XLenLLT = LLT::scalar(STI.getXLen());
+
+    replacePtrWithInt(MI.getOperand(1), MIB, MRI);
+    MI.setDesc(TII.get(TargetOpcode::G_ADD));
+    MRI.setType(DstReg, XLenLLT);
+    break;
+  }
   }
 }
 
