@@ -243,6 +243,10 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
     Value input = adaptor.getInput();
+    ShapedType resultType = cast<ShapedType>(sliceOp.getType());
+    if (llvm::isa<UnrankedTensorType>(resultType) ||
+        resultType.getRank() != static_cast<int64_t>(sliceOp.getSize().size()))
+      return failure();
     SmallVector<int64_t> strides, sizes;
     ArrayRef<int64_t> starts = sliceOp.getStart();
     strides.resize(cast<ShapedType>(sliceOp.getType()).getRank(), 1);
