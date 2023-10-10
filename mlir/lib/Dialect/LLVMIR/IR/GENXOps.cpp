@@ -13,6 +13,7 @@
 #include "mlir/Dialect/LLVMIR/GENXDialect.h"
 #include "mlir/Dialect/LLVMIR/GENXTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
@@ -21,12 +22,83 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 LogicalResult GENX::MatrixDPASOp::verify() {
-  // TODO: Add verification for matrices and precisions.
-
   if (getRc() != 1 && getRc() != 2 && getRc() != 4 && getRc() != 8)
     return this->emitOpError("expecting repect count to be 1, 2, 4, or 8");
 
-  return success();
+  GENX::PrecisionType precision = getPa();
+  if (getPa() != getPb())
+    return this->emitOpError(
+        "expecting precision of matrix A and B to be the same");
+
+  Type AElemTy = getA().getType().getElementType();
+  Type BElemTy = getB().getType().getElementType();
+  Type CElemTy = getC().getType().getElementType();
+  Type DElemTy = getD().getType().getElementType();
+  if (AElemTy != BElemTy || CElemTy != DElemTy)
+    return this->emitOpError("element type of 2nd (A) and 3rd (B) operands or "
+                             "1st operand (C) and result (D) must match");
+
+  return TypeSwitch<Type, LogicalResult>(AElemTy)
+      .Case<Float32Type>([&](auto ty) -> LogicalResult {
+        if (precision != GENX::PrecisionType::TF32)
+          return this->emitOpError("precision should be TF32 when 2nd (A) or "
+                                   "3rd (B) operand element type is f32");
+        if (!CElemTy.isF32())
+          return this->emitOpError("the element type for 1st operand (C) and "
+                                   "the result should be f32");
+        return success();
+      })
+      .Case<BFloat16Type>([&](auto ty) -> LogicalResult {
+        if (precision != GENX::PrecisionType::BF16)
+          return this->emitOpError(
+              "precision should be BF16 when 2nd (A) or 3rd (B) operand "
+              "element type is bf16");
+        if (!CElemTy.isF32())
+          return this->emitOpError(
+              "the element type for 1st operand (C) and the "
+              "result should be f32");
+        return success();
+      })
+      .Case<Float16Type>([&](auto ty) -> LogicalResult {
+        if (precision != GENX::PrecisionType::FP16)
+          return this->emitOpError("precision should be FP16 when 2nd (A) or "
+                                   "3rd (B) operand element type is f16");
+        if (!CElemTy.isF32())
+          return this->emitOpError(
+              "the element type for 1st operand (C) and the "
+              "result should be f32");
+        return success();
+      })
+      .Case<IntegerType>([&](auto ty) -> LogicalResult {
+        if (!ty.isInteger(8))
+          return this->emitOpError(
+              "expecting 2nd (A) or 3rd (B) operand element type to be f32, "
+              "bf16, f16, or i8");
+
+        if (precision == GENX::PrecisionType::U8) {
+          if (ty.isSigned())
+            return this->emitOpError(
+                "precision should be S8 when 2nd (A) or 3rd (B) operand "
+                "element type is signed i8");
+        } else if (precision == GENX::PrecisionType::S8) {
+          if (ty.isUnsigned())
+            return this->emitOpError(
+                "precision should be U8 when 2nd (A) or 3rd (B) operand "
+                "element type is unsigned i8");
+        } else
+          return this->emitOpError("precision should be U8 or S8 when 2nd (A) "
+                                   "or 3rd (B) operand element type is i8");
+
+        if (!CElemTy.isInteger(32))
+          return this->emitOpError("the element type for 1st operand (C) and "
+                                   "the result should be i32");
+
+        return success();
+      })
+      .Default([&](mlir::Type) -> LogicalResult {
+        return this->emitOpError("expecting 2nd (A) or 3rd (B) operand element "
+                                 "type to be f32, bf16, f16, or i8");
+      });
 }
 
 //===----------------------------------------------------------------------===//

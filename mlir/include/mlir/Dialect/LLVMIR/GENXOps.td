@@ -347,6 +347,13 @@ def GENX_AtomicRMWOp : GENX_Op<"atomic.rmw", [
 // Joint Matrix operations
 //===----------------------------------------------------------------------===//
 
+class FixedVectorOfRankAndType<list<int> allowedRanks,
+                               list<Type> allowedTypes> : AllOfType<
+  [FixedVectorOf<allowedTypes>, FixedVectorOfRank<allowedRanks>],
+  FixedVectorOf<allowedTypes>.summary #
+  FixedVectorOfRank<allowedRanks>.summary,
+  "::mlir::VectorType">;
+
 def GENX_MatrixElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, F16, BF16]>;
 
 /// Enum attribute of the different precision types.
@@ -374,9 +381,9 @@ def PrecisionTypeAttr : EnumAttr<GENX_Dialect, PrecisionType, "precision_type"> 
 def GENX_MatrixDPASOp : GENX_Op<"matrix.dpas">,
   Results<(outs FixedVectorOf<[GENX_MatrixElemType]>:$d)>,
   Arguments<(ins
-    FixedVectorOf<[GENX_MatrixElemType]>:$c,
-    FixedVectorOf<[GENX_MatrixElemType]>:$a,
-    FixedVectorOf<[GENX_MatrixElemType]>:$b,
+    FixedVectorOfRankAndType<[1], [GENX_MatrixElemType]>:$c,
+    FixedVectorOfRankAndType<[1], [GENX_MatrixElemType]>:$a,
+    FixedVectorOfRankAndType<[1], [GENX_MatrixElemType]>:$b,
     PrecisionTypeAttr:$pa,
     PrecisionTypeAttr:$pb,
     I32Attr:$rc
