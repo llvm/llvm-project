@@ -270,7 +270,7 @@ declare void @abort()
 
 define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-LABEL: define void @monkey
-; CHECK-SAME: (ptr nocapture noundef [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr {
+; CHECK-SAME: (ptr nocapture noundef [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt i32 [[LEN]], 1
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY4_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -284,13 +284,7 @@ define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY4_PREHEADER]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.body4:
-; CHECK-NEXT:    [[K_07:%.*]] = phi i32 [ [[DEC:%.*]], [[AT_EXIT:%.*]] ], [ [[I_09]], [[FOR_BODY4_PREHEADER]] ]
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i32 [[K_07]], [[LEN]]
-; CHECK-NEXT:    br i1 [[CMP_NOT_I]], label [[AT_EXIT]], label [[IF_THEN_I:%.*]]
-; CHECK:       if.then.i:
-; CHECK-NEXT:    tail call void @abort()
-; CHECK-NEXT:    unreachable
-; CHECK:       at.exit:
+; CHECK-NEXT:    [[K_07:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY4]] ], [ [[I_09]], [[FOR_BODY4_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = zext i32 [[K_07]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IDX_EXT_I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4
