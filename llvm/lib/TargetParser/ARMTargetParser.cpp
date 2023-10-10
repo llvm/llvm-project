@@ -519,6 +519,7 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   case Triple::GNUEABIHF:
   case Triple::MuslEABI:
   case Triple::MuslEABIHF:
+  case Triple::OpenHOS:
     return "aapcs-linux";
   case Triple::EABIHF:
   case Triple::EABI:
