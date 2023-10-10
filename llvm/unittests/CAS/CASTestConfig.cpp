@@ -9,11 +9,31 @@
 #include "CASTestConfig.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/CAS/PluginCAS.h"
+#include "llvm/Config/config.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;
+
+// See llvm/utils/unittest/UnitTestMain/TestMain.cpp
+extern const char *TestMainArgv0;
+
+// Just a reachable symbol to ease resolving of the executable's path.
+static std::string TestStringArg1("plugincas-test-string-arg1");
+
+std::string llvm::unittest::cas::getCASPluginPath() {
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
+  llvm::SmallString<256> PathBuf(sys::path::parent_path(
+      sys::path::parent_path(sys::path::parent_path(Executable))));
+  std::string LibName = "libCASPluginTest";
+  sys::path::append(PathBuf, "lib", LibName + LLVM_PLUGIN_EXT);
+  return std::string(PathBuf);
+}
+
 
 TestingAndDir createInMemory(int I) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
@@ -48,4 +68,21 @@ TestingAndDir createOnDisk(int I) {
   return TestingAndDir{std::move(CAS), std::move(Cache), std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASTest, ::testing::Values(createOnDisk));
+
+
+TestingAndDir createPluginCASImpl(int I) {
+  using namespace llvm::unittest::cas;
+  unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
+  std::optional<
+      std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+      DBs;
+  EXPECT_THAT_ERROR(
+      createPluginCASDatabases(getCASPluginPath(), Temp.path(), {})
+          .moveInto(DBs),
+      Succeeded());
+  return TestingAndDir{std::move(DBs->first), std::move(DBs->second),
+                       std::move(Temp)};
+}
+INSTANTIATE_TEST_SUITE_P(PluginCAS, CASTest,
+                         ::testing::Values(createPluginCASImpl));
 #endif /* LLVM_ENABLE_ONDISK_CAS */

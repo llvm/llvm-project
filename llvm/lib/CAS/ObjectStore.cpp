@@ -10,12 +10,9 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 using namespace llvm;
@@ -206,55 +203,4 @@ std::unique_ptr<MemoryBuffer>
 ObjectProxy::getMemoryBuffer(StringRef Name,
                              bool RequiresNullTerminator) const {
   return CAS->getMemoryBuffer(H, Name, RequiresNullTerminator);
-}
-
-static Expected<std::shared_ptr<ObjectStore>>
-createOnDiskCASImpl(const Twine &Path) {
-  std::string CASPath = Path.str();
-  // If path is empty, use default ondisk CAS path.
-  if (CASPath.empty())
-    CASPath = getDefaultOnDiskCASPath();
-  auto UniDB = builtin::createBuiltinUnifiedOnDiskCache(CASPath);
-  if (!UniDB)
-    return UniDB.takeError();
-  return builtin::createObjectStoreFromUnifiedOnDiskCache(std::move(*UniDB));
-}
-
-static Expected<std::shared_ptr<ObjectStore>>
-createInMemoryCASImpl(const Twine &) {
-  return createInMemoryCAS();
-}
-
-static ManagedStatic<StringMap<ObjectStoreCreateFuncTy *>> RegisteredScheme;
-
-static StringMap<ObjectStoreCreateFuncTy *> &getRegisteredScheme() {
-  if (!RegisteredScheme.isConstructed()) {
-    RegisteredScheme->insert({"mem://", &createInMemoryCASImpl});
-    RegisteredScheme->insert({"file://", &createOnDiskCASImpl});
-  }
-  return *RegisteredScheme;
-}
-
-Expected<std::shared_ptr<ObjectStore>>
-cas::createCASFromIdentifier(StringRef Id) {
-  for (auto &Scheme : getRegisteredScheme()) {
-    if (Id.consume_front(Scheme.getKey()))
-      return Scheme.getValue()(Id);
-  }
-
-  return createStringError(std::make_error_code(std::errc::invalid_argument),
-                           "Unknown CAS identifier is provided");
-}
-
-bool cas::isRegisteredCASIdentifier(StringRef Id) {
-  for (auto &Scheme : getRegisteredScheme()) {
-    if (Id.consume_front(Scheme.getKey()))
-      return true;
-  }
-  return false;
-}
-
-void cas::registerCASURLScheme(StringRef Prefix,
-                               ObjectStoreCreateFuncTy *Func) {
-  getRegisteredScheme().insert({Prefix, Func});
 }

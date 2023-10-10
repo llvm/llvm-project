@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMCAS
   BuiltinCAS.cpp
   BuiltinUnifiedCASDatabases.cpp
   CASNodeSchema.cpp
+  CASRegistry.cpp
   HierarchicalTreeBuilder.cpp
   InMemoryCAS.cpp
   MappedFileRegionBumpPtr.cpp
@@ -17,6 +18,7 @@ add_llvm_component_library(LLVMCAS
   OnDiskGraphDB.cpp
   OnDiskHashMappedTrie.cpp
   OnDiskKeyValueDB.cpp
+  PluginCAS.cpp
   TreeEntry.cpp
   TreeSchema.cpp
   UnifiedOnDiskCache.cpp

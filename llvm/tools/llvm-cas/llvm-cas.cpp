@@ -8,6 +8,7 @@
 
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
+#include "llvm/CAS/CASRegistry.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/Support/CommandLine.h"
@@ -116,12 +117,15 @@ int main(int Argc, char **Argv) {
 
   std::shared_ptr<ObjectStore> CAS;
   std::shared_ptr<ActionCache> AC;
-  std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
-  assert(CAS);
+  if (isRegisteredCASIdentifier(CASPath))
+    std::tie(CAS, AC) = ExitOnErr(createCASFromIdentifier(CASPath));
+  else
+    std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
 
   std::shared_ptr<ObjectStore> UpstreamCAS;
   if (!UpstreamCASPath.empty())
-    UpstreamCAS = ExitOnErr(createCASFromIdentifier(UpstreamCASPath));
+    UpstreamCAS =
+        std::move(ExitOnErr(createCASFromIdentifier(UpstreamCASPath)).first);
 
   if (Command == Dump)
     return dump(*CAS);

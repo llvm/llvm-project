@@ -333,25 +333,6 @@ void getDefaultOnDiskCASPath(SmallVectorImpl<char> &Path);
 /// user.
 std::string getDefaultOnDiskCASPath();
 
-/// Create ObjectStore from a string identifier.
-/// Currently the string identifier is using URL scheme with following supported
-/// schemes:
-///  * InMemory CAS: mem://
-///  * OnDisk CAS: file://${PATH_TO_ONDISK_CAS}
-/// For the plugin scheme, use argument "ondisk-path=${PATH}" to choose the
-/// on-disk directory that the plugin should use, otherwise the default
-/// OnDiskCAS location will be used.
-/// FIXME: Need to implement proper URL encoding scheme that allows "%".
-Expected<std::shared_ptr<ObjectStore>> createCASFromIdentifier(StringRef Id);
-
-/// Check if a string is a CAS identifier.
-bool isRegisteredCASIdentifier(StringRef Config);
-
-/// Register a URL scheme to CAS Identifier.
-using ObjectStoreCreateFuncTy =
-    Expected<std::shared_ptr<ObjectStore>>(const Twine &);
-void registerCASURLScheme(StringRef Prefix, ObjectStoreCreateFuncTy *Func);
-
 } // namespace cas
 } // namespace llvm
 

@@ -17,9 +17,13 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+namespace llvm::unittest::cas {
+std::string getCASPluginPath();
+} // namespace llvm::unittest::cas
+
 struct TestingAndDir {
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
-  std::unique_ptr<llvm::cas::ActionCache> Cache;
+  std::shared_ptr<llvm::cas::ActionCache> Cache;
   std::optional<llvm::unittest::TempDir> Temp;
 };
 
@@ -36,7 +40,7 @@ protected:
       Dirs.push_back(std::move(*TD.Temp));
     return std::move(TD.CAS);
   }
-  std::unique_ptr<llvm::cas::ActionCache> createActionCache() {
+  std::shared_ptr<llvm::cas::ActionCache> createActionCache() {
     auto TD = GetParam()(++(*NextCASIndex));
     if (TD.Temp)
       Dirs.push_back(std::move(*TD.Temp));
