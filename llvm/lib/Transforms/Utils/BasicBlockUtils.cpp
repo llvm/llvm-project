@@ -2076,3 +2076,9 @@ void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
   PBI->setCondition(NewCond);
   PBI->swapSuccessors();
 }
+
+bool llvm::hasOnlySimpleTerminator(const BasicBlock *BB) {
+  auto *Term = BB->getTerminator();
+  return isa<ReturnInst>(Term) || isa<UnreachableInst>(Term) ||
+         isa<BranchInst>(Term);
+}
