@@ -2636,6 +2636,10 @@ TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
   return GetDeclContextForType(ClangUtil::GetQualType(type));
 }
 
+CompilerDeclContext TypeSystemClang::GetCompilerDeclContextForType(const CompilerType& type) {
+  return CreateDeclContext(GetDeclContextForType(type));
+}
+
 /// Aggressively desugar the provided type, skipping past various kinds of
 /// syntactic sugar and other constructs one typically wants to ignore.
 /// The \p mask argument allows one to skip certain kinds of simplifications,

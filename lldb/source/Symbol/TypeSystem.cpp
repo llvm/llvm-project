@@ -186,6 +186,10 @@ std::optional<llvm::json::Value> TypeSystem::ReportStatistics() {
   return std::nullopt;
 }
 
+CompilerDeclContext TypeSystem::GetCompilerDeclContextForType(const CompilerType& type) {
+  return CompilerDeclContext();
+}
+
 #pragma mark TypeSystemMap
 
 TypeSystemMap::TypeSystemMap() : m_mutex(), m_map() {}

@@ -215,6 +215,8 @@ public:
   bool GetDescription(lldb::SBStream &description,
                       lldb::DescriptionLevel description_level);
 
+  lldb::SBType FindNestedType(const char *name);
+
   lldb::SBType &operator=(const lldb::SBType &rhs);
 
   bool operator==(lldb::SBType &rhs);
