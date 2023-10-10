@@ -13,9 +13,6 @@
 //   Zbc - 1.0
 //   Zbs - 1.0
 //
-// The experimental extensions appeared in an earlier draft of the Bitmanip
-// extensions. They are not ratified and subject to change.
-//
 // This file also describes RISC-V instructions from the Zbk* extensions in
 // Cryptography Extensions Volume I: Scalar & Entropy Source Instructions,
 // versions:
