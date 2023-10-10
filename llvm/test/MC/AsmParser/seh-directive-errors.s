@@ -105,7 +105,7 @@ h:                                      # @h
 i:
 	.seh_proc i
 	pushq %rbp
-	.seh_pushreg 17
+	.seh_pushreg 32
 # CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: incorrect register number for use with this directive
 	pushq %rbx
 	.seh_pushreg %xmm0

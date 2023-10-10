@@ -331,6 +331,8 @@ def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
                                        "Support movdiri instruction (direct store integer)">;
 def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
                                         "Support movdir64b instruction (direct store 64 bytes)">;
+def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
+                                   "Support extended general purpose register">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
