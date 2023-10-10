@@ -3171,9 +3171,6 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     };
   }
 
-  if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
-    return true;
-
   if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
     return true;
 
@@ -3193,6 +3190,10 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
         Known2.Zero.intersects(Known1.One))
       return true;
   }
+
+  if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
+    return true;
+
   return false;
 }
 
