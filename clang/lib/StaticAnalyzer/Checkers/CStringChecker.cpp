@@ -933,18 +933,17 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   case MemRegion::NonParamVarRegionKind: {
     // If we have a global constant with a string literal initializer,
     // compute the initializer's length.
-    const VarDecl *decl = cast<NonParamVarRegion>(MR)->getDecl();
-    if (decl->hasGlobalStorage()) {
-      if (const Expr *init = decl->getInit()) {
-        if (auto *strLit = dyn_cast<StringLiteral>(init)) {
-          SValBuilder &svalBuilder = C.getSValBuilder();
-          QualType sizeTy = svalBuilder.getContext().getSizeType();
-          return svalBuilder.makeIntVal(strLit->getLength(), sizeTy);
+    const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
+    if (Decl->getType().isConstQualified() && Decl->hasGlobalStorage()) {
+      if (const Expr *Init = Decl->getInit()) {
+        if (auto *StrLit = dyn_cast<StringLiteral>(Init)) {
+          SValBuilder &SvalBuilder = C.getSValBuilder();
+          QualType SizeTy = SvalBuilder.getContext().getSizeType();
+          return SvalBuilder.makeIntVal(StrLit->getLength(), SizeTy);
         }
       }
     }
-    // Otherwise, fallback to this.
-    return getCStringLengthForRegion(C, state, Ex, MR, hypothetical);
+    [[fallthrough]];
   }
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
