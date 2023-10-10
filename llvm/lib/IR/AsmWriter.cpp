@@ -3642,6 +3642,8 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     printEscapedString(GV->getSection(), Out);
     Out << '"';
   }
+  if (GV->isLarge())
+    Out << ", large";
   if (GV->hasPartition()) {
     Out << ", partition \"";
     printEscapedString(GV->getPartition(), Out);

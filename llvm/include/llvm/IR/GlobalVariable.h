@@ -46,6 +46,9 @@ class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   // Is this a global whose value can change from its initial value before
   // global initializers are run?
   bool isExternallyInitializedConstant : 1;
+  // Is this global unconditionally considered large in code models with a
+  // small/large data distinction?
+  bool isLargeGlobal : 1;
 
 public:
   /// GlobalVariable ctor - If a parent module is specified, the global is
@@ -53,7 +56,7 @@ public:
   GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
                  Constant *Initializer = nullptr, const Twine &Name = "",
                  ThreadLocalMode = NotThreadLocal, unsigned AddressSpace = 0,
-                 bool isExternallyInitialized = false);
+                 bool isExternallyInitialized = false, bool isLarge = false);
   /// GlobalVariable ctor - This creates a global and inserts it before the
   /// specified other global.
   GlobalVariable(Module &M, Type *Ty, bool isConstant, LinkageTypes Linkage,
@@ -61,7 +64,7 @@ public:
                  GlobalVariable *InsertBefore = nullptr,
                  ThreadLocalMode = NotThreadLocal,
                  std::optional<unsigned> AddressSpace = std::nullopt,
-                 bool isExternallyInitialized = false);
+                 bool isExternallyInitialized = false, bool isLarge = false);
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
@@ -159,6 +162,8 @@ public:
   void setExternallyInitialized(bool Val) {
     isExternallyInitializedConstant = Val;
   }
+  bool isLarge() const { return isLargeGlobal; }
+  void setLarge(bool Val) { isLargeGlobal = Val; }
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a GlobalVariable) from the GlobalVariable Src to this one.

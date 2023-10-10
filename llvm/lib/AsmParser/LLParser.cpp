@@ -1286,6 +1286,9 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
         return true;
       if (Alignment)
         GV->setAlignment(*Alignment);
+    } else if (Lex.getKind() == lltok::kw_large) {
+      GV->setLarge(true);
+      Lex.Lex();
     } else if (Lex.getKind() == lltok::MetadataVar) {
       if (parseGlobalObjectMetadataAttachment(*GV))
         return true;

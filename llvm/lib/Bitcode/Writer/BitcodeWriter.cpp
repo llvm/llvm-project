@@ -1404,7 +1404,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
-    //             comdat, attributes, DSO_Local, GlobalSanitizer]
+    //             comdat, attributes, DSO_Local, GlobalSanitizer, large]
     Vals.push_back(addToStrtab(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
@@ -1421,7 +1421,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
         GV.hasComdat() || GV.hasAttributes() || GV.isDSOLocal() ||
-        GV.hasPartition() || GV.hasSanitizerMetadata()) {
+        GV.hasPartition() || GV.hasSanitizerMetadata() || GV.isLarge()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
       Vals.push_back(getEncodedUnnamedAddr(GV));
@@ -1439,6 +1439,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
       Vals.push_back((GV.hasSanitizerMetadata() ? serializeSanitizerMetadata(
                                                       GV.getSanitizerMetadata())
                                                 : 0));
+      Vals.push_back(GV.isLarge());
     } else {
       AbbrevToUse = SimpleGVarAbbrev;
     }

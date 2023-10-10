@@ -570,6 +570,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(partition);
+  KEYWORD(large);
   KEYWORD(alias);
   KEYWORD(ifunc);
   KEYWORD(module);

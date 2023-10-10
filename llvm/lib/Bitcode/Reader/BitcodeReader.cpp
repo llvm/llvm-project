@@ -3917,6 +3917,9 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
     NewGV->setSanitizerMetadata(Meta);
   }
 
+  if (Record.size() > 17 && Record[17])
+    NewGV->setLarge(Record[17]);
+
   return Error::success();
 }
 

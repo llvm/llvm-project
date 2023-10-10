@@ -695,6 +695,9 @@ target supports it, it will emit globals to the section specified.
 Additionally, the global can placed in a comdat if the target has the necessary
 support.
 
+For code models with a small/large data distinction, a global marked ``large``
+is considered large regardless of its size.
+
 External declarations may have an explicit section specified. Section
 information is retained in LLVM IR for targets that make use of this
 information. Attaching section information to an external declaration is an
@@ -755,7 +758,7 @@ Syntax::
                          [(unnamed_addr|local_unnamed_addr)] [AddrSpace]
                          [ExternallyInitialized]
                          <global | constant> <Type> [<InitializerConstant>]
-                         [, section "name"] [, partition "name"]
+                         [, section "name"] [, large] [, partition "name"]
                          [, comdat [($name)]] [, align <Alignment>]
                          [, no_sanitize_address] [, no_sanitize_hwaddress]
                          [, sanitize_address_dyninit] [, sanitize_memtag]

@@ -115,6 +115,7 @@ enum Kind {
   kw_addrspace,
   kw_section,
   kw_partition,
+  kw_large,
   kw_alias,
   kw_ifunc,
   kw_module,
