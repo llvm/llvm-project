@@ -784,7 +784,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
 
   for (const DWARFLocationExpression &Location : *Locations) {
     uint8_t AddressSize = getAddressByteSize();
-    DataExtractor Data(Location.Expr, /*IsLittleEndian=*/true, AddressSize);
+    DataExtractor Data(Location.Expr, isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
     auto It = Expr.begin();
     if (It == Expr.end())
