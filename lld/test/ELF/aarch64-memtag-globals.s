@@ -78,7 +78,7 @@ Symbols:
 ## dynamic entries, etc.
 # RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android \
 # RUN:   %t/input_3.s -o %t3.o
-# RUN: ld.lld -static -Bstatic --android-memtag-mode=sync %t1.o %t2.o %t3.o -o %t.static.so
+# RUN: ld.lld -static --android-memtag-mode=sync %t1.o %t2.o %t3.o -o %t.static.so
 # RUN: llvm-readelf -s --section-headers --relocs --memtag %t.static.so | \
 # RUN:   FileCheck %s --check-prefix=CHECK-STATIC
 # CHECK-STATIC-NOT: .memtag.globals.static
