@@ -3020,32 +3020,41 @@ static bool isNonEqualShl(const Value *V1, const Value *V2, unsigned Depth,
   return false;
 }
 
-static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
-                           unsigned Depth, const SimplifyQuery &Q) {
-  // Check two PHIs are in same block.
-  if (PN1->getParent() != PN2->getParent())
-    return false;
-
+static bool isNonEqualPhisSameBB(const PHINode *PN1, const PHINode *PN2,
+                                 unsigned Depth, const SimplifyQuery &Q) {
   SmallPtrSet<const BasicBlock *, 8> VisitedBBs;
-  bool UsedFullRecursion = false;
   for (const BasicBlock *IncomBB : PN1->blocks()) {
     if (!VisitedBBs.insert(IncomBB).second)
       continue; // Don't reprocess blocks that we have dealt with already.
     const Value *IV1 = PN1->getIncomingValueForBlock(IncomBB);
     const Value *IV2 = PN2->getIncomingValueForBlock(IncomBB);
-    const APInt *C1, *C2;
-    if (match(IV1, m_APInt(C1)) && match(IV2, m_APInt(C2)) && *C1 != *C2)
-      continue;
-
-    // Only one pair of phi operands is allowed for full recursion.
-    if (UsedFullRecursion)
-      return false;
 
     SimplifyQuery RecQ = Q;
     RecQ.CxtI = IncomBB->getTerminator();
     if (!isKnownNonEqual(IV1, IV2, Depth + 1, RecQ))
       return false;
-    UsedFullRecursion = true;
+  }
+  return true;
+}
+
+static bool isNonEqualPhi(const Value *V1, const Value *V2, unsigned Depth,
+                          const SimplifyQuery &Q) {
+  const PHINode *PN1 = dyn_cast<PHINode>(V1);
+  if (!PN1)
+    return false;
+
+  if (const PHINode *PN2 = dyn_cast<PHINode>(V2)) {
+    if (PN1->getParent() == PN2->getParent())
+      return isNonEqualPhisSameBB(PN1, PN2, Depth, Q);
+  }
+  for (const BasicBlock *IncomBB : PN1->blocks()) {
+    Value *V = PN1->getIncomingValueForBlock(IncomBB);
+    if (V == PN1)
+      continue;
+    SimplifyQuery RecQ = Q;
+    RecQ.CxtI = IncomBB->getTerminator();
+    if (!isKnownNonEqual(V, V2, Depth + 1, RecQ))
+      return false;
   }
   return true;
 }
@@ -3089,14 +3098,6 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   if (O1 && O2 && O1->getOpcode() == O2->getOpcode()) {
     if (auto Values = getInvertibleOperands(O1, O2))
       return isKnownNonEqual(Values->first, Values->second, Depth + 1, Q);
-
-    if (const PHINode *PN1 = dyn_cast<PHINode>(V1)) {
-      const PHINode *PN2 = cast<PHINode>(V2);
-      // FIXME: This is missing a generalization to handle the case where one is
-      // a PHI and another one isn't.
-      if (isNonEqualPHIs(PN1, PN2, Depth, Q))
-        return true;
-    };
   }
 
   if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
@@ -3120,6 +3121,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   }
 
   if (isNonEqualSelect(V1, V2, Depth, Q) || isNonEqualSelect(V2, V1, Depth, Q))
+    return true;
+
+  if (isNonEqualPhi(V1, V2, Depth, Q) || isNonEqualPhi(V2, V1, Depth, Q))
     return true;
 
   return false;
