@@ -43,6 +43,7 @@
 ; CHECK-NEXT:       mc:debug_string  llvmcas://{{.*}}
 ; CHECK-NEXT:       mc:debug_string  llvmcas://{{.*}}
 ; CHECK-NEXT:       mc:debug_string  llvmcas://{{.*}}
+; CHECK-NEXT:       mc:padding  llvmcas://{{.*}}
 ; CHECK-NEXT:     mc:debug_line_section  llvmcas://{{.*}}
 ; CHECK-NEXT:       mc:debug_line_distinct_data  llvmcas://{{.*}}
 ; CHECK-NEXT:       mc:debug_line  llvmcas://{{.*}}

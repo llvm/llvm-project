@@ -20,6 +20,7 @@ namespace mccasformats {
 namespace v1 {
 
 constexpr unsigned Dwarf4HeaderSize32Bit = 11;
+constexpr unsigned Dwarf5HeaderSize32Bit = 12;
 
 /// Returns true if the values associated with a combination of Form and Attr
 /// are not expected to deduplicate.
@@ -71,6 +72,9 @@ struct DataWriter {
 
   /// Write ULEB128(V) to the data stream.
   void writeULEB128(uint64_t V) { encodeULEB128(V, DataStream); }
+
+  /// Write SLEB128(V) to the data stream.
+  void writeSLEB128(int64_t V) { encodeSLEB128(V, DataStream); }
 
   /// Write V to the data stream.
   void writeByte(uint8_t V) { DataStream << V; }
