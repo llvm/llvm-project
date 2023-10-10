@@ -448,10 +448,6 @@ module std_inttypes_h [system] {
   export *
 }
 // <iso646.h> provided by compiler.
-module std_limits_h [system] {
-  header "limits.h"
-  export *
-}
 module std_locale_h [system] {
   header "locale.h"
   export *
@@ -2053,6 +2049,7 @@ module std_private_utility_cmp                    [system] {
 }
 module std_private_utility_convert_to_integral    [system] { header "__utility/convert_to_integral.h" }
 module std_private_utility_declval                [system] { header "__utility/declval.h" }
+module std_private_utility_empty                  [system] { header "__utility/empty.h" }
 module std_private_utility_exception_guard        [system] { header "__utility/exception_guard.h" }
 module std_private_utility_exchange               [system] { header "__utility/exchange.h" }
 module std_private_utility_forward                [system] { header "__utility/forward.h" }
@@ -2088,7 +2085,6 @@ module std_private_utility_swap                   [system] {
   header "__utility/swap.h"
   export std_private_type_traits_is_swappable
 }
-module std_private_utility_terminate_on_exception [system] { header "__utility/terminate_on_exception.h" }
 module std_private_utility_to_underlying          [system] { header "__utility/to_underlying.h" }
 module std_private_utility_unreachable            [system] { header "__utility/unreachable.h" }
 

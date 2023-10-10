@@ -27,6 +27,7 @@ ARM64-SAME: foo.o
 
 RUN: ld.lld -### foo.o -m i386pep -shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --shared 2>&1 | FileCheck -check-prefix=SHARED %s
+RUN: ld.lld -### foo.o -m i386pep --dll 2>&1 | FileCheck -check-prefix=SHARED %s
 SHARED:      -out:a.dll
 SHARED-SAME: -dll
 

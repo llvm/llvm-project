@@ -2036,7 +2036,7 @@ cc_library(
 td_library(
     name = "ArmSVETdFiles",
     srcs = [
-        "include/mlir/Dialect/ArmSVE/ArmSVE.td",
+        "include/mlir/Dialect/ArmSVE/IR/ArmSVE.td",
     ],
     includes = ["include"],
     deps = [
@@ -2053,44 +2053,44 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/ArmSVE/ArmSVE.h.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVE.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/ArmSVE/ArmSVE.cpp.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc",
         ),
         (
             ["-gen-typedef-decls"],
-            "include/mlir/Dialect/ArmSVE/ArmSVETypes.h.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVETypes.h.inc",
         ),
         (
             ["-gen-typedef-defs"],
-            "include/mlir/Dialect/ArmSVE/ArmSVETypes.cpp.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVETypes.cpp.inc",
         ),
         (
             [
                 "-gen-dialect-decls",
                 "-dialect=arm_sve",
             ],
-            "include/mlir/Dialect/ArmSVE/ArmSVEDialect.h.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h.inc",
         ),
         (
             [
                 "-gen-dialect-defs",
                 "-dialect=arm_sve",
             ],
-            "include/mlir/Dialect/ArmSVE/ArmSVEDialect.cpp.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVEDialect.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSVE/ArmSVE.td",
+    td_file = "include/mlir/Dialect/ArmSVE/IR/ArmSVE.td",
     deps = [":ArmSVETdFiles"],
 )
 
 cc_library(
     name = "ArmSVEDialect",
     srcs = ["lib/Dialect/ArmSVE/IR/ArmSVEDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/ArmSVE/ArmSVEDialect.h"],
+    hdrs = ["include/mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"],
     includes = ["include"],
     deps = [
         ":ArmSVEIncGen",
@@ -2105,7 +2105,7 @@ cc_library(
 cc_library(
     name = "ArmSVETransforms",
     srcs = glob(["lib/Dialect/ArmSVE/Transforms/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/ArmSVE/Transforms.h"],
+    hdrs = ["include/mlir/Dialect/ArmSVE/Transforms/Transforms.h"],
     includes = ["include"],
     deps = [
         ":ArmSVEDialect",
@@ -2124,11 +2124,11 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["-gen-llvmir-conversions"],
-            "include/mlir/Dialect/ArmSVE/ArmSVEConversions.inc",
+            "include/mlir/Dialect/ArmSVE/IR/ArmSVEConversions.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSVE/ArmSVE.td",
+    td_file = "include/mlir/Dialect/ArmSVE/IR/ArmSVE.td",
     deps = [":ArmSVETdFiles"],
 )
 
@@ -8643,6 +8643,7 @@ cc_library(
     name = "SparseTensorRuntime",
     srcs = [
         "lib/ExecutionEngine/SparseTensor/File.cpp",
+        "lib/ExecutionEngine/SparseTensor/MapRef.cpp",
         "lib/ExecutionEngine/SparseTensor/NNZ.cpp",
         "lib/ExecutionEngine/SparseTensor/Storage.cpp",
     ],
@@ -8651,6 +8652,7 @@ cc_library(
         "include/mlir/ExecutionEngine/SparseTensor/COO.h",
         "include/mlir/ExecutionEngine/SparseTensor/ErrorHandling.h",
         "include/mlir/ExecutionEngine/SparseTensor/File.h",
+        "include/mlir/ExecutionEngine/SparseTensor/MapRef.h",
         "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
     ],
     includes = ["include"],
@@ -9029,6 +9031,7 @@ td_library(
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
+        "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
         "include/mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td",
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td",
@@ -9039,6 +9042,25 @@ td_library(
         ":OpBaseTdFiles",
     ],
 )
+
+
+gentbl_cc_library(
+    name = "OpenACCOpsInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
+    deps = [":OpenAccOpsTdFiles"],
+)
+
 
 gentbl_cc_library(
     name = "OpenACCOpsIncGen",
@@ -9171,6 +9193,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":OpenACCOpsIncGen",
+        ":OpenACCOpsInterfacesIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
         ":Transforms",

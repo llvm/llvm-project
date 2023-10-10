@@ -858,6 +858,19 @@ bool Relocation::isTLS(uint64_t Type) {
   return isTLSX86(Type);
 }
 
+bool Relocation::isInstructionReference(uint64_t Type) {
+  if (Arch != Triple::riscv64)
+    return false;
+
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_RISCV_PCREL_LO12_I:
+  case ELF::R_RISCV_PCREL_LO12_S:
+    return true;
+  }
+}
+
 uint64_t Relocation::getNone() {
   if (Arch == Triple::aarch64)
     return ELF::R_AARCH64_NONE;

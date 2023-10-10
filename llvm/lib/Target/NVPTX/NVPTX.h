@@ -181,6 +181,18 @@ enum CmpMode {
   FTZ_FLAG = 0x100
 };
 }
+
+namespace PTXPrmtMode {
+enum PrmtMode {
+  NONE,
+  F4E,
+  B4E,
+  RC8,
+  ECL,
+  ECR,
+  RC16,
+};
+}
 }
 void initializeNVPTXDAGToDAGISelPass(PassRegistry &);
 } // namespace llvm
