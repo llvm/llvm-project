@@ -151,7 +151,8 @@ void Dex::buildIndex() {
   // Build RevRefs
   for (const auto &Pair : Refs)
     for (const auto &R : Pair.second)
-      RevRefs[R.Container].emplace_back(R, Pair.first);
+      if ((R.Kind & RefKind::Call) != RefKind::Unknown)
+        RevRefs[R.Container].emplace_back(R, Pair.first);
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {

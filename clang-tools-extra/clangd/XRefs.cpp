@@ -2319,10 +2319,10 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // In this function, we find outgoing calls based on the index only.
   RefsRequest Request;
   Request.IDs.insert(*ID);
-  // We could restrict more specifically to calls by introducing a new RefKind,
-  // but non-call references (such as address-of-function) can still be
-  // interesting as they can indicate indirect calls.
-  Request.Filter = RefKind::Reference;
+  // Note that RefKind::Call just restricts the matched SymbolKind to
+  // functions, not the form of the reference (e.g. address-of-function,
+  // which can indicate an indirect call, should still be caught).
+  Request.Filter = RefKind::Call;
   // Initially store the ranges in a map keyed by SymbolID of the callee.
   // This allows us to group different calls to the same function
   // into the same CallHierarchyOutgoingCall.
@@ -2347,11 +2347,11 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
     // Filter references to only keep function calls
     using SK = index::SymbolKind;
     auto Kind = Callee.SymInfo.Kind;
-    if (Kind != SK::Function && Kind != SK::InstanceMethod &&
-        Kind != SK::ClassMethod && Kind != SK::StaticMethod &&
-        Kind != SK::Constructor && Kind != SK::Destructor &&
-        Kind != SK::ConversionFunction)
-      return;
+    bool NotCall = (Kind != SK::Function && Kind != SK::InstanceMethod &&
+                    Kind != SK::ClassMethod && Kind != SK::StaticMethod &&
+                    Kind != SK::Constructor && Kind != SK::Destructor &&
+                    Kind != SK::ConversionFunction);
+    assert(!NotCall);
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
