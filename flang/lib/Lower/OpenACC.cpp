@@ -382,13 +382,23 @@ static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
       retVal = declareOp.getBase();
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
                    refTy.getEleTy())) {
-      if (seqTy.hasDynamicExtents())
-        TODO(loc, "private recipe of array with dynamic extents");
       if (fir::isa_trivial(seqTy.getEleTy())) {
-        auto alloca = builder.create<fir::AllocaOp>(loc, seqTy);
-        auto shapeOp = genShapeOp(builder, seqTy, loc);
+        mlir::Value shape;
+        llvm::SmallVector<mlir::Value> extents;
+        if (seqTy.hasDynamicExtents()) {
+          // Extents are passed as block arguments. First argument is the
+          // original value.
+          for (unsigned i = 1; i < recipe.getInitRegion().getArguments().size();
+               ++i)
+            extents.push_back(recipe.getInitRegion().getArgument(i));
+          shape = builder.create<fir::ShapeOp>(loc, extents);
+        } else {
+          shape = genShapeOp(builder, seqTy, loc);
+        }
+        auto alloca = builder.create<fir::AllocaOp>(
+            loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
         auto declareOp = builder.create<hlfir::DeclareOp>(
-            loc, alloca, accPrivateInitName, shapeOp,
+            loc, alloca, accPrivateInitName, shape,
             llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
         retVal = declareOp.getBase();
       }
@@ -418,8 +428,22 @@ Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   auto recipe =
       modBuilder.create<mlir::acc::PrivateRecipeOp>(loc, recipeName, ty);
+  llvm::SmallVector<mlir::Type> argsTy{ty};
+  llvm::SmallVector<mlir::Location> argsLoc{loc};
+  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+    if (auto seqTy =
+            mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+      if (seqTy.hasDynamicExtents()) {
+        mlir::Type idxTy = builder.getIndexType();
+        for (unsigned i = 0; i < seqTy.getDimension(); ++i) {
+          argsTy.push_back(idxTy);
+          argsLoc.push_back(loc);
+        }
+      }
+    }
+  }
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                      {ty}, {loc});
+                      argsTy, argsLoc);
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
   genPrivateLikeInitRegion<mlir::acc::PrivateRecipeOp>(builder, recipe, ty,
                                                        loc);
@@ -554,6 +578,29 @@ mlir::Type getTypeFromBounds(llvm::SmallVector<mlir::Value> &bounds,
   return ty;
 }
 
+/// Check if the DataBoundsOp is a constant bound (lb and ub are constants or
+/// extent is a constant).
+bool isConstantBound(mlir::acc::DataBoundsOp &op) {
+  if (op.getLowerbound() && fir::getIntIfConstant(op.getLowerbound()) &&
+      op.getUpperbound() && fir::getIntIfConstant(op.getUpperbound()))
+    return true;
+  if (op.getExtent() && fir::getIntIfConstant(op.getExtent()))
+    return true;
+  return false;
+}
+
+/// Return true iff all the bounds are expressed with constant values.
+bool areAllBoundConstant(llvm::SmallVector<mlir::Value> &bounds) {
+  for (auto bound : bounds) {
+    auto dataBound =
+        mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
+    assert(dataBound && "Must be DataBoundOp operation");
+    if (!isConstantBound(dataBound))
+      return false;
+  }
+  return true;
+}
+
 template <typename RecipeOp>
 static void
 genPrivatizations(const Fortran::parser::AccObjectList &objectList,
@@ -681,29 +728,6 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
       return value;
   }
   llvm_unreachable("OpenACC reduction unsupported type");
-}
-
-/// Check if the DataBoundsOp is a constant bound (lb and ub are constants or
-/// extent is a constant).
-bool isConstantBound(mlir::acc::DataBoundsOp &op) {
-  if (op.getLowerbound() && fir::getIntIfConstant(op.getLowerbound()) &&
-      op.getUpperbound() && fir::getIntIfConstant(op.getUpperbound()))
-    return true;
-  if (op.getExtent() && fir::getIntIfConstant(op.getExtent()))
-    return true;
-  return false;
-}
-
-/// Return true iff all the bounds are expressed with constant values.
-bool areAllBoundConstant(llvm::SmallVector<mlir::Value> &bounds) {
-  for (auto bound : bounds) {
-    auto dataBound =
-        mlir::dyn_cast<mlir::acc::DataBoundsOp>(bound.getDefiningOp());
-    assert(dataBound && "Must be DataBoundOp operation");
-    if (!isConstantBound(dataBound))
-      return false;
-  }
-  return true;
 }
 
 /// Return a constant with the initial value for the reduction operator and
