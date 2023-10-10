@@ -8457,8 +8457,7 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
                                        StrictFlexArraysLevel, true)) {
     // The "counted_by" attribute must be on a flexible array member.
     SourceRange SR = FD->getLocation();
-    Diag(SR.getBegin(),
-         diag::err_counted_by_attr_not_on_flexible_array_member)
+    Diag(SR.getBegin(), diag::err_counted_by_attr_not_on_flexible_array_member)
         << SR;
     return true;
   }
@@ -8466,14 +8465,12 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
   if (Field->hasAttr<CountedByAttr>()) {
     // The "counted_by" field can't point to the flexible array member.
     SourceRange SR = CBA->getCountedByFieldLoc();
-    Diag(SR.getBegin(),
-         diag::err_flexible_array_counted_by_attr_refers_to_self)
+    Diag(SR.getBegin(), diag::err_flexible_array_counted_by_attr_refers_to_self)
         << CBA->getCountedByField() << SR;
     return true;
   }
 
-  if (!Field->getType()->isIntegerType() ||
-      Field->getType()->isBooleanType()) {
+  if (!Field->getType()->isIntegerType() || Field->getType()->isBooleanType()) {
     // The "counted_by" field must have an integer type.
     SourceRange SR = Field->getLocation();
     Diag(SR.getBegin(),
