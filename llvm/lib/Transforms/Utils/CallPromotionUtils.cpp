@@ -15,7 +15,9 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -380,6 +382,265 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   return *NewInst;
 }
 
+// Returns true if 'I' could be sinked to 'Block'.
+static bool shouldSinkInstrToBlock(Instruction &I, BasicBlock *Block) {
+  // Conservatively regard no-use as not sinkable. For instance,
+  // llvm.assume should remain in the original block.
+  if (I.use_empty())
+    return false;
+
+  for (Use &U : I.uses()) {
+    Instruction *User = dyn_cast<Instruction>(U.getUser());
+    // Conservatively returns true if there is a non-instruction user.
+    if (!User || User->getParent() != Block)
+      return false;
+  }
+  return true;
+}
+
+static void sinkInstructionsForIndirectCall(BasicBlock *SrcBlock,
+                                            BasicBlock *DestBlock,
+                                            Instruction *VTableInstr,
+                                            const CallBase &CB) {
+  std::vector<Instruction *> SinkInsts;
+  LoadInst *FPtr = nullptr;
+  for (Instruction &Inst :
+       make_range(++SrcBlock->getTerminator()->getReverseIterator(),
+                  SrcBlock->rend())) {
+    if (Inst.isDebugOrPseudoInst())
+      continue;
+
+    // Exit loop if vtable instr is seen.
+    if (&Inst == VTableInstr)
+      break;
+
+    if (!shouldSinkInstrToBlock(Inst, DestBlock))
+      continue;
+
+    if (LoadInst *LI = dyn_cast<LoadInst>(&Inst)) {
+      // This load instruction loads the vfunc-ptr for indirect call 'CB',
+      // and it doesn't have other users.
+      if (cast<Value>(LI) == CB.getCalledOperand()) {
+        FPtr = LI;
+        break;
+      }
+    }
+  }
+  if (FPtr != nullptr) {
+    FPtr->moveBefore(&*DestBlock->getFirstInsertionPt());
+
+    Value *Addr = FPtr->getPointerOperand();
+
+    if (Instruction *AddrInst = dyn_cast<Instruction>(Addr)) {
+      if (shouldSinkInstrToBlock(*AddrInst, DestBlock)) {
+        AddrInst->moveBefore(&*DestBlock->getFirstInsertionPt());
+      }
+    }
+  }
+}
+
+static Value *getOrResult(std::vector<Value *> &ICmps, IRBuilder<> &Builder) {
+  assert(!ICmps.empty());
+  if (ICmps.size() == 1) {
+    return ICmps[0];
+  }
+  std::vector<Value *> UpdatedResult;
+  int i = 0, size = ICmps.size();
+  for (i = 0; i + 1 < size; i += 2) {
+    Value *Or = Builder.CreateOr(ICmps[i], ICmps[i + 1], "vtable-cmp-or");
+    UpdatedResult.push_back(Or);
+  }
+  if (i < size) {
+    UpdatedResult.push_back(ICmps[i]);
+  }
+  return getOrResult(UpdatedResult, Builder);
+}
+
+// FIXME: Drop !prof on direct calls, and update !prof on indirect calls.
+// FIXME: Split this function to smaller helper functions and de-dup code with
+// function-based promotion.
+CallBase &llvm::promoteIndirectCallWithVTableInfo(
+    CallBase &CB, Function *TargetFunction,
+    const SmallVector<VTableCandidate> &VTableCandidates,
+    const std::vector<int> &VTableIndices,
+    const std::unordered_map<int, Value *> &VTableOffsetToValueMap,
+    uint64_t &SumPromotedVTableCount, MDNode *BranchWeights) {
+  SumPromotedVTableCount = 0;
+  IRBuilder<> Builder(&CB);
+  CallBase *OrigIndirectCall = &CB;
+
+  Instruction *VTableInstr = nullptr;
+
+  std::vector<Value *> ICmps;
+  for (auto Index : VTableIndices) {
+    SumPromotedVTableCount += VTableCandidates[Index].VTableValCount;
+    const auto &VTableCandidate = VTableCandidates[Index];
+    if (VTableInstr == nullptr) {
+      VTableInstr = VTableCandidate.VTableInstr;
+    } else {
+      // The VTableInstr that's being instrumented. It should remain the same
+      // across all candidates.
+      assert(VTableInstr == VTableCandidate.VTableInstr &&
+             "VTableInstr should remain the same across all vtable candidates");
+    }
+    Value *VTableVar = Builder.CreatePtrToInt(VTableCandidate.VTableVariable,
+                                              Builder.getInt64Ty());
+    assert(VTableOffsetToValueMap.find(VTableCandidate.AddressPointOffset) !=
+               VTableOffsetToValueMap.end() &&
+           "Caller should construct the offset-variables");
+
+    Value *OffsetVar =
+        VTableOffsetToValueMap.at(VTableCandidate.AddressPointOffset);
+    Value *ICmp = Builder.CreateICmpEQ(VTableVar, OffsetVar);
+    ICmps.push_back(ICmp);
+  }
+
+  Value *Cond = getOrResult(ICmps, Builder);
+
+  // FIXME:
+  // This should be optimized to the comparison with a newly-created (alias of?)
+  // vtable variable (only frequently accessed vtables are created)
+
+  if (CB.isMustTailCall()) {
+    // From:
+    //   bb:
+    //     vptr = load
+    //     func-addr = gep vptr
+    //     funcptr = load
+    //     res = tail call funcptr
+    //     ret res
+    //
+    // To:
+    //   bb:
+    //     vptr = load
+    //     minus = sub vptr, vtable
+    //     cond = icmp minus, constant-offset
+    //     br cond true if.then, false if.else
+    //   if.then:
+    //     %res1 = musttail call direct_callee
+    //     ret %res1
+    //   if.else:
+    //     func-addr = gep vptr
+    //     funcptr = load func-addr
+    //     res2 = musttail call funcptr
+    //     ret res2
+    BasicBlock *OrigBlock = CB.getParent();
+    Instruction *ThenTerm =
+        SplitBlockAndInsertIfThen(Cond, &CB, false, BranchWeights);
+    BasicBlock *ThenBlock = ThenTerm->getParent();
+    BasicBlock *ElseBlock = CB.getParent();
+    ThenBlock->setName("if.then.direct_vtable_targ");
+    ElseBlock->setName("if.else.orig_indirect_call");
+    CallBase *NewInst = cast<CallBase>(CB.clone());
+    NewInst->insertBefore(ThenTerm);
+    NewInst->setCalledOperand(TargetFunction);
+
+    // Sink the instructions that load funcptr to else block if possible.
+    sinkInstructionsForIndirectCall(OrigBlock, ElseBlock, VTableInstr, CB);
+
+    // After this copy the bitcast and ret.
+    Value *NewRetVal = NewInst;
+    auto Next = CB.getNextNode();
+    if (auto *BitCast = dyn_cast_or_null<BitCastInst>(Next)) {
+      assert(BitCast->getOperand(0) == &CB &&
+             "bitcast following musttail call must use the call");
+      auto NewBitCast = BitCast->clone();
+      NewBitCast->replaceUsesOfWith(&CB, NewInst);
+      NewBitCast->insertBefore(ThenTerm);
+      NewRetVal = NewBitCast;
+      Next = BitCast->getNextNode();
+    }
+    // Place a clone of the return instruction after the new call site.
+    ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
+    assert(Ret && "musttail call must precede a ret with an optional bitcast");
+    auto NewRet = Ret->clone();
+    if (Ret->getReturnValue()) {
+      NewRet->replaceUsesOfWith(Ret->getReturnValue(), NewRetVal);
+    }
+    NewRet->insertBefore(ThenTerm);
+    // A return instruction is terminating, so we don't need the terminating
+    // instruction just created.
+    ThenTerm->eraseFromParent();
+    return *NewInst;
+  }
+
+  // Create if-then-else structure. The original instruction is moved into else,
+  // and instructions to load virtual functions are sinked into else.
+  // Put a clone of the original instruction in the then block and set its
+  // callee to the direct function. Before:
+  //     %vtable = load ptr, ptr %object, !prof !0
+  //     %vfnaddr = getelementptr inbounds ptr, ptr %vtable, i64 1
+  //     %1 = load ptr, ptr %vfnaddr
+  //     %call = call i32 %1(ptr %object), !prof !1
+  //
+  // After:
+  //     %vtableptr = load ptr, ptr %object
+  //     %tmp0 = ptrtoint ptr %vtableptr to i64
+  //     %vtableobject = sub nuw i64 %tmp9, constant-offset
+  //     %cmp = icmp eq i64 ptrtoint(ptr @_ZTV8Derived2 to i64), %vtableobject
+  //     br i1 %cmp, label if.true.direct_vtable_target, label
+  //     if.false.orig_indirect
+  //   if.true.direct_vtable_target:
+  //     %res1 = call i32 @_ZN4Base5func2Ev(ptr %object)
+  //     br label if.end.vtable_icp
+  //   if.false.orig_indirect:
+  //     %vfnaddr = getelementptr inbounds ptr, ptr %vtable, i64 1
+  //     %vfnptr = load ptr, ptr %vfnaddr
+  //     %res2 = call i32 %vfnptr(ptr %object)
+  //     br label if.end.vtable_icp
+  //   if.end.vtable_icp:
+  //     %call = phi i32 [%res2, if.false.orig_indirect], [%res1,
+  //     if.true.direct_vtable_target]
+
+  Instruction *ThenTerm = nullptr;
+  Instruction *ElseTerm = nullptr;
+
+  BasicBlock *OrigBlock = CB.getParent();
+  SplitBlockAndInsertIfThenElse(Cond, &CB, &ThenTerm, &ElseTerm, BranchWeights);
+  BasicBlock *ThenBlock = ThenTerm->getParent();
+  BasicBlock *ElseBlock = ElseTerm->getParent();
+  BasicBlock *MergeBlock = OrigIndirectCall->getParent();
+
+  ThenBlock->setName("if.true.direct_vtable_target");
+  ElseBlock->setName("if.false.orig_indirect");
+  MergeBlock->setName("if.end.vtable_icp");
+
+  CallBase *NewInst = cast<CallBase>(OrigIndirectCall->clone());
+  OrigIndirectCall->moveBefore(ElseTerm);
+  NewInst->insertBefore(ThenTerm);
+  // Rewrite NewInst to use direct callee to sink the instructions that
+  // compute virtual function addresses.
+  NewInst->setCalledOperand(TargetFunction);
+
+  sinkInstructionsForIndirectCall(OrigBlock, ElseBlock, VTableInstr, CB);
+
+  if (auto *OrigInvoke = dyn_cast<InvokeInst>(OrigIndirectCall)) {
+    auto *NewInvoke = cast<InvokeInst>(NewInst);
+
+    // Invoke instructions are terminating themselves.
+    ThenTerm->eraseFromParent();
+    ElseTerm->eraseFromParent();
+
+    // Branch from the "merge" block to the original normal destination.
+    Builder.SetInsertPoint(MergeBlock);
+    Builder.CreateBr(OrigInvoke->getNormalDest());
+
+    // Fix-up phi nodes in the original invoke's normal and unwind destinations.
+    fixupPHINodeForNormalDest(OrigInvoke, OrigBlock, MergeBlock);
+    fixupPHINodeForUnwindDest(OrigInvoke, MergeBlock, ThenBlock, ElseBlock);
+
+    // Now set the normal destinations of the invoke instructions to be the
+    // "merge" block.
+    OrigInvoke->setNormalDest(MergeBlock);
+    NewInvoke->setNormalDest(MergeBlock);
+  }
+
+  // create a phi node for the returned value
+  createRetPHINode(OrigIndirectCall, NewInst, MergeBlock, Builder);
+
+  return *NewInst;
+}
+
 bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
@@ -467,12 +728,16 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
 }
 
 CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
-                            CastInst **RetBitCast) {
-  assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
+                            CastInst **RetBitCast,
+                            bool DirectCalleeAlreadySet) {
+  if (!DirectCalleeAlreadySet) {
+    assert(!CB.getCalledFunction() &&
+           "Only indirect call sites can be promoted");
 
-  // Set the called function of the call site to be the given callee (but don't
-  // change the type).
-  CB.setCalledOperand(Callee);
+    // Set the called function of the call site to be the given callee (but
+    // don't change the type).
+    CB.setCalledOperand(Callee);
+  }
 
   // Since the call site will no longer be direct, we must clear metadata that
   // is only appropriate for indirect calls. This includes !prof and !callees

@@ -17,12 +17,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -663,6 +665,12 @@ public:
     uint64_t Offset;
   };
 
+  struct VTableTypeAndOffsetInfo {
+    ValueInfo VTableVI;
+    StringRef CompatibleTypeStr;
+    uint64_t Offset;
+  };
+
   /// A specification for a virtual function call with all constant integer
   /// arguments. This is used to perform virtual constant propagation on the
   /// summary.
@@ -689,6 +697,8 @@ public:
     /// all constant integer arguments.
     std::vector<ConstVCall> TypeTestAssumeConstVCalls,
         TypeCheckedLoadConstVCalls;
+
+    std::vector<VTableTypeAndOffsetInfo> VTableEdges;
   };
 
   /// Flags specific to function summaries.
@@ -811,6 +821,7 @@ public:
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
         std::vector<FunctionSummary::ConstVCall>(),
+        std::vector<FunctionSummary::VTableTypeAndOffsetInfo>(),
         std::vector<FunctionSummary::ParamAccess>(),
         std::vector<CallsiteInfo>(), std::vector<AllocInfo>());
   }
@@ -868,6 +879,7 @@ public:
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
                   std::vector<ConstVCall> TypeCheckedLoadConstVCalls,
+                  std::vector<VTableTypeAndOffsetInfo> VTableEdges,
                   std::vector<ParamAccess> Params, CallsitesTy CallsiteList,
                   AllocsTy AllocList)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
@@ -876,11 +888,11 @@ public:
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
         !TypeCheckedLoadConstVCalls.empty())
-      TIdInfo = std::make_unique<TypeIdInfo>(
-          TypeIdInfo{std::move(TypeTests), std::move(TypeTestAssumeVCalls),
-                     std::move(TypeCheckedLoadVCalls),
-                     std::move(TypeTestAssumeConstVCalls),
-                     std::move(TypeCheckedLoadConstVCalls)});
+      TIdInfo = std::make_unique<TypeIdInfo>(TypeIdInfo{
+          std::move(TypeTests), std::move(TypeTestAssumeVCalls),
+          std::move(TypeCheckedLoadVCalls),
+          std::move(TypeTestAssumeConstVCalls),
+          std::move(TypeCheckedLoadConstVCalls), std::move(VTableEdges)});
     if (!Params.empty())
       ParamAccesses = std::make_unique<ParamAccessesTy>(std::move(Params));
     if (!CallsiteList.empty())
@@ -925,6 +937,12 @@ public:
   ArrayRef<GlobalValue::GUID> type_tests() const {
     if (TIdInfo)
       return TIdInfo->TypeTests;
+    return {};
+  }
+
+  ArrayRef<VTableTypeAndOffsetInfo> vtable_edges() const {
+    if (TIdInfo)
+      return TIdInfo->VTableEdges;
     return {};
   }
 
@@ -1260,6 +1278,36 @@ struct TypeIdOffsetVtableInfo {
 /// Note that each type identifier may be compatible with multiple vtables, due
 /// to inheritance, which is why this is a vector.
 using TypeIdCompatibleVtableInfo = std::vector<TypeIdOffsetVtableInfo>;
+
+// Define DenseMapInfo since VTableTypeAndOffsetInfo is used as element type
+// inside SetVector.
+template <> struct DenseMapInfo<FunctionSummary::VTableTypeAndOffsetInfo> {
+  static FunctionSummary::VTableTypeAndOffsetInfo getEmptyKey() {
+    return {DenseMapInfo<ValueInfo>::getEmptyKey(),
+            DenseMapInfo<StringRef>::getEmptyKey(),
+            DenseMapInfo<uint64_t>::getEmptyKey()};
+  }
+
+  static FunctionSummary::VTableTypeAndOffsetInfo getTombstoneKey() {
+    return {DenseMapInfo<ValueInfo>::getTombstoneKey(),
+            DenseMapInfo<StringRef>::getTombstoneKey(),
+            DenseMapInfo<uint64_t>::getTombstoneKey()};
+  }
+
+  static unsigned
+  getHashValue(const FunctionSummary::VTableTypeAndOffsetInfo &V) {
+    return DenseMapInfo<ValueInfo>::getHashValue(V.VTableVI) ^
+           DenseMapInfo<StringRef>::getHashValue(V.CompatibleTypeStr) ^
+           DenseMapInfo<uint64_t>::getHashValue(V.Offset);
+  }
+
+  static bool isEqual(const FunctionSummary::VTableTypeAndOffsetInfo &LHS,
+                      const FunctionSummary::VTableTypeAndOffsetInfo &RHS) {
+    return DenseMapInfo<ValueInfo>::isEqual(LHS.VTableVI, RHS.VTableVI) &&
+           LHS.CompatibleTypeStr == RHS.CompatibleTypeStr &&
+           LHS.Offset == RHS.Offset;
+  }
+};
 
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.

@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -166,7 +167,7 @@ static void addVCallToSet(
 /// If this intrinsic call requires that we add information to the function
 /// summary, do so via the non-constant reference arguments.
 static void addIntrinsicToSummary(
-    const CallInst *CI,
+    ModuleSummaryIndex &Index, const CallInst *CI,
     SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> &TypeTests,
     SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
         &TypeTestAssumeVCalls,
@@ -178,6 +179,9 @@ static void addIntrinsicToSummary(
     SetVector<FunctionSummary::ConstVCall,
               std::vector<FunctionSummary::ConstVCall>>
         &TypeCheckedLoadConstVCalls,
+    SetVector<FunctionSummary::VTableTypeAndOffsetInfo,
+              std::vector<FunctionSummary::VTableTypeAndOffsetInfo>>
+        &VTableTypeAndOffsetData,
     DominatorTree &DT) {
   switch (CI->getCalledFunction()->getIntrinsicID()) {
   case Intrinsic::type_test:
@@ -201,10 +205,32 @@ static void addIntrinsicToSummary(
     SmallVector<DevirtCallSite, 4> DevirtCalls;
     SmallVector<CallInst *, 4> Assumes;
     findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
-    for (auto &Call : DevirtCalls)
+    for (auto &Call : DevirtCalls) {
       addVCallToSet(Call, Guid, TypeTestAssumeVCalls,
                     TypeTestAssumeConstVCalls);
 
+      Instruction *VTableInstr =
+          PGOIndirectCallVisitor::getAnnotatedVTableInstruction(&Call.CB);
+
+      if (VTableInstr) {
+        std::unique_ptr<InstrProfValueData[]> ValueDataArray =
+            std::make_unique<InstrProfValueData[]>(24);
+
+        uint32_t ActualNumValues = 0;
+        uint64_t TotalCount = 0;
+
+        getValueProfDataFromInst(*VTableInstr, IPVK_VTableTarget, 24,
+                                 ValueDataArray.get(), ActualNumValues,
+                                 TotalCount);
+
+        for (uint32_t j = 0; j < ActualNumValues; j++) {
+          VTableTypeAndOffsetData.insert(
+              {Index.getOrInsertValueInfo(
+                   ValueDataArray[j].Value) /* VTableGUID */,
+               TypeId->getString() /* CompatibleTypeStr */, Call.Offset});
+        }
+      }
+    }
     break;
   }
 
@@ -281,6 +307,9 @@ static void computeFunctionSummary(
       CallGraphEdges;
   SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges, LoadRefEdges,
       StoreRefEdges;
+  SetVector<FunctionSummary::VTableTypeAndOffsetInfo,
+            std::vector<FunctionSummary::VTableTypeAndOffsetInfo>>
+      VTableEdges;
   SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> TypeTests;
   SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
       TypeTestAssumeVCalls, TypeCheckedLoadVCalls;
@@ -389,9 +418,10 @@ static void computeFunctionSummary(
       // intrinsic, or an indirect call with profile data.
       if (CalledFunction) {
         if (CI && CalledFunction->isIntrinsic()) {
-          addIntrinsicToSummary(
-              CI, TypeTests, TypeTestAssumeVCalls, TypeCheckedLoadVCalls,
-              TypeTestAssumeConstVCalls, TypeCheckedLoadConstVCalls, DT);
+          addIntrinsicToSummary(Index, CI, TypeTests, TypeTestAssumeVCalls,
+                                TypeCheckedLoadVCalls,
+                                TypeTestAssumeConstVCalls,
+                                TypeCheckedLoadConstVCalls, VTableEdges, DT);
           continue;
         }
         // We should have named any anonymous globals
@@ -631,8 +661,8 @@ static void computeFunctionSummary(
       CallGraphEdges.takeVector(), TypeTests.takeVector(),
       TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
-      TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
-      std::move(Callsites), std::move(Allocs));
+      TypeCheckedLoadConstVCalls.takeVector(), VTableEdges.takeVector(),
+      std::move(ParamAccesses), std::move(Callsites), std::move(Allocs));
   if (NonRenamableLocal)
     CantBePromoted.insert(F.getGUID());
   Index.addGlobalValueSummary(F, std::move(FuncSummary));
@@ -890,6 +920,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
+                    ArrayRef<FunctionSummary::VTableTypeAndOffsetInfo>{},
                     ArrayRef<FunctionSummary::ParamAccess>{},
                     ArrayRef<CallsiteInfo>{}, ArrayRef<AllocInfo>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));

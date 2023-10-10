@@ -1300,10 +1300,13 @@ private:
 
 public:
   Value *CreateAdd(Value *LHS, Value *RHS, const Twine &Name = "",
-                   bool HasNUW = false, bool HasNSW = false) {
-    if (Value *V =
-            Folder.FoldNoWrapBinOp(Instruction::Add, LHS, RHS, HasNUW, HasNSW))
-      return V;
+                   bool HasNUW = false, bool HasNSW = false,
+                   bool AllowFold = true) {
+    if (AllowFold) {
+      if (Value *V = Folder.FoldNoWrapBinOp(Instruction::Add, LHS, RHS, HasNUW,
+                                            HasNSW))
+        return V;
+    }
     return CreateInsertNUWNSWBinOp(Instruction::Add, LHS, RHS, Name, HasNUW,
                                    HasNSW);
   }
@@ -1312,15 +1315,19 @@ public:
     return CreateAdd(LHS, RHS, Name, false, true);
   }
 
-  Value *CreateNUWAdd(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateAdd(LHS, RHS, Name, true, false);
+  Value *CreateNUWAdd(Value *LHS, Value *RHS, const Twine &Name = "",
+                      bool AllowFold = true) {
+    return CreateAdd(LHS, RHS, Name, true, false, AllowFold);
   }
 
   Value *CreateSub(Value *LHS, Value *RHS, const Twine &Name = "",
-                   bool HasNUW = false, bool HasNSW = false) {
-    if (Value *V =
-            Folder.FoldNoWrapBinOp(Instruction::Sub, LHS, RHS, HasNUW, HasNSW))
-      return V;
+                   bool HasNUW = false, bool HasNSW = false,
+                   bool AllowFold = true) {
+    if (AllowFold) {
+      if (Value *V = Folder.FoldNoWrapBinOp(Instruction::Sub, LHS, RHS, HasNUW,
+                                            HasNSW))
+        return V;
+    }
     return CreateInsertNUWNSWBinOp(Instruction::Sub, LHS, RHS, Name, HasNUW,
                                    HasNSW);
   }
@@ -1329,8 +1336,9 @@ public:
     return CreateSub(LHS, RHS, Name, false, true);
   }
 
-  Value *CreateNUWSub(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateSub(LHS, RHS, Name, true, false);
+  Value *CreateNUWSub(Value *LHS, Value *RHS, const Twine &Name = "",
+                      bool AllowFold = true) {
+    return CreateSub(LHS, RHS, Name, true, false, AllowFold);
   }
 
   Value *CreateMul(Value *LHS, Value *RHS, const Twine &Name = "",

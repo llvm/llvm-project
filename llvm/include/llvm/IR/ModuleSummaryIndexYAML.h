@@ -144,6 +144,7 @@ struct FunctionSummaryYaml {
       TypeCheckedLoadVCalls;
   std::vector<FunctionSummary::ConstVCall> TypeTestAssumeConstVCalls,
       TypeCheckedLoadConstVCalls;
+  std::vector<FunctionSummary::VTableTypeAndOffsetInfo> VTableEdges;
 };
 
 } // End yaml namespace
@@ -234,8 +235,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
           std::move(FSum.TypeCheckedLoadConstVCalls),
-          ArrayRef<FunctionSummary::ParamAccess>{}, ArrayRef<CallsiteInfo>{},
-          ArrayRef<AllocInfo>{}));
+          std::move(FSum.VTableEdges), ArrayRef<FunctionSummary::ParamAccess>{},
+          ArrayRef<CallsiteInfo>{}, ArrayRef<AllocInfo>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {

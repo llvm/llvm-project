@@ -427,9 +427,46 @@ static void computeImportForFunction(
     SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
     FunctionImporter::ImportMapTy &ImportList,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists,
-    FunctionImporter::ImportThresholdsTy &ImportThresholds) {
+    FunctionImporter::ImportThresholdsTy &ImportThresholds, StringRef ModName) {
   GVImporter.onImportingSummary(Summary);
   static int ImportCount = 0;
+  // If there is a local variable, make sure to import the copy in caller's
+  // module.
+  auto LocalNotInModule = [&](const GlobalValueSummary *GVS) -> bool {
+    return GlobalValue::isLocalLinkage(GVS->linkage()) &&
+           GVS->modulePath() != Summary.modulePath();
+  };
+  // When a vtable definition is imported, IR linker should import all the
+  // declarations.
+  if (!Summary.vtable_edges().empty()) {
+    for (const auto &edge : Summary.vtable_edges()) {
+      ValueInfo VTableVI = edge.VTableVI;
+      if (!VTableVI) {
+        continue;
+      }
+
+      // VTable already defined in destination module
+      //
+      // FIXME: Change to shouldImportGlobal
+      if (DefinedGVSummaries.count(VTableVI.getGUID()))
+        continue;
+
+      for (const auto &VTableSummary : VTableVI.getSummaryList()) {
+        const auto *GVS = dyn_cast<GlobalVarSummary>(VTableSummary.get());
+
+        if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
+            LocalNotInModule(GVS))
+          continue;
+
+        // import the declaration from module.
+        ImportList[VTableSummary->modulePath()].insert(VTableVI.getGUID());
+
+        if (ExportLists) {
+          (*ExportLists)[VTableSummary->modulePath()].insert(VTableVI);
+        }
+      }
+    }
+  }
   for (const auto &Edge : Summary.calls()) {
     ValueInfo VI = Edge.first;
     LLVM_DEBUG(dbgs() << " edge -> " << VI << " Threshold:" << Threshold
@@ -618,9 +655,9 @@ void ModuleImportsManager::computeImportForModule(
       // Skip import for global variables
       continue;
     LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
-    computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedGVSummaries, IsPrevailing, Worklist, GVI,
-                             ImportList, ExportLists, ImportThresholds);
+    computeImportForFunction(
+        *FuncSummary, Index, ImportInstrLimit, DefinedGVSummaries, IsPrevailing,
+        Worklist, GVI, ImportList, ExportLists, ImportThresholds, ModName);
   }
 
   // Process the newly imported functions and add callees to the worklist.
@@ -632,7 +669,7 @@ void ModuleImportsManager::computeImportForModule(
     if (auto *FS = dyn_cast<FunctionSummary>(Summary))
       computeImportForFunction(*FS, Index, Threshold, DefinedGVSummaries,
                                IsPrevailing, Worklist, GVI, ImportList,
-                               ExportLists, ImportThresholds);
+                               ExportLists, ImportThresholds, ModName);
   }
 
   // Print stats about functions considered but rejected for importing

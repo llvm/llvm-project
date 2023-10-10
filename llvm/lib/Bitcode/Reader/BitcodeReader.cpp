@@ -7171,6 +7171,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       PendingTypeCheckedLoadVCalls;
   std::vector<FunctionSummary::ConstVCall> PendingTypeTestAssumeConstVCalls,
       PendingTypeCheckedLoadConstVCalls;
+  std::vector<FunctionSummary::VTableTypeAndOffsetInfo> PendingVTableEdges;
   std::vector<FunctionSummary::ParamAccess> PendingParamAccesses;
 
   std::vector<CallsiteInfo> PendingCallsites;
@@ -7285,8 +7286,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls),
-          std::move(PendingParamAccesses), std::move(PendingCallsites),
-          std::move(PendingAllocs));
+          std::move(PendingVTableEdges), std::move(PendingParamAccesses),
+          std::move(PendingCallsites), std::move(PendingAllocs));
       FS->setModulePath(getThisModule()->first());
       FS->setOriginalName(std::get<1>(VIAndOriginalGUID));
       TheIndex.addGlobalValueSummary(std::get<0>(VIAndOriginalGUID),
@@ -7429,8 +7430,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls),
-          std::move(PendingParamAccesses), std::move(PendingCallsites),
-          std::move(PendingAllocs));
+          std::move(PendingVTableEdges), std::move(PendingParamAccesses),
+          std::move(PendingCallsites), std::move(PendingAllocs));
       LastSeenSummary = FS.get();
       LastSeenGUID = VI.getGUID();
       FS->setModulePath(ModuleIdMap[ModuleId]);
@@ -7615,6 +7616,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
+      break;
+    }
+    case bitc::FS_VTABLE_EDGES: {
+      assert(PendingVTableEdges.empty() && "VTableEdges not read yet");
+      for (unsigned I = 0; I != Record.size(); I += 4) {
+        // restore Record[I] to VI
+        StringRef TypeStr(Strtab.data() + Record[I + 1], Record[I + 2]);
+        PendingVTableEdges.push_back(
+            {std::get<0>(getValueInfoFromValueId(Record[I])), TypeStr,
+             Record[I + 3]});
+      }
       break;
     }
 

@@ -2626,6 +2626,11 @@ public:
   void printWPDRes(const WholeProgramDevirtResolution &WPDRes);
   void printTypeIdInfo(const FunctionSummary::TypeIdInfo &TIDInfo);
   void printVFuncId(const FunctionSummary::VFuncId VFId);
+  void printVTableEdges(
+      const std::vector<FunctionSummary::VTableTypeAndOffsetInfo> &VTableEdges,
+      const char *Tag);
+  void
+  printVTableEdge(const FunctionSummary::VTableTypeAndOffsetInfo &VTableEdge);
   void
   printNonConstVCalls(const std::vector<FunctionSummary::VFuncId> &VCallList,
                       const char *Tag);
@@ -3353,7 +3358,27 @@ void AssemblyWriter::printTypeIdInfo(
     printConstVCalls(TIDInfo.TypeCheckedLoadConstVCalls,
                      "typeCheckedLoadConstVCalls");
   }
+  if (!TIDInfo.VTableEdges.empty()) {
+    Out << TIDFS;
+    printVTableEdges(TIDInfo.VTableEdges, "vtableEdges");
+  }
   Out << ")";
+}
+
+void AssemblyWriter::printVTableEdge(
+    const FunctionSummary::VTableTypeAndOffsetInfo &VTableEdge) {
+  Out << "vTableEdge: (";
+  auto GUIDSlot = Machine.getGUIDSlot(VTableEdge.VTableVI.getGUID());
+  // FIXME: Change this to assert(GUIDSlot != -1)
+  if (GUIDSlot == -1) {
+    Out << "vtableGuid: " << VTableEdge.VTableVI.getGUID();
+  } else {
+    Out << "vtableGuid: ^" << GUIDSlot;
+  }
+  Out << ", " << VTableEdge.CompatibleTypeStr;
+  Out << ", " << VTableEdge.Offset;
+  Out << ")";
+  return;
 }
 
 void AssemblyWriter::printVFuncId(const FunctionSummary::VFuncId VFId) {
@@ -3402,6 +3427,20 @@ void AssemblyWriter::printConstVCalls(
       Out << ", ";
       printArgs(ConstVCall.Args);
     }
+    Out << ")";
+  }
+  Out << ")";
+}
+
+void AssemblyWriter::printVTableEdges(
+    const std::vector<FunctionSummary::VTableTypeAndOffsetInfo> &VTableEdges,
+    const char *Tag) {
+  Out << Tag << ": (";
+  FieldSeparator FS;
+  for (auto &VTableEdge : VTableEdges) {
+    Out << FS;
+    Out << "(";
+    printVTableEdge(VTableEdge);
     Out << ")";
   }
   Out << ")";

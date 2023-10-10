@@ -198,14 +198,25 @@ public:
     for (const auto &GUIDSummaryLists : *Index)
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists.second.SummaryList)
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get()))
+        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
           // a value id.
           for (auto &CallEdge : FS->calls())
-            if (!CallEdge.first.haveGVs() || !CallEdge.first.getValue())
+            if (!CallEdge.first.haveGVs() || !CallEdge.first.getValue()) {
               assignValueId(CallEdge.first.getGUID());
+            }
+
+          for (auto &VTable : FS->vtable_edges()) {
+            ValueInfo VTableVI = VTable.VTableVI;
+            assert(VTableVI && "VTableVI doesn't exist when writing per-module "
+                               "function summary");
+            if (!VTableVI.haveGVs() || !VTableVI.getValue()) {
+              assignValueId(VTableVI.getGUID());
+            }
+          }
+        }
   }
 
 protected:
@@ -3761,8 +3772,9 @@ void IndexBitcodeWriter::writeModStrings() {
 /// a function summary entry (whether per-module or combined).
 template <typename Fn>
 static void writeFunctionTypeMetadataRecords(BitstreamWriter &Stream,
-                                             FunctionSummary *FS,
-                                             Fn GetValueID) {
+                                             FunctionSummary *FS, Fn GetValueID,
+                                             StringTableBuilder &StrtabBuilder,
+                                             bool PerModule) {
   if (!FS->type_tests().empty())
     Stream.EmitRecord(bitc::FS_TYPE_TESTS, FS->type_tests());
 
@@ -3982,9 +3994,38 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
 
   writeFunctionTypeMetadataRecords(
-      Stream, FS, [&](const ValueInfo &VI) -> std::optional<unsigned> {
+      Stream, FS,
+      [&](const ValueInfo &VI) -> std::optional<unsigned> {
         return {VE.getValueID(VI.getValue())};
-      });
+      },
+      StrtabBuilder, true);
+
+  SmallVector<uint64_t, 64> Record;
+  // The resolved information produced by thin-link will be represented using
+  // different formats.
+  auto WriteVTableEdges =
+      [&](uint64_t Ty,
+          ArrayRef<FunctionSummary::VTableTypeAndOffsetInfo> VTableEdges) {
+        if (VTableEdges.empty())
+          return;
+        Record.clear();
+        for (auto &Edge : VTableEdges) {
+          assert(Edge.VTableVI && "Expect VTableVI for an edge");
+
+          std::optional<unsigned> ValueID = getValueId(Edge.VTableVI);
+
+          assert(ValueID && "Expect ValueID for an VTableEdge");
+
+          Record.push_back(*ValueID);
+          // Record.push_back(Edge.VTableGUID);
+          Record.push_back(StrtabBuilder.add(Edge.CompatibleTypeStr));
+          Record.push_back(Edge.CompatibleTypeStr.size());
+          Record.push_back(Edge.Offset);
+        }
+        Stream.EmitRecord(Ty, Record);
+      };
+
+  WriteVTableEdges(bitc::FS_VTABLE_EDGES, FS->vtable_edges());
 
   writeFunctionHeapProfileRecords(
       Stream, FS, CallsiteAbbrev, AllocAbbrev,
@@ -4448,7 +4489,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     };
 
     auto *FS = cast<FunctionSummary>(S);
-    writeFunctionTypeMetadataRecords(Stream, FS, GetValueId);
+    writeFunctionTypeMetadataRecords(Stream, FS, GetValueId, StrtabBuilder,
+                                     false);
     getReferencedTypeIds(FS, ReferencedTypeIds);
 
     writeFunctionHeapProfileRecords(

@@ -453,7 +453,10 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     Types.clear();
     G.getMetadata(LLVMContext::MD_type, Types);
     if (!Types.empty()) {
-      MD5VTableMap.emplace_back(G.getGUID(), &G);
+      if (Error E = addVTableName(G.getName()))
+        return E;
+
+      MD5VTableMap.emplace_back(GlobalValue::getGUID(G.getName()), &G);
     }
   }
   Sorted = false;

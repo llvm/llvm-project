@@ -8864,7 +8864,8 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       std::move(TypeIdInfo.TypeCheckedLoadVCalls),
       std::move(TypeIdInfo.TypeTestAssumeConstVCalls),
       std::move(TypeIdInfo.TypeCheckedLoadConstVCalls),
-      std::move(ParamAccesses), std::move(Callsites), std::move(Allocs));
+      std::move(TypeIdInfo.VTableEdges), std::move(ParamAccesses),
+      std::move(Callsites), std::move(Allocs));
 
   FS->setModulePath(ModulePath);
 

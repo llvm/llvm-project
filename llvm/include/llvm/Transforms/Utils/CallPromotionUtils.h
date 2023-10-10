@@ -14,12 +14,28 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CALLPROMOTIONUTILS_H
 
+#include "llvm/IR/GlobalVariable.h"
+
 namespace llvm {
 class CallBase;
 class CastInst;
 class Function;
 class MDNode;
 class Value;
+
+// This is a per callsite information.
+struct VTableCandidate {
+  Instruction *VTableInstr; // the instruction that's instrumented
+  GlobalVariable *VTableVariable;
+  uint64_t AddressPointOffset; // Address point offset.
+  Function *TargetFunction;
+  uint64_t VTableValCount; // compute percentage
+
+  VTableCandidate(Instruction *I, GlobalVariable *GV, uint32_t Offset,
+                  Function *F, uint64_t C)
+      : VTableInstr(I), VTableVariable(GV), AddressPointOffset(Offset),
+        TargetFunction(F), VTableValCount(C) {}
+};
 
 /// Return true if the given indirect call site can be made to call \p Callee.
 ///
@@ -39,7 +55,8 @@ bool isLegalToPromote(const CallBase &CB, Function *Callee,
 /// RetBitCast is non-null, it will be used to store the return value bitcast,
 /// if created.
 CallBase &promoteCall(CallBase &CB, Function *Callee,
-                      CastInst **RetBitCast = nullptr);
+                      CastInst **RetBitCast = nullptr,
+                      bool DirectCalleeAlreadySet = false);
 
 /// Promote the given indirect call site to conditionally call \p Callee.
 ///
@@ -50,6 +67,17 @@ CallBase &promoteCall(CallBase &CB, Function *Callee,
 /// new conditional branch.
 CallBase &promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
                                     MDNode *BranchWeights = nullptr);
+
+/// Promote the given indirect call to a conditional call.
+/// Before:
+///
+/// After:
+CallBase &promoteIndirectCallWithVTableInfo(
+    CallBase &CB, Function *TargetFunction,
+    const SmallVector<VTableCandidate> &VTableCandidates,
+    const std::vector<int> &VTableIndices,
+    const std::unordered_map<int, Value *> &VTableOffsetToValueMap,
+    uint64_t &SumPromotedVTableCount, MDNode *BranchWeights);
 
 /// Try to promote (devirtualize) a virtual call on an Alloca. Return true on
 /// success.

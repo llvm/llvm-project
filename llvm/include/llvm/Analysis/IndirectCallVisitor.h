@@ -81,6 +81,21 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
     }
   }
 
+  // write a helper function to vtable ptr for an indirect call.
+  static Instruction *getAnnotatedVTableInstruction(CallBase *CB) {
+    assert(CB != nullptr && "Caller guaranteed");
+    LoadInst *LI = dyn_cast<LoadInst>(CB->getCalledOperand());
+
+    if (LI != nullptr) {
+      Value *FuncPtr = LI->getPointerOperand(); // GEP (or bitcast)
+      Value *VTablePtr = FuncPtr->stripInBoundsConstantOffsets();
+      if (VTablePtr != nullptr && isa<Instruction>(VTablePtr)) {
+        return cast<Instruction>(VTablePtr);
+      }
+    }
+    return nullptr;
+  }
+
 private:
   // Keeps track of the pointers that are tested by llvm type intrinsics for
   // look up.

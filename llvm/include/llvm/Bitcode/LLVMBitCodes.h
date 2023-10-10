@@ -319,6 +319,9 @@ enum GlobalValueSummarySymtabCodes {
   //  numver x version]
   FS_COMBINED_ALLOC_INFO = 29,
   FS_STACK_IDS = 30,
+
+  // [n x (vtable-guid, compatible-type-guid, offset-from-address-point)]
+  FS_VTABLE_EDGES = 31,
 };
 
 enum MetadataCodes {
