@@ -39,7 +39,7 @@ namespace sparse_tensor {
 /// Return `true` if one of the given types is a sparse tensor type.
 static bool containsSparseTensor(TypeRange types) {
   for (Type t : types)
-    if (getSparseTensorEncoding(t))
+    if (isa<TensorType>(t) && getSparseTensorEncoding(t))
       return true;
   return false;
 }
@@ -97,7 +97,8 @@ public:
       return false;
     });
 
-    if (failed(bufferization::bufferizeOp(getOperation(), updatedOptions)))
+    if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
+                                                updatedOptions)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
@@ -154,7 +155,6 @@ public:
         pm.addPass(createSparseTensorCodegenPass(createSparseDeallocs,
                                                  enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
-        pm.addPass(createStorageSpecifierToLLVMPass());
       }
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();
