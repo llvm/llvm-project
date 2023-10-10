@@ -64,6 +64,7 @@ set(FLANG_TEST_DEPENDS
   FortranRuntime
   Fortran_main
   FortranDecimal
+  clang
 )
 if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
   list(APPEND FLANG_TEST_DEPENDS Bye)
