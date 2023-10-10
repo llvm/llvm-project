@@ -190,13 +190,14 @@ void Instrumentation::createLeafNodeDescription(FunctionDescription &FuncDesc,
   FuncDesc.LeafNodes.emplace_back(IN);
 }
 
-InstructionListType
-Instrumentation::createInstrumentationSnippet(BinaryContext &BC, bool IsLeaf) {
+InstructionListType Instrumentation::createInstrumentationSnippet(
+    BinaryContext &BC, bool IsLeaf, MCPlusBuilder::AllocatorIdTy AllocatorId) {
   auto L = BC.scopeLock();
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol("InstrEntry");
   Summary->Counters.emplace_back(Label);
   return BC.MIB->createInstrIncMemory(Label, BC.Ctx.get(), IsLeaf,
-                                      BC.AsmInfo->getCodePointerSize());
+                                      BC.AsmInfo->getCodePointerSize(),
+                                      AllocatorId);
 }
 
 // Helper instruction sequence insertion function
@@ -210,14 +211,13 @@ insertInstructions(InstructionListType &Instrs, BinaryBasicBlock &BB,
   return Iter;
 }
 
-void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
-                                         BinaryBasicBlock::iterator Iter,
-                                         bool IsLeaf,
-                                         FunctionDescription &FuncDesc,
-                                         uint32_t Node) {
+void Instrumentation::instrumentLeafNode(
+    BinaryBasicBlock &BB, BinaryBasicBlock::iterator Iter, bool IsLeaf,
+    FunctionDescription &FuncDesc, uint32_t Node,
+    MCPlusBuilder::AllocatorIdTy AllocatorId) {
   createLeafNodeDescription(FuncDesc, Node);
   InstructionListType CounterInstrs = createInstrumentationSnippet(
-      BB.getFunction()->getBinaryContext(), IsLeaf);
+      BB.getFunction()->getBinaryContext(), IsLeaf, AllocatorId);
   insertInstructions(CounterInstrs, BB, Iter);
 }
 
@@ -247,7 +247,8 @@ bool Instrumentation::instrumentOneTarget(
     BinaryBasicBlock::iterator &Iter, BinaryFunction &FromFunction,
     BinaryBasicBlock &FromBB, uint32_t From, BinaryFunction &ToFunc,
     BinaryBasicBlock *TargetBB, uint32_t ToOffset, bool IsLeaf, bool IsInvoke,
-    FunctionDescription *FuncDesc, uint32_t FromNodeID, uint32_t ToNodeID) {
+    FunctionDescription *FuncDesc, uint32_t FromNodeID, uint32_t ToNodeID,
+    MCPlusBuilder::AllocatorIdTy AllocatorId) {
   BinaryContext &BC = FromFunction.getBinaryContext();
   {
     auto L = BC.scopeLock();
@@ -263,7 +264,8 @@ bool Instrumentation::instrumentOneTarget(
       return false;
   }
 
-  InstructionListType CounterInstrs = createInstrumentationSnippet(BC, IsLeaf);
+  InstructionListType CounterInstrs =
+      createInstrumentationSnippet(BC, IsLeaf, AllocatorId);
 
   const MCInst &Inst = *Iter;
   if (BC.MIB->isCall(Inst)) {
@@ -422,7 +424,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
           instrumentOneTarget(SplitWorklist, SplitInstrs, I, Function, BB,
                               FromOffset, *TargetFunc, TargetBB, ToOffset,
                               IsLeafFunction, IsInvokeBlock, FuncDesc,
-                              BBToID[&BB]);
+                              BBToID[&BB], 0, AllocId);
         }
         continue;
       }
@@ -438,7 +440,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
         instrumentOneTarget(SplitWorklist, SplitInstrs, I, Function, BB,
                             FromOffset, *TargetFunc, TargetBB, ToOffset,
                             IsLeafFunction, IsInvokeBlock, FuncDesc,
-                            BBToID[&BB], BBToID[TargetBB]);
+                            BBToID[&BB], BBToID[TargetBB], AllocId);
         continue;
       }
 
@@ -455,7 +457,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
           instrumentOneTarget(
               SplitWorklist, SplitInstrs, I, Function, BB, FromOffset, Function,
               &*Succ, Succ->getInputOffset(), IsLeafFunction, IsInvokeBlock,
-              FuncDesc, BBToID[&BB], BBToID[&*Succ]);
+              FuncDesc, BBToID[&BB], BBToID[&*Succ], AllocId);
         }
         continue;
       }
@@ -498,7 +500,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       instrumentOneTarget(SplitWorklist, SplitInstrs, I, Function, BB,
                           FromOffset, Function, FTBB, FTBB->getInputOffset(),
                           IsLeafFunction, IsInvokeBlock, FuncDesc, BBToID[&BB],
-                          BBToID[FTBB]);
+                          BBToID[FTBB], AllocId);
     }
   } // End of BBs loop
 
@@ -508,7 +510,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       BinaryBasicBlock &BB = *BBI;
       if (STOutSet[&BB].size() == 0)
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
-                           BBToID[&BB]);
+                           BBToID[&BB], AllocId);
     }
   }
 
