@@ -108,10 +108,7 @@ KnownBits analyzeKnownBitsFromAndXorOr(
 
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
-                         const DataLayout &DL, AssumptionCache *AC = nullptr,
-                         const Instruction *CxtI = nullptr,
-                         const DominatorTree *DT = nullptr,
-                         bool UseInstrInfo = true);
+                         const SimplifyQuery &SQ);
 
 /// Return true if the given value is known to have exactly one bit set when
 /// defined. For vectors return true if every element is known to be a power
