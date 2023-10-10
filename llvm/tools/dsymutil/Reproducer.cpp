@@ -14,7 +14,7 @@ using namespace llvm::dsymutil;
 
 static std::string createReproducerDir(std::error_code &EC) {
   SmallString<128> Root;
-  if (const char *Path = getenv("DSYMUTIL_REPRODUCER_PATH")) {
+  if (const char *Path = getenv("LLVM_DIAGNOSTIC_DIR")) {
     Root.assign(Path);
     EC = sys::fs::create_directory(Root);
   } else {
