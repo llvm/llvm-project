@@ -42,12 +42,9 @@ define amdgpu_gfx void @gfx_func() {
 ; SDAG-NEXT:    v_writelane_b32 v40, s29, 25
 ; SDAG-NEXT:    v_writelane_b32 v40, s30, 26
 ; SDAG-NEXT:    v_writelane_b32 v40, s31, 27
-; SDAG-NEXT:    s_getpc_b64 s[34:35]
-; SDAG-NEXT:    s_add_u32 s34, s34, extern_c_func@gotpcrel32@lo+4
-; SDAG-NEXT:    s_addc_u32 s35, s35, extern_c_func@gotpcrel32@hi+12
-; SDAG-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
+; SDAG-NEXT:    s_mov_b32 s35, extern_c_func@abs32@hi
+; SDAG-NEXT:    s_mov_b32 s34, extern_c_func@abs32@lo
 ; SDAG-NEXT:    s_mov_b64 s[8:9], 0
-; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; SDAG-NEXT:    v_readlane_b32 s30, v40, 26
 ; SDAG-NEXT:    v_readlane_b32 s31, v40, 27
@@ -122,12 +119,9 @@ define amdgpu_gfx void @gfx_func() {
 ; GISEL-NEXT:    v_writelane_b32 v40, s29, 25
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 26
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 27
-; GISEL-NEXT:    s_getpc_b64 s[34:35]
-; GISEL-NEXT:    s_add_u32 s34, s34, extern_c_func@gotpcrel32@lo+4
-; GISEL-NEXT:    s_addc_u32 s35, s35, extern_c_func@gotpcrel32@hi+12
-; GISEL-NEXT:    s_load_dwordx2 s[34:35], s[34:35], 0x0
+; GISEL-NEXT:    s_mov_b32 s34, extern_c_func@abs32@lo
+; GISEL-NEXT:    s_mov_b32 s35, extern_c_func@abs32@hi
 ; GISEL-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[34:35]
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 26
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 27
