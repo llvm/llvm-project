@@ -202,9 +202,7 @@ KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
 }
 
 bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
-                               const DataLayout &DL, AssumptionCache *AC,
-                               const Instruction *CxtI, const DominatorTree *DT,
-                               bool UseInstrInfo) {
+                               const SimplifyQuery &SQ) {
   assert(LHS->getType() == RHS->getType() &&
          "LHS and RHS should have the same type");
   assert(LHS->getType()->isIntOrIntVectorTy() &&
@@ -255,8 +253,8 @@ bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
   IntegerType *IT = cast<IntegerType>(LHS->getType()->getScalarType());
   KnownBits LHSKnown(IT->getBitWidth());
   KnownBits RHSKnown(IT->getBitWidth());
-  computeKnownBits(LHS, LHSKnown, DL, 0, AC, CxtI, DT, UseInstrInfo);
-  computeKnownBits(RHS, RHSKnown, DL, 0, AC, CxtI, DT, UseInstrInfo);
+  ::computeKnownBits(LHS, LHSKnown, 0, SQ);
+  ::computeKnownBits(RHS, RHSKnown, 0, SQ);
   return KnownBits::haveNoCommonBitsSet(LHSKnown, RHSKnown);
 }
 
