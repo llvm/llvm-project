@@ -378,6 +378,10 @@ Bug Fixes in This Version
 - Fix crash in evaluating ``constexpr`` value for invalid template function.
   Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
 
+- Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
+  shift operation, could result in missing warnings about
+  ``shift count >= width of type`` or internal compiler error.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
