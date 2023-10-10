@@ -14,7 +14,7 @@
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[VAR_Y:.*]] = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
 !CHECK: omp.atomic.read %[[VAR_X]] = %[[VAR_Y]] memory_order(acquire)  hint(uncontended) : !fir.ref<i32>, i32
-!CHECK: omp.atomic.read %[[VAR_A]] = %[[VAR_B]] memory_order(relaxed) hint(none)  : !fir.ref<!fir.char<1>>, !fir.char<1>
+!CHECK: omp.atomic.read %[[VAR_A]] = %[[VAR_B]] memory_order(relaxed) : !fir.ref<!fir.char<1>>, !fir.char<1>
 !CHECK: omp.atomic.read %[[VAR_C]] = %[[VAR_D]] memory_order(seq_cst)  hint(contended) : !fir.ref<!fir.logical<4>>, !fir.logical<4>
 !CHECK: omp.atomic.read %[[VAR_E]] = %[[VAR_F]] hint(speculative) : !fir.ref<!fir.char<1,8>>, !fir.char<1,8>
 !CHECK: omp.atomic.read %[[VAR_G]] = %[[VAR_H]] hint(nonspeculative) : !fir.ref<f32>, f32
