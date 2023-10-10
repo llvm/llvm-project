@@ -16865,12 +16865,11 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
         LangOpts.CPlusPlus11? diag::ext_offsetof_non_standardlayout_type
                             : diag::ext_offsetof_non_pod_type;
 
-      if (!IsSafe && !DidWarnAboutNonPOD &&
-          DiagRuntimeBehavior(BuiltinLoc, nullptr,
-                              PDiag(DiagID)
-                              << SourceRange(Components[0].LocStart, OC.LocEnd)
-                              << CurrentType))
+      if (!IsSafe && !DidWarnAboutNonPOD && !isUnevaluatedContext()) {
+        Diag(BuiltinLoc, DiagID)
+            << SourceRange(Components[0].LocStart, OC.LocEnd) << CurrentType;
         DidWarnAboutNonPOD = true;
+      }
     }
 
     // Look for the field.
