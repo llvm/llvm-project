@@ -104,7 +104,6 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
   case SP::GDOP_LDrr:
   case SP::GDOP_LDXrr:
   case SP::TLS_ADDrr:
-  case SP::TLS_ADDXrr:
   case SP::TLS_LDrr:
   case SP::TLS_LDXrr:  SymOpNo = 3; break;
   }
