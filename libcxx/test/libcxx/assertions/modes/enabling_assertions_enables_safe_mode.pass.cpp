@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(hardening): remove in LLVM 19.
+// TODO(hardening): remove in LLVM 20.
 // This test ensures that enabling assertions now enables the safe mode.
 
 // Other hardening modes would additionally trigger the error that they are mutually exclusive.
@@ -15,8 +15,7 @@
 // UNSUPPORTED: c++03, !has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// Ignore the warning about `_LIBCPP_ENABLE_ASSERTIONS` being deprecated.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-error -D_LIBCPP_ENABLE_ASSERTIONS=1
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <cassert>
 #include "check_assertion.h"
