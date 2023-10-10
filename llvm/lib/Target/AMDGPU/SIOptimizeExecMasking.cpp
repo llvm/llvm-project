@@ -594,10 +594,14 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
 
   // The kill flags may no longer be correct.
-  if (Src0->isReg())
-    MRI->clearKillFlags(Src0->getReg());
-  if (Src1->isReg())
-    MRI->clearKillFlags(Src1->getReg());
+  if (Src0->isReg()) {
+    for (MCRegAliasIterator I(Src0->getReg(), TRI, true); I.isValid(); ++I)
+      MRI->clearKillFlags(*I);
+  }
+  if (Src1->isReg()) {
+    for (MCRegAliasIterator I(Src1->getReg(), TRI, true); I.isValid(); ++I)
+      MRI->clearKillFlags(*I);
+  }
 
   SaveExecInstr.eraseFromParent();
   VCmp.eraseFromParent();
