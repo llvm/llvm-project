@@ -158,10 +158,6 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case X86::GR16RegClassID:
     case X86::GR32RegClassID:
     case X86::GR64RegClassID:
-    case X86::GR8_NOREX2RegClassID:
-    case X86::GR16_NOREX2RegClassID:
-    case X86::GR32_NOREX2RegClassID:
-    case X86::GR64_NOREX2RegClassID:
     case X86::RFP32RegClassID:
     case X86::RFP64RegClassID:
     case X86::RFP80RegClassID:
@@ -610,14 +606,6 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasAVX512()) {
     for (unsigned n = 16; n != 32; ++n) {
       for (MCRegAliasIterator AI(X86::XMM0 + n, this, true); AI.isValid(); ++AI)
-        Reserved.set(*AI);
-    }
-  }
-
-  // Reserve the extended general purpose registers.
-  if (!Is64Bit || !MF.getSubtarget<X86Subtarget>().hasEGPR()) {
-    for (unsigned n = 0; n != 16; ++n) {
-      for (MCRegAliasIterator AI(X86::R16 + n, this, true); AI.isValid(); ++AI)
         Reserved.set(*AI);
     }
   }

@@ -150,17 +150,6 @@ class X86InstrInfo final : public X86GenInstrInfo {
 public:
   explicit X86InstrInfo(X86Subtarget &STI);
 
-  /// Given a machine instruction descriptor, returns the register
-  /// class constraint for OpNum, or NULL. Returned register class
-  /// may be different from the definition in the TD file, e.g.
-  /// GR*RegClass (definition in TD file)
-  /// ->
-  /// GR*_NOREX2RegClass (Returned register class)
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI,
-              const MachineFunction &MF) const override;
-
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
