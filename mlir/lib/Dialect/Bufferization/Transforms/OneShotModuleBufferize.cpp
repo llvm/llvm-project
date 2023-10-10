@@ -238,7 +238,8 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 
 /// Return the func::FuncOp called by `callOp`.
 static func::FuncOp getCalledFunction(func::CallOp callOp) {
-  SymbolRefAttr sym = llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
+  SymbolRefAttr sym =
+      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<func::FuncOp>(
@@ -439,12 +440,19 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   for (func::FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    bool copyBeforeWrite =
-        options.copyBeforeWrite ||
-        llvm::is_contained(options.noAnalysisFuncFilter, funcOp.getSymName());
-    if (failed(bufferizeOp(funcOp, options, copyBeforeWrite,
-                           /*opFilter=*/nullptr, statistics)))
-      return failure();
+
+    if (llvm::is_contained(options.noAnalysisFuncFilter, funcOp.getSymName())) {
+      // This function was not analyzed and RaW conflicts were not resolved.
+      // Buffer copies must be inserted before every write.
+      OneShotBufferizationOptions updatedOptions = options;
+      updatedOptions.copyBeforeWrite = true;
+      if (failed(bufferizeOp(funcOp, updatedOptions, statistics)))
+        return failure();
+    } else {
+      if (failed(bufferizeOp(funcOp, options, statistics)))
+        return failure();
+    }
+
     // Change buffer return types to more precise layout maps.
     if (options.inferFunctionResultLayout)
       foldMemRefCasts(funcOp);
