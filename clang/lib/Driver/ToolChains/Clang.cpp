@@ -2812,6 +2812,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-mlimit-float-precision");
     CmdArgs.push_back(A->getValue());
   }
+  if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
+    CmdArgs.push_back("-fcx-limited-range");
 
   for (const Arg *A : Args) {
     auto optID = A->getOption().getID();

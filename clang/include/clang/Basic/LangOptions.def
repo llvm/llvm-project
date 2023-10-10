@@ -219,6 +219,8 @@ BENIGN_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization wit
 BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
+LANGOPT(CxLimitedRange, 1, 0, "Enable use of algebraic expansions of complex arithmetics.")
+
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 
 BENIGN_LANGOPT(AccessControl     , 1, 1, "C++ access control")

@@ -904,6 +904,11 @@ PRAGMA_ANNOTATION(pragma_fenv_access_ms)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_round)
 
+// Annotation for #pragma STDC CX_LIMITED_RANGE
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+PRAGMA_ANNOTATION(pragma_cx_limited_range)
+
 // Annotation for #pragma float_control
 // The lexer produces these so that they only take effect when the parser
 // handles them.
