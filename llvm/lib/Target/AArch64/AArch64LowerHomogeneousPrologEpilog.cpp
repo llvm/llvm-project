@@ -219,9 +219,14 @@ static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
     else
       Opc = IsPaired ? AArch64::STPXi : AArch64::STRXui;
   }
-  // Fix the implicit scale for non-pair cases.
-  if (!IsPaired)
-    Offset *= 8;
+  // The implicit scale for Offset is 8.
+  TypeSize Scale(0U, false);
+  unsigned Width;
+  int64_t MinOffset, MaxOffset;
+  bool Success =
+      AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
+  assert(Success && "Invalid Opcode");
+  Offset *= (8 / (int)Scale);
 
   MachineInstrBuilder MIB = BuildMI(MBB, Pos, DebugLoc(), TII.get(Opc));
   if (IsPreDec)
@@ -256,9 +261,14 @@ static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
     else
       Opc = IsPaired ? AArch64::LDPXi : AArch64::LDRXui;
   }
-  // Fix the implicit scale for non-pair cases.
-  if (!IsPaired)
-    Offset *= 8;
+  // The implicit scale for Offset is 8.
+  TypeSize Scale(0U, false);
+  unsigned Width;
+  int64_t MinOffset, MaxOffset;
+  bool Success =
+      AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
+  assert(Success && "Invalid Opcode");
+  Offset *= (8 / (int)Scale);
 
   MachineInstrBuilder MIB = BuildMI(MBB, Pos, DebugLoc(), TII.get(Opc));
   if (IsPostDec)
