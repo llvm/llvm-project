@@ -4587,15 +4587,12 @@ void RewriteInstance::updateELFSymbolTable(
     }
   }
 
-  assert((!NumHotTextSymsUpdated || NumHotTextSymsUpdated == 2) &&
-         "either none or both __hot_start/__hot_end symbols were expected");
-  assert((!NumHotDataSymsUpdated || NumHotDataSymsUpdated == 2) &&
-         "either none or both __hot_data_start/__hot_data_end symbols were "
-         "expected");
+  auto AddSymbol = [&](const StringRef &Name, uint64_t Address) {
+    if (!Address)
+      return;
 
-  auto addSymbol = [&](const std::string &Name) {
     ELFSymTy Symbol;
-    Symbol.st_value = getNewValueForSymbol(Name);
+    Symbol.st_value = Address;
     Symbol.st_shndx = ELF::SHN_ABS;
     Symbol.st_name = AddToStrTab(Name);
     Symbol.st_size = 0;
@@ -4608,14 +4605,30 @@ void RewriteInstance::updateELFSymbolTable(
     Symbols.emplace_back(Symbol);
   };
 
+  // Add runtime library start and fini address symbols
+  if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary()) {
+    AddSymbol("__bolt_runtime_start", RtLibrary->getRuntimeStartAddress());
+    AddSymbol("__bolt_runtime_fini", RtLibrary->getRuntimeFiniAddress());
+  }
+
+  assert((!NumHotTextSymsUpdated || NumHotTextSymsUpdated == 2) &&
+         "either none or both __hot_start/__hot_end symbols were expected");
+  assert((!NumHotDataSymsUpdated || NumHotDataSymsUpdated == 2) &&
+         "either none or both __hot_data_start/__hot_data_end symbols were "
+         "expected");
+
+  auto AddEmittedSymbol = [&](const StringRef &Name) {
+    AddSymbol(Name, getNewValueForSymbol(Name));
+  };
+
   if (opts::HotText && !NumHotTextSymsUpdated) {
-    addSymbol("__hot_start");
-    addSymbol("__hot_end");
+    AddEmittedSymbol("__hot_start");
+    AddEmittedSymbol("__hot_end");
   }
 
   if (opts::HotData && !NumHotDataSymsUpdated) {
-    addSymbol("__hot_data_start");
-    addSymbol("__hot_data_end");
+    AddEmittedSymbol("__hot_data_start");
+    AddEmittedSymbol("__hot_data_end");
   }
 
   // Put local symbols at the beginning.
