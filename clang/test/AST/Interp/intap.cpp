@@ -4,11 +4,18 @@
 // RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
 
 
+using MaxBitInt = _BitInt(8388608);
+
 constexpr _BitInt(2) A = 0;
 constexpr _BitInt(2) B = A + 1;
 constexpr _BitInt(2) C = B + 1; // expected-warning {{from 2 to -2}} \
                                 // ref-warning {{from 2 to -2}}
 static_assert(C == -2, "");
+
+
+constexpr MaxBitInt A_ = 0;
+constexpr MaxBitInt B_ = A_ + 1;
+static_assert(B_ == 1, "");
 
 
 #ifdef __SIZEOF_INT128__
