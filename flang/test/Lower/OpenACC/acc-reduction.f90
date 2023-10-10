@@ -3,6 +3,35 @@
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_max_ref_UxUxf32 : !fir.ref<!fir.array<?x?xf32>> reduction_operator <max> init {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index):
+! HLFIR:   %[[CST:.*]] = arith.constant -1.401300e-45 : f32
+! HLFIR:   %[[SHAPE:.*]] = fir.shape %arg1, %arg2 : (index, index) -> !fir.shape<2>
+! HLFIR:   %[[TEMP:.*]] = fir.alloca !fir.array<?x?xf32>, %arg1, %arg2
+! HLFIR:   %[[DECL:.*]]:2 = hlfir.declare %[[TEMP]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! HLFIR:   hlfir.assign %[[CST]] to %[[DECL]]#0 : f32, !fir.box<!fir.array<?x?xf32>>
+! HLFIR:   acc.yield %[[DECL]]#0 : !fir.box<!fir.array<?x?xf32>>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[V1:.*]]: !fir.ref<!fir.array<?x?xf32>>, %[[V2:.*]]: !fir.ref<!fir.array<?x?xf32>>, %[[LB0:.*]]: index, %[[UB0:.*]]: index, %[[STEP0:.*]]: index, %[[LB1:.*]]: index, %[[UB1:.*]]: index, %[[STEP1:.*]]: index):
+! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+! HLFIR:   %[[DECL_V1:.*]]:2 = hlfir.declare %[[V1]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! HLFIR:   %[[DECL_V2:.*]]:2 = hlfir.declare %[[V2]](%[[SHAPE]]) {uniq_name = ""} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! HLFIR:   %[[DES_V1:.*]] = hlfir.designate %[[DECL_V1]]#0 (%arg2:%arg3:%arg4, %arg5:%arg6:%arg7)  shape %10 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+! HLFIR:   %[[DES_V2:.*]] = hlfir.designate %[[DECL_V2]]#0 (%arg2:%arg3:%arg4, %arg5:%arg6:%arg7)  shape %10 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+! HLFIR:   %[[ELEMENTAL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
+! HLFIR:   ^bb0(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index):
+! HLFIR:     %[[D1:.*]] = hlfir.designate %13 (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+! HLFIR:     %[[D2:.*]] = hlfir.designate %14 (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+! HLFIR:     %[[LOAD1:.*]] = fir.load %[[D1]] : !fir.ref<f32>
+! HLFIR:     %[[LOAD2:.*]] = fir.load %[[D2]] : !fir.ref<f32>
+! HLFIR:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD1]], %[[LOAD2]] : f32
+! HLFIR:     %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD1]], %[[LOAD2]] : f32
+! HLFIR:     hlfir.yield_element %[[SELECT]] : f32
+! HLFIR:   }
+! HLFIR:   hlfir.assign %[[ELEMENTAL]] to %[[DECL_V1]]#0 : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
+! HLFIR:   acc.yield %[[V1]] : !fir.ref<!fir.array<?x?xf32>>
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_max_box_ptr_Uxf32 : !fir.box<!fir.ptr<!fir.array<?xf32>>> reduction_operator <max> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.box<!fir.ptr<!fir.array<?xf32>>>):
 ! CHECK: } combiner {
@@ -290,8 +319,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_max_section_ext100_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant -1.401300e-45 : f32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 ! CHECK:   %[[LB:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB:.*]] = arith.constant 99 : index
@@ -338,8 +367,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_max_section_ext100xext10_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <max> init {
 ! CHECK: ^bb0(%arg0: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant -2147483648 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xi32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xi32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xi32>>, !fir.ref<!fir.array<100x10xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10xi32>>
 ! CHECK: } combiner {
@@ -384,8 +413,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_min_section_ext100xext10_ref_100x10xf32 : !fir.ref<!fir.array<100x10xf32>> reduction_operator <min> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10xf32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 3.40282347E+38 : f32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xf32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xf32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xf32>>, !fir.ref<!fir.array<100x10xf32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10xf32>>
 ! CHECK: } combiner {
@@ -430,8 +459,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_min_section_ext100_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <min> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 2147483647 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xi32>>
 ! CHECK: } combiner {
@@ -487,8 +516,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_mul_section_ext100_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <mul> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 1 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xi32>>
 ! CHECK: } combiner {
@@ -526,8 +555,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xf32>>
 ! CHECK: } combiner {
@@ -565,8 +594,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100xext10xext2_ref_100x10x2xi32 : !fir.ref<!fir.array<100x10x2xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10x2xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 0 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10x2xi32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shape<3>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10x2xi32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10x2xi32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<100x10x2xi32>>, !fir.ref<!fir.array<100x10x2xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10x2xi32>>
 ! CHECK: } combiner {
@@ -598,8 +627,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100xext10_ref_100x10xi32 : !fir.ref<!fir.array<100x10xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100x10xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 0 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xi32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100x10xi32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100x10xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<100x10xi32>>, !fir.ref<!fir.array<100x10xi32>>)
 ! HLFIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100x10xi32>>
 ! CHECK: } combiner {
@@ -626,8 +655,8 @@
 ! CHECK-LABEL: acc.reduction.recipe @reduction_add_section_ext100_ref_100xi32 : !fir.ref<!fir.array<100xi32>> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xi32>>):
 ! CHECK:   %[[INIT:.*]] = arith.constant 0 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32>
 ! HLFIR:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32>
 ! HLFIR:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]](%[[SHAPE]]) {uniq_name = "acc.reduction.init"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<100xi32>>)
 ! HFLIR:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.array<100xi32>>
 ! CHECK: } combiner {
@@ -1134,13 +1163,13 @@ end subroutine
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
 ! HLFIR: acc.parallel reduction(@reduction_add_box_Uxi32 -> %[[RED:.*]] : !fir.ref<!fir.array<?xi32>>)
 
-subroutine acc_reduction_add_dynamic_extent_max(a)
+subroutine acc_reduction_add_assumed_shape_max(a)
   real :: a(:)
   !$acc parallel reduction(max:a)
   !$acc end parallel
 end subroutine
 
-! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_max(
+! CHECK-LABEL: func.func @_QPacc_reduction_add_assumed_shape_max(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"})
 ! HLFIR: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
@@ -1189,3 +1218,16 @@ end subroutine
 ! HLFIR: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
 ! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ptr<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ptr<!fir.array<?xf32>> {name = "a"}
 ! HLFIR: acc.parallel reduction(@reduction_max_box_ptr_Uxf32 -> %[[RED]] : !fir.ptr<!fir.array<?xf32>>)
+
+subroutine acc_reduction_max_dynamic_extent_max(a, n)
+  integer :: n
+  real :: a(n, n)
+  !$acc parallel reduction(max:a)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_max_dynamic_extent_max(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"})
+! HLFIR: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) {uniq_name = "_QFacc_reduction_max_dynamic_extent_maxEa"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! HLFIR: %[[RED:.*]] = acc.reduction varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?x?xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
+! HLFIR: acc.parallel reduction(@reduction_max_ref_UxUxf32 -> %[[RED]] : !fir.ref<!fir.array<?x?xf32>>)
