@@ -220,7 +220,7 @@ void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
   SmallString<256> buf;
   llvm::raw_svector_ostream os(buf);
   os << "Declared variable-length array (VLA) ";
-  os << "has a tainted (attacker controlled) size, that can be 0 or negative";
+  os << "has a tainted (attacker controlled) size that can be 0 or negative";
 
   auto report = std::make_unique<PathSensitiveBugReport>(*TaintBT, os.str(), N);
   report->addRange(SizeE->getSourceRange());
