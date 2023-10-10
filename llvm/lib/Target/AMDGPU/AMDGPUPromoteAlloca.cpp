@@ -772,6 +772,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
     // Ignore assume-like intrinsics and comparisons used in assumes.
     if (isAssumeLikeIntrinsic(Inst)) {
+      if (!Inst->use_empty())
+        return RejectUser(Inst, "assume-like intrinsic cannot have any users");
       UsersToRemove.push_back(Inst);
       continue;
     }
