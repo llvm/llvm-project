@@ -210,7 +210,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
 }
 
 // The helper function that calls omp_target_memcpy or omp_target_memcpy_rect
-static int libomp_target_memcpy_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
+static int libomp_target_memcpy_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
   if (Task == nullptr)
     return OFFLOAD_FAIL;
 
@@ -241,7 +241,7 @@ static int libomp_target_memcpy_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
   return Rc;
 }
 
-static int libomp_target_memset_async_helper(kmp_int32 Gtid, kmp_task_t *Task) {
+static int libomp_target_memset_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
   if (!Task)
     return OFFLOAD_FAIL;
 
@@ -267,12 +267,12 @@ ConvertDepObjVector(llvm::SmallVector<kmp_depend_info_t> &Vec, int DepObjCount,
   }
 }
 
-static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
-                                              int DepObjCount,
-                                              omp_depend_t *DepObjList) {
+template <class T>
+static inline int
+libomp_helper_task_creation(T *Args, int (*Fn)(kmp_int32, kmp_task_t *),
+                            int DepObjCount, omp_depend_t *DepObjList) {
   // Create global thread ID
   int Gtid = __kmpc_global_thread_num(nullptr);
-  int (*Fn)(kmp_int32, kmp_task_t *) = &libomp_target_memset_async_helper;
 
   // Setup the hidden helper flags
   kmp_int32 Flags = 0;
@@ -301,7 +301,8 @@ static int libomp_helper_memset_task_creation(TargetMemsetArgsTy *Args,
   return Rc;
 }
 
-EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes, int DeviceNum) {
+EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
+                               int DeviceNum) {
   TIMESCOPE();
   DP("Call to omp_target_memset, device %d, device pointer %p, size %zu\n",
      DeviceNum, Ptr, NumBytes);
@@ -325,7 +326,8 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes, int Devi
     int InitialDevice = omp_get_initial_device();
     void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
     (void)memset(Shadow, ByteVal, NumBytes);
-    (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum, InitialDevice);
+    (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
+                            InitialDevice);
     (void)omp_target_free(Shadow, InitialDevice);
   }
 
@@ -333,64 +335,26 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes, int Devi
   return Ptr;
 }
 
-EXTERN void *omp_target_memset_async(void *Ptr, int ByteVal, size_t NumBytes, int DeviceNum,
-                                     int DepObjCount,
+EXTERN void *omp_target_memset_async(void *Ptr, int ByteVal, size_t NumBytes,
+                                     int DeviceNum, int DepObjCount,
                                      omp_depend_t *DepObjList) {
   DP("Call to omp_target_memset_async, device %d, device pointer %p, size %zu",
      DeviceNum, Ptr, NumBytes);
 
   // Behave as a no-op if N==0 or if Ptr is nullptr (as a useful implementation
   // of unspecified behavior, see OpenMP spec).
-  if (!Ptr || NumBytes == 0) {
+  if (!Ptr || NumBytes == 0)
     return Ptr;
-  }
 
   // Create the task object to deal with the async invocation
   auto *Args = new TargetMemsetArgsTy{Ptr, ByteVal, NumBytes, DeviceNum};
 
   // omp_target_memset_async() cannot fail via a return code, so ignore the
   // return code of the helper function
-  (void)libomp_helper_memset_task_creation(Args, DepObjCount, DepObjList);
+  (void)libomp_helper_task_creation(Args, &libomp_target_memset_async_task,
+                                    DepObjCount, DepObjList);
 
   return Ptr;
-}
-
-// Allocate and launch helper task
-static int libomp_helper_memcpy_task_creation(TargetMemcpyArgsTy *Args,
-                                              int DepObjCount,
-                                              omp_depend_t *DepObjList) {
-  // Create global thread ID
-  int Gtid = __kmpc_global_thread_num(nullptr);
-  int (*Fn)(kmp_int32, kmp_task_t *) = &libomp_target_memcpy_async_helper;
-
-  // Setup the hidden helper flags;
-  kmp_int32 Flags = 0;
-  kmp_tasking_flags_t *InputFlags = (kmp_tasking_flags_t *)&Flags;
-  InputFlags->hidden_helper = 1;
-
-  // Alloc helper task
-  kmp_task_t *Ptr = __kmpc_omp_target_task_alloc(nullptr, Gtid, Flags,
-                                                 sizeof(kmp_task_t), 0, Fn, -1);
-
-  if (Ptr == nullptr) {
-    // Task allocation failed, delete the argument object
-    delete Args;
-
-    return OFFLOAD_FAIL;
-  }
-
-  // Setup the arguments passed to helper task
-  Ptr->shareds = Args;
-
-  // Convert the type of depend objects
-  llvm::SmallVector<kmp_depend_info_t> DepObjs;
-  ConvertDepObjVector(DepObjs, DepObjCount, DepObjList);
-
-  // Launch the helper task
-  int Rc = __kmpc_omp_task_with_deps(nullptr, Gtid, Ptr, DepObjCount,
-                                     DepObjs.data(), 0, nullptr);
-
-  return Rc;
 }
 
 EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
@@ -413,7 +377,8 @@ EXTERN int omp_target_memcpy_async(void *Dst, const void *Src, size_t Length,
       Dst, Src, Length, DstOffset, SrcOffset, DstDevice, SrcDevice);
 
   // Create and launch helper task
-  int Rc = libomp_helper_memcpy_task_creation(Args, DepObjCount, DepObjList);
+  int Rc = libomp_helper_task_creation(Args, &libomp_target_memcpy_async_task,
+                                       DepObjCount, DepObjList);
 
   DP("omp_target_memcpy_async returns %d\n", Rc);
   return Rc;
@@ -510,7 +475,8 @@ EXTERN int omp_target_memcpy_rect_async(
       DstDimensions, SrcDimensions, DstDevice, SrcDevice);
 
   // Create and launch helper task
-  int Rc = libomp_helper_memcpy_task_creation(Args, DepObjCount, DepObjList);
+  int Rc = libomp_helper_task_creation(Args, &libomp_target_memcpy_async_task,
+                                       DepObjCount, DepObjList);
 
   DP("omp_target_memcpy_rect_async returns %d\n", Rc);
   return Rc;
