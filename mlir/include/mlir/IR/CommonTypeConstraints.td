@@ -38,10 +38,17 @@ def IsScalableVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &
                                    ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType, with a single trailing scalable dimension.
-def IsTrailingScalableVectorTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
-                            CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">,
-                            CPred<"::llvm::cast<::mlir::VectorType>($_self).getScalableDims().back()">,
-                            CPred<"!llvm::is_contained(::llvm::cast<::mlir::VectorType>($_self).getScalableDims().drop_back(), true)">]>;
+// Examples:
+// Valid:
+//   - vector<[4]xf32>, vector<2x3x[2]xi64>, vector<32x[8]xi32>
+// Invalid
+//   - vector<[4]x8xi32>, vector<[2]x[2]xf64>, vector<2x[8]x4xi32>
+def IsOnlyTrailingDimScalablePred : And<[
+  CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
+  CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">,
+  CPred<"::llvm::cast<::mlir::VectorType>($_self).getScalableDims().back()">,
+  CPred<"!llvm::is_contained(::llvm::cast<::mlir::VectorType>($_self).getScalableDims().drop_back(), true)">
+]>;
 
 // Whether a type is a VectorType and all dimensions are scalable.
 def allDimsScalableVectorTypePred : And<[
@@ -410,8 +417,10 @@ class ScalableVectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsScalableVectorTypePred,
           "scalable vector", "::mlir::VectorType">;
 
+// Any vector with a single trailing scalable dimension, with an element type in
+// the `allowedTypes` list.
 class TrailingScalableVectorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsTrailingScalableVectorTypePred,
+  ShapedContainerType<allowedTypes, IsOnlyTrailingDimScalablePred,
           "trailing scalable vector", "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given

@@ -70,6 +70,25 @@ using ScalableMaskedDivFOpLowering =
 
 namespace {
 
+/// Unrolls a conversion to/from equivalent vector types, to allow using a
+/// conversion intrinsic that only supports 1-D vector types.
+///
+/// Example:
+/// ```
+/// %result = arm_sve.convert_to_svbool %source : vector<2x[4]xi1>
+/// ```
+/// is rewritten into:
+/// ```
+/// %cst = arith.constant dense<false> : vector<2x[16]xi1>
+/// %1 = vector.extract %source[0] : vector<[4]xi1> from vector<2x[4]xi1>
+/// %2 = "arm_sve.intr.convert.to.svbool"(%1)
+///                : (vector<[4]xi1>) -> vector<[16]xi1>
+/// %3 = vector.insert %2, %cst [0] : vector<[16]xi1> into vector<2x[16]xi1>
+/// %4 = vector.extract %source[1] : vector<[4]xi1> from vector<2x[4]xi1>
+/// %5 = "arm_sve.intr.convert.to.svbool"(%4)
+///                : (vector<[4]xi1>) -> vector<[16]xi1>
+/// %result = vector.insert %5, %3 [1] : vector<[16]xi1> into vector<2x[16]xi1>
+/// ```
 template <typename Op, typename IntrOp>
 struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
   using ConvertOpToLLVMPattern<Op>::ConvertOpToLLVMPattern;
@@ -86,9 +105,13 @@ struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultType, rewriter.getZeroAttr(resultType));
 
+    // We want to iterate over the input vector in steps of the trailing
+    // dimension. So this creates tile shape where all leading dimensions are 1,
+    // and the trailing dimension step is the size of the dimension.
     SmallVector<int64_t> tileShape(sourceType.getRank(), 1);
     tileShape.back() = sourceType.getShape().back();
 
+    // Iterate over all scalable mask/predicate slices of the source vector.
     for (SmallVector<int64_t> index :
          StaticTileOffsetRange(sourceType.getShape(), tileShape)) {
       auto extractOrInsertPosition = ArrayRef(index).drop_back();
