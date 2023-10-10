@@ -239,7 +239,7 @@ public:
   }
 
   void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
-                           unsigned BBIdx, unsigned InstIdx) {
+                           unsigned BBIdx, unsigned &InstIdx) {
     // type_index:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
@@ -265,7 +265,7 @@ public:
   }
 
   void serialiseCallInst(CallInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
-                         unsigned InstIdx) {
+                         unsigned &InstIdx) {
     // type_index:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
@@ -289,7 +289,7 @@ public:
   }
 
   void serialiseBranchInst(BranchInst *I, ValueLoweringMap &VLMap,
-                           unsigned BBIdx, unsigned InstIdx) {
+                           unsigned BBIdx, unsigned &InstIdx) {
     // We split LLVM's `br` into two Yk IR instructions: one for unconditional
     // branching, another for conidtional branching.
     if (!I->isConditional()) {
