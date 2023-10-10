@@ -1208,6 +1208,43 @@ namespace X86II {
     return false;
   }
 
+  inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
+    uint64_t TSFlags = Desc.TSFlags;
+    uint64_t Encoding = TSFlags & EncodingMask;
+    // EVEX can always use egpr.
+    if (Encoding == X86II::EVEX)
+      return true;
+
+    // To be conservative, egpr is not used for all pseudo instructions
+    // because we are not sure what instruction it will become.
+    // FIXME: Could we improve it in X86ExpandPseudo?
+    if (isPseudo(TSFlags))
+      return false;
+
+    // MAP OB/TB in legacy encoding space can always use egpr except
+    // XSAVE*/XRSTOR*.
+    unsigned Opcode = Desc.Opcode;
+    switch (Opcode) {
+    default:
+      break;
+    case X86::XSAVE:
+    case X86::XSAVE64:
+    case X86::XSAVEOPT:
+    case X86::XSAVEOPT64:
+    case X86::XSAVEC:
+    case X86::XSAVEC64:
+    case X86::XSAVES:
+    case X86::XSAVES64:
+    case X86::XRSTOR:
+    case X86::XRSTOR64:
+    case X86::XRSTORS:
+    case X86::XRSTORS64:
+      return false;
+    }
+    uint64_t OpMap = TSFlags & X86II::OpMapMask;
+    return !Encoding && (OpMap == X86II::OB || OpMap == X86II::TB);
+  }
+
   /// \returns true if the MemoryOperand is a 32 extended (zmm16 or higher)
   /// registers, e.g. zmm21, etc.
   static inline bool is32ExtendedReg(unsigned RegNo) {
