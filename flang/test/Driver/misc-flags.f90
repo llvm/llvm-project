@@ -10,6 +10,9 @@
 ! Make sure that `-L' is "visible" to Flang's driver
 ! RUN: %flang -L/ -### %s
 
+! Make sure that `-fcommon' is "visible" to Flang's driver
+! RUN: %flang -fcommon -### %s
+
 program hello
   write(*,*), "Hello world!"
 end program hello

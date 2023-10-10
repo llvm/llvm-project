@@ -1786,7 +1786,7 @@ def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
 def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option, FlangOption]>,
   HelpText<"Place uninitialized global variables in a common block">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"NoCommon">>,
   DocBrief<[{Place definitions of variables with no storage class and no initializer
@@ -5077,6 +5077,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[NoXarchOption]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
+  Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;

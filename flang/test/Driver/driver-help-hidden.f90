@@ -29,6 +29,7 @@
 ! CHECK-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
 ! CHECK-NEXT: -fbackslash             Specify that backslash in string introduces an escape character
 ! CHECK-NEXT: -fcolor-diagnostics     Enable colors in diagnostics
+! CHECK-NEXT: -fcommon                Place uninitialized global variables in a common block
 ! CHECK-NEXT: -fconvert=<value>       Set endian conversion of data for unformatted files
 ! CHECK-NEXT: -fdefault-double-8      Set the default double precision kind to an 8 byte wide type
 ! CHECK-NEXT: -fdefault-integer-8     Set the default integer and logical kind to an 8 byte wide type
@@ -112,6 +113,7 @@
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
 ! CHECK-NEXT: -msve-vector-bits=<value>
 ! CHECK-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
+! CHECK-NEXT: -mtune=<value>          Only supported on AArch64, PowerPC, RISC-V, SystemZ, and X86
 ! CHECK-NEXT: --no-offload-arch=<value>
 ! CHECK-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! CHECK-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
