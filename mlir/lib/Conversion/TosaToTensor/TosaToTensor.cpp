@@ -244,8 +244,7 @@ public:
     Location loc = sliceOp.getLoc();
     Value input = adaptor.getInput();
     ShapedType resultType = cast<ShapedType>(sliceOp.getType());
-    if (llvm::isa<UnrankedTensorType>(resultType) ||
-        resultType.getRank() != static_cast<int64_t>(sliceOp.getSize().size()))
+    if (llvm::isa<UnrankedTensorType>(resultType))
       return failure();
     SmallVector<int64_t> strides, sizes;
     ArrayRef<int64_t> starts = sliceOp.getStart();
