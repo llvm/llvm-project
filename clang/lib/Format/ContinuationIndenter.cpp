@@ -1335,6 +1335,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if ((PreviousNonComment &&
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
+        (PreviousNonComment->is(TT_AttributeMacro) &&
+         Current.isNot(tok::l_paren)) ||
         PreviousNonComment->isOneOf(
             TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
             TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
