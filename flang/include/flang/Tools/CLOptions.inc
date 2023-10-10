@@ -64,7 +64,12 @@ DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
 DisableOption(FirAvc, "avc", "array value copy analysis and transformation");
 DisableOption(
     FirMao, "memory-allocation-opt", "memory allocation optimization");
+
 DisableOption(FirAliasTags, "fir-alias-tags", "fir alias analysis");
+static llvm::cl::opt<bool> useOldAliasTags("use-old-alias-tags",
+    llvm::cl::desc("Use a single TBAA tree for all functions and do not use "
+                   "the FIR alias tags pass"),
+    llvm::cl::init(false), llvm::cl::Hidden);
 
 /// CodeGen Passes
 #if !defined(FLANG_EXCLUDE_CODEGEN)
@@ -157,6 +162,7 @@ inline void addFIRToLLVMPass(
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
   options.applyTBAA = optLevel.isOptimizingForSpeed();
+  options.forceUnifiedTBAATree = useOldAliasTags;
   addPassConditionally(pm, disableFirToLlvmIr,
       [&]() { return fir::createFIRToLLVMPass(options); });
 }
@@ -221,7 +227,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversionPass());
 
-  if (pc.AliasAnalysis && !disableFirAliasTags)
+  if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAliasTagsPass());
 
   // convert control flow to CFG form

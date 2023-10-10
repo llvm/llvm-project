@@ -3786,7 +3786,8 @@ public:
 
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule(),
-                                         options.applyTBAA || applyTBAA};
+                                         options.applyTBAA || applyTBAA,
+                                         options.forceUnifiedTBAATree};
     mlir::RewritePatternSet pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
