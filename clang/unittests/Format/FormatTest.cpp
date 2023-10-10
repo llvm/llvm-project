@@ -11674,6 +11674,9 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("vector<SomeType __attr1 *const> v;", CustomAttrs);
   verifyFormat("vector<SomeType __attr1 *__attr2> v;", CustomAttrs);
   verifyFormat("vector<SomeType __attr1 *no_underscore_attr> v;", CustomAttrs);
+  verifyFormat("__attr1 ::qualified_type f();", CustomAttrs);
+  verifyFormat("__attr1() ::qualified_type f();", CustomAttrs);
+  verifyFormat("__attr1(nodebug) ::qualified_type f();", CustomAttrs);
 
   // Check that these are not parsed as function declarations:
   CustomAttrs.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
