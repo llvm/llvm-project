@@ -81,23 +81,23 @@ public:
   /// and that all required buffer copies were already inserted by
   /// `insertTensorCopies` in the form of `bufferization.alloc_tensor` ops.
   LogicalResult runDenseBufferization() {
-    bufferization::OpFilter denseOpFilter;
-    denseOpFilter.allowOperation([&](Operation *op) {
+    bufferization::OneShotBufferizationOptions updatedOptions =
+        bufferizationOptions;
+    // Skip all sparse ops.
+    updatedOptions.opFilter.denyOperation([&](Operation *op) {
       if (containsSparseTensor(TypeRange(op->getResults())) ||
           containsSparseTensor(TypeRange(op->getOperands())))
-        return false;
+        return true;
       if (auto funcOp = dyn_cast<func::FuncOp>(op)) {
         FunctionType funcType = funcOp.getFunctionType();
         if (containsSparseTensor(funcType.getInputs()) ||
             containsSparseTensor(funcType.getResults()))
-          return false;
+          return true;
       }
-      return true;
+      return false;
     });
 
-    if (failed(bufferization::bufferizeOp(getOperation(), bufferizationOptions,
-                                          /*copyBeforeWrite=*/false,
-                                          &denseOpFilter)))
+    if (failed(bufferization::bufferizeOp(getOperation(), updatedOptions)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
