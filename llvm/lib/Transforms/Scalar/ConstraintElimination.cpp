@@ -895,7 +895,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
     if (!(-StepOffset).isOne())
       return;
 
-    // AR may wrap.h
+    // AR may wrap.
     // Add StartValue >= PN conditional on B <= StartValue which guarantees that
     // the loop exits before wrapping with a step of -1.
     WorkList.push_back(FactOrCheck::getConditionFact(
