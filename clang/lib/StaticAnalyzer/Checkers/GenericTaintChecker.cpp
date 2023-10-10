@@ -726,7 +726,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{CDF_MaybeBuiltin, {{"stpcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strcat"}}},
-       TR::Prop({{0,1}}, {{0, ReturnValueIndex}})},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"wcsncat"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
@@ -757,11 +757,10 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
       {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
        // malloc, calloc, alloca, realloc, memccpy
-       // are intentionally left out as taint sinks
-       // because unconditional reporting for these functions
-       // generate many false positives.
-       // These taint sinks should be implemented in other checkers
-       // with more sophisticated sanitation heuristics.
+       // are intentionally not marked as taint sinks because unconditional
+       // reporting for these functions generates many false positives.
+       // These taint sinks should be implemented in other checkers with more
+       // sophisticated sanitation heuristics.
       {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
       {{{{"setproctitle_fast"}}},
        TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
