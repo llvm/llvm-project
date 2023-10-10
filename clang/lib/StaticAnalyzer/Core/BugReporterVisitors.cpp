@@ -132,6 +132,18 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
     }
     // Pattern match for a few useful cases: a[0], p->f, *p etc.
     else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      // This handles the case when the dereferencing of a member reference
+      // happens. This is needed, because the ast for dereferencing of a
+      // member reference looks like the following:
+      // |-MemberExpr
+      //  `-DeclRefExpr
+      // This branch without the special case just takes out the DeclRefExpr
+      // of the struct, class or union.
+      // This is wrong, because this DeclRefExpr will be passed
+      // to the bug reporting and the notes will refer to wrong variable
+      // (the struct instead of the member).
+      if (ME->getMemberDecl()->getType()->isReferenceType())
+        break;
       E = ME->getBase();
     } else if (const auto *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
       E = IvarRef->getBase();
@@ -157,26 +169,43 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
   return E;
 }
 
+static const VarDecl *getVarDeclForExpression(const Expr *E) {
+  if (const auto *DR = dyn_cast<DeclRefExpr>(E))
+    return dyn_cast<VarDecl>(DR->getDecl());
+  return nullptr;
+}
+
 static const MemRegion *
 getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
                              bool LookingForReference = true) {
-  if (const auto *DR = dyn_cast<DeclRefExpr>(E)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DR->getDecl())) {
-      if (LookingForReference && !VD->getType()->isReferenceType())
-        return nullptr;
-      return N->getState()
-          ->getLValue(VD, N->getLocationContext())
-          .getAsRegion();
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    // This handles other kinds of null references,
+    // for example, references from FieldRegions:
+    //   struct Wrapper { int &ref; };
+    //   Wrapper w = { *(int *)0 };
+    //   w.ref = 1;
+    const Expr *Base = ME->getBase();
+    const VarDecl *VD = getVarDeclForExpression(Base);
+    if (!VD)
+      return nullptr;
+
+    const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+    if (!FD)
+      return nullptr;
+
+    if (FD->getType()->isReferenceType()) {
+      SVal StructSVal = N->getState()->getLValue(VD, N->getLocationContext());
+      return N->getState()->getLValue(FD, StructSVal).getAsRegion();
     }
+    return nullptr;
   }
 
-  // FIXME: This does not handle other kinds of null references,
-  // for example, references from FieldRegions:
-  //   struct Wrapper { int &ref; };
-  //   Wrapper w = { *(int *)0 };
-  //   w.ref = 1;
-
-  return nullptr;
+  const VarDecl *VD = getVarDeclForExpression(E);
+  if (!VD)
+    return nullptr;
+  if (LookingForReference && !VD->getType()->isReferenceType())
+    return nullptr;
+  return N->getState()->getLValue(VD, N->getLocationContext()).getAsRegion();
 }
 
 /// Comparing internal representations of symbolic values (via
