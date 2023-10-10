@@ -108,6 +108,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/VNCoercion.h"
 #include <algorithm>
 #include <cassert>
@@ -931,6 +932,8 @@ private:
       Type *, Value *, LoadInst *, Instruction *, MemoryAccess *) const;
   bool performSymbolicLoadCoercionForLiveOnEntryDef(LoadInst *,
                                                     MemoryAccess *) const;
+  bool performSymbolicLoadCoercionForMemoryPhi(LoadInst *,
+                                               MemoryAccess *) const;
   // Code generation for load coercion. Replaces the load with the right
   // instruction or the right sequence of instructions.
   bool implementLoadCoercion();
@@ -945,6 +948,15 @@ private:
   // further. For this reason, we run value numbering for all the uses of the
   // optimized load. If load coercion has failed, then we need to add the load
   // (and its uses) to the right congruence class.
+  // Emit the phi that replaces the load and it updates the SSA with the new
+  // phi.
+  Value *emitLoadCoercionPhi(LoadInst *, BasicBlock *,
+                             ArrayRef<std::pair<BasicBlock *, Instruction *>>);
+  // Check if the load can be replaced by a phi.
+  Value *tryReplaceLoadWithPhi(
+      LoadInst *, BasicBlock *,
+      SmallVectorImpl<std::pair<BasicBlock *, Instruction *>> &,
+      ArrayRef<BasicBlock *>);
   void updateUsesAfterLoadCoercionImpl(LoadInst *,
                                        SmallVectorImpl<Instruction *> &);
   void updateUsesAfterLoadCoercion(LoadInst *, Value *);
@@ -1648,6 +1660,137 @@ bool NewGVN::findLiveOnEntryDependency(LoadInst *CandidateLI,
   return IsLoadCoercionCandidate;
 }
 
+// Process load instructions that have MemoryPhi dependencies.
+bool NewGVN::performSymbolicLoadCoercionForMemoryPhi(
+    LoadInst *LI, MemoryAccess *DefiningAccess) const {
+  assert((!LI || LI->isSimple()) && "Not a simple load");
+  bool IsLoadCoercionCandidate = false;
+  if (auto *MemPhi = dyn_cast<MemoryPhi>(DefiningAccess)) {
+    // If the candidate load is dominated by a call that never returns, then we
+    // do not replace the load with a phi node.
+    if (ICF->isDominatedByICFIFromSameBlock(LI))
+      return false;
+
+    // The MemoryPhi of Example 1 indicates that the load is dependent on the
+    // store (1) in Basic block T and store (2) in basic block F. Therefore,
+    // both of the store instructions should be added in LoadCoercion map.
+    //
+    // Example 1:
+    //     BB1:                        BB2:
+    //      1 = MemoryDef(liveOnEntry)  2 = MemoryDef(liveOnEntry)
+    //      store i32 100, ptr %P       store i32 500, ptr %P
+    //      br label %BB3               br label %BB3
+    //                             \    /
+    //                            BB3:
+    //                             3 = MemoryPhi({BB1,1},{BB2,2})
+    //                             %V = load i32, ptr %P
+    //
+    // In Example 2, the load of BB3 has two dependencies: the store in BB1 as
+    // the MemoryPhi indicates and the load in BB2 which is not included in
+    // MemoryPhi. To find this dependency, we check if it is possible to apply
+    // load coercion to any of the instructions that have live on entry
+    // definition. We restrict our search to the MemoryPhi predecessors and the
+    // instructions that dominate the MemoryPhi.
+    //
+    // Example 2:
+    //     BB1:                        BB2:
+    //      1 = MemoryDef(liveOnEntry)  0 = MemoryDef(liveOnEntry)
+    //      store i32 100, ptr %P       %V1 = load i32, ptr %P
+    //      br label %BB3               br label %BB3
+    //                             \    /
+    //                            BB3:
+    //                             2 = MemoryPhi({BB1,1},{BB2,liveOnEntry})
+    //                             %V2 = load i32, ptr %P
+    //
+    // Iterate over all the operands of the memory phi and check if any of its
+    // operands can optimize the current load.
+    SmallVector<std::pair<MemoryAccess *, BasicBlock *>, 1>
+        LiveOnEntryMemAccesses;
+    for (Use &Op : MemPhi->incoming_values()) {
+      // Bail out if one of the operands is not a memory use or definition.
+      // TODO: Add support for MemoryPhi operands.
+      if (!isa<MemoryUseOrDef>(&Op)) {
+        LoadCoercion.erase(LI);
+        return false;
+      }
+
+      MemoryUseOrDef *MemAccess = cast<MemoryUseOrDef>(&Op);
+      int Offset = -1;
+      Instruction *DepI = nullptr;
+      BasicBlock *IncomingBB = MemPhi->getIncomingBlock(Op);
+
+      // We collect the MemoryPhi operands that have live on entry definitions
+      // and we process them later only if it is possible to optimize LI with
+      // the MemoryDef operand. The search for the live on entry definitions is
+      // expensive and we need to do it only if it is necessary.
+      if (MSSA->isLiveOnEntryDef(MemAccess))
+        LiveOnEntryMemAccesses.push_back(std::make_pair(MemAccess, IncomingBB));
+      else if (isa<MemoryDef>(&Op)) {
+        // Process MemoryDef operands.
+        DepI = MemAccess->getMemoryInst();
+        Offset = -1;
+
+        if (!ReachableBlocks.count(DepI->getParent())) {
+          LoadCoercion.erase(LI);
+          return false;
+        }
+
+        if (DT->dominates(LI, DepI)) {
+          // In this case, there is a loop. For now, we bail-out load
+          // coercion.
+          LoadCoercion.erase(LI);
+          return false;
+        }
+
+        if (auto *DepS = dyn_cast<StoreInst>(DepI))
+          Offset = analyzeLoadFromClobberingStore(
+              LI->getType(), LI->getPointerOperand(), DepS, DL);
+        else if (auto *DepL = dyn_cast<LoadInst>(DepI))
+          Offset = analyzeLoadFromClobberingLoad(
+              LI->getType(), LI->getPointerOperand(), DepL, DL);
+        else if (auto *DepCall = dyn_cast<CallInst>(DepI)) {
+          // TODO: Improve call coverage.
+          if (AA->doesNotAccessMemory(DepCall) || AA->onlyReadsMemory(DepCall))
+            continue;
+          LoadCoercion.erase(LI);
+          return false;
+        } else {
+          LoadCoercion.erase(LI);
+          return false;
+        }
+        if (Offset >= 0)
+          IsLoadCoercionCandidate |=
+              tryAddLoadDepInsnIntoLoadCoercionMap(LI, DepI, IncomingBB);
+        else {
+          LoadCoercion.erase(LI);
+          return false;
+        }
+      }
+    }
+
+    if (IsLoadCoercionCandidate) {
+      // Process the operands with live on entry definitions.
+      for (auto P : LiveOnEntryMemAccesses) {
+        MemoryAccess *MemAccess = P.first;
+        int Offset;
+        for (const auto &U : MemAccess->uses()) {
+          Offset = -1;
+          auto *MemUse = dyn_cast<MemoryUse>(U.getUser());
+          if (MemUse == nullptr)
+            continue;
+          LoadInst *DependingLoad = dyn_cast<LoadInst>(MemUse->getMemoryInst());
+          if (!DependingLoad)
+            continue;
+          SmallVector<BasicBlock *, 1> IncomingBB;
+          IncomingBB.push_back(P.second);
+          findLiveOnEntryDependency(LI, DependingLoad, IncomingBB, true);
+        }
+      }
+    }
+  }
+  return IsLoadCoercionCandidate;
+}
+
 // Find load coercion opportunities between instructions with live on entry
 // definitions.
 bool NewGVN::performSymbolicLoadCoercionForLiveOnEntryDef(
@@ -1837,8 +1980,11 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) const {
 
   // Check if we can apply load coercion.
   bool IsLoadCoercionCandidate = false;
-
-  if (MSSA->isLiveOnEntryDef(DefiningAccess) && EnableLoadCoercion)
+  if (auto *MemPhi = dyn_cast<MemoryPhi>(DefiningAccess)) {
+    if (EnableLoadCoercion)
+      IsLoadCoercionCandidate =
+          performSymbolicLoadCoercionForMemoryPhi(LI, DefiningAccess);
+  } else if (MSSA->isLiveOnEntryDef(DefiningAccess) && EnableLoadCoercion)
     IsLoadCoercionCandidate =
         performSymbolicLoadCoercionForLiveOnEntryDef(LI, DefiningAccess);
   else if (auto *MD = dyn_cast<MemoryDef>(DefiningAccess)) {
@@ -4215,6 +4361,146 @@ Value *NewGVN::getExtractedValue(LoadInst *LI, Instruction *DepI) {
   return NewValue;
 }
 
+// Create the phi node that replaces the load in load coercion.
+Value *NewGVN::emitLoadCoercionPhi(
+    LoadInst *LI, BasicBlock *InsertBB,
+    ArrayRef<std::pair<BasicBlock *, Instruction *>> PhiOperands) {
+  Value *NewValue = nullptr;
+  SmallVector<PHINode *, 8> NewPHIs;
+  SSAUpdater SSAUpdate(&NewPHIs);
+  SSAUpdate.Initialize(LI->getType(), LI->getName());
+
+  for (const auto &P : PhiOperands) {
+    BasicBlock *PredBB = P.first;
+    Instruction *DepI = P.second;
+
+    if (SSAUpdate.HasValueForBlock(PredBB))
+      continue;
+
+    // Get the incoming value for this block. This values is the value that we
+    // extract from the corresponding depending instruction.
+    NewValue = getExtractedValue(LI, DepI);
+    // Match the coerced value with the corresponding incoming block.
+    SSAUpdate.AddAvailableValue(PredBB, NewValue);
+  }
+
+  // Generate the phi node.
+  NewValue = SSAUpdate.GetValueInMiddleOfBlock(InsertBB);
+  // Run value numbering for the new phi node.
+  if (Instruction *I = dyn_cast<Instruction>(NewValue))
+    NewlyGeneratedInsns.push_back(I);
+
+  return NewValue;
+}
+
+// Check if we can remove the candidate load instruction and replace it with a
+// phi node. In Example 1, all the predecessors have a depending instruction.
+// Therefore, the load is replaced by a phi node whose incoming values are
+// extracted from each depending instruction.
+//
+// Example 1:
+// Before Load Coercion:
+//     BB1:                        BB2:
+//      store i32 100, ptr %P      store i32 500, ptr %P
+//      br label %BB3              br label %BB3
+//                           \    /
+//                         BB3:
+//                          %V = load i32, ptr %P
+//
+// After Load Coercion:
+//     BB1:                        BB2:
+//      store i32 100, ptr %P      store i32 500, ptr %P
+//      br label %BB3              br label %BB3
+//                           \    /
+//                         BB3:
+//                          %phi = phi i32 [ 100, %BB1], [ 500, %BB2 ]
+//
+// In example 2, there is only one depending instruction in BB1. We eliminate
+// the load of BB3 by adding an artificial dependency in BB2. This is done by
+// adding a new load (%V1) in BB2. Now, the load of BB3 has two dependencies.
+// Therefore, we can replace it with a phi node as it is shown below:
+//
+// Example 2:
+// Before Load Coercion:
+//     BB1:                        BB2:
+//      store i32 100, i32* %P      br label %BB3
+//      br label %BB3                /
+//                             \    /
+//                            BB3:
+//                             %V = load i32, i32* %P
+//
+// After Load Coercion:
+//     BB1:                        BB2:
+//      store i32 100, i32* %P      %V1 = load i32, i32* %P
+//      br label %BB3              br label %BB3
+//                             \    /
+//                            BB3:
+//                             %phi = phi i32 [ 100, %BB1], [ %V2, %BB2 ]
+//
+Value *NewGVN::tryReplaceLoadWithPhi(
+    LoadInst *LI, BasicBlock *InsertBB,
+    SmallVectorImpl<std::pair<BasicBlock *, Instruction *>> &PhiOperands,
+    ArrayRef<BasicBlock *> IncomingBlocksWithoutDep) {
+
+  // If we have found all the phi operands (Example 1), then we are ready to
+  // replace the load with a phi node.
+  if (PhiOperands.size() == pred_size(InsertBB))
+    return emitLoadCoercionPhi(LI, InsertBB, PhiOperands);
+
+  // Vanity checks before we do partial load elimination (Example 2).
+  // If there are more than one predecessors without a depending instruction,
+  // then we do not perform load coercion.
+  // TODO: Create a new common predecessor and emit a new load in the common
+  // predecessor.
+  if (IncomingBlocksWithoutDep.size() > 1)
+    return nullptr;
+
+  // Check if all the incoming blocks are reachable.
+  if (llvm::all_of(IncomingBlocksWithoutDep, [this, LI](BasicBlock *BB) {
+        return !ReachableEdges.count({BB, LI->getParent()});
+      }))
+    return nullptr;
+
+  BasicBlock *IncomingBlock = IncomingBlocksWithoutDep.back();
+  // Do not add a new load in EHPad that does not allow non-phi instructions.
+  if (IncomingBlock->getTerminator()->isEHPad())
+    return nullptr;
+
+  // TODO: Add support for the case where IncomingBlock has more than one
+  // successors.
+  if (succ_size(IncomingBlock) != 1)
+    return nullptr;
+
+  // Generate a new load instruction in the incoming block.
+  Value *LIPtr = LI->getPointerOperand();
+  SmallVector<Instruction *, 8> NewInsts;
+  PHITransAddr Address(LIPtr, DL, AC);
+  LIPtr =
+      Address.translateWithInsertion(InsertBB, IncomingBlock, *DT, NewInsts);
+  if (!LIPtr)
+    return nullptr;
+  auto *NewDependingLoad = new LoadInst(
+      LI->getType(), LIPtr, LI->getName(), LI->isVolatile(), LI->getAlign(),
+      LI->getOrdering(), LI->getSyncScopeID(), IncomingBlock->getTerminator());
+  NewInsts.push_back(NewDependingLoad);
+
+  // Update the debug information of the new load.
+  NewDependingLoad->setDebugLoc(LI->getDebugLoc());
+
+  // Update MemorySSA with the new load instruction.
+  updateMemorySSA(LI, NewDependingLoad);
+
+  // Create the new phi operand.
+  PhiOperands.push_back(std::make_pair(IncomingBlock, NewDependingLoad));
+  for (auto *CurI : NewInsts) {
+    if (LoadInst *LI = dyn_cast<LoadInst>(CurI))
+      NewLoadsInLoadCoercion.push_back(LI);
+    NewlyGeneratedInsns.push_back(CurI);
+  }
+  // Create the new phi node.
+  return emitLoadCoercionPhi(LI, InsertBB, PhiOperands);
+}
+
 void NewGVN::updateUsesAfterLoadCoercionImpl(
     LoadInst *LI, SmallVectorImpl<Instruction *> &LIUses) {
   // Run value numbering for the users of the candidate load instruction.
@@ -4350,6 +4636,124 @@ bool NewGVN::implementLoadCoercion() {
     if (DependingInsns.size() == 1 && DT->dominates(FirstDepI, LI) &&
         !isa<MemoryPhi>(DefiningAccess))
       NewValue = getExtractedValue(LI, FirstDepI);
+    else {
+      // Next, we check if we can replace LI with a phi node. To do this, we
+      // first have to find the operands of the phi node. In Example 1, it is
+      // straightforward that the operands of the new phi node is (100, %BB1)
+      // and (500, %BB2).
+      //
+      // Example 1:
+      // Before load coercion
+      //     BB1:                        BB2:
+      //      store i32 100, ptr %P       store i32 500, ptr %P
+      //      br label %BB3               br label %BB3
+      //                           \     /
+      //                            BB3:
+      //                             %V = load i32, ptr %P
+      //
+      // After load coercion
+      //     BB1:                        BB2:
+      //      store i32 100, ptr %P       store i32 500, ptr %P
+      //      br label %BB3               br label %BB3
+      //                           \     /
+      //                            BB3:
+      //                             %V = phi i32 [ 100, %BB1 ], [ 500, %BB2 ]
+      //
+      // However, this is not the case in Example 2. The operands of the new
+      // phi node should be (100, %BB2) and (%V1, %BB3). Hence, the incoming
+      // value might not be in an incoming block. But, the incoming value can
+      // also be in a basic block that dominates the incoming block.
+      //
+      // Example 2:
+      // Before load coercion
+      //                            BB1:
+      //                             %V1 = load i32, ptr %P
+      //                             br i1 %Cond, label %BB2, label %BB3
+      //                           /    \
+      //      BB2:                      BB3:
+      //       store i32 100, ptr %P     br label %BB3
+      //       br label %BB3             /
+      //                           \    /
+      //                          BB4:
+      //                           %V2 = load i32, ptr %P
+      //
+      // After load coercion
+      //                            BB1:
+      //                             %V1 = load i32, ptr %P
+      //                             br i1 %Cond, label %BB2, label %BB3
+      //                           /    \
+      //      BB2:                      BB3:
+      //       store i32 100, ptr %P     br label %BB3
+      //       br label %BB3             /
+      //                           \    /
+      //                          BB4:
+      //                           %V2 = phi i32 [ 100, %BB2 ], [ %V1, %BB3 ]
+      //
+      // In addition, we have to find which of the incoming blocks do not have
+      // depending instructions.
+      //
+      // Example 3:
+      // Before load coercion
+      //   BB1:                              BB2:
+      //    %V1 = load <2 x i32>, ptr %P      br label %BB3
+      //    br label %BB3                    /
+      //		     \              /
+      //                  BB3:
+      //                   %V2 = load i32, ptr %P
+      //
+      // After load coercion
+      //   BB1:                                BB2:
+      //    %V1 = load <2 x i32>, ptr %P        %V2' = load i32, ptr %P
+      //    %0 = bitcast <2 x i32> %V1 to i64  br label %BB3
+      //    %1 = trunc i64 %0 to i32            /
+      //    br label %BB3                      /
+      //		     \                /
+      //                  BB3:
+      //                   %V2 = phi i32 [ %1, %BB1], [ %V2', %BB2 ]
+      //
+      // In this case, the first operands of the phi node is (%1, %BB1). But,
+      // we have to create the second operand by emitting a new load in BB3.
+      // Hence, the second operand is (%V2', %BB2).
+      //
+      // Get the insertion point of the new phi node. For the first two
+      // examples, the insertion point is the beginning of the basic block of
+      // the MemoryPhi. In the third example, there is not a MemoryPhi.
+      // Therefore, the insertion point is the beginning of the parent block of
+      // the optimized block.
+      BasicBlock *InsertBB = isa<MemoryPhi>(DefiningAccess)
+                                 ? DefiningAccess->getBlock()
+                                 : LI->getParent();
+      // keeps the incoming blocks of the memory phi that have a depending
+      // instruction.
+      SmallVector<std::pair<BasicBlock *, Instruction *>, 2>
+          IncomingBlocksWithDep;
+      // Keeps the incoming blocks of the memory phi that do not have a
+      // depending instruction.
+      SmallVector<BasicBlock *, 2> IncomingBlocksWithoutDep;
+      // Get the predecessors of the LI.
+      SmallVector<BasicBlock *, 2> LIPredBBs;
+      for (BasicBlock *PredBB : predecessors(InsertBB))
+        LIPredBBs.push_back(PredBB);
+      SmallPtrSet<Instruction *, 2> LIDependingInsns;
+      // Check which blocks have a depending instructions.
+      for (auto &P : DependingInsns) {
+        Instruction *CurrentDepI = P.first;
+        BasicBlock *CurrentDepIBB = P.second;
+        auto PredBBIt =
+            std::find(LIPredBBs.begin(), LIPredBBs.end(), CurrentDepIBB);
+        if (PredBBIt != LIPredBBs.end()) {
+          IncomingBlocksWithDep.push_back(
+              std::make_pair(CurrentDepIBB, CurrentDepI));
+          LIPredBBs.erase(PredBBIt);
+        }
+        LIDependingInsns.insert(P.first);
+      }
+      // Check which blocks do not have an instruction.
+      for (auto *CurPredBB : LIPredBBs)
+        IncomingBlocksWithoutDep.push_back(CurPredBB);
+      NewValue = tryReplaceLoadWithPhi(LI, InsertBB, IncomingBlocksWithDep,
+                                       IncomingBlocksWithoutDep);
+    }
     // If we could not eliminate the load, then we need run value numbering for
     // the load (the load does not have an expression up to this point) and its
     // uses.
