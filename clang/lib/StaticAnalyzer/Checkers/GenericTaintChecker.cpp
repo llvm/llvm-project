@@ -291,14 +291,6 @@ public:
     return {{}, {}, std::move(SrcArgs), std::move(DstArgs)};
   }
 
-  /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
-  static GenericTaintRule
-  SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs, ArgSet &&DstArgs,
-           std::optional<StringRef> Msg = std::nullopt) {
-    return {
-        std::move(SinkArgs), {}, std::move(SrcArgs), std::move(DstArgs), Msg};
-  }
-
   /// Process a function which could either be a taint source, a taint sink, a
   /// taint filter or a taint propagator.
   void process(const GenericTaintChecker &Checker, const CallEvent &Call,
@@ -741,8 +733,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
        TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrndup)}},
        TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"bcopy"}},
-       TR::Prop({{0, 2}}, {{1}})},
+      {{CDF_MaybeBuiltin, {"bcopy"}}, TR::Prop({{0, 2}}, {{1}})},
 
       // Sinks
       {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
@@ -756,15 +747,15 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
       {{{"execvpe"}}, TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
       {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-       // malloc, calloc, alloca, realloc, memccpy
-       // are intentionally not marked as taint sinks because unconditional
-       // reporting for these functions generates many false positives.
-       // These taint sinks should be implemented in other checkers with more
-       // sophisticated sanitation heuristics.
+      // malloc, calloc, alloca, realloc, memccpy
+      // are intentionally not marked as taint sinks because unconditional
+      // reporting for these functions generates many false positives.
+      // These taint sinks should be implemented in other checkers with more
+      // sophisticated sanitation heuristics.
       {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
       {{{{"setproctitle_fast"}}},
        TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-       };
+  };
 
   // `getenv` returns taint only in untrusted environments.
   if (TR::UntrustedEnv(C)) {
