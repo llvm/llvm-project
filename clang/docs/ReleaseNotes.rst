@@ -301,6 +301,9 @@ Improvements to Clang's diagnostics
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
   (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
 
+- Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
+  appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
+
 Bug Fixes in This Version
 -------------------------
 - Fixed an issue where a class template specialization whose declaration is
