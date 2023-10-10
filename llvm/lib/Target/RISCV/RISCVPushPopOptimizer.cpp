@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains a pass that modifies PUSH/POP instructions from Zca
-// standard to use their non prolog/epilog related functionalities
-// and generates POPRET instruction.
+// This file contains a pass that replaces Zcmp POP instructions with
+// POPRET[Z] where possible.
 //
 //===----------------------------------------------------------------------===//
 
