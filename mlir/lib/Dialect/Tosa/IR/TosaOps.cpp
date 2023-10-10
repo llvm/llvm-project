@@ -264,6 +264,31 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   return emitOpError("input/output element types are incompatible.");
 }
 
+LogicalResult tosa::SliceOp::verify() {
+  auto inputType = llvm::cast<ShapedType>(getInput().getType());
+  auto resultType = llvm::cast<ShapedType>(getOutput().getType());
+  int64_t inputRank = inputType.getRank();
+  int64_t resultRank = resultType.getRank();
+  int64_t sizeRank = static_cast<int64_t>(getSize().size());
+  int64_t startRank = static_cast<int64_t>(getStart().size());
+  // FIXME: Should Input/Ouput be RankedTensorType ?
+  if (inputRank != resultRank)
+    return emitOpError("input and output of ranks must be equal");
+
+  if (sizeRank != inputRank || startRank != inputRank)
+    return emitOpError(
+        "The number of elements of the silce.getSize()/sliceStart() should be "
+        "equal to the rank of the input");
+
+  for (int i = 0; i < inputRank; i++) {
+    if (getStart()[i] + getSize()[i] > inputType.getShape()[i])
+      return emitOpError("The size of each dimension should be smaller than "
+                         "the size of each dimension of the input");
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Quantization Builders.
 //===----------------------------------------------------------------------===//
