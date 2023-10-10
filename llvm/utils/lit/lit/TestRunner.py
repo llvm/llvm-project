@@ -12,6 +12,7 @@ import shlex
 import shutil
 import tempfile
 import threading
+import typing
 
 import io
 
@@ -1029,7 +1030,9 @@ def formatOutput(title, data, limit=None):
 # If debug is False (set by some custom lit test formats that call this
 # function), out contains only stdout from the script, err contains only stderr
 # from the script, and there is no execution trace.
-def executeScriptInternal(test, litConfig, tmpBase, commands, cwd, debug=True):
+def executeScriptInternal(
+    test, litConfig, tmpBase, commands, cwd, debug=True
+) -> typing.Tuple[str, str, int, typing.Optional[str]]:
     cmds = []
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
@@ -2142,10 +2145,11 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     return script
 
 
-# Always returns a lit.Test.Result.
-def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
-    # Always returns the tuple (out, err, exitCode, timeoutInfo).
-    def runOnce(execdir):
+def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
+    # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
+    def runOnce(
+        execdir,
+    ) -> typing.Tuple[str, str, int, typing.Optional[str], Test.ResultCode]:
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
