@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
 
-// expected-note@+2{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'S &&' for 1st argument}}
-// expected-note@+1{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const S &' for 1st argument}}
 struct S {
     int e;
 };
@@ -16,5 +14,7 @@ constexpr S f(T) noexcept {
 	return get_format<T>(); // expected-error{{no viable conversion from returned value of type 'int' to function return type 'S'}}
 }
 
-// expected-note@+1{{in instantiation of function template specialization 'f<int>' requested here}}
 constexpr S x = f(0); // expected-error{{constexpr variable 'x' must be initialized by a constant expression}}
+// expected-note@-1{{in instantiation of function template specialization 'f<int>' requested here}}
+// expected-note@3{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'S &&' for 1st argument}}
+// expected-note@3{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const S &' for 1st argument}}

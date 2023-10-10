@@ -18406,6 +18406,7 @@ static void EvaluateAndDiagnoseImmediateInvocation(
       FD = Call->getConstructor();
     else if (auto *Cast = dyn_cast<CastExpr>(InnerExpr))
       FD = dyn_cast_or_null<FunctionDecl>(Cast->getConversionFunction());
+
     assert(FD && FD->isImmediateFunction() &&
            "could not find an immediate function in this expression");
     if (FD->isInvalidDecl())
