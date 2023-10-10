@@ -14320,8 +14320,8 @@ define <8 x i8> @test_v8i8_post_imm_ld1lane(ptr %bar, ptr %ptr, <8 x i8> %A) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.b { v0 }[1], [x0], #1
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v8i8_post_imm_ld1lane:
@@ -14345,8 +14345,8 @@ define <8 x i8> @test_v8i8_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <8 x i
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.b { v0 }[1], [x0], x2
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v8i8_post_reg_ld1lane:
@@ -14413,8 +14413,8 @@ define <4 x i16> @test_v4i16_post_imm_ld1lane(ptr %bar, ptr %ptr, <4 x i16> %A) 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.h { v0 }[1], [x0], #2
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v4i16_post_imm_ld1lane:
@@ -14439,8 +14439,8 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <4 x
 ; CHECK-NEXT:    lsl x8, x2, #1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.h { v0 }[1], [x0], x8
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v4i16_post_reg_ld1lane:
@@ -14507,8 +14507,8 @@ define <2 x i32> @test_v2i32_post_imm_ld1lane(ptr %bar, ptr %ptr, <2 x i32> %A) 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.s { v0 }[1], [x0], #4
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v2i32_post_imm_ld1lane:
@@ -14533,8 +14533,8 @@ define <2 x i32> @test_v2i32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2 x
 ; CHECK-NEXT:    lsl x8, x2, #2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.s { v0 }[1], [x0], x8
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v2i32_post_reg_ld1lane:
@@ -14644,8 +14644,8 @@ define <2 x float> @test_v2f32_post_imm_ld1lane(ptr %bar, ptr %ptr, <2 x float> 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.s { v0 }[1], [x0], #4
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v2f32_post_imm_ld1lane:
@@ -14670,8 +14670,8 @@ define <2 x float> @test_v2f32_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <2
 ; CHECK-NEXT:    lsl x8, x2, #2
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.s { v0 }[1], [x0], x8
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: test_v2f32_post_reg_ld1lane:
@@ -14776,9 +14776,9 @@ define <4 x i16> @test_v4i16_post_reg_ld1lane_forced_narrow(ptr %bar, ptr %ptr, 
 ; CHECK-NEXT:    lsl x8, x2, #1
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    ld1.h { v0 }[1], [x0], x8
-; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    str x0, [x1]
 ; CHECK-NEXT:    ldr d1, [x3]
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    cnt.8b v1, v1
 ; CHECK-NEXT:    uaddlp.4h v1, v1
 ; CHECK-NEXT:    uaddlp.2s v1, v1

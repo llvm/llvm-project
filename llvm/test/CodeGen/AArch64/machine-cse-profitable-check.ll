@@ -17,9 +17,9 @@ define void @foo(ptr %buf, <8 x i16> %a) {
 ; CHECK-AGGRESSIVE-CSE:       // %bb.0: // %entry
 ; CHECK-AGGRESSIVE-CSE-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-AGGRESSIVE-CSE-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-AGGRESSIVE-CSE-NEXT:    zip2 v2.8h, v0.8h, v1.8h
 ; CHECK-AGGRESSIVE-CSE-NEXT:    st2 { v0.4h, v1.4h }, [x0], #16
-; CHECK-AGGRESSIVE-CSE-NEXT:    zip2 v0.8h, v0.8h, v1.8h
-; CHECK-AGGRESSIVE-CSE-NEXT:    str q0, [x0]
+; CHECK-AGGRESSIVE-CSE-NEXT:    str q2, [x0]
 ; CHECK-AGGRESSIVE-CSE-NEXT:    ret
 entry:
   %vzip.i = shufflevector <8 x i16> %a, <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 poison, i16 poison, i16 poison, i16 poison>, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
