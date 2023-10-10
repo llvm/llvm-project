@@ -42,6 +42,8 @@ void mlir::sparse_tensor::buildSparseCompiler(
       /*enableSIMDIndex32=*/options.force32BitVectorIndices));
   if (options.testBufferizationAnalysisOnly)
     return;
+
+  pm.addPass(createStorageSpecifierToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());
