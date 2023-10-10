@@ -5519,8 +5519,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // destruction order is not necessarily reverse construction order.
   // FIXME: Revisit this based on C++ committee response to unimplementability.
   EvaluationOrder Order = EvaluationOrder::Default;
-  auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
   bool StaticOperator = false;
+  auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
   if (OCE) {
     if (OCE->isAssignmentOp())
       Order = EvaluationOrder::ForceRightToLeft;
@@ -5548,7 +5548,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   if (StaticOperator) {
     // If we're calling a static operator, we need to emit the object argument
     // and ignore it.
-    EmitIgnoredExpr(OCE->getArg(0));
+    EmitIgnoredExpr(E->getArg(0));
 
     EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType),
                  drop_begin(E->arguments(), 1), E->getDirectCallee(),
