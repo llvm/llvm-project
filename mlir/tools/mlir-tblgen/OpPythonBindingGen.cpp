@@ -301,9 +301,13 @@ static bool isODSReserved(StringRef str) {
 /// (does not change the `name` if it already is suitable) and returns the
 /// modified version.
 static std::string sanitizeName(StringRef name) {
-  if (isPythonReserved(name) || isODSReserved(name))
-    return (name + "_").str();
-  return name.str();
+  std::string processed_str = name.str();
+
+  std::replace(processed_str.begin(), processed_str.end(), '-', '_');
+
+  if (isPythonReserved(processed_str) || isODSReserved(processed_str))
+    return processed_str + "_";
+  return processed_str;
 }
 
 static std::string attrSizedTraitForKind(const char *kind) {
