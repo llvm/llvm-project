@@ -1,6 +1,9 @@
 ;; This file shows that llvm-symbolizer can symbolize data symbols
 ;; from the DWARF info on AIX. Note that AIX is big endian.
 
+;; FIXME: use assembly rather than LLVM IR once integrated assembler supports
+;; AIX assembly syntax.
+
 ; REQUIRES: powerpc-registered-target
 ; RUN: llc -filetype=obj -o %t -mtriple=powerpc-aix-ibm-xcoff < %s
 ; RUN: llvm-symbolizer --obj=%t 'DATA 0x60' 'DATA 0x61' 'DATA 0x64' 'DATA 0X68' \
