@@ -1116,6 +1116,38 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   return C;
 }
 
+Value *IRBuilderBase::CreateComplexMul(Value *L, Value *R, bool CxLimitedRange,
+                                       const Twine &Name) {
+  CallInst *Result = CreateBinaryIntrinsic(Intrinsic::experimental_complex_fmul,
+                                           L, R, nullptr, Name);
+  Result->setFastMathFlags(FMF);
+  AttributeList Attrs = Result->getAttributes();
+  StringRef Range =
+      (CxLimitedRange || FMF.noNaNs() || FMF.noInfs()) ? "limited" : "full";
+  Attrs = Attrs.addFnAttribute(getContext(), "complex-range", Range);
+  Result->setAttributes(Attrs);
+  return Result;
+}
+
+Value *IRBuilderBase::CreateComplexDiv(Value *L, Value *R, bool IgnoreNaNs,
+                                       bool DisableScaling, const Twine &Name) {
+  CallInst *Result = CreateBinaryIntrinsic(Intrinsic::experimental_complex_fdiv,
+                                           L, R, nullptr, Name);
+  Result->setFastMathFlags(FMF);
+  AttributeList Attrs = Result->getAttributes();
+  StringRef Range = "full";
+  if (DisableScaling) {
+    assert(IgnoreNaNs &&
+           "complex division DisableScaling should imply IgnoreNaNs");
+    Range = "limited";
+  } else if (IgnoreNaNs || FMF.noNaNs() || FMF.noInfs()) {
+    Range = "no-nan";
+  }
+  Attrs = Attrs.addFnAttribute(getContext(), "complex-range", Range);
+  Result->setAttributes(Attrs);
+  return Result;
+}
+
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
                                    const Twine &Name, Instruction *MDFrom) {
   if (auto *V = Folder.FoldSelect(C, True, False))

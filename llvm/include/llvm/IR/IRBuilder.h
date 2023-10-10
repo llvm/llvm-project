@@ -1762,6 +1762,43 @@ public:
   Value *CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
                       const Twine &Name = "", MDNode *FPMathTag = nullptr);
 
+  /// Construct a complex value out of a pair of real and imaginary values.
+  /// The resulting value will be a vector, with lane 0 being the real value and
+  /// lane 1 being the complex value.
+  /// Either the \p Real or \p Imag parameter may be null, if the input is a
+  /// pure real or pure imaginary number.
+  Value *CreateComplexValue(Value *Real, Value *Imag, const Twine &Name = "") {
+    Type *ScalarTy = (Real ? Real : Imag)->getType();
+    assert(ScalarTy->isFloatingPointTy() &&
+           "Only floating-point types may be complex values.");
+    Type *ComplexTy = FixedVectorType::get(ScalarTy, 2);
+    Value *Base = PoisonValue::get(ComplexTy);
+    if (Real)
+      Base = CreateInsertElement(Base, Real, uint64_t(0), Name);
+    if (Imag)
+      Base = CreateInsertElement(Base, Imag, uint64_t(1), Name);
+    return Base;
+  }
+
+  /// Construct a complex multiply operation, setting fast-math flags and the
+  /// complex-range attribute as appropriate.
+  Value *CreateComplexMul(Value *L, Value *R, bool CxLimitedRange,
+                          const Twine &Name = "");
+
+  /// Construct a complex divide operation, setting fast-math flags and the
+  /// complex-range attribute as appropriate.
+  /// The complex-range attribute is set from the \p IgnoreNaNs and
+  /// \p DisableScaling as follows:
+  ///
+  /// \p IgnoreNans | \p DisableScaling | complex-range value
+  /// ------------- | ----------------- | -------------------
+  /// false         | false             | full
+  /// false         | true              | (illegal combination)
+  /// true          | false             | no-nan
+  /// true          | true              | limited
+  Value *CreateComplexDiv(Value *L, Value *R, bool IgnoreNaNs,
+                          bool DisableScaling = false, const Twine &Name = "");
+
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Memory Instructions
   //===--------------------------------------------------------------------===//
