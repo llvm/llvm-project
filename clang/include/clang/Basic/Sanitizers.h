@@ -170,6 +170,8 @@ struct SanitizerSet {
     Mask = Value ? (Mask | K) : (Mask & ~K);
   }
 
+  void set(SanitizerMask K) { Mask = K; }
+
   /// Disable the sanitizers specified in \p K.
   void clear(SanitizerMask K = SanitizerKind::All) { Mask &= ~K; }
 
