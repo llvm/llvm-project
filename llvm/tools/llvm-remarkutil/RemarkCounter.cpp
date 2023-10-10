@@ -9,6 +9,7 @@
 // Generic tool to count remarks based on properties
 //
 //===----------------------------------------------------------------------===//
+
 #include "RemarkCounter.h"
 #include "RemarkUtilRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -138,9 +139,8 @@ bool Filters::filterRemark(const Remark &Remark) {
   return true;
 }
 
-Error KeyCounter::getAllKeysInRemarks(StringRef Buffer,
-                                      ArrayRef<FilterMatcher> Keys,
-                                      Filters &Filter) {
+Error ArgumentCounter::getAllMatchingArgumentsInRemark(
+    StringRef Buffer, ArrayRef<FilterMatcher> Arguments, Filters &Filter) {
   auto MaybeParser = createRemarkParser(InputFormat, Buffer);
   if (!MaybeParser)
     return MaybeParser.takeError();
@@ -151,10 +151,10 @@ Error KeyCounter::getAllKeysInRemarks(StringRef Buffer,
     // Only collect keys from remarks included in the filter.
     if (!Filter.filterRemark(Remark))
       continue;
-    for (auto &Key : Keys) {
+    for (auto &Key : Arguments) {
       for (Argument Arg : Remark.Args)
         if (Key.match(Arg.Key) && Arg.isValInt())
-          KeySetIdxMap.insert({Arg.Key, KeySetIdxMap.size()});
+          ArgumentSetIdxMap.insert({Arg.Key, ArgumentSetIdxMap.size()});
     }
   }
 
@@ -183,15 +183,15 @@ std::optional<std::string> Counter::getGroupByKey(const Remark &Remark) {
   }
 }
 
-void KeyCounter::collect(const Remark &Remark) {
-  SmallVector<unsigned, 4> Row(KeySetIdxMap.size());
+void ArgumentCounter::collect(const Remark &Remark) {
+  SmallVector<unsigned, 4> Row(ArgumentSetIdxMap.size());
   std::optional<std::string> GroupByKey = getGroupByKey(Remark);
   // Early return if we don't have a value
   if (!GroupByKey)
     return;
   auto GroupVal = *GroupByKey;
   CountByKeysMap.insert({GroupVal, Row});
-  for (auto [Key, Idx] : KeySetIdxMap) {
+  for (auto [Key, Idx] : ArgumentSetIdxMap) {
     auto Count = getValForKey(Key, Remark);
     CountByKeysMap[GroupVal][Idx] += Count;
   }
@@ -206,7 +206,7 @@ void RemarkCounter::collect(const Remark &Remark) {
     Iter.first->second += 1;
 }
 
-Error KeyCounter::print(StringRef OutputFileName) {
+Error ArgumentCounter::print(StringRef OutputFileName) {
   auto MaybeOF =
       getOutputFileWithFlags(OutputFileName, sys::fs::OF_TextWithCRLF);
   if (!MaybeOF)
@@ -215,9 +215,9 @@ Error KeyCounter::print(StringRef OutputFileName) {
   auto OF = std::move(*MaybeOF);
   OF->os() << groupByToStr(GroupBy) << ",";
   unsigned Idx = 0;
-  for (auto [Key, _] : KeySetIdxMap) {
+  for (auto [Key, _] : ArgumentSetIdxMap) {
     OF->os() << Key;
-    if (Idx != KeySetIdxMap.size() - 1)
+    if (Idx != ArgumentSetIdxMap.size() - 1)
       OF->os() << ",";
     Idx++;
   }
@@ -227,7 +227,7 @@ Error KeyCounter::print(StringRef OutputFileName) {
     unsigned Idx = 0;
     for (auto Count : CountVector) {
       OF->os() << Count;
-      if (Idx != KeySetIdxMap.size() - 1)
+      if (Idx != ArgumentSetIdxMap.size() - 1)
         OF->os() << ",";
       Idx++;
     }
@@ -235,6 +235,7 @@ Error KeyCounter::print(StringRef OutputFileName) {
   }
   return Error::success();
 }
+
 Error RemarkCounter::print(StringRef OutputFileName) {
   auto MaybeOF =
       getOutputFileWithFlags(OutputFileName, sys::fs::OF_TextWithCRLF);
@@ -313,21 +314,21 @@ static Error collectRemarks() {
     if (auto E = useCollectRemark(Buffer, RC, Filter))
       return E;
   } else if (CountByOpt == CountBy::ARGUMENT) {
-    SmallVector<FilterMatcher, 4> KeysVector;
+    SmallVector<FilterMatcher, 4> ArgumentsVector;
     if (!Keys.empty()) {
       for (auto &Key : Keys)
-        KeysVector.push_back({Key, false});
+        ArgumentsVector.push_back({Key, false});
     } else if (!RKeys.empty())
       for (auto Key : RKeys)
-        KeysVector.push_back({Key, true});
+        ArgumentsVector.push_back({Key, true});
     else
-      KeysVector.push_back({".*", true});
+      ArgumentsVector.push_back({".*", true});
 
-    Expected<KeyCounter> KC =
-        KeyCounter::createKeyCounter(GroupByOpt, KeysVector, Buffer, Filter);
-    if (!KC)
-      return KC.takeError();
-    if (auto E = useCollectRemark(Buffer, *KC, Filter))
+    Expected<ArgumentCounter> AC = ArgumentCounter::createArgumentCounter(
+        GroupByOpt, ArgumentsVector, Buffer, Filter);
+    if (!AC)
+      return AC.takeError();
+    if (auto E = useCollectRemark(Buffer, *AC, Filter))
       return E;
   }
   return Error::success();

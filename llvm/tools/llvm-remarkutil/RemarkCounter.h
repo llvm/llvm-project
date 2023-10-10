@@ -144,34 +144,33 @@ struct Counter {
 ///  | function1     | 0    | 1    | 3    |
 ///  | function2     | 1    | 0    | 2    |
 ///  | function3     | 2    | 3    | 1    |
-struct KeyCounter : Counter {
+struct ArgumentCounter : Counter {
   /// The internal object to keep the count for the remarks. The first argument
   /// corresponds to the property we are collecting for this can be either a
   /// source or function. The second argument is a row of integers where each
   /// item in the row is the count for a specified key.
   std::map<std::string, SmallVector<unsigned, 4>> CountByKeysMap;
-  /// A set of all the keys found in the remark file. The second argument is the
-  /// index of each of those keys which can be used in `CountByKeysMap` to fill
-  /// count information for that key.
-  MapVector<StringRef, unsigned> KeySetIdxMap;
-  /// Create a key counter. If the provided \p Keys represent a regex vector
-  /// then we need to check that the provided regular expressions are valid if
-  /// not we return an Error.
-  static Expected<KeyCounter> createKeyCounter(enum GroupBy GroupBy,
-                                               ArrayRef<FilterMatcher> Keys,
-                                               StringRef Buffer,
-                                               Filters &Filter) {
-    KeyCounter KC;
-    KC.GroupBy = GroupBy;
-    for (auto &Key : Keys) {
-      if (Key.IsRegex) {
-        if (auto E = checkRegex(std::get<Regex>(Key.FilterRE)))
+  /// A set of all the remark argument found in the remark file. The second
+  /// argument is the index of each of those arguments which can be used in
+  /// `CountByKeysMap` to fill count information for that argument.
+  MapVector<StringRef, unsigned> ArgumentSetIdxMap;
+  /// Create an argument counter. If the provided \p Arguments represent a regex
+  /// vector then we need to check that the provided regular expressions are
+  /// valid if not we return an Error.
+  static Expected<ArgumentCounter>
+  createArgumentCounter(enum GroupBy GroupBy, ArrayRef<FilterMatcher> Arguments,
+                        StringRef Buffer, Filters &Filter) {
+    ArgumentCounter AC;
+    AC.GroupBy = GroupBy;
+    for (auto &Arg : Arguments) {
+      if (Arg.IsRegex) {
+        if (auto E = checkRegex(std::get<Regex>(Arg.FilterRE)))
           return E;
       }
     }
-    if (auto E = KC.getAllKeysInRemarks(Buffer, Keys, Filter))
+    if (auto E = AC.getAllMatchingArgumentsInRemark(Buffer, Arguments, Filter))
       return E;
-    return KC;
+    return AC;
   }
 
   /// collect remark count for the passed remark.
@@ -180,10 +179,12 @@ struct KeyCounter : Counter {
   Error print(StringRef OutputFileName) override;
 
 private:
-  /// collect all the keys that match the list of \p Keys provided by parsing
-  /// through \p Buffer of remarks and filling \p KeySetIdxMap acting as a row
-  /// for for all the keys that we are interested in collecting information for.
-  Error getAllKeysInRemarks(StringRef Buffer, ArrayRef<FilterMatcher> Keys,
+  /// collect all the arguments that match the list of \p Arguments provided by
+  /// parsing through \p Buffer of remarks and filling \p ArgumentSetIdxMap
+  /// acting as a row for for all the keys that we are interested in collecting
+  /// information for.
+  Error getAllMatchingArgumentsInRemark(StringRef Buffer,
+                                        ArrayRef<FilterMatcher> Arguments,
                             Filters &Filter);
 };
 
