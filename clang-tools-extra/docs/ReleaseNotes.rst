@@ -180,6 +180,12 @@ New checks
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
 
+- New :doc:`misc-coroutine-suspension-hostile
+  <clang-tidy/checks/misc/coroutine-suspension-hostile>` check.
+
+  Detects when objects of certain hostile types persists across suspension points in a coroutine.
+  Such hostile types include scoped-lockable types and types belonging to a configurable denylist.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

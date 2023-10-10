@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "ConfusableIdentifierCheck.h"
 #include "ConstCorrectnessCheck.h"
+#include "CoroutineSuspensionHostileCheck.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "HeaderIncludeCycleCheck.h"
 #include "IncludeCleanerCheck.h"
@@ -41,6 +42,8 @@ public:
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(
         "misc-const-correctness");
+    CheckFactories.registerCheck<CoroutineSuspensionHostileCheck>(
+        "misc-coroutine-suspension-hostile");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<HeaderIncludeCycleCheck>(
