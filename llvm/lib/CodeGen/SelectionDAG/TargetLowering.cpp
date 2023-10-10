@@ -8385,6 +8385,8 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
       isOperationLegalOrCustomOrPromote(Opc, VT.getScalarType()))
     return SDValue();
 
+  // First, implement comparison not propagating NaN. If no native fmin or fmax
+  // available, use plain select with setcc instead.
   SDValue MinMax;
   if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE,
                                VT))
