@@ -68,7 +68,7 @@ jobs:
       matrix:
         target:
           - triple: x86_64-linux-gnu-ubuntu-22.04
-            runs-on: ubuntu-22.04-8x32
+            runs-on: ubuntu-22.04-16x64
             debian-build-deps: >
               chrpath
               gcc-multilib
