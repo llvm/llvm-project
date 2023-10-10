@@ -1167,6 +1167,8 @@ public:
   /// Produce widened copies of all Ingredients.
   void execute(VPTransformState &State) override;
 
+  unsigned getOpcode() const { return Opcode; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -1458,7 +1460,7 @@ public:
   bool isCanonical() const;
 
   /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
+  Type *getScalarType() const {
     return Trunc ? Trunc->getType() : IV->getType();
   }
 };
@@ -2080,7 +2082,7 @@ public:
 #endif
 
   /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
+  Type *getScalarType() const {
     return getOperand(0)->getLiveInIRValue()->getType();
   }
 
@@ -2149,7 +2151,7 @@ public:
 #endif
 
   /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
+  Type *getScalarType() const {
     return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
         ->getScalarType();
   }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
+#include "VPlanAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -738,7 +739,18 @@ void VPWidenRecipe::execute(VPTransformState &State) {
                       << Instruction::getOpcodeName(Opcode));
     llvm_unreachable("Unhandled instruction!");
   } // end of switch.
+
+#if !defined(NDEBUG)
+  // Verify that VPlan type infererrence results agree with the type of the
+  // generated values.
+  VPTypeAnalysis A(State.Builder.GetInsertBlock()->getContext());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    assert(VectorType::get(A.inferType(getVPSingleValue()), State.VF) ==
+           State.get(this, Part)->getType());
+  }
+#endif
 }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
