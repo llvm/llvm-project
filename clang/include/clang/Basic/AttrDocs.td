@@ -7474,8 +7474,14 @@ after returning from ``main()`` or when the ``exit()`` function has been
 called. Note, ``quick_exit()``, ``_Exit()``, and ``abort()`` prevent a function
 marked ``destructor`` from being called.
 
-The constructor or destructor function should not accept any arguments and its
-return type should be ``void``.
+In general, the constructor or destructor function must use the C calling
+convention, cannot accept any arguments, and its return type should be
+``void``, ``int``, or ``unsigned int``. The latter two types are supported for
+historical reasons. On targets with a GNU environment (one which uses glibc),
+the signature of the function can also be the same as that of ``main()``.
+
+In C++ language modes, the function cannot be marked ``consteval``, nor can it
+be a non-static member function.
 
 The attributes accept an optional argument used to specify the priority order
 in which to execute constructor and destructor functions. The priority is
