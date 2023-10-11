@@ -25,14 +25,13 @@ define float @float_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    bne $a3, $a2, .LBB0_5
 ; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
 ; LA64F-NEXT:    beqz $a4, .LBB0_3
 ; LA64F-NEXT:    b .LBB0_6
 ; LA64F-NEXT:  .LBB0_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; LA64F-NEXT:    dbar 1792
+; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:  .LBB0_6: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
@@ -61,14 +60,13 @@ define float @float_fadd_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    bne $a3, $a2, .LBB0_5
 ; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
 ; LA64D-NEXT:    beqz $a4, .LBB0_3
 ; LA64D-NEXT:    b .LBB0_6
 ; LA64D-NEXT:  .LBB0_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; LA64D-NEXT:    dbar 1792
+; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:  .LBB0_6: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
@@ -101,14 +99,13 @@ define float @float_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    bne $a3, $a2, .LBB1_5
 ; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB1_3 Depth=2
-; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
 ; LA64F-NEXT:    beqz $a4, .LBB1_3
 ; LA64F-NEXT:    b .LBB1_6
 ; LA64F-NEXT:  .LBB1_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; LA64F-NEXT:    dbar 1792
+; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:  .LBB1_6: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
@@ -137,14 +134,13 @@ define float @float_fsub_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    bne $a3, $a2, .LBB1_5
 ; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB1_3 Depth=2
-; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
 ; LA64D-NEXT:    beqz $a4, .LBB1_3
 ; LA64D-NEXT:    b .LBB1_6
 ; LA64D-NEXT:  .LBB1_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; LA64D-NEXT:    dbar 1792
+; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:  .LBB1_6: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
@@ -178,14 +174,13 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    bne $a3, $a2, .LBB2_5
 ; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
 ; LA64F-NEXT:    beqz $a4, .LBB2_3
 ; LA64F-NEXT:    b .LBB2_6
 ; LA64F-NEXT:  .LBB2_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; LA64F-NEXT:    dbar 1792
+; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:  .LBB2_6: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
@@ -215,14 +210,13 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    bne $a3, $a2, .LBB2_5
 ; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
 ; LA64D-NEXT:    beqz $a4, .LBB2_3
 ; LA64D-NEXT:    b .LBB2_6
 ; LA64D-NEXT:  .LBB2_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; LA64D-NEXT:    dbar 1792
+; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:  .LBB2_6: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
@@ -256,14 +250,13 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    bne $a3, $a2, .LBB3_5
 ; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
 ; LA64F-NEXT:    beqz $a4, .LBB3_3
 ; LA64F-NEXT:    b .LBB3_6
 ; LA64F-NEXT:  .LBB3_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; LA64F-NEXT:    dbar 1792
+; LA64F-NEXT:    dbar 0
 ; LA64F-NEXT:  .LBB3_6: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
@@ -293,14 +286,13 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    bne $a3, $a2, .LBB3_5
 ; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
 ; LA64D-NEXT:    beqz $a4, .LBB3_3
 ; LA64D-NEXT:    b .LBB3_6
 ; LA64D-NEXT:  .LBB3_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; LA64D-NEXT:    dbar 1792
+; LA64D-NEXT:    dbar 0
 ; LA64D-NEXT:  .LBB3_6: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3

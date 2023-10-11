@@ -106,7 +106,7 @@ MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
   return Obj.is64Bit() ? 8 : 4;
 }
 
-support::endianness
+llvm::endianness
 MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
   return Obj.isLittleEndian() ? support::little : support::big;
 }

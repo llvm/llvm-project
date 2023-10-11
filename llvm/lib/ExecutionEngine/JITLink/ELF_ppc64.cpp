@@ -33,7 +33,7 @@ constexpr StringRef TOCSymbolAliasIdent = "__TOC__";
 constexpr uint64_t ELFTOCBaseOffset = 0x8000;
 constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class TLSInfoTableManager_ELF_ppc64
     : public TableManager<TLSInfoTableManager_ELF_ppc64<Endianness>> {
 public:
@@ -84,19 +84,19 @@ private:
 
 template <>
 const uint8_t TLSInfoTableManager_ELF_ppc64<
-    support::endianness::little>::TLSInfoEntryContent[16] = {
+    llvm::endianness::little>::TLSInfoEntryContent[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
 };
 
 template <>
 const uint8_t TLSInfoTableManager_ELF_ppc64<
-    support::endianness::big>::TLSInfoEntryContent[16] = {
+    llvm::endianness::big>::TLSInfoEntryContent[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 Symbol &createELFGOTHeader(LinkGraph &G,
                            ppc64::TOCTableManager<Endianness> &TOC) {
   Symbol *TOCSymbol = nullptr;
@@ -122,7 +122,7 @@ Symbol &createELFGOTHeader(LinkGraph &G,
 }
 
 // Register preexisting GOT entries with TOC table manager.
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline void
 registerExistingGOTEntries(LinkGraph &G,
                            ppc64::TOCTableManager<Endianness> &TOC) {
@@ -140,7 +140,7 @@ registerExistingGOTEntries(LinkGraph &G,
   }
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 Error buildTables_ELF_ppc64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
   ppc64::TOCTableManager<Endianness> TOC;
@@ -189,7 +189,7 @@ Error buildTables_ELF_ppc64(LinkGraph &G) {
 
 namespace llvm::jitlink {
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class ELFLinkGraphBuilder_ppc64
     : public ELFLinkGraphBuilder<object::ELFType<Endianness, true>> {
 private:
@@ -381,7 +381,7 @@ public:
                                   FileName, ppc64::getEdgeKindName) {}
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class ELFJITLinker_ppc64 : public JITLinker<ELFJITLinker_ppc64<Endianness>> {
   using JITLinkerBase = JITLinker<ELFJITLinker_ppc64<Endianness>>;
   friend JITLinkerBase;
@@ -443,7 +443,7 @@ private:
   }
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
   LLVM_DEBUG({
@@ -467,7 +467,7 @@ createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
       .buildGraph();
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
                     std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;

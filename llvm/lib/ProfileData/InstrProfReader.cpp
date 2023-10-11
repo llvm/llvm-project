@@ -1337,12 +1337,12 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 Error IndexedInstrProfReader::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
   return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds, llvm::support::little);
+                               BinaryIds, llvm::endianness::little);
 }
 
 Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {
   return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                llvm::support::little);
+                                llvm::endianness::little);
 }
 
 void InstrProfReader::accumulateCounts(CountSumOrPercent &Sum, bool IsCS) {

@@ -294,7 +294,7 @@ public:
     uint32_t KeyLength = Key.size();
     uint32_t DataLength = sizeof(uint32_t);
 
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint16_t>(KeyLength);
     writer.write<uint16_t>(DataLength);
     return {KeyLength, DataLength};
@@ -303,7 +303,7 @@ public:
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) { OS << Key; }
 
   void EmitData(raw_ostream &OS, key_type_ref, data_type_ref Data, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Data);
   }
 };
@@ -326,7 +326,7 @@ void APINotesWriter::Implementation::writeIdentifierBlock(
     llvm::raw_svector_ostream BlobStream(HashTableBlob);
     // Make sure that no bucket is at offset 0
     llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                           llvm::support::little);
+                                           llvm::endianness::little);
     Offset = Generator.Emit(BlobStream);
   }
 
@@ -354,21 +354,21 @@ public:
     uint32_t KeyLength = sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t);
     uint32_t DataLength = sizeof(uint32_t);
 
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint16_t>(KeyLength);
     writer.write<uint16_t>(DataLength);
     return {KeyLength, DataLength};
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Key.parentContextID);
     writer.write<uint8_t>(Key.contextKind);
     writer.write<uint32_t>(Key.contextID);
   }
 
   void EmitData(raw_ostream &OS, key_type_ref, data_type_ref Data, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Data);
   }
 };
@@ -406,7 +406,7 @@ unsigned getVersionedInfoSize(
 
 /// Emit a serialized representation of a version tuple.
 void emitVersionTuple(raw_ostream &OS, const VersionTuple &VT) {
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   // First byte contains the number of components beyond the 'major' component.
   uint8_t descriptor;
@@ -445,7 +445,7 @@ void emitVersionedInfo(
               return LHS.first < RHS.first;
             });
 
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint16_t>(VI.size());
   for (const auto &E : VI) {
     emitVersionTuple(OS, E.first);
@@ -479,7 +479,7 @@ public:
           return asDerived().getUnversionedInfoSize(UI);
         });
 
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint16_t>(KeyLength);
     writer.write<uint16_t>(DataLength);
     return {KeyLength, DataLength};
@@ -495,7 +495,7 @@ public:
 
 /// Emit a serialized representation of the common entity information.
 void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   uint8_t payload = 0;
   if (auto swiftPrivate = CEI.isSwiftPrivate()) {
@@ -535,7 +535,7 @@ unsigned getCommonTypeInfoSize(const CommonTypeInfo &CTI) {
 void emitCommonTypeInfo(raw_ostream &OS, const CommonTypeInfo &CTI) {
   emitCommonEntityInfo(OS, CTI);
 
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   if (auto swiftBridge = CTI.getSwiftBridge()) {
     writer.write<uint16_t>(swiftBridge->size() + 1);
     OS.write(swiftBridge->c_str(), swiftBridge->size());
@@ -558,7 +558,7 @@ public:
   unsigned getKeyLength(key_type_ref) { return sizeof(uint32_t); }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Key);
   }
 
@@ -607,7 +607,7 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -626,7 +626,7 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -656,7 +656,7 @@ void emitVariableInfo(raw_ostream &OS, const VariableInfo &VI) {
 
   OS.write(reinterpret_cast<const char *>(bytes), 2);
 
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint16_t>(VI.getType().size());
   OS.write(VI.getType().data(), VI.getType().size());
 }
@@ -672,7 +672,7 @@ public:
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(std::get<0>(Key));
     writer.write<uint32_t>(std::get<1>(Key));
     writer.write<uint8_t>(std::get<2>(Key));
@@ -717,7 +717,7 @@ void APINotesWriter::Implementation::writeObjCPropertyBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -741,7 +741,7 @@ public:
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(std::get<0>(Key));
     writer.write<uint32_t>(std::get<1>(Key));
     writer.write<uint8_t>(std::get<2>(Key));
@@ -757,7 +757,7 @@ public:
 
   void emitUnversionedInfo(raw_ostream &OS, const ObjCMethodInfo &OMI) {
     uint8_t flags = 0;
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     flags = (flags << 1) | OMI.DesignatedInit;
     flags = (flags << 1) | OMI.RequiredInit;
     writer.write<uint8_t>(flags);
@@ -785,7 +785,7 @@ void APINotesWriter::Implementation::writeObjCMethodBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -815,21 +815,21 @@ public:
         sizeof(uint16_t) + sizeof(uint32_t) * Key.Identifiers.size();
     uint32_t DataLength = sizeof(uint32_t);
 
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint16_t>(KeyLength);
     writer.write<uint16_t>(DataLength);
     return {KeyLength, DataLength};
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint16_t>(Key.NumPieces);
     for (auto Identifier : Key.Identifiers)
       writer.write<uint32_t>(Identifier);
   }
 
   void EmitData(raw_ostream &OS, key_type_ref, data_type_ref Data, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Data);
   }
 };
@@ -853,7 +853,7 @@ void APINotesWriter::Implementation::writeObjCSelectorBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -873,7 +873,7 @@ public:
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Key.parentContextID);
     writer.write<uint8_t>(Key.contextKind);
     writer.write<uint32_t>(Key.contextID);
@@ -911,7 +911,7 @@ void APINotesWriter::Implementation::writeGlobalVariableBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -938,7 +938,7 @@ void emitParamInfo(raw_ostream &OS, const ParamInfo &PI) {
   if (auto RCC = PI.getRetainCountConvention())
     flags |= static_cast<uint8_t>(RCC.value()) + 1;
 
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint8_t>(flags);
 }
 
@@ -963,7 +963,7 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
   if (auto RCC = FI.getRetainCountConvention())
     flags |= static_cast<uint8_t>(RCC.value()) + 1;
 
-  llvm::support::endian::Writer writer(OS, llvm::support::little);
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   writer.write<uint8_t>(flags);
   writer.write<uint8_t>(FI.NumAdjustedNullable);
@@ -987,7 +987,7 @@ public:
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Key.parentContextID);
     writer.write<uint8_t>(Key.contextKind);
     writer.write<uint32_t>(Key.contextID);
@@ -1025,7 +1025,7 @@ void APINotesWriter::Implementation::writeGlobalFunctionBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -1043,7 +1043,7 @@ public:
   unsigned getKeyLength(key_type_ref) { return sizeof(uint32_t); }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Key);
   }
 
@@ -1079,7 +1079,7 @@ void APINotesWriter::Implementation::writeEnumConstantBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -1101,7 +1101,7 @@ public:
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
     writer.write<uint32_t>(Key.parentContextID);
     writer.write<uint8_t>(Key.contextKind);
     writer.write<IdentifierID>(Key.contextID);
@@ -1131,7 +1131,7 @@ public:
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TagInfo &TI) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
     uint8_t Flags = 0;
     if (auto extensibility = TI.EnumExtensibility) {
@@ -1187,7 +1187,7 @@ void APINotesWriter::Implementation::writeTagBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 
@@ -1206,7 +1206,7 @@ public:
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TypedefInfo &TI) {
-    llvm::support::endian::Writer writer(OS, llvm::support::little);
+    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
     uint8_t Flags = 0;
     if (auto swiftWrapper = TI.SwiftWrapper)
@@ -1237,7 +1237,7 @@ void APINotesWriter::Implementation::writeTypedefBlock(
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
       // Make sure that no bucket is at offset 0
       llvm::support::endian::write<uint32_t>(BlobStream, 0,
-                                             llvm::support::little);
+                                             llvm::endianness::little);
       Offset = Generator.Emit(BlobStream);
     }
 

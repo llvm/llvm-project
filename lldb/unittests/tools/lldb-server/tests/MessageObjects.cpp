@@ -53,7 +53,7 @@ Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
 
 lldb::pid_t ProcessInfo::GetPid() const { return m_pid; }
 
-support::endianness ProcessInfo::GetEndian() const { return m_endian; }
+llvm::endianness ProcessInfo::GetEndian() const { return m_endian; }
 
 //====== ThreadInfo ============================================================
 ThreadInfo::ThreadInfo(StringRef name, StringRef reason, RegisterMap registers,
@@ -237,7 +237,7 @@ StopReply::create(StringRef Response, llvm::endianness Endian,
 
 Expected<RegisterMap> StopReplyStop::parseRegisters(
     const StringMap<SmallVector<StringRef, 2>> &Elements,
-    support::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
+    llvm::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
 
   RegisterMap Result;
   for (const auto &E : Elements) {
@@ -263,7 +263,7 @@ Expected<RegisterMap> StopReplyStop::parseRegisters(
 }
 
 Expected<std::unique_ptr<StopReplyStop>>
-StopReplyStop::create(StringRef Response, support::endianness Endian,
+StopReplyStop::create(StringRef Response, llvm::endianness Endian,
                       ArrayRef<RegisterInfo> RegInfos) {
   unsigned int Signal;
   StringRef SignalStr = Response.take_front(2);

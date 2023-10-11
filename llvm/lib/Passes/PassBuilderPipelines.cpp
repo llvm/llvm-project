@@ -277,11 +277,13 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
     cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
 
 extern cl::opt<bool> EnableInferAlignmentPass;
+} // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
