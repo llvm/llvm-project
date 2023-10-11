@@ -11,7 +11,7 @@
 
 #include "platform.h"
 
-#if SCUDO_LINUX
+#if SCUDO_LINUX || SCUDO_TRUSTY
 
 #include "internal_defs.h"
 
@@ -29,6 +29,6 @@ void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot);
 
 } // namespace scudo
 
-#endif // SCUDO_LINUX
+#endif // SCUDO_LINUX || SCUDO_TRUSTY
 
 #endif // SCUDO_REPORT_LINUX_H_
