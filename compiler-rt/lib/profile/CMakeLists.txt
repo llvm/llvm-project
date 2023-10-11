@@ -124,10 +124,6 @@ append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
 # Disable 'nonstandard extension used: translation unit is empty'.
 append_list_if(COMPILER_RT_HAS_WD4206_FLAG /wd4206 EXTRA_FLAGS)
 
-# Disable diagnostics about use of reserved priority values (we are the
-# implementation, so we're allowed to use those reserved values).
-append_list_if(COMPILER_RT_HAS_WPRIO_CTOR_DTOR_FLAG -Wno-prio-ctor-dtor EXTRA_FLAGS)
-
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile
     STATIC

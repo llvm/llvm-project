@@ -105,10 +105,6 @@ def EnumConversion : DiagGroup<"enum-conversion",
                                [EnumEnumConversion,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
-def InvalidPriority : DiagGroup<"priority-ctor-dtor">;
-// For compatibility with GCC.
-def : DiagGroup<"prio-ctor-dtor", [InvalidPriority]>;
-
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
