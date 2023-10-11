@@ -8,22 +8,48 @@
  */
 
 #if !defined(__STDDEF_H) || defined(__need_ptrdiff_t) ||                       \
-    defined(__need_size_t) || defined(__need_wchar_t) ||                       \
-    defined(__need_NULL) || defined(__need_wint_t)
+    defined(__need_size_t) || defined(__need_rsize_t) ||                       \
+    defined(__need_wchar_t) || defined(__need_NULL) ||                         \
+    defined(__need_nullptr_t) || defined(__need_unreachable) ||                \
+    defined(__need_max_align_t) || defined(__need_offsetof) ||                 \
+    defined(__need_wint_t) ||                                                  \
+    (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1)
 
 #if !defined(__need_ptrdiff_t) && !defined(__need_size_t) &&                   \
-    !defined(__need_wchar_t) && !defined(__need_NULL) &&                       \
-    !defined(__need_wint_t)
+    !defined(__need_rsize_t) && !defined(__need_wchar_t) &&                    \
+    !defined(__need_NULL) && !defined(__need_nullptr_t) &&                     \
+    !defined(__need_unreachable) && !defined(__need_max_align_t) &&            \
+    !defined(__need_offsetof) && !defined(__need_wint_t)
 /* Always define miscellaneous pieces when modules are available. */
 #if !__has_feature(modules)
 #define __STDDEF_H
 #endif
 #define __need_ptrdiff_t
 #define __need_size_t
+/* ISO9899:2011 7.20 (C11 Annex K): Define rsize_t if __STDC_WANT_LIB_EXT1__ is
+ * enabled. */
+#if defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1
+#define __need_rsize_t
+#endif
 #define __need_wchar_t
 #define __need_NULL
-#define __need_STDDEF_H_misc
-/* __need_wint_t is intentionally not defined here. */
+/* FIXME: This is using the placeholder dates Clang produces for these macros
+   in C2x mode; switch to the correct values once they've been published. */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L) ||              \
+    defined(__cplusplus)
+#define __need_nullptr_t
+#endif
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
+#define __need_unreachable
+#endif
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||              \
+    (defined(__cplusplus) && __cplusplus >= 201103L)
+#define __need_max_align_t
+#endif
+#define __need_offsetof
+/* wint_t is provided by <wchar.h> and not <stddef.h>. It's here
+ * for compatibility, but must be explicitly requested. Therefore
+ * __need_wint_t is intentionally not defined here. */
 #endif
 
 #if defined(__need_ptrdiff_t)
@@ -48,18 +74,16 @@ typedef __SIZE_TYPE__ size_t;
 #undef __need_size_t
 #endif /*defined(__need_size_t) */
 
-#if defined(__need_STDDEF_H_misc)
-/* ISO9899:2011 7.20 (C11 Annex K): Define rsize_t if __STDC_WANT_LIB_EXT1__ is
- * enabled. */
-#if (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ >= 1 && \
-     !defined(_RSIZE_T)) || __has_feature(modules)
+#if defined(__need_rsize_t)
+#if !defined(_RSIZE_T) || __has_feature(modules)
 /* Always define rsize_t when modules are available. */
 #if !__has_feature(modules)
 #define _RSIZE_T
 #endif
 typedef __SIZE_TYPE__ rsize_t;
 #endif
-#endif /* defined(__need_STDDEF_H_misc) */
+#undef __need_rsize_t
+#endif /* defined(__need_rsize_t) */
 
 #if defined(__need_wchar_t)
 #if !defined(__cplusplus) || (defined(_MSC_VER) && !_NATIVE_WCHAR_T_DEFINED)
@@ -88,34 +112,37 @@ typedef __WCHAR_TYPE__ wchar_t;
 #else
 #  define NULL ((void*)0)
 #endif
-#ifdef __cplusplus
-#if defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED)
-namespace std { typedef decltype(nullptr) nullptr_t; }
-using ::std::nullptr_t;
-#endif
-#endif
 #undef __need_NULL
 #endif /* defined(__need_NULL) */
 
-/* FIXME: This is using the placeholder dates Clang produces for these macros
-   in C2x mode; switch to the correct values once they've been published. */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L
-typedef typeof(nullptr) nullptr_t;
-#endif /* defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L */
-
-#if defined(__need_STDDEF_H_misc) && defined(__STDC_VERSION__) &&              \
-    __STDC_VERSION__ >= 202000L
-#define unreachable() __builtin_unreachable()
-#endif /* defined(__need_STDDEF_H_misc) && >= C23 */
-
-#if defined(__need_STDDEF_H_misc)
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||              \
-    (defined(__cplusplus) && __cplusplus >= 201103L)
-#include "__stddef_max_align_t.h"
+#if defined(__need_nullptr_t)
+#ifdef __cplusplus
+#if defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED)
+namespace std {
+typedef decltype(nullptr) nullptr_t;
+}
+using ::std::nullptr_t;
 #endif
+#else
+typedef typeof(nullptr) nullptr_t;
+#endif
+#undef __need_nullptr_t
+#endif /* defined(__need_nullptr_t) */
+
+#if defined(__need_unreachable)
+#define unreachable() __builtin_unreachable()
+#undef __need_unreachable
+#endif /* defined(__need_unreachable) */
+
+#if defined(__need_max_align_t)
+#include "__stddef_max_align_t.h"
+#undef __need_max_align_t
+#endif /* defined(__need_max_align_t) */
+
+#if defined(__need_offsetof)
 #define offsetof(t, d) __builtin_offsetof(t, d)
-#undef __need_STDDEF_H_misc
-#endif  /* defined(__need_STDDEF_H_misc) */
+#undef __need_offsetof
+#endif /* defined(__need_offsetof) */
 
 /* Some C libraries expect to see a wint_t here. Others (notably MinGW) will use
 __WINT_TYPE__ directly; accommodate both by requiring __need_wint_t */
