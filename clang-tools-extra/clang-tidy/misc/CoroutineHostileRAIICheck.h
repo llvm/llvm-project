@@ -1,4 +1,4 @@
-//===--- CoroutineHostileRAIICheck.h - clang-tidy -----------------*- C++ -*-===//
+//===--- CoroutineHostileRAIICheck.h - clang-tidy ---------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,8 +22,7 @@ namespace clang::tidy::misc {
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
 class CoroutineHostileRAIICheck : public ClangTidyCheck {
 public:
-  CoroutineHostileRAIICheck(llvm::StringRef Name,
-                                  ClangTidyContext *Context);
+  CoroutineHostileRAIICheck(llvm::StringRef Name, ClangTidyContext *Context);
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus20;
