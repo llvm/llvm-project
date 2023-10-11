@@ -753,6 +753,8 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   }
 }
 
+// Make sure that registers are added in the correct array index which should be
+// the DWARF number for PPC registers.
 const char *const PPCTargetInfo::GCCRegNames[] = {
     "r0",  "r1",     "r2",   "r3",      "r4",      "r5",  "r6",  "r7",  "r8",
     "r9",  "r10",    "r11",  "r12",     "r13",     "r14", "r15", "r16", "r17",
