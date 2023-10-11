@@ -137,7 +137,8 @@ public:
 
   // CompilerType functions
 
-  virtual CompilerDeclContext GetCompilerDeclContextForType(const CompilerType& type);
+  virtual CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type);
 
   // Tests
 #ifndef NDEBUG

@@ -2636,7 +2636,8 @@ TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
   return GetDeclContextForType(ClangUtil::GetQualType(type));
 }
 
-CompilerDeclContext TypeSystemClang::GetCompilerDeclContextForType(const CompilerType& type) {
+CompilerDeclContext
+TypeSystemClang::GetCompilerDeclContextForType(const CompilerType &type) {
   return CreateDeclContext(GetDeclContextForType(type));
 }
 
