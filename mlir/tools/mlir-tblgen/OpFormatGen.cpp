@@ -2009,6 +2009,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
           "  }\n";
 }
 
+/// Generate a check that a DefaultValuedAttr has a value that is non-default.
 static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
                                     AttributeVariable &attrElement) {
   FmtContext fctx;
