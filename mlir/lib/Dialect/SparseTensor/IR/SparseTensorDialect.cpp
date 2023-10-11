@@ -1066,6 +1066,44 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+bool ConvertOp::directConvertable() {
+  if (isSortCOOConvert())
+    return false;
+
+  SparseTensorType srcStt = getSparseTensorType(getSource());
+  SparseTensorType dstStt = getSparseTensorType(getDest());
+
+  // We can always directly convert to unordered sparse tensor or dense tensor
+  // since dense tensor support random access.
+  if (dstStt.isAllDense() || !dstStt.isAllOrdered())
+    return true;
+
+  if (srcStt.isAllOrdered() && dstStt.isAllOrdered() &&
+      srcStt.hasSameDimToLvl(dstStt)) {
+    return true;
+  }
+
+  // Source and dest tensors are ordered in different ways. We only do direct
+  // dense to sparse conversion when the dense input is defined by a sparse
+  // constant. Note that we can theoretically always directly convert from dense
+  // inputs by rotating dense loops but it leads to bad cache locality and hurt
+  // performance.
+  if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())
+    if (isa<SparseElementsAttr>(constOp.getValue()))
+      return true;
+
+  return false;
+}
+
+bool ConvertOp::isSortCOOConvert() {
+  // TODO: we should instead use a different sort_coo operation to handle
+  // the conversion between COOs (but with different ordering).
+  return isUniqueCOOType(getSource().getType()) &&
+         isUniqueCOOType(getDest().getType()) &&
+         !getSparseTensorType(getSource()).isAllOrdered() &&
+         getSparseTensorType(getDest()).isAllOrdered();
+}
+
 LogicalResult ToPositionsOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
