@@ -290,7 +290,7 @@ unsigned SemaSignatureTable::getIndex(ArrayRef<PrototypeDescriptor> Signature) {
     return 0;
 
   // Checking Signature already in table or not.
-  if (Signature.size() < SignatureTable.size()) {
+  if (Signature.size() <= SignatureTable.size()) {
     size_t Bound = SignatureTable.size() - Signature.size() + 1;
     for (size_t Index = 0; Index < Bound; ++Index) {
       if (equal(Signature.begin(), Signature.end(),
