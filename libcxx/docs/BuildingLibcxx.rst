@@ -145,9 +145,6 @@ should add e.g. ``-DCMAKE_CXX_COMPILER_TARGET=x86_64-windows-msvc`` (replacing
 line above. This will instruct ``check-cxx`` to use the right target triple
 when invoking ``clang++``.
 
-Also note that if not building in Release mode, a failed assert in the tests
-pops up a blocking dialog box, making it hard to run a larger number of tests.
-
 CMake + ninja (MinGW)
 ---------------------
 
