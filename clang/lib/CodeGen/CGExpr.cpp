@@ -5552,10 +5552,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
 
     EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType),
                  drop_begin(E->arguments(), 1), E->getDirectCallee(),
-                 /*ParamsToSkip*/ 0, Order);
+                 /*ParamsToSkip=*/0, Order);
   } else
     EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-                 E->getDirectCallee(), /*ParamsToSkip*/ 0, Order);
+                 E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*ChainCall=*/Chain);
