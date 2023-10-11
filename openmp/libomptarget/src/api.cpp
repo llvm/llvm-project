@@ -325,10 +325,18 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
     // it to the GPU device.
     int InitialDevice = omp_get_initial_device();
     void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
-    (void)memset(Shadow, ByteVal, NumBytes);
-    (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
-                            InitialDevice);
-    (void)omp_target_free(Shadow, InitialDevice);
+    if (Shadow) {
+      (void)memset(Shadow, ByteVal, NumBytes);
+      (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
+                              InitialDevice);
+      (void)omp_target_free(Shadow, InitialDevice);
+    } else {
+      // If the omp_target_alloc has failed, let's just not do anything.
+      // omp_target_memset does not have any good way to fail, so we
+      // simply avoid a catastrophic failure of the process for now.
+      DP("omp_target_memset failed to fill memory due to error with "
+         "omp_target_alloc");
+    }
   }
 
   DP("omp_target_memset returns %p\n", Ptr);
