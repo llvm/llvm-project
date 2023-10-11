@@ -155,7 +155,8 @@ enum TokKind {
   XGetDagName,
   XSetDagArg,
   XSetDagName,
-  BANG_OPERATOR_LAST = XSetDagName,
+  XRepr,
+  BANG_OPERATOR_LAST = XRepr,
 
   // String valued tokens.
   STRING_VALUE_FIRST,

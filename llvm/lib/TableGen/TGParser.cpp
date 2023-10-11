@@ -1168,6 +1168,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XSize:
   case tgtok::XEmpty:
   case tgtok::XCast:
+  case tgtok::XRepr:
   case tgtok::XGetDagOp: { // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
     RecTy *Type = nullptr;
@@ -1185,6 +1186,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
 
+      break;
+    case tgtok::XRepr:
+      Lex.Lex(); // eat the operation
+      Code = UnOpInit::REPR;
+      Type = StringRecTy::get(Records);
       break;
     case tgtok::XToLower:
       Lex.Lex(); // eat the operation
