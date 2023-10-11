@@ -73,7 +73,7 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
 }
 
 StorageLocation &
-DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
+DataflowAnalysisContext::getStableStorageLocation(const ValueDecl &D) {
   if (auto *Loc = DeclToLoc.lookup(&D))
     return *Loc;
   auto &Loc = createStorageLocation(D.getType().getNonReferenceType());

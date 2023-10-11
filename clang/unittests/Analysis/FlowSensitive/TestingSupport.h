@@ -398,8 +398,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 
 using BuiltinOptions = DataflowAnalysisContext::Options;
 
-/// Runs dataflow on `Code` with a `NoopAnalysis` and calls `VerifyResults` to
-/// verify the results.
+/// Runs dataflow on function named `TargetFun` in `Code` with a `NoopAnalysis`
+/// and calls `VerifyResults` to verify the results.
 llvm::Error checkDataflowWithNoopAnalysis(
     llvm::StringRef Code,
     std::function<
@@ -409,6 +409,18 @@ llvm::Error checkDataflowWithNoopAnalysis(
     DataflowAnalysisOptions Options = {BuiltinOptions()},
     LangStandard::Kind Std = LangStandard::lang_cxx17,
     llvm::StringRef TargetFun = "target");
+
+/// Runs dataflow on function matched by `TargetFuncMatcher` in `Code` with a
+/// `NoopAnalysis` and calls `VerifyResults` to verify the results.
+llvm::Error checkDataflowWithNoopAnalysis(
+    llvm::StringRef Code,
+    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
+    LangStandard::Kind Std = LangStandard::lang_cxx17);
 
 /// Returns the `ValueDecl` for the given identifier.
 ///
