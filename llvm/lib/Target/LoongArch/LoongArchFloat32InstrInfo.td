@@ -126,6 +126,23 @@ def PseudoST_CFR : Pseudo<(outs),
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def PseudoLD_CFR : Pseudo<(outs CFR:$ccd),
                           (ins GPR:$rj, grlenimm:$imm)>;
+
+// SET_CFR_{FALSE,TRUE}
+// These instructions are defined in order to avoid expensive check error when
+// expanding `PseudoCopyCFR` instruction.
+// fcmp.caf.s $dst, $fa0, $fa0
+def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">;
+// fcmp.cueq.s $dst, $fa0, $fa0
+def SET_CFR_TRUE  : SET_CFR<0x0c160000, "fcmp.cueq.s">;
+
+// Pseudo instruction for COPY CFRs.
+def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)> {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let Size = 12;
+}
+
 } // Predicates = [HasBasicF]
 
 //===----------------------------------------------------------------------===//

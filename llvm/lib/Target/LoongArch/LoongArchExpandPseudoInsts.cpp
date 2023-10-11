@@ -29,6 +29,8 @@ using namespace llvm;
 
 #define LOONGARCH_PRERA_EXPAND_PSEUDO_NAME                                     \
   "LoongArch Pre-RA pseudo instruction expansion pass"
+#define LOONGARCH_EXPAND_PSEUDO_NAME                                           \
+  "LoongArch pseudo instruction expansion pass"
 
 namespace {
 
@@ -513,15 +515,134 @@ bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
   return true;
 }
 
+class LoongArchExpandPseudo : public MachineFunctionPass {
+public:
+  const LoongArchInstrInfo *TII;
+  static char ID;
+
+  LoongArchExpandPseudo() : MachineFunctionPass(ID) {
+    initializeLoongArchExpandPseudoPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override {
+    return LOONGARCH_EXPAND_PSEUDO_NAME;
+  }
+
+private:
+  bool expandMBB(MachineBasicBlock &MBB);
+  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                MachineBasicBlock::iterator &NextMBBI);
+  bool expandCopyCFR(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI);
+};
+
+char LoongArchExpandPseudo::ID = 0;
+
+bool LoongArchExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
+  TII =
+      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
+
+  bool Modified = false;
+  for (auto &MBB : MF)
+    Modified |= expandMBB(MBB);
+
+  return Modified;
+}
+
+bool LoongArchExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+  bool Modified = false;
+
+  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  while (MBBI != E) {
+    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
+    Modified |= expandMI(MBB, MBBI, NMBBI);
+    MBBI = NMBBI;
+  }
+
+  return Modified;
+}
+
+bool LoongArchExpandPseudo::expandMI(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     MachineBasicBlock::iterator &NextMBBI) {
+  switch (MBBI->getOpcode()) {
+  case LoongArch::PseudoCopyCFR:
+    return expandCopyCFR(MBB, MBBI, NextMBBI);
+  }
+
+  return false;
+}
+
+bool LoongArchExpandPseudo::expandCopyCFR(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Expand:
+  // MBB:
+  //    fcmp.caf.s  $dst, $fa0, $fa0 # set $dst 0(false)
+  //    bceqz $src, SinkMBB
+  // FalseBB:
+  //    fcmp.cueq.s $dst, $fa0, $fa0 # set $dst 1(true)
+  // SinkBB:
+  //    fallthrough
+
+  const BasicBlock *LLVM_BB = MBB.getBasicBlock();
+  auto *FalseBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  auto *SinkBB = MF->CreateMachineBasicBlock(LLVM_BB);
+
+  MF->insert(++MBB.getIterator(), FalseBB);
+  MF->insert(++FalseBB->getIterator(), SinkBB);
+
+  Register DestReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  // DestReg = 0
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::SET_CFR_FALSE), DestReg);
+  // Insert branch instruction.
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::BCEQZ))
+      .addReg(SrcReg)
+      .addMBB(SinkBB);
+  // DestReg = 1
+  BuildMI(FalseBB, DL, TII->get(LoongArch::SET_CFR_TRUE), DestReg);
+
+  FalseBB->addSuccessor(SinkBB);
+
+  SinkBB->splice(SinkBB->end(), &MBB, MI, MBB.end());
+  SinkBB->transferSuccessors(&MBB);
+
+  MBB.addSuccessor(FalseBB);
+  MBB.addSuccessor(SinkBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+
+  // Make sure live-ins are correctly attached to this new basic block.
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *FalseBB);
+  computeAndAddLiveIns(LiveRegs, *SinkBB);
+
+  return true;
+}
+
 } // end namespace
 
 INITIALIZE_PASS(LoongArchPreRAExpandPseudo, "loongarch-prera-expand-pseudo",
                 LOONGARCH_PRERA_EXPAND_PSEUDO_NAME, false, false)
 
+INITIALIZE_PASS(LoongArchExpandPseudo, "loongarch-expand-pseudo",
+                LOONGARCH_EXPAND_PSEUDO_NAME, false, false)
+
 namespace llvm {
 
 FunctionPass *createLoongArchPreRAExpandPseudoPass() {
   return new LoongArchPreRAExpandPseudo();
+}
+FunctionPass *createLoongArchExpandPseudoPass() {
+  return new LoongArchExpandPseudo();
 }
 
 } // end namespace llvm

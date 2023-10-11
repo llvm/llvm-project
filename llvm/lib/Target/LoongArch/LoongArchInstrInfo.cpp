@@ -77,6 +77,12 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
+  // CFR->CRR copy.
+  if (LoongArch::CFRRegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(LoongArch::PseudoCopyCFR), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
 
   // FPR->FPR copies.
   unsigned Opc;
