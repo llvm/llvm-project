@@ -276,7 +276,7 @@ Error LVCodeViewReader::collectInlineeInfo(
 }
 
 Error LVCodeViewReader::traverseInlineeLines(StringRef Subsection) {
-  BinaryStreamReader SR(Subsection, llvm::support::little);
+  BinaryStreamReader SR(Subsection, llvm::endianness::little);
   DebugInlineeLinesSubsectionRef Lines;
   if (Error E = Lines.initialize(SR))
     return createStringError(errorToErrorCode(std::move(E)), getFileName());
@@ -514,7 +514,7 @@ Error LVCodeViewReader::loadPrecompiledObject(PrecompRecord &Precomp,
       [&](TypeIndex TI, const CVType &Type) { TypeArray.push_back(Type); });
 
   ItemStream =
-      std::make_unique<BinaryItemStream<CVType>>(llvm::support::little);
+      std::make_unique<BinaryItemStream<CVType>>(llvm::endianness::little);
   ItemStream->setItems(TypeArray);
   TypeStream.setUnderlyingStream(*ItemStream);
 
@@ -621,7 +621,7 @@ Error LVCodeViewReader::traverseSymbolsSubsection(StringRef Subsection,
   LVSymbolVisitorDelegate VisitorDelegate(this, Section, &getObj(),
                                           SectionContents);
   CVSymbolArray Symbols;
-  BinaryStreamReader Reader(BinaryData, llvm::support::little);
+  BinaryStreamReader Reader(BinaryData, llvm::endianness::little);
   if (Error E = Reader.readArray(Symbols, Reader.getLength()))
     return createStringError(errorToErrorCode(std::move(E)), getFileName());
 

@@ -393,7 +393,7 @@ TEST_F(BinaryStreamTest, MutableBinaryByteStreamBounds) {
 }
 
 TEST_F(BinaryStreamTest, AppendingStream) {
-  AppendingBinaryByteStream Stream(llvm::support::little);
+  AppendingBinaryByteStream Stream(llvm::endianness::little);
   EXPECT_EQ(0U, Stream.getLength());
 
   std::vector<uint8_t> InputData = {'T', 'e', 's', 't', 'T', 'e', 's', 't'};
@@ -925,7 +925,7 @@ TEST_F(BinaryStreamTest, BinaryItemStream) {
     uint8_t *Ptr = static_cast<uint8_t *>(Allocator.Allocate(sizeof(Foo),
                                                              alignof(Foo)));
     MutableArrayRef<uint8_t> Buffer(Ptr, sizeof(Foo));
-    MutableBinaryByteStream Stream(Buffer, llvm::support::big);
+    MutableBinaryByteStream Stream(Buffer, llvm::endianness::big);
     BinaryStreamWriter Writer(Stream);
     ASSERT_THAT_ERROR(Writer.writeObject(F), Succeeded());
     Objects.push_back(BinaryItemStreamObject(Buffer));
