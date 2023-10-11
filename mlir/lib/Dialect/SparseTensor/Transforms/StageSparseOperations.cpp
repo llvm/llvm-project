@@ -22,8 +22,7 @@ struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
                                 PatternRewriter &rewriter) const override {
     // TODO: Implement it as an Interface, this can be reused from other
     // operations too (e.g., concatenate, reshape, etc).
-
-    if (op.directConvertable() || op.isSortCOOConvert())
+    if (op.directConvertable())
       return failure();
 
     Location loc = op.getLoc();
@@ -40,13 +39,16 @@ struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
 
     Type srcCOOTp = getCOOFromTypeWithOrdering(
         dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
-    Value srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
+    Value srcCOO = op.getSource();
+    if (srcCOO.getType() != srcCOOTp)
+      srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
 
     // -> sort
     Type dstCOOTp = getCOOFromTypeWithOrdering(
         dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/true);
     // TODO: this should be a sort_coo operation.
-    Value dstCOO = rewriter.create<ConvertOp>(loc, dstCOOTp, srcCOO);
+    Value dstCOO = rewriter.create<ReorderCOOOp>(
+        loc, dstCOOTp, srcCOO, SparseTensorSortKind::HybridQuickSort);
 
     // -> dest.
     if (dstCOO.getType() == op.getType()) {
