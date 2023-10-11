@@ -157,18 +157,12 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
   > cmake -G Ninja -S runtimes -B build                                               \
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
-          -DLLVM_ENABLE_RUNTIMES=libcxx                                               \
-          -DLIBCXX_CXX_ABI=libstdc++
+          -DLLVM_ENABLE_LLD=ON                                                        \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
+          -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
+          -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
   > ninja -C build cxx
-  > cp /mingw64/bin/{libstdc++-6,libgcc_s_seh-1,libwinpthread-1}.dll lib
   > ninja -C build check-cxx
-
-As this build configuration ends up depending on a couple other DLLs that
-aren't available in path while running tests, copy them into the same
-directory as the tested libc++ DLL.
-
-(Building a libc++ that depends on libstdc++ isn't necessarily a config one
-would want to deploy, but it simplifies the config for testing purposes.)
 
 .. _`libc++abi`: http://libcxxabi.llvm.org/
 
