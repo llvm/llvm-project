@@ -542,7 +542,7 @@ Expected<support::endianness>
 DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
-    return support::endianness::little;
+    return llvm::endianness::little;
   default:
     return make_error<StringError>(
         "architecture unsupported by DLLImportDefinitionGenerator",

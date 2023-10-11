@@ -348,7 +348,7 @@ public:
 
   template <typename T>
   using HasByteSwapT = decltype(support::endian::byte_swap(
-      std::declval<T &>(), support::endianness::little));
+      std::declval<T &>(), llvm::endianness::little));
   /// Adjust `Value` for the target endianness and add it to the hash.
   template <typename T>
   std::enable_if_t<is_detected<HasByteSwapT, T>::value, HashBuilder &>
@@ -393,8 +393,8 @@ public:
   hash_code Code;
 };
 
-using HashCodeHashBuilder = HashBuilder<hashbuilder_detail::HashCodeHasher,
-                                        support::endianness::native>;
+using HashCodeHashBuilder =
+    HashBuilder<hashbuilder_detail::HashCodeHasher, llvm::endianness::native>;
 } // namespace hashbuilder_detail
 
 /// Provide a default implementation of `hash_value` when `addHash(const T &)`

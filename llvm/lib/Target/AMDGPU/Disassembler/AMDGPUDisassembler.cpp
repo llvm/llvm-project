@@ -428,18 +428,19 @@ DECODE_SDWA(VopcDst)
 
 template <typename T> static inline T eatBytes(ArrayRef<uint8_t>& Bytes) {
   assert(Bytes.size() >= sizeof(T));
-  const auto Res = support::endian::read<T, support::endianness::little>(Bytes.data());
+  const auto Res =
+      support::endian::read<T, llvm::endianness::little>(Bytes.data());
   Bytes = Bytes.slice(sizeof(T));
   return Res;
 }
 
 static inline DecoderUInt128 eat12Bytes(ArrayRef<uint8_t> &Bytes) {
   assert(Bytes.size() >= 12);
-  uint64_t Lo = support::endian::read<uint64_t, support::endianness::little>(
-      Bytes.data());
+  uint64_t Lo =
+      support::endian::read<uint64_t, llvm::endianness::little>(Bytes.data());
   Bytes = Bytes.slice(8);
-  uint64_t Hi = support::endian::read<uint32_t, support::endianness::little>(
-      Bytes.data());
+  uint64_t Hi =
+      support::endian::read<uint32_t, llvm::endianness::little>(Bytes.data());
   Bytes = Bytes.slice(4);
   return DecoderUInt128(Lo, Hi);
 }
@@ -2076,7 +2077,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
   if (isGFX10Plus()) {
     uint16_t KernelCodeProperties =
         support::endian::read16(&Bytes[amdhsa::KERNEL_CODE_PROPERTIES_OFFSET],
-                                support::endianness::little);
+                                llvm::endianness::little);
     EnableWavefrontSize32 =
         AMDHSA_BITS_GET(KernelCodeProperties,
                         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
