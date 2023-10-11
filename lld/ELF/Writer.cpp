@@ -33,6 +33,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <climits>
+#include <map>
 
 #define DEBUG_TYPE "lld"
 
@@ -1216,6 +1217,58 @@ sortISDBySectionOrder(Ctx &ctx, InputSectionDescription *isd,
     isd->sections.push_back(isec);
 }
 
+// Sort Xtensa literal sections in OutputSection. For each literal section we
+// try to find by name text(code) section, which uses these literals. The
+// literal section should always be placed before code section. Also we try to
+// place literal section just before code section.
+static void sortSectionXtensa(OutputSection &osec) {
+  for (SectionCommand *b : osec.commands) {
+    if (auto *isd = dyn_cast<InputSectionDescription>(b)) {
+      std::map<std::string, int> orderedNames;
+      SmallVector<std::pair<InputSection *, int>, 0> orderedSections;
+      int sidx = 0;
+
+      for (InputSection *isec : isd->sections) {
+        if (orderedNames.count(isec->name.str())) {
+          orderedSections.push_back({isec, orderedNames[isec->name.str()]});
+          continue;
+        }
+        // Check if current section contains literals
+        if (isec->name.contains(".literal")) {
+          std::string literalName = isec->name.str();
+          std::size_t pos = literalName.find(".literal");
+          std::string textName;
+          // Reconstructing text(code) section name by literal section name
+          if (pos == 0) {
+            textName = ".text";
+          } else {
+            textName = literalName.substr(0, pos);
+          }
+          textName += literalName.substr(pos + 8, std::string::npos);
+          if (orderedNames.count(textName)) {
+            int textIdx = orderedNames[textName];
+            int literalIdx = textIdx - 1;
+            orderedSections.push_back({isec, literalIdx});
+            orderedNames[isec->name.str()] = literalIdx;
+          } else {
+            orderedSections.push_back({isec, sidx});
+            orderedNames[isec->name.str()] = sidx;
+          }
+        } else {
+          orderedSections.push_back({isec, sidx});
+          orderedNames[isec->name.str()] = sidx;
+        }
+        sidx += 2;
+      }
+
+      llvm::sort(orderedSections, llvm::less_second());
+      isd->sections.clear();
+      for (std::pair<InputSection *, int> p : orderedSections)
+        isd->sections.push_back(p.first);
+    }
+  }
+}
+
 static void sortSection(Ctx &ctx, OutputSection &osec,
                         const DenseMap<const InputSectionBase *, int> &order) {
   StringRef name = osec.name;
@@ -1232,6 +1285,10 @@ static void sortSection(Ctx &ctx, OutputSection &osec,
     for (SectionCommand *b : osec.commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(b))
         sortISDBySectionOrder(ctx, isd, order, osec.flags & SHF_EXECINSTR);
+
+  if (ctx.arg.emachine == EM_XTENSA) {
+    sortSectionXtensa(osec);
+  }
 
   if (ctx.script->hasSectionsCommand)
     return;
