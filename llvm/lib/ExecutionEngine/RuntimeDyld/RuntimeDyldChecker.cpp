@@ -806,7 +806,7 @@ private:
 RuntimeDyldCheckerImpl::RuntimeDyldCheckerImpl(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
     GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
-    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness, Triple TT,
+    GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
     StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream)
     : IsSymbolValid(std::move(IsSymbolValid)),
       GetSymbolInfo(std::move(GetSymbolInfo)),
@@ -1016,7 +1016,7 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
 RuntimeDyldChecker::RuntimeDyldChecker(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
     GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
-    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness, Triple TT,
+    GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
     StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream)
     : Impl(::std::make_unique<RuntimeDyldCheckerImpl>(
           std::move(IsSymbolValid), std::move(GetSymbolInfo),

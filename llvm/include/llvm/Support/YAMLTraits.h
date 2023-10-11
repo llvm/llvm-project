@@ -1277,7 +1277,7 @@ struct ScalarTraits<double> {
 // For endian types, we use existing scalar Traits class for the underlying
 // type.  This way endian aware types are supported whenever the traits are
 // defined for the underlying type.
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarTraits<support::detail::packed_endian_specific_integral<
                         value_type, endian, alignment>,
                     std::enable_if_t<has_ScalarTraits<value_type>::value>> {
@@ -1301,7 +1301,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarEnumerationTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
@@ -1317,7 +1317,7 @@ struct ScalarEnumerationTraits<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarBitSetTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,

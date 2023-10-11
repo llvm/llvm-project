@@ -535,7 +535,7 @@ struct CovMapFuncRecordReader {
                       const char *OutOfLineMappingBuf,
                       const char *OutOfLineMappingBufEnd) = 0;
 
-  template <class IntPtrT, support::endianness Endian>
+  template <class IntPtrT, llvm::endianness Endian>
   static Expected<std::unique_ptr<CovMapFuncRecordReader>>
   get(CovMapVersion Version, InstrProfSymtab &P,
       std::vector<BinaryCoverageReader::ProfileMappingRecord> &R, StringRef D,
@@ -543,7 +543,7 @@ struct CovMapFuncRecordReader {
 };
 
 // A class for reading coverage mapping function records for a module.
-template <CovMapVersion Version, class IntPtrT, support::endianness Endian>
+template <CovMapVersion Version, class IntPtrT, llvm::endianness Endian>
 class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
   using FuncRecordType =
       typename CovMapTraits<Version, IntPtrT>::CovMapFuncRecordType;
@@ -767,7 +767,7 @@ public:
 
 } // end anonymous namespace
 
-template <class IntPtrT, support::endianness Endian>
+template <class IntPtrT, llvm::endianness Endian>
 Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     CovMapVersion Version, InstrProfSymtab &P,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &R, StringRef D,
@@ -805,7 +805,7 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   llvm_unreachable("Unsupported version");
 }
 
-template <typename T, support::endianness Endian>
+template <typename T, llvm::endianness Endian>
 static Error readCoverageMappingData(
     InstrProfSymtab &ProfileNames, StringRef CovMap, StringRef FuncRecords,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
@@ -852,7 +852,7 @@ Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
     InstrProfSymtab &&ProfileNames, uint8_t BytesInAddress,
-    support::endianness Endian, StringRef CompilationDir) {
+    llvm::endianness Endian, StringRef CompilationDir) {
   std::unique_ptr<BinaryCoverageReader> Reader(
       new BinaryCoverageReader(std::move(FuncRecords)));
   Reader->ProfileNames = std::move(ProfileNames);
@@ -887,7 +887,7 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   uint8_t BytesInAddress = 8;
-  support::endianness Endian = llvm::endianness::little;
+  llvm::endianness Endian = llvm::endianness::little;
 
   // Read the magic and version.
   Data = Data.substr(sizeof(TestingFormatMagic));
@@ -1044,7 +1044,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   // The coverage uses native pointer sizes for the object it's written in.
   uint8_t BytesInAddress = OF->getBytesInAddress();
-  support::endianness Endian =
+  llvm::endianness Endian =
       OF->isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
 
   // Look for the sections that we are interested in.

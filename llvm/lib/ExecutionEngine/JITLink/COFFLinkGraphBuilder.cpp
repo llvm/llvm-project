@@ -43,7 +43,7 @@ COFFLinkGraphBuilder::getPointerSize(const object::COFFObjectFile &Obj) {
   return Obj.getBytesInAddress();
 }
 
-support::endianness
+llvm::endianness
 COFFLinkGraphBuilder::getEndianness(const object::COFFObjectFile &Obj) {
   return Obj.isLittleEndian() ? support::little : support::big;
 }

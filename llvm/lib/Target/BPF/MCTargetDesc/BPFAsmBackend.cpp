@@ -25,7 +25,7 @@ namespace {
 
 class BPFAsmBackend : public MCAsmBackend {
 public:
-  BPFAsmBackend(support::endianness Endian) : MCAsmBackend(Endian) {}
+  BPFAsmBackend(llvm::endianness Endian) : MCAsmBackend(Endian) {}
   ~BPFAsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,

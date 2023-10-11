@@ -842,7 +842,7 @@ TEST(GSYMTest, TestLineTableEncodeErrors) {
 
 static void TestHeaderEncodeError(const Header &H,
                                   std::string ExpectedErrorMsg) {
-  const support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);
@@ -852,7 +852,7 @@ static void TestHeaderEncodeError(const Header &H,
 
 static void TestHeaderDecodeError(StringRef Bytes,
                                   std::string ExpectedErrorMsg) {
-  const support::endianness ByteOrder = llvm::support::little;
+  const llvm::endianness ByteOrder = llvm::support::little;
   uint8_t AddressSize = 4;
   DataExtractor Data(Bytes, ByteOrder == llvm::support::little, AddressSize);
   llvm::Expected<Header> Decoded = Header::decode(Data);
@@ -919,7 +919,7 @@ TEST(GSYMTest, TestHeaderDecodeErrors) {
 }
 
 static void TestHeaderEncodeDecode(const Header &H,
-                                   support::endianness ByteOrder) {
+                                   llvm::endianness ByteOrder) {
   uint8_t AddressSize = 4;
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -932,7 +932,6 @@ static void TestHeaderEncodeDecode(const Header &H,
   // Make sure decoding succeeded.
   ASSERT_TRUE((bool)Decoded);
   EXPECT_EQ(H, Decoded.get());
-
 }
 TEST(GSYMTest, TestHeaderEncodeDecode) {
   Header H;
@@ -1014,10 +1013,10 @@ static void Compare(const GsymCreator &GC, const GsymReader &GR) {
   });
 }
 
-static void TestEncodeDecode(const GsymCreator &GC,
-                             support::endianness ByteOrder, uint16_t Version,
-                             uint8_t AddrOffSize, uint64_t BaseAddress,
-                             uint32_t NumAddresses, ArrayRef<uint8_t> UUID) {
+static void TestEncodeDecode(const GsymCreator &GC, llvm::endianness ByteOrder,
+                             uint16_t Version, uint8_t AddrOffSize,
+                             uint64_t BaseAddress, uint32_t NumAddresses,
+                             ArrayRef<uint8_t> UUID) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   FileWriter FW(OutStrm, ByteOrder);

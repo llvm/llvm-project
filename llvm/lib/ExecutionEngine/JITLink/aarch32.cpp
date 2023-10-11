@@ -305,7 +305,7 @@ void writeImmediate(WritableArmRelocation &R, uint32_t Imm) {
 }
 
 Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
-  support::endianness Endian = G.getEndianness();
+  llvm::endianness Endian = G.getEndianness();
 
   Edge::Kind Kind = E.getKind();
   const char *BlockWorkingMem = B.getContent().data();
