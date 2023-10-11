@@ -134,7 +134,10 @@ private:
         inconvertibleErrorCode());
   }
 
-  // Parses a `ProfileBBID` from `S`. `S` should be in the form "<bbid>" (representing an original block) or "<bbid>.<cloneid>" (representing a cloned block) where bbid is a non-negative integer and cloneid is a positive integer.
+  // Parses a `ProfileBBID` from `S`. `S` must be in the form "<bbid>"
+  // (representing an original block) or "<bbid>.<cloneid>" (representing a
+  // cloned block) where bbid is a non-negative integer and cloneid is a
+  // positive integer.
   Expected<ProfileBBID> parseProfileBBID(StringRef S) const;
 
   // Reads the basic block sections profile for functions in this module.

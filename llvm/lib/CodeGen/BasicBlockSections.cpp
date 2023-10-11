@@ -311,17 +311,18 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   DenseMap<unsigned, BBClusterInfo<unsigned>> ClusterInfoByBBID;
   if (BBSectionsType == BasicBlockSection::List) {
     auto [HasProfile, PathAndClusterInfo] =
-        getAnalysis<BasicBlockSectionsProfileReader>().getPathAndClusterInfoForFunction(
-            MF.getName());
+        getAnalysis<BasicBlockSectionsProfileReader>()
+            .getPathAndClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return true;
-    for (const BBClusterInfo<ProfileBBID> &BBP : PathAndClusterInfo.ClusterInfo) {
+    for (const BBClusterInfo<ProfileBBID> &BBP :
+         PathAndClusterInfo.ClusterInfo) {
       // TODO: Apply the path cloning profile.
       assert(!BBP.BasicBlockID.CloneID && "Path cloning is not supported yet");
       const auto [I, Inserted] = ClusterInfoByBBID.try_emplace(
           BBP.BasicBlockID.BBID,
           BBClusterInfo<unsigned>{BBP.BasicBlockID.BBID, BBP.ClusterID,
-                              BBP.PositionInCluster});
+                                  BBP.PositionInCluster});
       (void)I;
       assert(Inserted && "Duplicate BBID found in profile");
     }

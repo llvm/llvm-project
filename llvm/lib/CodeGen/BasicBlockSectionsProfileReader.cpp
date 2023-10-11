@@ -63,8 +63,9 @@ std::pair<bool, FunctionPathAndClusterInfo>
 BasicBlockSectionsProfileReader::getPathAndClusterInfoForFunction(
     StringRef FuncName) const {
   auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-  return R != ProgramPathAndClusterInfo.end() ? std::pair(true, R->second)
-                                      : std::pair(false, FunctionPathAndClusterInfo());
+  return R != ProgramPathAndClusterInfo.end()
+             ? std::pair(true, R->second)
+             : std::pair(false, FunctionPathAndClusterInfo());
 }
 
 // Reads the version 1 basic block sections profile. Profile for each function
@@ -85,10 +86,13 @@ BasicBlockSectionsProfileReader::getPathAndClusterInfoForFunction(
 // clone basic blocks along a path. The cloned blocks are then specified in the
 // cluster information.
 // The following profile lists two cloning paths (starting with 'p') for
-// function bar and places the total 9 blocks within two clusters. The blocks in each path are cloned along the path from the first block (the first block is not cloned).
-// For instance, path 1 (1 -> 3 -> 4) specifies that 3 and 4 must be cloned along the edge 1->3. In the clusters, each cloned
-// block is identified by its original block id, along with its clone id. For instance, the cloned blocks from path 1 are represented by 3.1 and 4.1.
-// A block cloned multiple times appears with distinct clone ids. The CFG for bar
+// function bar and places the total 9 blocks within two clusters. The first two
+// blocks of a cloning path specify the edge along which the path is cloned. For
+// instance, path 1 (1 -> 3 -> 4) instructs that 3 and 4 must be cloned along
+// the edge 1->3. Within the given clusters, each cloned block is identified by
+// "<original block id>.<clone id>". For instance, 3.1 represents the first
+// clone of block 3. Original blocks are specified just with their block ids. A
+// block cloned multiple times appears with distinct clone ids. The CFG for bar
 // is shown below before and after cloning with its final clusters labeled.
 //
 // f main
@@ -279,8 +283,8 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
 
         FI->second.ClusterInfo.emplace_back(
             BBClusterInfo<ProfileBBID>({{static_cast<unsigned>(BBID), 0},
-                                    CurrentCluster,
-                                    CurrentPosition++}));
+                                        CurrentCluster,
+                                        CurrentPosition++}));
       }
       CurrentCluster++;
     } else {
