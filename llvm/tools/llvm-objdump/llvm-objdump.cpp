@@ -1167,7 +1167,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
                                const MCSubtargetInfo &STI, raw_ostream &OS) {
-  support::endianness Endian =
+  llvm::endianness Endian =
       Obj.isLittleEndian() ? support::little : support::big;
   size_t Start = OS.tell();
   OS << format("%8" PRIx64 ": ", SectionAddr + Index);

@@ -64,7 +64,7 @@ namespace {
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
   unsigned PointerSize;
-  support::endianness Endianness;
+  llvm::endianness Endianness;
   const auto &TT = MOP.getExecutionSession().getTargetTriple();
 
   switch (TT.getArch()) {

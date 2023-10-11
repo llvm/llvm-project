@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(support::endianness Endian, unsigned RelaxFixupKind)
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
     : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
