@@ -3160,11 +3160,18 @@ static_assert(!__is_trivially_equality_comparable(float), "");
 static_assert(!__is_trivially_equality_comparable(double), "");
 static_assert(!__is_trivially_equality_comparable(long double), "");
 
-struct TriviallyEqualityComparableNoDefaultedComparator {
+struct NonTriviallyEqualityComparableNoComparator {
   int i;
   int j;
 };
-static_assert(!__is_trivially_equality_comparable(TriviallyEqualityComparableNoDefaultedComparator), "");
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator), "");
+
+struct NonTriviallyEqualityComparableNonDefaultedComparator {
+  int i;
+  int j;
+  bool operator==(const NonTriviallyEqualityComparableNonDefaultedComparator&);
+};
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNonDefaultedComparator), "");
 
 #if __cplusplus >= 202002L
 
@@ -3177,7 +3184,7 @@ struct TriviallyEqualityComparable {
 
   bool operator==(const TriviallyEqualityComparable&) const = default;
 };
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable), "");
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable));
 
 struct TriviallyEqualityComparableContainsArray {
   int a[4];
@@ -3192,6 +3199,17 @@ struct TriviallyEqualityComparableContainsMultiDimensionArray {
   bool operator==(const TriviallyEqualityComparableContainsMultiDimensionArray&) const = default;
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsMultiDimensionArray));
+
+auto GetNonCapturingLambda() { return [](){ return 42; }; }
+
+struct TriviallyEqualityComparableContainsLambda {
+  [[no_unique_address]] decltype(GetNonCapturingLambda()) l;
+  int i;
+
+  bool operator==(const TriviallyEqualityComparableContainsLambda&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(decltype(GetNonCapturingLambda()))); // padding
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsLambda));
 
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
