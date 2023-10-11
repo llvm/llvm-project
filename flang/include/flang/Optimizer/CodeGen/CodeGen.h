@@ -55,7 +55,7 @@ struct FIRToLLVMPassOptions {
   // Generate TBAA information for FIR types and memory accessing operations.
   bool applyTBAA = false;
 
-  // force the usage of a unified tbaa tree in TBAABuilder
+  // Force the usage of a unified tbaa tree in TBAABuilder.
   bool forceUnifiedTBAATree = false;
 };
 
