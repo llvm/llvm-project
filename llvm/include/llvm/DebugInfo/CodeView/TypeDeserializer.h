@@ -28,7 +28,7 @@ namespace codeview {
 class TypeDeserializer : public TypeVisitorCallbacks {
   struct MappingInfo {
     explicit MappingInfo(ArrayRef<uint8_t> RecordData)
-        : Stream(RecordData, llvm::support::little), Reader(Stream),
+        : Stream(RecordData, llvm::endianness::little), Reader(Stream),
           Mapping(Reader) {}
 
     BinaryByteStream Stream;

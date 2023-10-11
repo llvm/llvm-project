@@ -550,10 +550,10 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
 
 struct EndianTypes {
   typedef llvm::support::detail::packed_endian_specific_integral<
-      float, llvm::support::little, llvm::support::unaligned>
+      float, llvm::endianness::little, llvm::support::unaligned>
       ulittle_float;
   typedef llvm::support::detail::packed_endian_specific_integral<
-      double, llvm::support::little, llvm::support::unaligned>
+      double, llvm::endianness::little, llvm::support::unaligned>
       ulittle_double;
 
   llvm::support::ulittle64_t u64;

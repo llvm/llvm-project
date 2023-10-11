@@ -7629,14 +7629,13 @@ namespace {
 
 template <typename T>
 static uint64_t read(StringRef Contents, ptrdiff_t Offset) {
-  using llvm::support::little;
-
   if (Offset + sizeof(T) > Contents.size()) {
     outs() << "warning: attempt to read past end of buffer\n";
     return T();
   }
 
-  uint64_t Val = support::endian::read<T, little>(Contents.data() + Offset);
+  uint64_t Val = support::endian::read<T, llvm::endianness::little>(
+      Contents.data() + Offset);
   return Val;
 }
 

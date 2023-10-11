@@ -2939,7 +2939,7 @@ Error LVLogicalVisitor::finishVisitation(CVType &Record, TypeIndex TI,
 // Customized version of 'FieldListVisitHelper'.
 Error LVLogicalVisitor::visitFieldListMemberStream(
     TypeIndex TI, LVElement *Element, ArrayRef<uint8_t> FieldList) {
-  BinaryByteStream Stream(FieldList, llvm::support::little);
+  BinaryByteStream Stream(FieldList, llvm::endianness::little);
   BinaryStreamReader Reader(Stream);
   FieldListDeserializer Deserializer(Reader);
   TypeVisitorCallbackPipeline Pipeline;
