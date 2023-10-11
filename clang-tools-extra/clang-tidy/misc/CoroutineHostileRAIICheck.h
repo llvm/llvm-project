@@ -1,4 +1,4 @@
-//===--- HeaderIncludeCycleCheck.h - clang-tidy -----------------*- C++ -*-===//
+//===--- CoroutineHostileRAIICheck.h - clang-tidy -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESUSPENSSIONHOSTILECHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESUSPENSSIONHOSTILECHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -20,9 +20,9 @@ namespace clang::tidy::misc {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-check.html
-class CoroutineSuspensionHostileCheck : public ClangTidyCheck {
+class CoroutineHostileRAIICheck : public ClangTidyCheck {
 public:
-  CoroutineSuspensionHostileCheck(llvm::StringRef Name,
+  CoroutineHostileRAIICheck(llvm::StringRef Name,
                                   ClangTidyContext *Context);
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -37,9 +37,9 @@ private:
   void checkVarDecl(VarDecl *VD);
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
-  const std::vector<StringRef> DenyTypeList;
+  const std::vector<StringRef> RAIIDenyList;
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESUSPENSSIONHOSTILECHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H

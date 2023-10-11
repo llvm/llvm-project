@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CoroutineSuspensionHostileCheck.h"
+#include "CoroutineHostileRAIICheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
@@ -18,19 +18,19 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
-CoroutineSuspensionHostileCheck::CoroutineSuspensionHostileCheck(
-    StringRef Name, ClangTidyContext *Context)
+CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
+                                                     ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      DenyTypeList(
-          utils::options::parseStringList(Options.get("DenyTypeList", ""))) {}
+      RAIIDenyList(
+          utils::options::parseStringList(Options.get("RAIIDenyList", ""))) {}
 
-void CoroutineSuspensionHostileCheck::registerMatchers(MatchFinder *Finder) {
+void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.
   Finder->addMatcher(coawaitExpr().bind("suspension"), this);
   Finder->addMatcher(coyieldExpr().bind("suspension"), this);
 }
 
-void CoroutineSuspensionHostileCheck::checkVarDecl(VarDecl *VD) {
+void CoroutineHostileRAIICheck::checkVarDecl(VarDecl *VD) {
   RecordDecl *RD = VD->getType().getCanonicalType()->getAsRecordDecl();
   if (RD->hasAttr<clang::ScopedLockableAttr>()) {
     diag(VD->getLocation(),
@@ -38,16 +38,15 @@ void CoroutineSuspensionHostileCheck::checkVarDecl(VarDecl *VD) {
          "unlocked by a different thread")
         << VD;
   }
-  if (std::find(DenyTypeList.begin(), DenyTypeList.end(),
-                RD->getQualifiedNameAsString()) != DenyTypeList.end()) {
+  if (std::find(RAIIDenyList.begin(), RAIIDenyList.end(),
+                RD->getQualifiedNameAsString()) != RAIIDenyList.end()) {
     diag(VD->getLocation(),
          "%0 persists across a suspension point of coroutine")
         << VD;
   }
 }
 
-void CoroutineSuspensionHostileCheck::check(
-    const MatchFinder::MatchResult &Result) {
+void CoroutineHostileRAIICheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Suspension = Result.Nodes.getNodeAs<Stmt>("suspension");
   DynTypedNode P;
   for (const Stmt *Child = Suspension; Child; Child = P.get<Stmt>()) {
@@ -71,9 +70,9 @@ void CoroutineSuspensionHostileCheck::check(
   }
 }
 
-void CoroutineSuspensionHostileCheck::storeOptions(
+void CoroutineHostileRAIICheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "DenyTypeList",
-                utils::options::serializeStringList(DenyTypeList));
+  Options.store(Opts, "RAIIDenyList",
+                utils::options::serializeStringList(RAIIDenyList));
 }
 } // namespace clang::tidy::misc

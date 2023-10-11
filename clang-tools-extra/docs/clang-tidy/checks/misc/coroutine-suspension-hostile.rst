@@ -1,17 +1,20 @@
-.. title:: clang-tidy - misc-coroutine-suspension-hostile
+.. title:: clang-tidy - misc-coroutine-hostile-raii
 
-misc-coroutine-suspension-hostile
+misc-coroutine-hostile-raii
 ====================
 
-This check detects when objects of certain hostile types persists across suspension points in a coroutine.
-Such hostile types include scoped-lockable types and types belonging to a configurable denylist.
+This check detects hostile-RAII objects which should not persist across a suspension point in a coroutine.
+Since after a suspension a coroutine could potentially be resumed on a different thread,
+such RAII objects could be created by one thread but destroyed by another.
+Certain RAII types could be hostile to being destroyed by another thread.
 
-A scoped-lockable object persisting across a suspension point in a coroutine is 
-problematic as it is possible for the lock held by this object at the suspension 
-point to be unlocked by a wrong thread if the coroutine resume on a different thread.
-This would be undefined behaviour.
+The check considers the following type as hostile:
 
-The check also diagnosis objects persisting across suspension points which belong to a configurable denylist.
+ - Scoped-lockable types: A scoped-lockable object persisting across a suspension point in a coroutine is 
+ problematic as it is possible for the lock held by this object at the suspension 
+ point to be unlocked by a different thread. This would be undefined behaviour.
+
+ - Types belonging to a configurable denylist.
 
 .. code-block:: c++
 
@@ -29,7 +32,7 @@ The check also diagnosis objects persisting across suspension points which belon
 Options
 -------
 
-.. option:: DenyTypeList
+.. option:: RAIIDenyList
 
    A semicolon-separated list of qualified types which should not be allowed to persist across suspension points.
    Do not include trailing `::` in the qualified name.
