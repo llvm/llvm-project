@@ -79,7 +79,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("init_term_dyn.o")));
   }
 
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_L, options::OPT_T_Group, options::OPT_s,
                    options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
