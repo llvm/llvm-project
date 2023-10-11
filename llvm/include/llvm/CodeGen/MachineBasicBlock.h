@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
@@ -104,6 +105,16 @@ public:
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
+  };
+
+  class Delegate {
+    virtual void anchor();
+
+  public:
+    virtual ~Delegate() = default;
+
+    virtual void MBB_NoteInsertion(MachineInstr &MI) = 0;
+    virtual void MBB_NoteRemoval(MachineInstr &MI) = 0;
   };
 
 private:
@@ -232,6 +243,9 @@ public:
 
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
+
+  /// Delegates to inform of instruction addition and removal.
+  SmallPtrSet<Delegate *, 1> TheDelegates;
 
   /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
@@ -1183,6 +1197,29 @@ public:
   /// NOT be called directly, but by using getEdgeProbability method from
   /// MachineBranchProbabilityInfo class.
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
+
+  void resetDelegate(Delegate *delegate) {
+    assert(TheDelegates.count(delegate) &&
+           "Only an existing delegate can perform reset!");
+    TheDelegates.erase(delegate);
+  }
+
+  void addDelegate(Delegate *delegate) {
+    assert(delegate && !TheDelegates.count(delegate) &&
+           "Attempted to add null delegate, or to change it without "
+           "first resetting it!");
+    TheDelegates.insert(delegate);
+  }
+
+  void noteInsertion(MachineInstr &MI) {
+    for (auto *TheDelegate : TheDelegates)
+      TheDelegate->MBB_NoteInsertion(MI);
+  }
+
+  void noteRemoval(MachineInstr &MI) {
+    for (auto *TheDelegate : TheDelegates)
+      TheDelegate->MBB_NoteRemoval(MI);
+  }
 
 private:
   /// Return probability iterator corresponding to the I successor iterator.

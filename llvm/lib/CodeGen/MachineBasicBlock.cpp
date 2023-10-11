@@ -156,12 +156,14 @@ void ilist_traits<MachineInstr>::addNodeToList(MachineInstr *N) {
   MachineFunction *MF = Parent->getParent();
   N->addRegOperandsToUseLists(MF->getRegInfo());
   MF->handleInsertion(*N);
+  Parent->noteInsertion(*N);
 }
 
 /// When we remove an instruction from a basic block list, we update its parent
 /// pointer and remove its operands from reg use/def lists if appropriate.
 void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
   assert(N->getParent() && "machine instruction not in a basic block");
+  N->getParent()->noteRemoval(*N);
 
   // Remove from the use/def lists.
   if (MachineFunction *MF = N->getMF()) {
@@ -1097,6 +1099,31 @@ static bool jumpTableHasOtherUses(const MachineFunction &MF,
   return false;
 }
 
+class MBBSplitCriticalEdgeDelegate : public MachineBasicBlock::Delegate {
+private:
+  MachineBasicBlock *MBB;
+  SlotIndexes *Indexes;
+
+public:
+  MBBSplitCriticalEdgeDelegate(MachineBasicBlock *Block,
+                               SlotIndexes *IndexesToUpdate)
+      : MBB(Block), Indexes(IndexesToUpdate) {
+    MBB->addDelegate(this);
+  }
+
+  ~MBBSplitCriticalEdgeDelegate() { MBB->resetDelegate(this); }
+
+  void MBB_NoteInsertion(MachineInstr &MI) override {
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(MI);
+  }
+
+  void MBB_NoteRemoval(MachineInstr &MI) override {
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(MI);
+  }
+};
+
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     MachineBasicBlock *Succ, Pass &P,
     std::vector<SparseBitVector<>> *LiveInSets) {
@@ -1170,51 +1197,23 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 
   ReplaceUsesOfBlockWith(Succ, NMBB);
 
-  // If updateTerminator() removes instructions, we need to remove them from
-  // SlotIndexes.
-  SmallVector<MachineInstr*, 4> Terminators;
-  if (Indexes) {
-    for (MachineInstr &MI :
-         llvm::make_range(getFirstInstrTerminator(), instr_end()))
-      Terminators.push_back(&MI);
-  }
-
   // Since we replaced all uses of Succ with NMBB, that should also be treated
   // as the fallthrough successor
   if (Succ == PrevFallthrough)
     PrevFallthrough = NMBB;
 
-  if (!ChangedIndirectJump)
+  if (!ChangedIndirectJump) {
+    MBBSplitCriticalEdgeDelegate SlotUpdater(this, Indexes);
     updateTerminator(PrevFallthrough);
-
-  if (Indexes) {
-    SmallVector<MachineInstr*, 4> NewTerminators;
-    for (MachineInstr &MI :
-         llvm::make_range(getFirstInstrTerminator(), instr_end()))
-      NewTerminators.push_back(&MI);
-
-    for (MachineInstr *Terminator : Terminators) {
-      if (!is_contained(NewTerminators, Terminator))
-        Indexes->removeMachineInstrFromMaps(*Terminator);
-    }
   }
 
   // Insert unconditional "jump Succ" instruction in NMBB if necessary.
   NMBB->addSuccessor(Succ);
   if (!NMBB->isLayoutSuccessor(Succ)) {
+    MBBSplitCriticalEdgeDelegate SlotUpdater(NMBB, Indexes);
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
-
-    if (Indexes) {
-      for (MachineInstr &MI : NMBB->instrs()) {
-        // Some instructions may have been moved to NMBB by updateTerminator(),
-        // so we first remove any instruction that already has an index.
-        if (Indexes->hasIndex(MI))
-          Indexes->removeMachineInstrFromMaps(MI);
-        Indexes->insertMachineInstrInMaps(MI);
-      }
-    }
   }
 
   // Fix PHI nodes in Succ so they refer to NMBB instead of this.
@@ -1743,3 +1742,5 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
 const MBBSectionID
     MBBSectionID::ExceptionSectionID(MBBSectionID::SectionType::Exception);
+
+void MachineBasicBlock::Delegate::anchor() {}
