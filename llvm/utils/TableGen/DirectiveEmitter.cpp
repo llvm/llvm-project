@@ -104,12 +104,13 @@ static void GenerateEnumClauseVal(const std::vector<Record *> &Records,
            << "llvm::" << DirLang.getCppNamespace() << "::" << EnumName
            << "::" << CV->getName() << ";\n";
       }
-      EnumHelperFuncs += (llvm::Twine(EnumName) + llvm::Twine(" get") +
+      EnumHelperFuncs += (llvm::Twine("LLVM_FUNC_ABI ") +
+                          llvm::Twine(EnumName) + llvm::Twine(" get") +
                           llvm::Twine(EnumName) + llvm::Twine("(StringRef);\n"))
                              .str();
 
       EnumHelperFuncs +=
-          (llvm::Twine("llvm::StringRef get") + llvm::Twine(DirLang.getName()) +
+          (llvm::Twine("LLVM_FUNC_ABI llvm::StringRef get") + llvm::Twine(DirLang.getName()) +
            llvm::Twine(EnumName) + llvm::Twine("Name(") +
            llvm::Twine(EnumName) + llvm::Twine(");\n"))
               .str();
@@ -215,20 +216,20 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   // Generic function signatures
   OS << "\n";
   OS << "// Enumeration helper functions\n";
-  OS << "Directive get" << DirLang.getName()
+  OS << "LLVM_FUNC_ABI Directive get" << DirLang.getName()
      << "DirectiveKind(llvm::StringRef Str);\n";
   OS << "\n";
-  OS << "llvm::StringRef get" << DirLang.getName()
+  OS << "LLVM_FUNC_ABI llvm::StringRef get" << DirLang.getName()
      << "DirectiveName(Directive D);\n";
   OS << "\n";
-  OS << "Clause get" << DirLang.getName()
+  OS << "LLVM_FUNC_ABI Clause get" << DirLang.getName()
      << "ClauseKind(llvm::StringRef Str);\n";
   OS << "\n";
-  OS << "llvm::StringRef get" << DirLang.getName() << "ClauseName(Clause C);\n";
+  OS << "LLVM_FUNC_ABI llvm::StringRef get" << DirLang.getName() << "ClauseName(Clause C);\n";
   OS << "\n";
   OS << "/// Return true if \\p C is a valid clause for \\p D in version \\p "
      << "Version.\n";
-  OS << "bool isAllowedClauseForDirective(Directive D, "
+  OS << "LLVM_FUNC_ABI bool isAllowedClauseForDirective(Directive D, "
      << "Clause C, unsigned Version);\n";
   OS << "\n";
   if (EnumHelperFuncs.length() > 0) {

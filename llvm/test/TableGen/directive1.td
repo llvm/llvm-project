@@ -88,19 +88,19 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  constexpr auto TDLCV_valc = llvm::tdl::AKind::TDLCV_valc;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
-// CHECK-NEXT:  Directive getTdlDirectiveKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_FUNC_ABI Directive getTdlDirectiveKind(llvm::StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::StringRef getTdlDirectiveName(Directive D);
+// CHECK-NEXT:  LLVM_FUNC_ABI llvm::StringRef getTdlDirectiveName(Directive D);
 // CHECK-EMPTY:
-// CHECK-NEXT:  Clause getTdlClauseKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_FUNC_ABI Clause getTdlClauseKind(llvm::StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  llvm::StringRef getTdlClauseName(Clause C);
+// CHECK-NEXT:  LLVM_FUNC_ABI llvm::StringRef getTdlClauseName(Clause C);
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
-// CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
+// CHECK-NEXT:  LLVM_FUNC_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
-// CHECK-NEXT:  AKind getAKind(StringRef);
-// CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
+// CHECK-NEXT:  LLVM_FUNC_ABI AKind getAKind(StringRef);
+// CHECK-NEXT:  LLVM_FUNC_ABI llvm::StringRef getTdlAKindName(AKind);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
