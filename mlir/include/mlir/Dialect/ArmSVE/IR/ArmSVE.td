@@ -44,8 +44,10 @@ def SVEPredicate : ScalableVectorOfRankAndLengthAndType<
 
 // Generalizations of SVBool and SVEPredicate to ranks >= 1.
 // These are masks with a single trailing scalable dimension.
-def SVBoolMask : TrailingScalableVectorOfSizeAndType<[16], [I1]>;
-def SVEPredicateMask : TrailingScalableVectorOfSizeAndType<[16, 8, 4, 2, 1], [I1]>;
+def SVBoolMask : VectorWithTrailingDimScalableOfSizeAndType<
+  [16], [I1]>;
+def SVEPredicateMask : VectorWithTrailingDimScalableOfSizeAndType<
+  [16, 8, 4, 2, 1], [I1]>;
 
 //===----------------------------------------------------------------------===//
 // ArmSVE op definitions

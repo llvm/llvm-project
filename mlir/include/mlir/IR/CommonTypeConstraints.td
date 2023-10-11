@@ -43,7 +43,7 @@ def IsScalableVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &
 //   - vector<[4]xf32>, vector<2x3x[2]xi64>, vector<32x[8]xi32>
 // Invalid
 //   - vector<[4]x8xi32>, vector<[2]x[2]xf64>, vector<2x[8]x4xi32>
-def IsOnlyTrailingDimScalablePred : And<[
+def IsVectorTypeWithOnlyTrailingDimScalablePred : And<[
   CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
   CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">,
   CPred<"::llvm::cast<::mlir::VectorType>($_self).getScalableDims().back()">,
@@ -419,8 +419,8 @@ class ScalableVectorOf<list<Type> allowedTypes> :
 
 // Any vector with a single trailing scalable dimension, with an element type in
 // the `allowedTypes` list.
-class TrailingScalableVectorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsOnlyTrailingDimScalablePred,
+class VectorWithTrailingDimScalableOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsVectorTypeWithOnlyTrailingDimScalablePred,
           "trailing scalable vector", "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given
@@ -500,18 +500,30 @@ class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
-// Normalizes an index so it can be bounds checked.
+// Normalizes a (possibly negative) index so it can be easily bounds checked.
 // Negative values are mapped to their absolute value.
 //  - These are used to index in reverse (i.e. index -1 would be the last element)
 // Positive values are mapped to their value + 1.
 //  - This results the same range of values as the negative indices
-// This allows bounds checking to be: len(list) >= NormalizeIndex<idx>.ret.
+// This allows bounds checking to be: len(list) >= NormalizeIndex<idx>.ret (see
+// first CPred of IsNthDimSizeIsOneOfPred).
 class NormalizeIndex<int value> {
   int ret = !if(!lt(value, 0), !sub(0, value), !add(value, 1));
 }
 
-// Whether the n-th dim of the shape matches the given `size`.
-// Negative values index in reverse.
+// Whether the n-th dim of the shape is contained within `allowedSizes`.
+// Negative values for `n` index in reverse.
+//
+// Examples:
+// IsNthDimSizeIsOneOfPred<0, {2, 3, 4}>
+//  - Accepts any shape where the first dim is 2, 3, or 4.
+//    * This means shapes like: 2x8x9x5, 4, 3x1, 4x?, etc
+// IsNthDimSizeIsOneOfPred<-1, {16}>
+//  - Accepts any shape where the last dim is 16.
+//    * This means shapes like 2x16, 16, 1x2x3x4x16, etc
+// IsNthDimSizeIsOneOfPred<-2, {10, 5}>
+//  - Accepts any shape where the second to last dim is 10 or 5.
+//    * This means shapes like: 1x10x2, 2x1x4x5x6, 8x10x?, etc
 class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
   : And<[
       CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # NormalizeIndex<n>.ret>,
@@ -525,13 +537,6 @@ class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>
   : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
-
-// Any ShapedType where the size of the n-th dim is contained in `sizes`.
-// Negative values index in reverse.
-class ShapedTypeWithNthDimOfSize<int n, list<int> allowedSizes> : Type<
-  IsNthDimSizeIsOneOfPred<n, allowedSizes>,
-  " with dim " # n # " having a size of {" # !interleave(allowedSizes, ", ") # "}",
-  "::mlir::ShapedType">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
@@ -594,14 +599,21 @@ class ScalableVectorOfRankAndLengthAndType<list<int> allowedRanks,
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any ShapedType where the size of the n-th dim is contained in `allowedSizes`.
+// Negative values for `n` index in reverse.
+class ShapedTypeWithNthDimOfSize<int n, list<int> allowedSizes> : Type<
+  IsNthDimSizeIsOneOfPred<n, allowedSizes>,
+  " with dim " # n # " having a size of {" # !interleave(allowedSizes, ", ") # "}",
+  "::mlir::ShapedType">;
+
 // Any scalable vector with a single trailing scalable dimensions, where the
 // size of the trailing dimension is in `allowedTrailingSizes` list, and the
 // type is in the `allowedTypes` list.
-class TrailingScalableVectorOfSizeAndType<list<int> allowedTrailingSizes,
+class VectorWithTrailingDimScalableOfSizeAndType<list<int> allowedTrailingSizes,
                                            list<Type> allowedTypes> : AllOfType<
-  [TrailingScalableVectorOf<allowedTypes>,
+  [VectorWithTrailingDimScalableOf<allowedTypes>,
    ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>],
-   TrailingScalableVectorOf<allowedTypes>.summary #
+   VectorWithTrailingDimScalableOf<allowedTypes>.summary #
    ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>.summary,
   "::mlir::VectorType">;
 
