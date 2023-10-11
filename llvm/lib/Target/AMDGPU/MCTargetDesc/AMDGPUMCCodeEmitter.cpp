@@ -411,7 +411,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
-    support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
+    support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
 
     // Only one literal value allowed
     break;
