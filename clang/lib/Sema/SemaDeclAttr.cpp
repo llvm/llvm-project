@@ -8392,7 +8392,7 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
     if (!OrdResult.empty()) {
       SourceRange SR = FD->getLocation();
       Diag(SR.getBegin(), diag::err_counted_by_must_be_in_structure)
-        << FieldName << SR;
+          << FieldName << SR;
 
       if (auto *ND = OrdResult.getAsSingle<NamedDecl>()) {
         SR = ND->getLocation();
@@ -8429,7 +8429,8 @@ bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
       return true;
     }
 
-    if (!Field->getType()->isIntegerType() || Field->getType()->isBooleanType()) {
+    if (!Field->getType()->isIntegerType() ||
+        Field->getType()->isBooleanType()) {
       // The "counted_by" field must have an integer type.
       SourceRange SR = CBA->getCountedByFieldLoc();
       Diag(SR.getBegin(),
