@@ -472,18 +472,25 @@ class raw_ostream;
     /// begin and basic block)
     using MBBIndexIterator = SmallVectorImpl<IdxMBBPair>::const_iterator;
 
-    /// Move iterator to the next IdxMBBPair where the SlotIndex is greater or
-    /// equal to \p To.
-    MBBIndexIterator advanceMBBIndex(MBBIndexIterator I, SlotIndex To) const {
-      return std::partition_point(
-          I, idx2MBBMap.end(),
-          [=](const IdxMBBPair &IM) { return IM.first < To; });
+    /// Get an iterator pointing to the first IdxMBBPair with SlotIndex greater
+    /// than or equal to \p Idx. If \p Start is provided, only search the range
+    /// from \p Start to the end of the function.
+    MBBIndexIterator getMBBLowerBound(MBBIndexIterator Start,
+                                      SlotIndex Idx) const {
+      return std::lower_bound(
+          Start, MBBIndexEnd(), Idx,
+          [](const IdxMBBPair &IM, SlotIndex Idx) { return IM.first < Idx; });
+    }
+    MBBIndexIterator getMBBLowerBound(SlotIndex Idx) const {
+      return getMBBLowerBound(MBBIndexBegin(), Idx);
     }
 
-    /// Get an iterator pointing to the IdxMBBPair with the biggest SlotIndex
-    /// that is greater or equal to \p Idx.
-    MBBIndexIterator findMBBIndex(SlotIndex Idx) const {
-      return advanceMBBIndex(idx2MBBMap.begin(), Idx);
+    /// Get an iterator pointing to the first IdxMBBPair with SlotIndex greater
+    /// than \p Idx.
+    MBBIndexIterator getMBBUpperBound(SlotIndex Idx) const {
+      return std::upper_bound(
+          MBBIndexBegin(), MBBIndexEnd(), Idx,
+          [](SlotIndex Idx, const IdxMBBPair &IM) { return Idx < IM.first; });
     }
 
     /// Returns an iterator for the begin of the idx2MBBMap.
@@ -501,16 +508,11 @@ class raw_ostream;
       if (MachineInstr *MI = getInstructionFromIndex(index))
         return MI->getParent();
 
-      MBBIndexIterator I = findMBBIndex(index);
-      // Take the pair containing the index
-      MBBIndexIterator J =
-        ((I != MBBIndexEnd() && I->first > index) ||
-         (I == MBBIndexEnd() && !idx2MBBMap.empty())) ? std::prev(I) : I;
-
-      assert(J != MBBIndexEnd() && J->first <= index &&
-             index < getMBBEndIdx(J->second) &&
+      MBBIndexIterator I = std::prev(getMBBUpperBound(index));
+      assert(I != MBBIndexEnd() && I->first <= index &&
+             index < getMBBEndIdx(I->second) &&
              "index does not correspond to an MBB");
-      return J->second;
+      return I->second;
     }
 
     /// Insert the given machine instruction into the mapping. Returns the
