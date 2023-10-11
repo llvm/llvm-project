@@ -19,13 +19,13 @@ body: |
     ; GFX803-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
     ; GFX803-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; GFX803-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(uge), [[COPY2]](s32), [[COPY3]]
+    ;
     ; GFX1150-LABEL: name: fcmp_ss
     ; GFX1150: liveins: $sgpr0, $sgpr1
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:sgpr(s32) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY1]]
-    ; GFX1150-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[FCMP]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_FCMP floatpred(uge), %0(s32), %1

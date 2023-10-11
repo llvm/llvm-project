@@ -19,7 +19,7 @@ body: |
     ; FAST-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
     ; FAST-NEXT: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
     ; FAST-NEXT: [[UADDE:%[0-9]+]]:sgpr(s32), [[UADDE1:%[0-9]+]]:sgpr(s32) = G_UADDE [[COPY]], [[COPY1]], [[ZEXT]]
-    ; FAST-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[UADDE1]](s32)
+    ;
     ; GREEDY-LABEL: name: uadde_s32_sss
     ; GREEDY: liveins: $sgpr0, $sgpr1, $sgpr2
     ; GREEDY-NEXT: {{  $}}
@@ -31,7 +31,6 @@ body: |
     ; GREEDY-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
     ; GREEDY-NEXT: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
     ; GREEDY-NEXT: [[UADDE:%[0-9]+]]:sgpr(s32), [[UADDE1:%[0-9]+]]:sgpr(s32) = G_UADDE [[COPY]], [[COPY1]], [[ZEXT]]
-    ; GREEDY-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[UADDE1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2
@@ -59,6 +58,7 @@ body: |
     ; FAST-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; FAST-NEXT: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST-NEXT: [[UADDE:%[0-9]+]]:vgpr(s32), [[UADDE1:%[0-9]+]]:vcc(s1) = G_UADDE [[COPY]], [[COPY3]], [[COPY4]]
+    ;
     ; GREEDY-LABEL: name: uadde_s32_vss
     ; GREEDY: liveins: $vgpr0, $sgpr0, $sgpr1
     ; GREEDY-NEXT: {{  $}}
@@ -96,6 +96,7 @@ body: |
     ; FAST-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; FAST-NEXT: [[COPY5:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST-NEXT: [[UADDE:%[0-9]+]]:vgpr(s32), [[UADDE1:%[0-9]+]]:vcc(s1) = G_UADDE [[COPY3]], [[COPY4]], [[COPY5]]
+    ;
     ; GREEDY-LABEL: name: uadde_s32_ssv
     ; GREEDY: liveins: $sgpr0, $sgpr1, $vgpr0
     ; GREEDY-NEXT: {{  $}}
@@ -130,6 +131,7 @@ body: |
     ; FAST-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY2]](s32)
     ; FAST-NEXT: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST-NEXT: [[UADDE:%[0-9]+]]:vgpr(s32), [[UADDE1:%[0-9]+]]:vcc(s1) = G_UADDE [[COPY]], [[COPY1]], [[COPY3]]
+    ;
     ; GREEDY-LABEL: name: uadde_s32_vvs
     ; GREEDY: liveins: $vgpr0, $vgpr1, $sgpr0
     ; GREEDY-NEXT: {{  $}}
@@ -162,7 +164,7 @@ body: |
     ; FAST-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY2]](s32)
     ; FAST-NEXT: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
     ; FAST-NEXT: [[UADDE:%[0-9]+]]:sgpr(s32), [[UADDE1:%[0-9]+]]:sgpr(s32) = G_UADDE [[COPY]], [[COPY1]], [[ZEXT]]
-    ; FAST-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[UADDE1]](s32)
+    ;
     ; GREEDY-LABEL: name: uadde_s32_sss_noscc
     ; GREEDY: liveins: $sgpr0, $sgpr1, $sgpr2
     ; GREEDY-NEXT: {{  $}}
@@ -172,7 +174,6 @@ body: |
     ; GREEDY-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY2]](s32)
     ; GREEDY-NEXT: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
     ; GREEDY-NEXT: [[UADDE:%[0-9]+]]:sgpr(s32), [[UADDE1:%[0-9]+]]:sgpr(s32) = G_UADDE [[COPY]], [[COPY1]], [[ZEXT]]
-    ; GREEDY-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s1) = G_TRUNC [[UADDE1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2

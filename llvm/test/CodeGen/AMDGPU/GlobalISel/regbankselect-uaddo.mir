@@ -15,7 +15,6 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[UADDO:%[0-9]+]]:sgpr(s32), [[UADDO1:%[0-9]+]]:sgpr(s32) = G_UADDO [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[UADDO1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32), %3:_(s1) = G_UADDO %0, %1

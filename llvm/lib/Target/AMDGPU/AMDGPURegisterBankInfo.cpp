@@ -1681,7 +1681,8 @@ bool AMDGPURegisterBankInfo::applyMappingMAD_64_32(
   if (DstOnValu) {
     B.buildCopy(Dst1, Carry);
   } else {
-    B.buildTrunc(Dst1, Carry);
+    if (!MRI.use_nodbg_empty(Dst1))
+      B.buildTrunc(Dst1, Carry);
   }
 
   MI.eraseFromParent();
@@ -2213,6 +2214,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       B.buildZExt(NewSrcReg, MI.getOperand(4).getReg());
       MI.getOperand(4).setReg(NewSrcReg);
     }
+
+    // Don't create dead instruction
+    if (MRI.use_nodbg_empty(DstReg))
+      return;
 
     MachineBasicBlock *MBB = MI.getParent();
     B.setInsertPt(*MBB, std::next(MI.getIterator()));
