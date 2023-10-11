@@ -1,0 +1,96 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_STD_ATOMICS_ATOMICS_TYPES_FLOAT_TEST_HELPER_H
+#define TEST_STD_ATOMICS_ATOMICS_TYPES_FLOAT_TEST_HELPER_H
+
+#include <atomic>
+#include <cassert>
+#include <thread>
+#include <vector>
+
+// Test that all threads see the exact same sequence of events
+// Test will pass 100% if store_op and load_op are correctly
+// affecting the memory with seq_cst order
+template <class T, template <class> class MaybeVolatile, class StoreOp, class LoadOp>
+void test_seq_cst(StoreOp store_op, LoadOp load_op) {
+  for (int i = 0; i < 100; ++i) {
+    T old_value = 0.0;
+    T new_value = 1.0;
+
+    MaybeVolatile<std::atomic<T>> x(old_value);
+    MaybeVolatile<std::atomic<T>> y(old_value);
+
+    std::atomic_bool x_update_first(false);
+    std::atomic_bool y_update_first(false);
+
+    std::thread t1([&] { store_op(x, old_value, new_value); });
+
+    std::thread t2([&] { store_op(y, old_value, new_value); });
+
+    std::thread t3([&] {
+      while (load_op(x) != new_value) {
+        std::this_thread::yield();
+      }
+      if (load_op(y) != new_value) {
+        x_update_first.store(true, std::memory_order_relaxed);
+      }
+    });
+
+    std::thread t4([&] {
+      while (load_op(y) != new_value) {
+        std::this_thread::yield();
+      }
+      if (load_op(x) != new_value) {
+        y_update_first.store(true, std::memory_order_relaxed);
+      }
+    });
+
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    assert(!(x_update_first && y_update_first));
+  }
+}
+
+// Test that all writes before the store are seen by other threads after the load
+// Test will pass 100% if store_op and load_op are correctly
+// affecting the memory with acquire-release order
+template <class T, template <class> class MaybeVolatile, class StoreOp, class LoadOp>
+void test_acquire_release(StoreOp store_op, LoadOp load_op) {
+  for (auto i = 0; i < 100; ++i) {
+    T old_value = 0.0;
+    T new_value = 1.0;
+
+    MaybeVolatile<std::atomic<T>> at(old_value);
+    int non_atomic = 5;
+
+    constexpr auto number_of_threads = 4;
+    std::vector<std::thread> threads;
+    threads.reserve(number_of_threads);
+
+    for (auto j = 0; j < number_of_threads; ++j) {
+      threads.emplace_back([&at, &non_atomic, load_op, new_value] {
+        while (load_op(at) != new_value) {
+          std::this_thread::yield();
+        }
+        assert(non_atomic == 6);
+      });
+    }
+
+    non_atomic = 6;
+    store_op(at, old_value, new_value);
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+  }
+}
+
+#endif // TEST_STD_ATOMICS_ATOMICS_TYPES_FLOAT_TEST_HELPER_H

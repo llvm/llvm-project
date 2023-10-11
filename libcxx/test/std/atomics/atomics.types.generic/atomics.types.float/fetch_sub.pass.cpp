@@ -19,29 +19,21 @@
 #include <thread>
 #include <vector>
 
+#include "test_helper.h"
 #include "test_macros.h"
-#include "make_test_thread.h"
 
 template <class T>
 concept HasVolatileFetchSub = requires(volatile std::atomic<T> a, T t) { a.fetch_sub(t); };
 
-template <class T>
-void test() {
-  static_assert(noexcept(std::declval<std::atomic<T>&>().fetch_sub(T(0))));
+template <class T, template <class> class MaybeVolatile = std::type_identity_t>
+void testImpl() {
   static_assert(HasVolatileFetchSub<T> == std::atomic<T>::is_always_lock_free);
+  static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().fetch_sub(T(0))));
 
   // fetch_sub
   {
-    std::atomic<T> a(3.1);
-    std::same_as<T> decltype(auto) r = a.fetch_sub(T(1.2));
-    assert(r == T(3.1));
-    assert(a.load() == T(3.1) - T(1.2));
-  }
-
-  // fetch_sub volatile
-  if constexpr (std::atomic<T>::is_always_lock_free) {
-    volatile std::atomic<T> a(3.1);
-    std::same_as<T> decltype(auto) r = a.fetch_sub(T(1.2));
+    MaybeVolatile<std::atomic<T>> a(3.1);
+    std::same_as<T> decltype(auto) r = a.fetch_sub(T(1.2), std::memory_order::relaxed);
     assert(r == T(3.1));
     assert(a.load() == T(3.1) - T(1.2));
   }
@@ -51,14 +43,14 @@ void test() {
     constexpr auto number_of_threads = 4;
     constexpr auto loop              = 1000;
 
-    std::atomic<T> at;
+    MaybeVolatile<std::atomic<T>> at;
 
     std::vector<std::thread> threads;
     threads.reserve(number_of_threads);
     for (auto i = 0; i < number_of_threads; ++i) {
       threads.emplace_back([&at]() {
         for (auto j = 0; j < loop; ++j) {
-          at.fetch_sub(T(1.234));
+          at.fetch_sub(T(1.234), std::memory_order::relaxed);
         }
       });
     }
@@ -76,6 +68,34 @@ void test() {
     };
 
     assert(at.load() == accu_neg(1.234, number_of_threads * loop));
+  }
+
+  // memory_order::release
+  {
+    auto store = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
+      x.fetch_sub(old_val - new_val, std::memory_order::release);
+    };
+    auto load = [](MaybeVolatile<std::atomic<T>>& x) { return x.load(std::memory_order::acquire); };
+    test_acquire_release<T, MaybeVolatile>(store, load);
+  }
+
+  // memory_order::seq_cst
+  {
+    auto fetch_sub = [](MaybeVolatile<std::atomic<T>>& x, T old_value, T new_val) { x.fetch_sub(old_value - new_val); };
+    auto fetch_sub_with_order = [](MaybeVolatile<std::atomic<T>>& x, T old_value, T new_val) {
+      x.fetch_sub(old_value - new_val, std::memory_order::seq_cst);
+    };
+    auto load = [](auto& x) { return x.load(); };
+    test_seq_cst<T, MaybeVolatile>(fetch_sub, load);
+    test_seq_cst<T, MaybeVolatile>(fetch_sub_with_order, load);
+  }
+}
+
+template <class T>
+void test() {
+  testImpl<T>();
+  if constexpr (std::atomic<T>::is_always_lock_free) {
+    testImpl<T, std::add_volatile_t>();
   }
 }
 

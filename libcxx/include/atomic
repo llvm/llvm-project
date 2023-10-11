@@ -262,7 +262,7 @@ struct atomic<T*>
     void notify_all() noexcept;
 };
 
-template<> 
+template<>
 struct atomic<floating-point-type> {
   using value_type = floating-point-type;
   using difference_type = value_type;

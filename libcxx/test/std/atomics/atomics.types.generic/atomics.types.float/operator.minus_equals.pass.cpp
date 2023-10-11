@@ -16,28 +16,20 @@
 #include <thread>
 #include <vector>
 
+#include "test_helper.h"
 #include "test_macros.h"
-#include "make_test_thread.h"
 
 template <class T>
 concept HasVolatileMinusEquals = requires(volatile std::atomic<T> a, T t) { a -= t; };
 
-template <class T>
-void test() {
-  static_assert(noexcept(std::declval<std::atomic<T>&>() -= T(0)));
+template <class T, template <class> class MaybeVolatile = std::type_identity_t>
+void testImpl() {
   static_assert(HasVolatileMinusEquals<T> == std::atomic<T>::is_always_lock_free);
+  static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>() -= T(0)));
 
   // -=
   {
-    std::atomic<T> a(3.1);
-    std::same_as<T> decltype(auto) r = a -= T(1.2);
-    assert(r == T(3.1) - T(1.2));
-    assert(a.load() == T(3.1) - T(1.2));
-  }
-
-  // -= volatile
-  if constexpr (std::atomic<T>::is_always_lock_free) {
-    volatile std::atomic<T> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(3.1);
     std::same_as<T> decltype(auto) r = a -= T(1.2);
     assert(r == T(3.1) - T(1.2));
     assert(a.load() == T(3.1) - T(1.2));
@@ -48,7 +40,7 @@ void test() {
     constexpr auto number_of_threads = 4;
     constexpr auto loop              = 1000;
 
-    std::atomic<T> at;
+    MaybeVolatile<std::atomic<T>> at;
 
     std::vector<std::thread> threads;
     threads.reserve(number_of_threads);
@@ -73,6 +65,21 @@ void test() {
     };
 
     assert(at.load() == accu_neg(1.234, number_of_threads * loop));
+  }
+
+  // memory_order::seq_cst
+  {
+    auto minus_equals = [](MaybeVolatile<std::atomic<T>>& x, T old_value, T new_val) { x -= (old_value - new_val); };
+    auto load         = [](MaybeVolatile<std::atomic<T>>& x) { return x.load(); };
+    test_seq_cst<T, MaybeVolatile>(minus_equals, load);
+  }
+}
+
+template <class T>
+void test() {
+  testImpl<T>();
+  if constexpr (std::atomic<T>::is_always_lock_free) {
+    testImpl<T, std::add_volatile_t>();
   }
 }
 
