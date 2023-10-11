@@ -196,7 +196,7 @@ struct ParallelLoopTiling
 
   void runOnOperation() override {
     for (int64_t tileSize : tileSizes) 
-      if (!tileSize)
+      if (tileSize == 0)
         signalPassFailure();
     auto *parentOp = getOperation();
     SmallVector<ParallelOp, 2> innermostPloops;
