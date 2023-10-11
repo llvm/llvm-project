@@ -3507,7 +3507,7 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
     return;
 
   if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ() &&
-      !EffectiveTriple.isPPC64())
+      !EffectiveTriple.isPPC64() && !EffectiveTriple.isAArch64())
     return;
 
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_clash_protection,
