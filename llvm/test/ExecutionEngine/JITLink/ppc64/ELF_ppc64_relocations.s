@@ -1,3 +1,4 @@
+# REQUIRES: system-linux
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc --triple=powerpc64le-unknown-linux-gnu --filetype=obj -o \
 # RUN:   %t/elf_reloc.o --defsym LE=1 %s
