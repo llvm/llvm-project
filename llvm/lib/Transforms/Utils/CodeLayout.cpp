@@ -520,30 +520,24 @@ private:
 
 /// A wrapper around two concatenated vectors (chains) of jumps.
 struct MergedJumpsT {
-  using JumpIter = std::vector<JumpT *>::const_iterator;
-
-  MergedJumpsT(JumpIter Begin, JumpIter End) : Begin1(Begin), End1(End) {}
+  MergedJumpsT(const std::vector<JumpT *> *Jumps) { JumpArray[0] = Jumps; }
 
   template <typename F> void forEach(const F &Func) const {
-    for (auto It = Begin1; It != End1; It++)
-      Func(*It);
-    for (auto It = Begin2; It != End2; It++)
-      Func(*It);
+    for (auto Jumps : JumpArray)
+      if (Jumps != nullptr)
+        for (JumpT *Jump : *Jumps)
+          Func(Jump);
   }
 
-  bool empty() const { return Begin1 == End1; }
+  bool empty() const { return JumpArray[0]->empty(); }
 
-  void append(JumpIter Begin, JumpIter End) {
-    assert(Begin2 == End2 && "cannot extend MergedJumpsT");
-    Begin2 = Begin;
-    End2 = End;
+  void append(const std::vector<JumpT *> *Jumps) {
+    assert(JumpArray[1] == nullptr && "cannot extend MergedJumpsT");
+    JumpArray[1] = Jumps;
   }
 
 private:
-  JumpIter Begin1;
-  JumpIter End1;
-  JumpIter Begin2;
-  JumpIter End2;
+  std::array<const std::vector<JumpT *> *, 2> JumpArray{nullptr, nullptr};
 };
 
 /// Merge two chains of nodes respecting a given 'type' and 'offset'.
@@ -832,10 +826,10 @@ private:
       return Edge->getCachedMergeGain(ChainPred, ChainSucc);
 
     // Precompute jumps between ChainPred and ChainSucc.
-    MergedJumpsT Jumps(Edge->jumps().begin(), Edge->jumps().end());
+    MergedJumpsT Jumps(&Edge->jumps());
     ChainEdge *EdgePP = ChainPred->getEdge(ChainPred);
     if (EdgePP != nullptr)
-      Jumps.append(EdgePP->jumps().begin(), EdgePP->jumps().end());
+      Jumps.append(&EdgePP->jumps());
 
     // This object holds the best chosen gain of merging two chains.
     MergeGainT Gain = MergeGainT();
@@ -937,8 +931,7 @@ private:
     ChainEdge *SelfEdge = Into->getEdge(Into);
     if (SelfEdge != nullptr) {
       MergedNodes = MergedNodesT(Into->Nodes.begin(), Into->Nodes.end());
-      MergedJumpsT MergedJumps(SelfEdge->jumps().begin(),
-                               SelfEdge->jumps().end());
+      MergedJumpsT MergedJumps(&SelfEdge->jumps());
       Into->Score = extTSPScore(MergedNodes, MergedJumps);
     }
 
