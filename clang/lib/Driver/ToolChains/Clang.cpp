@@ -4796,7 +4796,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       CmdArgs.push_back("-cc1depscan");
 
       // Pass depscan related options to cc1depscan.
-      Args.AddAllArgs(CmdArgs, DepScanOpts);
+      Args.addAllArgs(CmdArgs, DepScanOpts);
 
       assert(Output.isFilename() && "Depscan needs to have file output");
       CmdArgs.push_back("-o");
