@@ -1434,4 +1434,65 @@ func.func @_QPtest_loop_nest(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK: fir.if
 // CHECK-NOT: fir.if
 
+
+//-----
+
+// Check that a non-dominating operand isn't causing a problem.
+// Just check it compiles, and doesn't version this loop.
+func.func @sum1drebox(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %decl = fir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmoduleFsum1dEi"}
+  %1 = fir.alloca f64 {bindc_name = "sum", uniq_name = "_QMmoduleFsum1dEsum"}
+  %cst = arith.constant 0.000000e+00 : f64
+  fir.store %cst to %1 : !fir.ref<f64>
+  %c1_i32 = arith.constant 1 : i32
+  %2 = fir.convert %c1_i32 : (i32) -> index
+  %3 = fir.load %arg1 : !fir.ref<i32>
+  %4 = fir.convert %3 : (i32) -> index
+  %c1 = arith.constant 1 : index
+  %5 = fir.convert %2 : (index) -> i32
+  %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) {
+    %rebox = fir.rebox %decl : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
+    fir.store %arg3 to %0 : !fir.ref<i32>
+    %7 = fir.load %1 : !fir.ref<f64>
+    %8 = fir.load %0 : !fir.ref<i32>
+    %9 = fir.convert %8 : (i32) -> i64
+    %c1_i64 = arith.constant 1 : i64
+    %10 = arith.subi %9, %c1_i64 : i64
+    %11 = fir.coordinate_of %rebox, %10 : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
+    %12 = fir.load %11 : !fir.ref<f64>
+    %13 = arith.addf %7, %12 fastmath<contract> : f64
+    fir.store %13 to %1 : !fir.ref<f64>
+    %14 = arith.addi %arg2, %c1 : index
+    %15 = fir.convert %c1 : (index) -> i32
+    %16 = fir.load %0 : !fir.ref<i32>
+    %17 = arith.addi %16, %15 : i32
+    fir.result %14, %17 : index, i32
+  }
+  fir.store %6#1 to %0 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL: func @sum1drebox
+// No versioning -> no if-operation.
+// CHECK-NOT: fir.if
+
+
 } // End module
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
