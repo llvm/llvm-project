@@ -667,11 +667,9 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
                 LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   LogicalResult bodyGenStatus = success();
-  if (op.getNumTeamsLower() || op.getNumTeamsUpper() || op.getIfExpr() ||
-      op.getThreadLimit() || !op.getAllocatorsVars().empty() ||
-      op.getReductions()) {
+  if (op.getIfExpr() || !op.getAllocatorsVars().empty() || op.getReductions())
     return op.emitError("unhandled clauses for translation to LLVM IR");
-  }
+
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
         moduleTranslation, allocaIP);
@@ -680,9 +678,21 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
                         moduleTranslation, bodyGenStatus);
   };
 
+  llvm::Value *numTeamsLower = nullptr;
+  if (auto numTeamsLowerVar = op.getNumTeamsLower())
+    numTeamsLower = moduleTranslation.lookupValue(numTeamsLowerVar);
+
+  llvm::Value *numTeamsUpper = nullptr;
+  if (auto numTeamsUpperVar = op.getNumTeamsUpper())
+    numTeamsUpper = moduleTranslation.lookupValue(numTeamsUpperVar);
+
+  llvm::Value *threadLimit = nullptr;
+  if (auto threadLimitVar = op.getThreadLimit())
+    threadLimit = moduleTranslation.lookupValue(threadLimitVar);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  builder.restoreIP(
-      moduleTranslation.getOpenMPBuilder()->createTeams(ompLoc, bodyCB));
+  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTeams(
+      ompLoc, bodyCB, numTeamsLower, numTeamsUpper, threadLimit));
   return bodyGenStatus;
 }
 
