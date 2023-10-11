@@ -494,6 +494,9 @@ BUILTIN(__builtin_isinf,      "i.", "FnctE")
 BUILTIN(__builtin_isinf_sign, "i.", "FnctE")
 BUILTIN(__builtin_isnan,      "i.", "FnctE")
 BUILTIN(__builtin_isnormal,   "i.", "FnctE")
+BUILTIN(__builtin_issubnormal,"i.", "FnctE")
+BUILTIN(__builtin_iszero,     "i.", "FnctE")
+BUILTIN(__builtin_issignaling,"i.", "FnctE")
 BUILTIN(__builtin_isfpclass,  "i.", "nctE")
 
 // FP signbit builtins
