@@ -430,13 +430,12 @@ public:
     LongDoubleWidth = 96;
     LongDoubleAlign = 32;
     SuitableAlign = 128;
-    resetDataLayout(
-        Triple.isOSBinFormatMachO()
-            ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-"
-              "f80:32-n8:16:32-S128"
-            : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-"
-              "f80:32-n8:16:32-S128",
-        Triple.isOSBinFormatMachO() ? "_" : "");
+    resetDataLayout(Triple.isOSBinFormatMachO()
+                        ? "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
+                          "128-f64:32:64-f80:32-n8:16:32-S128"
+                        : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:"
+                          "128-f64:32:64-f80:32-n8:16:32-S128",
+                    Triple.isOSBinFormatMachO() ? "_" : "");
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -541,8 +540,9 @@ public:
       UseSignedCharForObjCBool = false;
     SizeType = UnsignedLong;
     IntPtrType = SignedLong;
-    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-"
-                    "f80:128-n8:16:32-S128", "_");
+    resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-"
+                    "f64:32:64-f80:128-n8:16:32-S128",
+                    "_");
     HasAlignMac68kSupport = true;
   }
 
@@ -569,7 +569,7 @@ public:
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
     bool IsMSVC = getTriple().isWindowsMSVCEnvironment();
     std::string Layout = IsWinCOFF ? "e-m:x" : "e-m:e";
-    Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-";
+    Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-";
     Layout += IsMSVC ? "f80:128" : "f80:32";
     Layout += "-n8:16:32-a:0:32-S32";
     resetDataLayout(Layout, IsWinCOFF ? "_" : "");
@@ -620,8 +620,8 @@ public:
       : X86_32TargetInfo(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     DoubleAlign = LongLongAlign = 64;
-    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:"
-                    "32-n8:16:32-a:0:32-S32",
+    resetDataLayout("e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
+                    "i128:128-f80:32-n8:16:32-a:0:32-S32",
                     "_");
   }
 
@@ -659,8 +659,8 @@ public:
       : X86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-f64:"
-                    "32-f128:32-n8:16:32-a:0:32-S32");
+    resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
+                    "f64:32-f128:32-n8:16:32-a:0:32-S32");
     WIntType = UnsignedInt;
   }
 
@@ -720,11 +720,11 @@ public:
 
     // Pointers are 32-bit in x32.
     resetDataLayout(IsX32 ? "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-f80:128-n8:16:32:64-S128"
-                          : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:"
-                                        "64-i64:64-f80:128-n8:16:32:64-S128"
-                                      : "e-m:e-p270:32:32-p271:32:32-p272:64:"
-                                        "64-i64:64-f80:128-n8:16:32:64-S128");
+                            "i64:64-i128:128-f80:128-n8:16:32:64-S128"
+                    : IsWinCOFF ? "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:"
+                                  "64-i128:128-f80:128-n8:16:32:64-S128"
+                                : "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:"
+                                  "64-i128:128-f80:128-n8:16:32:64-S128");
 
     // Use fpret only for long double.
     RealTypeUsesObjCFPRetMask = (unsigned)FloatModeKind::LongDouble;
@@ -921,8 +921,9 @@ public:
     llvm::Triple T = llvm::Triple(Triple);
     if (T.isiOS())
       UseSignedCharForObjCBool = false;
-    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:"
-                    "16:32:64-S128", "_");
+    resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                    "f80:128-n8:16:32:64-S128",
+                    "_");
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
