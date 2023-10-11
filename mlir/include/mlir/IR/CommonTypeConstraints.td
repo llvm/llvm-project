@@ -38,7 +38,7 @@ def IsScalableVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &
                                    ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a VectorType and all dimensions are scalable.
-def allDimsScalableVectorTypePred : And<[
+def IsVectorTypeWithAllDimsScalablePred : And<[
   IsVectorTypePred,
   CPred<[{::llvm::cast<::mlir::VectorType>($_self).allDimsScalable()}]>
 ]>;
