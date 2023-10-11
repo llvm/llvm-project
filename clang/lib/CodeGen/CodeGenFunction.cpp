@@ -1216,11 +1216,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       SkippedChecks.set(SanitizerKind::ObjectSize, true);
       QualType ThisTy = MD->getThisType();
 
-      // If this is the call operator of a lambda with no capture-default, it
+      // If this is the call operator of a lambda with no captures, it
       // may have a static invoker function, which may call this operator with
       // a null 'this' pointer.
-      if (isLambdaCallOperator(MD) &&
-          MD->getParent()->getLambdaCaptureDefault() == LCD_None)
+      if (isLambdaCallOperator(MD) && MD->getParent()->isCapturelessLambda())
         SkippedChecks.set(SanitizerKind::Null, true);
 
       EmitTypeCheck(
