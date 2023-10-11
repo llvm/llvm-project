@@ -3610,7 +3610,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
           Error = 24; // auto not allowed in lambda parameter (before C++14)
           break;
         } else if (!Auto || Auto->getKeyword() != AutoTypeKeyword::Auto) {
-          Error = 16; // __auto_type or decltype(auto) not allowed in lambda parameter
+          Error = 16; // __auto_type or decltype(auto) not allowed in lambda
+                      // parameter
           break;
         }
         Info = SemaRef.getCurLambda();
