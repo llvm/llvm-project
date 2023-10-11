@@ -132,7 +132,7 @@ void ArgList::AddAllArgsExcept(ArgStringList &Output,
 }
 
 /// This is a nicer interface when you don't have a list of Ids to exclude.
-void ArgList::AddAllArgs(ArgStringList &Output,
+void ArgList::addAllArgs(ArgStringList &Output,
                          ArrayRef<OptSpecifier> Ids) const {
   ArrayRef<OptSpecifier> Exclude = std::nullopt;
   AddAllArgsExcept(Output, Ids, Exclude);
