@@ -20,9 +20,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::misc {
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      RAIIDenyList(
-          utils::options::parseStringList(Options.get("RAIIDenyList", ""))) {}
+    : ClangTidyCheck(Name, Context) {
+  for (StringRef Denied :
+       utils::options::parseStringList(Options.get("RAIIDenyList", ""))) {
+    Denied.consume_front("::");
+    RAIIDenyList.push_back(Denied);
+  }
+}
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.

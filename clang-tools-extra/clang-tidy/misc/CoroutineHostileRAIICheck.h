@@ -19,7 +19,7 @@ namespace clang::tidy::misc {
 /// Check detects objects which should not to persist across suspension points
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-check.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
 class CoroutineHostileRAIICheck : public ClangTidyCheck {
 public:
   CoroutineHostileRAIICheck(llvm::StringRef Name,
@@ -37,7 +37,7 @@ private:
   void checkVarDecl(VarDecl *VD);
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
-  const std::vector<StringRef> RAIIDenyList;
+  std::vector<StringRef> RAIIDenyList;
 };
 
 } // namespace clang::tidy::misc

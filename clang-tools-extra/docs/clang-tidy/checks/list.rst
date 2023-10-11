@@ -241,7 +241,7 @@ Clang-Tidy Checks
    :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
-   :doc:`misc-coroutine-suspension-hostile <misc/coroutine-suspension-hostile.html>`_, "Yes"
+   :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii.html>`_, "Yes"
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"

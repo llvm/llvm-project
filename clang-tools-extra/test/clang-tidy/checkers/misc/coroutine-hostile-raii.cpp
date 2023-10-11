@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++20 %s misc-coroutine-hostile-raii %t \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {misc-coroutine-hostile-raii.RAIIDenyList: \
-// RUN:               'my::Mutex; my::other::Mutex'}}"
+// RUN:               'my::Mutex; ::my::other::Mutex'}}"
 
 namespace std {
 
