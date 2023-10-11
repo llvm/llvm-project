@@ -195,7 +195,7 @@ struct ParallelLoopTiling
   }
 
   void runOnOperation() override {
-    for (int64_t tileSize : tileSizes) 
+    for (auto tileSize : tileSizes)
       if (tileSize == 0)
         signalPassFailure();
     auto *parentOp = getOperation();
