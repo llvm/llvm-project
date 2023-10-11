@@ -371,9 +371,8 @@ instructions as such:
 
 #### Assembly Representation
 
-At the assembly level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
-using the ``@AUTH`` modifier:
+At the assembly level, authenticated relocations are represented
+using the `@AUTH` modifier:
 
 ```asm
     .quad _target@AUTH(<key>,<discriminator>[,addr])
@@ -412,8 +411,7 @@ The pointer authentication information is encoded into the addend, as such:
 
 #### ELF Object File Representation
 
-At the object file level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
+At the object file level, authenticated relocations are represented
 using the `R_AARCH64_AUTH_ABS64` relocation kind (with value `0xE100`).
 
 The signing schema is encoded in the place of relocation to be applied
