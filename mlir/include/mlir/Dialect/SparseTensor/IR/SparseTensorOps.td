@@ -195,6 +195,17 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
     ```
 
   }];
+
+  let extraClassDeclaration = [{
+     // Whether the convert can be done by a single step (either a sort or a foreach),
+     // or it would require a tmp buffer (sort, then foreach).
+     bool directConvertable();
+
+     // Whether the convert is actually a sort coo
+     // TODO: The method will be removed when sort_coo operation is introduced.
+     bool isSortCOOConvert();
+  }];
+
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
