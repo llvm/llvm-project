@@ -269,14 +269,10 @@ STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 static int64_t getArgumentStackToRestore(MachineFunction &MF,
                                          MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  bool IsTailCallReturn = false;
-  if (MBB.end() != MBBI) {
-    unsigned RetOpcode = MBBI->getOpcode();
-    IsTailCallReturn = RetOpcode == AArch64::TCRETURNdi ||
-                       RetOpcode == AArch64::TCRETURNri ||
-                       RetOpcode == AArch64::TCRETURNriBTI;
-  }
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  bool IsTailCallReturn = (MBB.end() != MBBI)
+                              ? AArch64InstrInfo::isTailCallReturnInst(*MBBI)
+                              : false;
 
   int64_t ArgumentPopSize = 0;
   if (IsTailCallReturn) {
@@ -300,7 +296,6 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -617,7 +612,7 @@ void AArch64FrameLowering::resetCFIToInitialState(
   }
 
   // Shadow call stack uses X18, reset it.
-  if (needsShadowCallStackPrologueEpilogue(MF))
+  if (MFI.needsShadowCallStackPrologueEpilogue(MF))
     insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
                        TRI.getDwarfRegNum(AArch64::X18, true));
 
@@ -1290,19 +1285,6 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   }
 }
 
-static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) {
-  if (!(llvm::any_of(
-            MF.getFrameInfo().getCalleeSavedInfo(),
-            [](const auto &Info) { return Info.getReg() == AArch64::LR; }) &&
-        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)))
-    return false;
-
-  if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
-    report_fatal_error("Must reserve x18 to use shadow call stack");
-
-  return true;
-}
-
 static void emitShadowCallStackPrologue(const TargetInstrInfo &TII,
                                         MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -1414,7 +1396,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
-  if (needsShadowCallStackPrologueEpilogue(MF))
+  if (MFnI.needsShadowCallStackPrologueEpilogue(MF))
     emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
                                 MFnI.needsDwarfUnwindInfo(MF));
 
@@ -1945,7 +1927,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       if (NeedsWinCFI)
         HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
     }
-    if (needsShadowCallStackPrologueEpilogue(MF))
+    if (AFI->needsShadowCallStackPrologueEpilogue(MF))
       emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
     if (EmitCFI)
       emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
