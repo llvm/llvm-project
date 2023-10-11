@@ -35,7 +35,6 @@ enum class VectorTypeModifier : uint8_t {
   Widening2XVector,
   Widening4XVector,
   Widening8XVector,
-  SEW4XVector,
   MaskVector,
   Log2EEW3,
   Log2EEW4,
