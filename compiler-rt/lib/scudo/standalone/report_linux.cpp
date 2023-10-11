@@ -12,7 +12,8 @@
 
 #include "common.h"
 #include "internal_defs.h"
-#include "linux_common.h"
+#include "report.h"
+#include "report_linux.h"
 #include "string_utils.h"
 
 #include <errno.h>
@@ -21,10 +22,8 @@
 
 namespace scudo {
 
-void NORETURN die() { abort(); }
-
 // Fatal internal map() error (potentially OOM related).
-void NORETURN dieOnMapError(uptr SizeIfOOM) {
+void NORETURN reportMapError(uptr SizeIfOOM) {
   char Error[128] = "Scudo ERROR: internal map failure\n";
   if (SizeIfOOM) {
     formatString(
@@ -32,32 +31,26 @@ void NORETURN dieOnMapError(uptr SizeIfOOM) {
         "Scudo ERROR: internal map failure (NO MEMORY) requesting %zuKB\n",
         SizeIfOOM >> 10);
   }
-  outputRaw(Error);
-  setAbortMessage(Error);
-  die();
+  reportRawError(Error);
 }
 
-void NORETURN dieOnUnmapError(uptr Addr, uptr Size) {
+void NORETURN reportUnmapError(uptr Addr, uptr Size) {
   char Error[128];
   formatString(Error, sizeof(Error),
                "Scudo ERROR: internal unmap failure (error desc=%s) Addr 0x%zx "
                "Size %zu\n",
                strerror(errno), Addr, Size);
-  outputRaw(Error);
-  setAbortMessage(Error);
-  die();
+  reportRawError(Error);
 }
 
-void NORETURN dieOnProtectError(uptr Addr, uptr Size, int Prot) {
+void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot) {
   char Error[128];
   formatString(
       Error, sizeof(Error),
       "Scudo ERROR: internal protect failure (error desc=%s) Addr 0x%zx "
       "Size %zu Prot %x\n",
       strerror(errno), Addr, Size, Prot);
-  outputRaw(Error);
-  setAbortMessage(Error);
-  die();
+  reportRawError(Error);
 }
 
 } // namespace scudo

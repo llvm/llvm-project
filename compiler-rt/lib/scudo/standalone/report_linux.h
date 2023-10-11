@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SCUDO_LINUX_COMMON_H_
-#define SCUDO_LINUX_COMMON_H_
+#ifndef SCUDO_REPORT_LINUX_H_
+#define SCUDO_REPORT_LINUX_H_
 
 #include "platform.h"
 
@@ -17,18 +17,18 @@
 
 namespace scudo {
 
-// Internal map fatal error. This must not call map(). SizeIfOOM shall
+// Report a fatal error when a map call fails. SizeIfOOM shall
 // hold the requested size on an out-of-memory error, 0 otherwise.
-void NORETURN dieOnMapError(uptr SizeIfOOM = 0);
+void NORETURN reportMapError(uptr SizeIfOOM = 0);
 
-// Internal unmap fatal error. This must not call map().
-void NORETURN dieOnUnmapError(uptr Addr, uptr Size);
+// Report a fatal error when an unmap call fails.
+void NORETURN reportUnmapError(uptr Addr, uptr Size);
 
-// Internal protect fatal error. This must not call map().
-void NORETURN dieOnProtectError(uptr Addr, uptr Size, int Prot);
+// Report a fatal error when a mprotect call fails.
+void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot);
 
 } // namespace scudo
 
 #endif // SCUDO_LINUX
 
-#endif // SCUDO_LINUX_COMMON_H_
+#endif // SCUDO_REPORT_LINUX_H_
