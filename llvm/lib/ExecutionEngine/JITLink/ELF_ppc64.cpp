@@ -84,14 +84,14 @@ private:
 
 template <>
 const uint8_t TLSInfoTableManager_ELF_ppc64<
-    support::endianness::little>::TLSInfoEntryContent[16] = {
+    llvm::endianness::little>::TLSInfoEntryContent[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
 };
 
 template <>
 const uint8_t TLSInfoTableManager_ELF_ppc64<
-    support::endianness::big>::TLSInfoEntryContent[16] = {
+    llvm::endianness::big>::TLSInfoEntryContent[16] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
 };

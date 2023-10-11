@@ -90,7 +90,7 @@ struct PLTCallStubInfo {
 
 template <support::endianness Endianness>
 inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   switch (StubKind) {
   case LongBranch: {
     ArrayRef<char> Content =
@@ -273,14 +273,14 @@ inline static uint16_t highesta(uint64_t x) { return (x + 0x8000) >> 48; }
 // its endian.
 template <support::endianness Endianness>
 inline static uint64_t readPrefixedInstruction(const char *Loc) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   uint64_t Inst = support::endian::read64<Endianness>(Loc);
   return isLE ? (Inst << 32) | (Inst >> 32) : Inst;
 }
 
 template <support::endianness Endianness>
 inline static void writePrefixedInstruction(char *Loc, uint64_t Inst) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   Inst = isLE ? (Inst << 32) | (Inst >> 32) : Inst;
   support::endian::write64<Endianness>(Loc, Inst);
 }

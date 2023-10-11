@@ -68,8 +68,8 @@ Error DWARFLinkerImpl::link() {
 
   if (TheDwarfEmitter) {
     GlobalEndianness = TheDwarfEmitter->getTargetTriple().isLittleEndian()
-                           ? support::endianness::little
-                           : support::endianness::big;
+                           ? llvm::endianness::little
+                           : llvm::endianness::big;
   }
 
   for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
