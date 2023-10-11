@@ -55,7 +55,7 @@ public:
   CompileUnit(LinkingGlobalData &GlobalData, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
               OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
-              support::endianness Endianess)
+              llvm::endianness Endianess)
       : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
         getUnitFromOffset(UnitFromOffset), Stage(Stage::CreatedNotLoaded) {
     UnitName = File.FileName;
@@ -65,7 +65,7 @@ public:
   CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
               OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
-              support::endianness Endianess)
+              llvm::endianness Endianess)
       : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
         OrigUnit(&OrigUnit), getUnitFromOffset(UnitFromOffset),
         Stage(Stage::CreatedNotLoaded) {
