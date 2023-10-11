@@ -1980,3 +1980,12 @@ def SVCNTP_COUNT : SInst<"svcntp_{d}", "n}i", "QcQsQiQl", MergeNone, "aarch64_sv
 
 defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUl", "aarch64_sve_revd">;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2
+
+let TargetGuard = "sme2" in {
+// == ADD (vectors) ==
+  def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
+  def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
+}

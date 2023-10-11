@@ -43,6 +43,8 @@ enum ClassKind {
   ClassG,     // Overloaded name without type suffix
 };
 
+enum class ACLEKind { SVE, SME };
+
 using TypeSpec = std::string;
 
 namespace {
@@ -246,7 +248,7 @@ public:
   }
 
   /// Emits the intrinsic declaration to the ostream.
-  void emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter) const;
+  void emitIntrinsic(raw_ostream &OS, ACLEKind Kind) const;
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
@@ -353,6 +355,9 @@ public:
 
   /// Emit arm_sve.h.
   void createHeader(raw_ostream &o);
+
+  // Emits core intrinsics in both arm_sme.h and arm_sve.h
+  void createCoreHeaderIntrinsics(raw_ostream &o, ACLEKind Kind);
 
   /// Emit all the __builtin prototypes and code needed by Sema.
   void createBuiltins(raw_ostream &o);
@@ -1023,29 +1028,24 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
          getMergeSuffix();
 }
 
-void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter) const {
+void Intrinsic::emitIntrinsic(raw_ostream &OS, ACLEKind Kind) const {
   bool IsOverloaded = getClassKind() == ClassG && getProto().size() > 1;
 
   std::string FullName = mangleName(ClassS);
   std::string ProtoName = mangleName(getClassKind());
   std::string SMEAttrs = "";
 
-  if (Flags & Emitter.getEnumValueForFlag("IsStreaming"))
-    SMEAttrs += ", arm_streaming";
-  if (Flags & Emitter.getEnumValueForFlag("IsStreamingCompatible"))
-    SMEAttrs += ", arm_streaming_compatible";
-  if (Flags & Emitter.getEnumValueForFlag("IsSharedZA"))
-    SMEAttrs += ", arm_shared_za";
-  if (Flags & Emitter.getEnumValueForFlag("IsPreservesZA"))
-    SMEAttrs += ", arm_preserves_za";
-
   OS << (IsOverloaded ? "__aio " : "__ai ")
-     << "__attribute__((__clang_arm_builtin_alias("
-     << (SMEAttrs.empty() ? "__builtin_sve_" : "__builtin_sme_")
-     << FullName << ")";
-  if (!SMEAttrs.empty())
-    OS << SMEAttrs;
-  OS << "))\n";
+     << "__attribute__((__clang_arm_builtin_alias(";
+
+  switch (Kind) {
+  case ACLEKind::SME:
+    OS << "__builtin_sme_" << FullName << ")))\n";
+    break;
+  case ACLEKind::SVE:
+    OS << "__builtin_sve_" << FullName << ")))\n";
+    break;
+  }
 
   OS << getTypes()[0].str() << " " << ProtoName << "(";
   for (unsigned I = 0; I < getTypes().size() - 1; ++I) {
@@ -1178,6 +1178,30 @@ void SVEEmitter::createIntrinsic(
           Name, Proto, Merge, MergeSuffix, MemEltType, LLVMName, Flags,
           ImmChecks, TS, ClassG, *this, Guard));
   }
+}
+
+void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS, ACLEKind Kind) {
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  // Sort intrinsics in header file by following order/priority:
+  // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
+  // - Class (is intrinsic overloaded or not)
+  // - Intrinsic name
+  std::stable_sort(
+      Defs.begin(), Defs.end(), [](const std::unique_ptr<Intrinsic> &A,
+                                   const std::unique_ptr<Intrinsic> &B) {
+        auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+          return std::make_tuple(I->getGuard(), (unsigned)I->getClassKind(), I->getName());
+        };
+        return ToTuple(A) < ToTuple(B);
+      });
+
+  // Actually emit the intrinsic declarations.
+  for (auto &I : Defs)
+    I->emitIntrinsic(OS, Kind);
 }
 
 void SVEEmitter::createHeader(raw_ostream &OS) {
@@ -1331,27 +1355,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
              << To.Suffix << "(__VA_ARGS__)\n";
       }
 
-  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
-    createIntrinsic(R, Defs);
-
-  // Sort intrinsics in header file by following order/priority:
-  // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
-  // - Class (is intrinsic overloaded or not)
-  // - Intrinsic name
-  std::stable_sort(
-      Defs.begin(), Defs.end(), [](const std::unique_ptr<Intrinsic> &A,
-                                   const std::unique_ptr<Intrinsic> &B) {
-        auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-          return std::make_tuple(I->getGuard(), (unsigned)I->getClassKind(), I->getName());
-        };
-        return ToTuple(A) < ToTuple(B);
-      });
-
-  // Actually emit the intrinsic declarations.
-  for (auto &I : Defs)
-    I->emitIntrinsic(OS, *this);
+  createCoreHeaderIntrinsics(OS, ACLEKind::SVE);
 
   OS << "#define svcvtnt_bf16_x      svcvtnt_bf16_m\n";
   OS << "#define svcvtnt_bf16_f32_x  svcvtnt_bf16_f32_m\n";
@@ -1533,30 +1537,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
 
-  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
-    createIntrinsic(R, Defs);
-
-  // Sort intrinsics in header file by following order/priority similar to SVE:
-  // - Architectural guard
-  // - Class (is intrinsic overloaded or not)
-  // - Intrinsic name
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-                       return std::make_tuple(I->getGuard(),
-                                              (unsigned)I->getClassKind(),
-                                              I->getName());
-                     };
-                     return ToTuple(A) < ToTuple(B);
-                   });
-
-  // Actually emit the intrinsic declaration.
-  for (auto &I : Defs) {
-    I->emitIntrinsic(OS, *this);
-  }
+  createCoreHeaderIntrinsics(OS, ACLEKind::SME);
 
   OS << "#ifdef __cplusplus\n";
   OS << "} // extern \"C\"\n";

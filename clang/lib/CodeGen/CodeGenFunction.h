@@ -4297,6 +4297,11 @@ public:
   /// the wider vector. This avoids the error when allocating space in llvm
   /// for struct of scalable vectors if a function returns struct.
   llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
+
+  void GetAArch64SMEProcessedOperands(unsigned BuiltinID, const CallExpr *E,
+                                      SmallVectorImpl<llvm::Value *> &Ops,
+                                      SVETypeFlags TypeFlags);
+
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
