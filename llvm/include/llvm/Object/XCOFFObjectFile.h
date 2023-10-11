@@ -778,17 +778,19 @@ public:
     assert(OwningObjectPtr && "OwningObjectPtr cannot be nullptr!");
     assert(SymEntDataRef.p != 0 &&
            "Symbol table entry pointer cannot be nullptr!");
-
-    if (OwningObjectPtr->is64Bit())
-      Entry64 = reinterpret_cast<const XCOFFSymbolEntry64 *>(SymEntDataRef.p);
-    else
-      Entry32 = reinterpret_cast<const XCOFFSymbolEntry32 *>(SymEntDataRef.p);
   }
 
-  const XCOFFSymbolEntry32 *getSymbol32() { return Entry32; }
-  const XCOFFSymbolEntry64 *getSymbol64() { return Entry64; }
+#define Entry32                                                                \
+  reinterpret_cast<const XCOFFSymbolEntry32 *>(getRawDataRefImpl().p)
+#define Entry64                                                                \
+  reinterpret_cast<const XCOFFSymbolEntry64 *>(getRawDataRefImpl().p)
 
-  uint64_t getValue() const { return Entry32 ? getValue32() : getValue64(); }
+  const XCOFFSymbolEntry32 *getSymbol32() const { return Entry32; }
+  const XCOFFSymbolEntry64 *getSymbol64() const { return Entry64; }
+
+  uint64_t getValue() const {
+    return getObject()->is64Bit() ? getValue64() : getValue32();
+  }
 
   uint32_t getValue32() const { return Entry32->Value; }
 
@@ -798,7 +800,7 @@ public:
     return getObject()->getSymbolSize(getRawDataRefImpl());
   }
 
-#define GETVALUE(X) Entry32 ? Entry32->X : Entry64->X
+#define GETVALUE(X)  getObject()->is64Bit() ? Entry64->X : Entry32->X
 
   int16_t getSectionNumber() const { return GETVALUE(SectionNumber); }
 
@@ -823,9 +825,11 @@ public:
 #undef GETVALUE
 
   uintptr_t getEntryAddress() const {
-    return Entry32 ? reinterpret_cast<uintptr_t>(Entry32)
-                   : reinterpret_cast<uintptr_t>(Entry64);
+    return getObject()->is64Bit() ? reinterpret_cast<uintptr_t>(Entry64)
+                                  : reinterpret_cast<uintptr_t>(Entry32);
   }
+#undef Entry32
+#undef Entry64
 
   Expected<StringRef> getName() const;
   bool isFunction() const;
@@ -836,9 +840,6 @@ private:
   const XCOFFObjectFile *getObject() const {
     return cast<XCOFFObjectFile>(BasicSymbolRef::getObject());
   }
-
-  const XCOFFSymbolEntry32 *Entry32 = nullptr;
-  const XCOFFSymbolEntry64 *Entry64 = nullptr;
 };
 
 class xcoff_symbol_iterator : public symbol_iterator {

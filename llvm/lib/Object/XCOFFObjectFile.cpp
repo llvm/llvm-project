@@ -1318,14 +1318,15 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
   if (getStorageClass() & 0x80)
     return StringRef("Unimplemented Debug Name");
 
-  if (Entry32) {
-    if (Entry32->NameInStrTbl.Magic != XCOFFSymbolRef::NAME_IN_STR_TBL_MAGIC)
-      return generateXCOFFFixedNameStringRef(Entry32->SymbolName);
+  if (!getObject()->is64Bit()) {
+    if (getSymbol32()->NameInStrTbl.Magic !=
+        XCOFFSymbolRef::NAME_IN_STR_TBL_MAGIC)
+      return generateXCOFFFixedNameStringRef(getSymbol32()->SymbolName);
 
-    return getObject()->getStringTableEntry(Entry32->NameInStrTbl.Offset);
+    return getObject()->getStringTableEntry(getSymbol32()->NameInStrTbl.Offset);
   }
 
-  return getObject()->getStringTableEntry(Entry64->Offset);
+  return getObject()->getStringTableEntry(getSymbol64()->Offset);
 }
 
 // Explictly instantiate template classes.
