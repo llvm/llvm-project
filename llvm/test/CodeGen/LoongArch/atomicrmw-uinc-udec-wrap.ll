@@ -33,14 +33,13 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    bne $a5, $a2, .LBB0_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB0_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $a7, $a6
 ; LA64-NEXT:    sc.w $a7, $a0, 0
 ; LA64-NEXT:    beqz $a7, .LBB0_3
 ; LA64-NEXT:    b .LBB0_6
 ; LA64-NEXT:  .LBB0_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB0_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64-NEXT:    addi.w $a6, $a2, 0
@@ -86,14 +85,13 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    bne $a5, $a2, .LBB1_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB1_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $a7, $a6
 ; LA64-NEXT:    sc.w $a7, $a0, 0
 ; LA64-NEXT:    beqz $a7, .LBB1_3
 ; LA64-NEXT:    b .LBB1_6
 ; LA64-NEXT:  .LBB1_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB1_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64-NEXT:    addi.w $a6, $a2, 0
@@ -127,14 +125,13 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    bne $a1, $a3, .LBB2_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB2_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $a6, $a5
 ; LA64-NEXT:    sc.w $a6, $a0, 0
 ; LA64-NEXT:    beqz $a6, .LBB2_3
 ; LA64-NEXT:    b .LBB2_6
 ; LA64-NEXT:  .LBB2_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB2_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64-NEXT:    move $a3, $a1
@@ -166,14 +163,13 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; LA64-NEXT:    bne $a2, $a3, .LBB3_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB3_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $a5, $a4
 ; LA64-NEXT:    sc.d $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB3_3
 ; LA64-NEXT:    b .LBB3_6
 ; LA64-NEXT:  .LBB3_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB3_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64-NEXT:    bne $a2, $a3, .LBB3_1
@@ -221,14 +217,13 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    bne $a6, $a2, .LBB4_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB4_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $t0, $a7
 ; LA64-NEXT:    sc.w $t0, $a0, 0
 ; LA64-NEXT:    beqz $t0, .LBB4_3
 ; LA64-NEXT:    b .LBB4_6
 ; LA64-NEXT:  .LBB4_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB4_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB4_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB4_1 Depth=1
 ; LA64-NEXT:    addi.w $a7, $a2, 0
@@ -279,14 +274,13 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    bne $a6, $a2, .LBB5_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB5_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $t0, $a7
 ; LA64-NEXT:    sc.w $t0, $a0, 0
 ; LA64-NEXT:    beqz $t0, .LBB5_3
 ; LA64-NEXT:    b .LBB5_6
 ; LA64-NEXT:  .LBB5_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB5_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB5_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB5_1 Depth=1
 ; LA64-NEXT:    addi.w $a7, $a2, 0
@@ -325,14 +319,13 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    bne $a2, $a4, .LBB6_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB6_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $a7, $a6
 ; LA64-NEXT:    sc.w $a7, $a0, 0
 ; LA64-NEXT:    beqz $a7, .LBB6_3
 ; LA64-NEXT:    b .LBB6_6
 ; LA64-NEXT:  .LBB6_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB6_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB6_1 Depth=1
 ; LA64-NEXT:    move $a4, $a2
@@ -369,14 +362,13 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; LA64-NEXT:    bne $a2, $a3, .LBB7_5
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB7_3 Depth=2
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    move $a5, $a4
 ; LA64-NEXT:    sc.d $a5, $a0, 0
 ; LA64-NEXT:    beqz $a5, .LBB7_3
 ; LA64-NEXT:    b .LBB7_6
 ; LA64-NEXT:  .LBB7_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; LA64-NEXT:    dbar 1792
+; LA64-NEXT:    dbar 0
 ; LA64-NEXT:  .LBB7_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB7_1 Depth=1
 ; LA64-NEXT:    bne $a2, $a3, .LBB7_1
