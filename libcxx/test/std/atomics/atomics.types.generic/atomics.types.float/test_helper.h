@@ -71,7 +71,7 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
     MaybeVolatile<std::atomic<T>> at(old_value);
     int non_atomic = 5;
 
-    constexpr auto number_of_threads = 4;
+    constexpr auto number_of_threads = 8;
     std::vector<std::thread> threads;
     threads.reserve(number_of_threads);
 
