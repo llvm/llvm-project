@@ -176,6 +176,7 @@ add_llvm_target(AMDGPUCodeGen
   CodeGenTypes
   Core
   GlobalISel
+  HIPStdPar
   IPO
   MC
   MIRParser
