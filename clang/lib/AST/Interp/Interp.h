@@ -1568,6 +1568,22 @@ inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
   return true;
 }
 
+/// Like Cast(), but we cast to an arbitrary-bitwidth integral, so we need
+/// to know what bitwidth the result should be.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<false>>(
+      IntegralAP<false>::from(S.Stk.pop<T>(), BitWidth));
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+  S.Stk.push<IntegralAP<true>>(
+      IntegralAP<true>::from(S.Stk.pop<T>(), BitWidth));
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
                           const llvm::fltSemantics *Sem,
@@ -1606,6 +1622,46 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(T(Result));
     return CheckFloatResult(S, OpPC, F, Status);
   }
+}
+
+static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
+                                          uint32_t BitWidth) {
+  const Floating &F = S.Stk.pop<Floating>();
+
+  APSInt Result(BitWidth, /*IsUnsigned=*/true);
+  auto Status = F.convertToInteger(Result);
+
+  // Float-to-Integral overflow check.
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
+
+    S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
+    return S.noteUndefinedBehavior();
+  }
+
+  S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
+  return CheckFloatResult(S, OpPC, F, Status);
+}
+
+static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
+                                           uint32_t BitWidth) {
+  const Floating &F = S.Stk.pop<Floating>();
+
+  APSInt Result(BitWidth, /*IsUnsigned=*/false);
+  auto Status = F.convertToInteger(Result);
+
+  // Float-to-Integral overflow check.
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    QualType Type = E->getType();
+
+    S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
+    return S.noteUndefinedBehavior();
+  }
+
+  S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
+  return CheckFloatResult(S, OpPC, F, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1697,7 +1753,7 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
 
   typename LT::AsUnsigned R;
   LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                            LT::AsUnsigned::from(RHS), Bits, &R);
+                            LT::AsUnsigned::from(RHS, Bits), Bits, &R);
   S.Stk.push<LT>(LT::from(R));
   return true;
 }

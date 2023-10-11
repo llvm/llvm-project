@@ -138,6 +138,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
+    if (ToT == PT_IntAP)
+      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(CE->getType()),
+                                              CE);
+    if (ToT == PT_IntAPS)
+      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(CE->getType()),
+                                               CE);
+
     return this->emitCastFloatingIntegral(*ToT, CE);
   }
 
@@ -182,6 +189,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       assert(ToT != PT_IntAP && ToT != PT_IntAPS);
       return true;
     }
+
+    if (ToT == PT_IntAP)
+      return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
+    if (ToT == PT_IntAPS)
+      return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE);
 
     return this->emitCast(*FromT, *ToT, CE);
   }

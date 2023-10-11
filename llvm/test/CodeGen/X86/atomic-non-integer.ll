@@ -157,8 +157,8 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ;
 ; X86-AVX-LABEL: store_fp128:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    subl $44, %esp
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 48
+; X86-AVX-NEXT:    subl $60, %esp
+; X86-AVX-NEXT:    .cfi_def_cfa_offset 64
 ; X86-AVX-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl %eax, {{[0-9]+}}(%esp)
@@ -166,7 +166,7 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ; X86-AVX-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl %eax, (%esp)
 ; X86-AVX-NEXT:    calll __sync_lock_test_and_set_16
-; X86-AVX-NEXT:    addl $40, %esp
+; X86-AVX-NEXT:    addl $56, %esp
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 4
 ; X86-AVX-NEXT:    retl
 ;
@@ -393,68 +393,112 @@ define double @load_double(double* %fptr) {
   ret double %v
 }
 
-define fp128 @load_fp128(fp128* %fptr) {
-; X86-SSE-LABEL: load_fp128:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    pushl %edi
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE-NEXT:    subl $20, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 32
-; X86-SSE-NEXT:    .cfi_offset %esi, -12
-; X86-SSE-NEXT:    .cfi_offset %edi, -8
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    subl $8, %esp
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 8
-; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl $0
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-SSE-NEXT:    calll __sync_val_compare_and_swap_16
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset -4
-; X86-SSE-NEXT:    addl $44, %esp
-; X86-SSE-NEXT:    .cfi_adjust_cfa_offset -44
-; X86-SSE-NEXT:    movl (%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
-; X86-SSE-NEXT:    movl %edx, 12(%esi)
-; X86-SSE-NEXT:    movl %eax, (%esi)
-; X86-SSE-NEXT:    movl %ecx, 4(%esi)
-; X86-SSE-NEXT:    movl %esi, %eax
-; X86-SSE-NEXT:    addl $20, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 12
-; X86-SSE-NEXT:    popl %esi
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE-NEXT:    popl %edi
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
-; X86-SSE-NEXT:    retl $4
+define fp128 @load_fp128(ptr %fptr) {
+; X86-SSE1-LABEL: load_fp128:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl %edi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    subl $20, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 32
+; X86-SSE1-NEXT:    .cfi_offset %esi, -12
+; X86-SSE1-NEXT:    .cfi_offset %edi, -8
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE1-NEXT:    subl $8, %esp
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 8
+; X86-SSE1-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE1-NEXT:    calll __sync_val_compare_and_swap_16
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset -4
+; X86-SSE1-NEXT:    addl $44, %esp
+; X86-SSE1-NEXT:    .cfi_adjust_cfa_offset -44
+; X86-SSE1-NEXT:    movl (%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE1-NEXT:    movl %edi, 8(%esi)
+; X86-SSE1-NEXT:    movl %edx, 12(%esi)
+; X86-SSE1-NEXT:    movl %eax, (%esi)
+; X86-SSE1-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE1-NEXT:    movl %esi, %eax
+; X86-SSE1-NEXT:    addl $20, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 12
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE1-NEXT:    popl %edi
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE1-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: load_fp128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    subl $24, %esp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 32
+; X86-SSE2-NEXT:    .cfi_offset %esi, -8
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    subl $8, %esp
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 8
+; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl $0
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    pushl %eax
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-SSE2-NEXT:    calll __sync_val_compare_and_swap_16
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset -4
+; X86-SSE2-NEXT:    addl $44, %esp
+; X86-SSE2-NEXT:    .cfi_adjust_cfa_offset -44
+; X86-SSE2-NEXT:    movaps (%esp), %xmm0
+; X86-SSE2-NEXT:    movaps %xmm0, (%esi)
+; X86-SSE2-NEXT:    movl %esi, %eax
+; X86-SSE2-NEXT:    addl $24, %esp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE2-NEXT:    retl $4
 ;
 ; X86-AVX-LABEL: load_fp128:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %esi
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX-NEXT:    subl $56, %esp
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 64
+; X86-AVX-NEXT:    subl $72, %esp
+; X86-AVX-NEXT:    .cfi_def_cfa_offset 80
 ; X86-AVX-NEXT:    .cfi_offset %esi, -8
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -466,10 +510,10 @@ define fp128 @load_fp128(fp128* %fptr) {
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    calll __sync_val_compare_and_swap_16
 ; X86-AVX-NEXT:    subl $4, %esp
-; X86-AVX-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; X86-AVX-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
 ; X86-AVX-NEXT:    vmovaps %xmm0, (%esi)
 ; X86-AVX-NEXT:    movl %esi, %eax
-; X86-AVX-NEXT:    addl $56, %esp
+; X86-AVX-NEXT:    addl $72, %esp
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
 ; X86-AVX-NEXT:    popl %esi
 ; X86-AVX-NEXT:    .cfi_def_cfa_offset 4
