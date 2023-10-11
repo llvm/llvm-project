@@ -1219,7 +1219,7 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
   // This is much faster than scanning each byte independently.
   if ((unsigned long)(End - Start) > sizeof(Word)) {
     do {
-      Word = llvm::support::endian::read64(Buf, llvm::support::little);
+      Word = llvm::support::endian::read64(Buf, llvm::endianness::little);
       // no new line => jump over sizeof(Word) bytes.
       auto Mask = likelyhasbetween(Word, '\n', '\r');
       if (!Mask) {

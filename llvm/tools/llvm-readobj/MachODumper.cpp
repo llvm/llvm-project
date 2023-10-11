@@ -760,8 +760,8 @@ void MachODumper::printCGProfile() {
   StringRef CGProfileContents =
       unwrapOrError(Obj->getFileName(), CGProfileSection.getContents());
   BinaryStreamReader Reader(CGProfileContents, Obj->isLittleEndian()
-                                                   ? llvm::support::little
-                                                   : llvm::support::big);
+                                                   ? llvm::endianness::little
+                                                   : llvm::endianness::big);
 
   ListScope L(W, "CGProfile");
   while (!Reader.empty()) {
