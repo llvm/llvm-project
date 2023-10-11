@@ -2181,7 +2181,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
 
   if (!config->dynamicBase &&
-      (config->machine == ARMNT || config->machine == ARM64))
+      (config->machine == ARMNT || isAnyArm64(config->machine)))
     error("/dynamicbase:no is not compatible with " +
           machineToStr(config->machine));
 
