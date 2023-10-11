@@ -74,7 +74,7 @@ define void @divergent_args(i32 %i32, i1 %i1) {
 }
 
 ; CHECK-LABEL: for function 'no_divergent_args_if_inreg':
-; CHECK-NOT: DIVERGENT ARGUMENTS
+; CHECK-NOT: DIVERGENT
 define void @no_divergent_args_if_inreg(i32 inreg %i32, i1 inreg %i1) {
  ret void
 }

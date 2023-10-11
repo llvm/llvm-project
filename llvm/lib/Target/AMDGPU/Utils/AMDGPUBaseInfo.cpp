@@ -2550,7 +2550,6 @@ bool isArgPassedInSGPR(const Argument *A) {
     return A->hasAttribute(Attribute::InReg) ||
            A->hasAttribute(Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
     return A->hasAttribute(Attribute::InReg);
   }
 }
@@ -2577,7 +2576,6 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
            CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
     return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
 }
