@@ -820,7 +820,7 @@ def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
     the output format. E.g., reorder an unordered COO into an ordered one.
 
     The input and result COO tensor must have the same element type, position type and
-    coordinate type. At the moment, the operation also only support ordering
+    coordinate type. At the moment, the operation also only supports ordering
     input and result COO with the same dim2lvl map.
 
     Example:
