@@ -261,7 +261,7 @@ define i64 @test_load_sptr32_zext_i64(ptr addrspace(270) %i) {
 ; CHECK-LABEL: test_load_sptr32_zext_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %ecx, %rax
-; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: test_load_sptr32_zext_i64:
@@ -278,11 +278,20 @@ entry:
 }
 
 define void @test_store_sptr32_trunc_i1(ptr addrspace(270) %s, i32 %i) {
-; ALL-LABEL: test_store_sptr32_trunc_i1:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movslq %ecx, %rax
-; ALL-NEXT:    movl %edx, (%rax)
-; ALL-NEXT:    retq
+; CHECK-LABEL: test_store_sptr32_trunc_i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movslq %ecx, %rax
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    movb %dl, (%rax)
+; CHECK-NEXT:    retq
+;
+; CHECK-O0-LABEL: test_store_sptr32_trunc_i1:
+; CHECK-O0:       # %bb.0: # %entry
+; CHECK-O0-NEXT:    movslq %ecx, %rax
+; CHECK-O0-NEXT:    andl $1, %edx
+; CHECK-O0-NEXT:    movb %dl, %cl
+; CHECK-O0-NEXT:    movb %cl, (%rax)
+; CHECK-O0-NEXT:    retq
 entry:
   %0 = trunc i32 %i to i1
   store i1 %0, ptr addrspace(270) %s
