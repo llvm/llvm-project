@@ -3082,10 +3082,9 @@ cc_library(
         ":InferTypeOpInterface",
         ":MeshIncGen",
         ":Support",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
-
 
 ##---------------------------------------------------------------------------##
 # NVGPU dialect.
@@ -4437,9 +4436,9 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TensorDialect",
-        ":VectorInterfaces",
         ":VectorAttributesIncGen",
         ":VectorDialectIncGen",
+        ":VectorInterfaces",
         ":VectorOpsIncGen",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -8223,8 +8222,8 @@ cc_library(
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
-        "//llvm:TransformUtils",
         "//llvm:TargetParser",
+        "//llvm:TransformUtils",
     ],
 )
 
@@ -9146,7 +9145,6 @@ td_library(
     ],
 )
 
-
 gentbl_cc_library(
     name = "OpenACCOpsInterfacesIncGen",
     tbl_outs = [
@@ -9163,7 +9161,6 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
     deps = [":OpenAccOpsTdFiles"],
 )
-
 
 gentbl_cc_library(
     name = "OpenACCOpsIncGen",
@@ -10536,7 +10533,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Vector/IR/Vector.td",
     deps = [
         ":ArithOpsTdFiles",
-        ":VectorOpsTdFiles"
+        ":VectorOpsTdFiles",
     ],
 )
 
@@ -10556,7 +10553,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Vector/IR/VectorOps.td",
     deps = [
         ":ArithOpsTdFiles",
-        ":VectorOpsTdFiles"
+        ":VectorOpsTdFiles",
     ],
 )
 
@@ -10584,7 +10581,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Vector/IR/VectorAttributes.td",
     deps = [
         ":ArithOpsTdFiles",
-        ":VectorOpsTdFiles"
+        ":VectorOpsTdFiles",
     ],
 )
 
@@ -12250,12 +12247,12 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":MLProgramDialect",
         ":FuncDialect",
-        ":TransformUtils",
         ":IR",
+        ":MLProgramDialect",
         ":MLProgramPassIncGen",
         ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -12876,8 +12873,8 @@ gentbl_cc_library(
 cc_library(
     name = "UBDialect",
     srcs = [
-        "lib/Dialect/UB/IR/UBOps.cpp",
         "include/mlir/Transforms/InliningUtils.h",
+        "lib/Dialect/UB/IR/UBOps.cpp",
     ],
     hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
     includes = ["include"],
