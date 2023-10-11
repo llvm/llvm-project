@@ -17,15 +17,15 @@ class AffineStoreOp:
 
     def __init__(
         self,
-        value: Value,
+        value: Union[Operation, OpView, Value],
         memref: Union[Operation, OpView, Value],
-        map,
+        map: AffineMap=None,
         *,
-        map_operands=[],
+        map_operands=None,
         loc=None,
         ip=None
     ):
-        """Creates an affine load operation.
+        """Creates an affine store operation.
 
         - `value`: the value to store into the memref.
         - `memref`: the buffer to store into.
@@ -34,6 +34,8 @@ class AffineStoreOp:
         - `map_operands`: the list of arguments to substitute the dimensions, 
           then symbols in the affine map, in increasing order.
         """
+        map = map if map is not None else []
+        map_operands = map_operands if map_operands is not None else []
         operands = [
             _get_op_result_or_value(value),
             _get_op_result_or_value(memref),
