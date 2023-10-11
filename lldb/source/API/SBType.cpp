@@ -587,7 +587,7 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
 }
 
 SBType SBType::FindNestedType(const char *name) {
-  LLDB_INSTRUMENT_VA(this);
+  LLDB_INSTRUMENT_VA(this, name);
 
   if (!IsValid())
     return SBType();

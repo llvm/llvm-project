@@ -119,6 +119,11 @@ class TypeAndTypeListTestCase(TestBase):
 
         self.assertEqual(task_type, task_head_pointee_type)
 
+        # Check whether we can find a nested type by name
+        name_type = task_type.FindNestedType("name")
+        self.assertTrue(name_type)
+        self.DebugSBType(name_type)
+
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
         self.DebugSBValue(id)
