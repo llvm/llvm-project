@@ -135,9 +135,9 @@ public:
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                   const MCInstrInfo *MCII)
       : MCDisassembler(STI, Ctx), MCII(MCII) {
-    InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
-                                ? llvm::support::big
-                                : llvm::support::little;
+        InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
+                                    ? llvm::endianness::big
+                                    : llvm::endianness::little;
   }
 
   ~ARMDisassembler() override = default;

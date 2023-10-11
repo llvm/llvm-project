@@ -511,7 +511,7 @@ TEST(MappedBlockStreamTest, CreateFpmStream) {
   constexpr uint32_t NumFileBlocks = 4096 * 4;
 
   std::vector<uint8_t> MsfBuffer(NumFileBlocks * SB.BlockSize);
-  MutableBinaryByteStream MsfStream(MsfBuffer, llvm::support::little);
+  MutableBinaryByteStream MsfStream(MsfBuffer, llvm::endianness::little);
 
   SB.NumBlocks = NumFileBlocks;
   auto FpmStream =

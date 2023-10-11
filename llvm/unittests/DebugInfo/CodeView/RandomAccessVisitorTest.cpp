@@ -152,7 +152,8 @@ protected:
   }
 
   struct GlobalTestState {
-    GlobalTestState() : Strings(Allocator), ItemStream(llvm::support::little) {}
+    GlobalTestState()
+        : Strings(Allocator), ItemStream(llvm::endianness::little) {}
 
     BumpPtrAllocator Allocator;
     StringSaver Strings;
@@ -370,7 +371,7 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
       {Builder.records()[0]},
       {Builder.records()[1]},
   };
-  BinaryItemStream<CVType> ItemStream(llvm::support::little);
+  BinaryItemStream<CVType> ItemStream(llvm::endianness::little);
   ItemStream.setItems(TypeArray);
   VarStreamArray<CVType> TypeStream(ItemStream);
 
@@ -386,7 +387,7 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
   ArrayRef<uint8_t> Buffer(reinterpret_cast<const uint8_t *>(TIO.data()),
                            TIO.size() * sizeof(TypeIndexOffset));
 
-  BinaryStreamReader Reader(Buffer, llvm::support::little);
+  BinaryStreamReader Reader(Buffer, llvm::endianness::little);
   FixedStreamArray<TypeIndexOffset> PartialOffsets;
   ASSERT_THAT_ERROR(Reader.readArray(PartialOffsets, 2), Succeeded());
 

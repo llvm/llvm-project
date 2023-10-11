@@ -1237,7 +1237,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     }
     case DebugSubsectionKind::FrameData: {
       // First four bytes is a relocation against the function.
-      BinaryStreamReader SR(Contents, llvm::support::little);
+      BinaryStreamReader SR(Contents, llvm::endianness::little);
 
       DebugFrameDataSubsectionRef FrameData;
       if (Error E = FrameData.initialize(SR))
@@ -1354,7 +1354,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
   CVSymbolDumper CVSD(W, Types, CodeViewContainer::ObjectFile, std::move(CODD),
                       CompilationCPUType, opts::CodeViewSubsectionBytes);
   CVSymbolArray Symbols;
-  BinaryStreamReader Reader(BinaryData, llvm::support::little);
+  BinaryStreamReader Reader(BinaryData, llvm::endianness::little);
   if (Error E = Reader.readArray(Symbols, Reader.getLength())) {
     W.flush();
     reportError(std::move(E), Obj->getFileName());
@@ -1369,7 +1369,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 }
 
 void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
-  BinaryStreamRef Stream(Subsection, llvm::support::little);
+  BinaryStreamRef Stream(Subsection, llvm::endianness::little);
   DebugChecksumsSubsectionRef Checksums;
   if (Error E = Checksums.initialize(Stream))
     reportError(std::move(E), Obj->getFileName());
@@ -1389,7 +1389,7 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
 }
 
 void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
-  BinaryStreamReader SR(Subsection, llvm::support::little);
+  BinaryStreamReader SR(Subsection, llvm::endianness::little);
   DebugInlineeLinesSubsectionRef Lines;
   if (Error E = Lines.initialize(SR))
     reportError(std::move(E), Obj->getFileName());
@@ -1449,7 +1449,7 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
                     Obj->getFileName());
 
       CVTypeArray Types;
-      BinaryStreamReader Reader(Data, llvm::support::little);
+      BinaryStreamReader Reader(Data, llvm::endianness::little);
       if (auto EC = Reader.readArray(Types, Reader.getLength())) {
         consumeError(std::move(EC));
         W.flush();
@@ -2150,7 +2150,7 @@ void COFFDumper::printCGProfile() {
 
   StringRef CGProfileContents =
       unwrapOrError(Obj->getFileName(), CGProfileSection.getContents());
-  BinaryStreamReader Reader(CGProfileContents, llvm::support::little);
+  BinaryStreamReader Reader(CGProfileContents, llvm::endianness::little);
 
   ListScope L(W, "CGProfile");
   while (!Reader.empty()) {
