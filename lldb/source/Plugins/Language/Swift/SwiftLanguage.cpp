@@ -1056,10 +1056,17 @@ SwiftLanguage::GetHardcodedSynthetics() {
       }
       auto [swift_valobj, should_wrap_in_ptr] = *maybe_swift_valobj;
 
+      auto swift_type_system =
+          swift_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+      if (!swift_type_system) {
+        LLDB_LOGF(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                       "Could not get Swift TypeSystem ");
+        return nullptr;
+      }
       CompilerType cast_target_type = swift_type;
       if (should_wrap_in_ptr)
         cast_target_type =
-            type_system_swift.GetPointerType(swift_type.GetOpaqueQualType());
+            swift_type_system->GetPointerType(swift_type.GetOpaqueQualType());
 
       // Cast it to a Swift type since thhe swift runtime expects a Swift value
       // object.
