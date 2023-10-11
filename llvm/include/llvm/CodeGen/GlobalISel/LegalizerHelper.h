@@ -384,6 +384,7 @@ public:
   LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
   LegalizeResult lowerFunnelShift(MachineInstr &MI);
   LegalizeResult lowerEXT(MachineInstr &MI);
+  LegalizeResult lowerTRUNC(MachineInstr &MI);
   LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
   LegalizeResult lowerRotate(MachineInstr &MI);
 
