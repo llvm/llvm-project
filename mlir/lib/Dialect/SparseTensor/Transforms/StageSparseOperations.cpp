@@ -36,6 +36,8 @@ struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
     // source -> coo
     // The tmp COO must be unordered, otherwise it is a direct conversion.
     assert(!(srcStt.hasSameDimToLvl(dstStt) && srcStt.isAllOrdered()));
+    (void)srcStt; // to silence warning when assertion is disabled
+
     Type srcCOOTp = getCOOFromTypeWithOrdering(
         dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
     Value srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
