@@ -1,5 +1,5 @@
 // Check that fopen64(NULL, "r") is ok.
-// REQUIRES: linux
+// REQUIRES: linux, asan, glibc
 // RUN: %clang -O2 %s -o %t && %run %t
 #include <stdio.h>
 FILE *fopen64(const char *filename, const char *mode);
