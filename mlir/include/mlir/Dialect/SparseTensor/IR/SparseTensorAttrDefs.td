@@ -486,7 +486,7 @@ class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
 class COOSparseTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsCOOPred], "sparse tensor">;
+  : TensorOf<allowedTypes, [IsCOOPred], "COO sparse tensor">;
 
 class SparseTensorSliceOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
