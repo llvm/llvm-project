@@ -619,8 +619,11 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
   }
   for (BinaryFunction *BF : BC.getInjectedBinaryFunctions())
     for (BinaryBasicBlock &BB : *BF)
-      for (MCInst &Instruction : BB)
+      for (MCInst &Instruction : BB) {
+        if (auto Label = BC.MIB->getLabel(Instruction))
+          PreservedLabelAnnotations.emplace_back(&Instruction, *Label);
         BC.MIB->stripAnnotations(Instruction);
+      }
 
   // Release all memory taken by annotations
   BC.MIB->freeAnnotations();
