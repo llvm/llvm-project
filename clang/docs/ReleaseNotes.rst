@@ -564,6 +564,7 @@ X86 Support
 - Support ISA of ``USER_MSR``.
   * Support intrinsic of ``_urdmsr``.
   * Support intrinsic of ``_uwrmsr``.
+- ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
