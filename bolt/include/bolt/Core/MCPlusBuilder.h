@@ -504,10 +504,10 @@ public:
   }
 
   /// Create increment contents of target by 1 for Instrumentation
-  virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
-                                                   MCContext *Ctx, bool IsLeaf,
-                                                   unsigned CodePointerSize,
-                                                   AllocatorIdTy AllocatorId) {
+  virtual InstructionListType
+  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
+                       unsigned CodePointerSize,
+                       AllocatorIdTy AllocatorId = 0) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }
