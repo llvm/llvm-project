@@ -436,7 +436,7 @@ public:
 private:
   template <typename T>
   static T read(const uint8_t *P) {
-    return support::endian::read<T, Endianness, 1>(P);
+    return support::endian::read<T, Endianness>(P);
   }
 
   static const unsigned HeaderOffset = 0;
