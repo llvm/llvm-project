@@ -464,7 +464,6 @@ libcxx/include/__tuple/tuple_like_ext.h
 libcxx/include/__tuple/tuple_size.h
 libcxx/include/__tuple/tuple_types.h
 libcxx/include/typeindex
-libcxx/include/typeinfo
 libcxx/include/uchar.h
 libcxx/include/unordered_map
 libcxx/include/unordered_set

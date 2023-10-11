@@ -1270,6 +1270,11 @@ module std_private_debug_utils_strict_weak_ordering_check [system] {
   export std_private_type_traits_is_constant_evaluated
 }
 
+module std_private_typeinfo_typeinfo          [system] {
+  header "__typeinfo/typeinfo.h"
+  export *
+}
+
 module std_private_exception_exception        [system] { header "__exception/exception.h" }
 module std_private_exception_exception_ptr    [system] {
   header "__exception/exception_ptr.h"
