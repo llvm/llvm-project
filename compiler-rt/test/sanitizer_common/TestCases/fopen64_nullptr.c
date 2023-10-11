@@ -2,7 +2,7 @@
 
 // REQUIRES: linux
 #include <stdio.h>
-FILE * fopen64 ( const char * filename, const char * mode );
+FILE *fopen64(const char *filename, const char *mode);
 const char *fn = NULL;
 FILE *f;
 int main() { f = fopen64(fn, "r"); }
