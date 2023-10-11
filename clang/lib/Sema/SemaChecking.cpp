@@ -2836,24 +2836,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-//  case Builtin::BI__builtin_vectorelements: {
-//    if (checkArgCount(*this, TheCall, 1))
-//      return ExprError();
-//
-//    const Expr *Arg = TheCall->getArg(0);
-//    QualType Ty = Arg->getType();
-//    const auto *VecTy = Ty->getAs<VectorType>();
-//    if (!VecTy && !Ty->isSizelessVectorType()) {
-//      Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-//          << 1 << Arg->getType();
-//      return ExprError();
-//    }
-//
-//    // The number of elements in a vector is always an integer.
-//    TheCall->setType(Context.IntTy);
-//    break;
-//  }
-
   case Builtin::BI__builtin_matrix_transpose:
     return SemaBuiltinMatrixTranspose(TheCall, TheCallResult);
 

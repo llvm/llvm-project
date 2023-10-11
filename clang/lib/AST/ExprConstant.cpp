@@ -13597,7 +13597,8 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
         E);
   case UETT_VectorElements: {
     QualType Ty = E->getTypeOfArgument();
-    // If the vector has a fixed size, we can determine the number of elements at compile time.
+    // If the vector has a fixed size, we can determine the number of elements
+    // at compile time.
     if (Ty->isVectorType())
       return Success(Ty->castAs<VectorType>()->getNumElements(), E);
 

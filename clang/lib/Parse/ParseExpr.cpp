@@ -2340,7 +2340,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
   assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual, tok::kw_sizeof,
                        tok::kw___alignof, tok::kw_alignof, tok::kw__Alignof,
                        tok::kw_vec_step,
-                       tok::kw___builtin_omp_required_simd_align, tok::kw___builtin_vectorelements) &&
+                       tok::kw___builtin_omp_required_simd_align,
+                       tok::kw___builtin_vectorelements) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
 
   ExprResult Operand;
@@ -2461,7 +2462,8 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
 ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___alignof, tok::kw_alignof,
                      tok::kw__Alignof, tok::kw_vec_step,
-                     tok::kw___builtin_omp_required_simd_align, tok::kw___builtin_vectorelements) &&
+                     tok::kw___builtin_omp_required_simd_align,
+                     tok::kw___builtin_vectorelements) &&
          "Not a sizeof/alignof/vec_step expression!");
   Token OpTok = Tok;
   ConsumeToken();

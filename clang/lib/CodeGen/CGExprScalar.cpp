@@ -3084,16 +3084,22 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
             .getQuantity();
     return llvm::ConstantInt::get(CGF.SizeTy, Alignment);
   } else if (E->getKind() == UETT_VectorElements) {
-    // For scalable vectors, we don't know the size at compile time. We can use @llvm.vscale to calculate it at runtime.
+    // For scalable vectors, we don't know the size at compile time. We can use
+    // @llvm.vscale to calculate it at runtime.
     if (E->getTypeOfArgument()->isSizelessVectorType()) {
-      auto *VecTy = dyn_cast<llvm::ScalableVectorType>(ConvertType(E->getTypeOfArgument()));
+      auto *VecTy = dyn_cast<llvm::ScalableVectorType>(
+          ConvertType(E->getTypeOfArgument()));
       llvm::Type *ElementTy = VecTy->getElementType();
       uint64_t NumUnscaledElements = VecTy->getMinNumElements();
 
-      llvm::Value *VScale = Builder.CreateVScale(llvm::ConstantInt::get(ElementTy, 1));
-      // We need to pass the element type to the vscale call. As it may be small, like i8, we need to extend here to avoid an overflow for large vectors.
+      llvm::Value *VScale =
+          Builder.CreateVScale(llvm::ConstantInt::get(ElementTy, 1));
+      // We need to pass the element type to the vscale call. As it may be
+      // small, like i8, we need to extend here to avoid an overflow for large
+      // vectors.
       VScale = Builder.CreateZExt(VScale, CGF.SizeTy);
-      return Builder.CreateMul(VScale, llvm::ConstantInt::get(CGF.SizeTy, NumUnscaledElements));
+      return Builder.CreateMul(
+          VScale, llvm::ConstantInt::get(CGF.SizeTy, NumUnscaledElements));
     }
   }
 
