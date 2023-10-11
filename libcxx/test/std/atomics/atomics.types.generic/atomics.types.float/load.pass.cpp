@@ -61,7 +61,7 @@ void testImpl() {
 
     for (auto i = 0; i < loop; ++i) {
       auto r = at.load(std::memory_order_relaxed);
-      assert(std::ranges::any_of(std::views::iota(0, number_of_threads), [r](auto i) { return r == T(i); }));
+      assert(std::ranges::any_of(std::views::iota(0, number_of_threads), [r](auto j) { return r == T(j); }));
     }
 
     for (auto& thread : threads) {
