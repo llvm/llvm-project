@@ -392,9 +392,14 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     fir::DispatchOp dispatch;
     if (std::optional<unsigned> passArg = caller.getPassArgIndex()) {
       // PASS, PASS(arg-name)
+      // Note that caller.getInputs is used instead of operands to get the
+      // passed object because interface mismatch issues may have inserted a
+      // cast to the operand with a different declared type, which would break
+      // later type bound call resolution in the FIR to FIR pass.
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
-          operands[*passArg], operands, builder.getI32IntegerAttr(*passArg));
+          caller.getInputs()[*passArg], operands,
+          builder.getI32IntegerAttr(*passArg));
     } else {
       // NOPASS
       const Fortran::evaluate::Component *component =
