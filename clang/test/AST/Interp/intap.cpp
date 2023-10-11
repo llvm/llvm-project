@@ -90,10 +90,4 @@ namespace i128 {
                                            // expected-error {{must be initialized by a constant expression}} \
                                            // expected-note {{is outside the range of representable values of type}}
 }
-
-#else
-/// No int128 support, so no expected directives.
-
-// expected-no-diagnostics
-// ref-no-diagnostics
 #endif
