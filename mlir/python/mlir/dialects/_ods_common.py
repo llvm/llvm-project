@@ -1,11 +1,18 @@
 #  Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+from collections import defaultdict
 
 # Provide a convenient name for sub-packages to resolve the main C-extension
 # with a relative import.
 from .._mlir_libs import _mlir as _cext
-from typing import Sequence as _Sequence, Union as _Union
+from typing import (
+    Callable as _Callable,
+    Sequence as _Sequence,
+    Type as _Type,
+    TypeVar as _TypeVar,
+    Union as _Union,
+)
 
 __all__ = [
     "equally_sized_accessor",
@@ -123,3 +130,52 @@ def get_op_result_or_op_results(
         if len(op.results) > 0
         else op
     )
+
+
+U = _TypeVar("U", bound=_cext.ir.Value)
+SubClassValueT = _Type[U]
+
+TypeCasterT = _Callable[
+    [_Union[_cext.ir.Value, _cext.ir.OpResult]], _Union[SubClassValueT, None]
+]
+
+_VALUE_CASTERS: defaultdict[
+    _cext.ir.TypeID,
+    _Sequence[TypeCasterT],
+] = defaultdict(list)
+
+
+def has_value_caster(typeid: _cext.ir.TypeID):
+    if not isinstance(typeid, _cext.ir.TypeID):
+        raise ValueError(f"{typeid=} is not a TypeID")
+    if typeid in _VALUE_CASTERS:
+        return True
+    return False
+
+
+def get_value_caster(typeid: _cext.ir.TypeID):
+    if not has_value_caster(typeid):
+        raise ValueError(f"no registered caster for {typeid=}")
+    return _VALUE_CASTERS[typeid]
+
+
+def maybe_cast(
+    val: _Union[
+        _cext.ir.Value,
+        _cext.ir.OpResult,
+        _Sequence[_cext.ir.Value],
+        _Sequence[_cext.ir.OpResult],
+        _cext.ir.Operation,
+    ]
+) -> _Union[SubClassValueT, _Sequence[SubClassValueT], _cext.ir.Operation]:
+    if isinstance(val, (tuple, list)):
+        return tuple(map(maybe_cast, val))
+
+    if not isinstance(val, _cext.ir.Value) and not isinstance(val, _cext.ir.OpResult):
+        return val
+
+    if has_value_caster(val.type.typeid):
+        for caster in get_value_caster(val.type.typeid):
+            if casted := caster(val):
+                return casted
+    return val
