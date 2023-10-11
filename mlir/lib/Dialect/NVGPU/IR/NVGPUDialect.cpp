@@ -435,6 +435,8 @@ LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
   return failure();
 }
 
+LogicalResult isAllowedSizeM(int sizeM) { return success(sizeM == 64); }
+
 LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
   SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
                                72,  80,  88,  96,  104, 112, 120, 128,
@@ -443,7 +445,7 @@ LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
   SmallVector<int> allowedNshort = {8,   16,  24,  32,  48,  64,
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
-  if (typeA.isBF16() || typeA.isF16() || typeA.isTF32() ||
+  if (typeA.isBF16() || typeA.isF16() || typeA.isF32() || typeA.isTF32() ||
       typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
     if (llvm::is_contained(allowedN, sizeN))
       return success();
@@ -559,6 +561,28 @@ LogicalResult WarpgroupMmaStoreOp::verify() {
                          << dstMemrefType.getDimSize(0) << "]["
                          << dstMemrefType.getDimSize(1)
                          << "]  does not have same size as results";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WarpgroupMmaInitAccumulatorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
+  for (OpResult matrix : getMatrixC()) {
+    VectorType vectorType = matrix.getType()
+                                .cast<nvgpu::WarpgroupAccumulatorType>()
+                                .getFragmented();
+    // Check [M][N] shape
+    if (failed(isAllowedSizeM(vectorType.getDimSize(0))) ||
+        failed(isAllowedSizeN(vectorType.getDimSize(1),
+                              vectorType.getElementType()))) {
+      return emitOpError() << "has type " << vectorType
+                           << ". It does not fit into warp-group "
+                              "level (wgmma) matrix multiplication instruction "
+                              "(or not supported yet)";
+    }
   }
   return success();
 }
