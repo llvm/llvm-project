@@ -431,6 +431,8 @@ public:
   bool shouldSignReturnAddress(const MachineFunction &MF) const;
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
+  bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
+
   bool shouldSignWithBKey() const { return SignWithBKey; }
   bool isMTETagged() const { return IsMTETagged; }
 
