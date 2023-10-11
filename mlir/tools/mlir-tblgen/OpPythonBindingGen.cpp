@@ -39,7 +39,7 @@ except ImportError:
   _ods_ext_module = None
 
 import builtins
-from typing import Sequence as _Sequence, Union as _Union
+from typing import Sequence as _Sequence
 
 )Py";
 
@@ -269,7 +269,14 @@ constexpr const char *regionAccessorTemplate = R"Py(
 
 constexpr const char *valueBuilderTemplate = R"Py(
 def {0}({2}) -> {4}:
-  return _get_op_result_or_op_results({1}({3}))
+  op = {1}.__base__ if getattr({1}, "__has_mixin__", False) else {1}
+  return _get_op_result_or_op_results(op({3}))
+)Py";
+
+constexpr const char *valueBuilderNoResultsTemplate = R"Py(
+def {0}({2}) -> {4}:
+  op = {1}.__base__ if getattr({1}, "__has_mixin__", False) else {1}
+  return op({3})
 )Py";
 
 static llvm::cl::OptionCategory
@@ -1009,7 +1016,8 @@ static void emitValueBuilder(const Operator &op,
         return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
       });
   os << llvm::formatv(
-      valueBuilderTemplate,
+      op.getNumResults() > 0 ? valueBuilderTemplate
+                             : valueBuilderNoResultsTemplate,
       // Drop dialect name and then sanitize again (to catch e.g. func.return).
       sanitizeName(llvm::join(++splitName.begin(), splitName.end(), "_")),
       op.getCppClassName(), llvm::join(valueBuilderParams, ", "),

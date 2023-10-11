@@ -71,6 +71,7 @@ def extend_opview_class(ext_module):
             ) from e
         LocalOpView.__name__ = parent_opview_cls.__name__
         LocalOpView.__qualname__ = parent_opview_cls.__qualname__
+        LocalOpView.__has_mixin__ = True
         return LocalOpView
 
     return class_decorator
