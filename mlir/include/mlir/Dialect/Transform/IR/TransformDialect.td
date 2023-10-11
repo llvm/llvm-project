@@ -74,6 +74,12 @@ def Transform_Dialect : Dialect {
           extraData.at(::mlir::TypeID::get<DataTy>()).get());
     }
 
+
+    ::mlir::Attribute parseAttribute(DialectAsmParser &parser,
+                                     Type type) const override;
+    void printAttribute(Attribute attr,
+                        DialectAsmPrinter &printer) const override;
+
     /// Parses a type registered by this dialect or one of its extensions.
     ::mlir::Type parseType(::mlir::DialectAsmParser & parser) const override;
 

@@ -1,7 +1,7 @@
 // RUN: cd %p; mlir-opt %s
 
-module attributes { test.blob_ref = #test.e1di64_elements<library> : tensor<*xi1>} {
-  module attributes { test.blob_ref = #test.e1di64_elements<library> : tensor<*xi1>} {}
+module attributes { test.blob_ref = #transform.rref<library @foo> : tensor<*xi1>} {
+  module attributes { test.blob_ref = #transform.rref<banana @bar> : tensor<*xi1>} {}
   module {}
   module {}
 }

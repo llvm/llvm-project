@@ -16,6 +16,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/RWMutex.h"
@@ -205,6 +206,9 @@ LogicalResult transform::detail::TransformLibraryManager::registerLibraryModule(
 // TransformDialect
 //===----------------------------------------------------------------------===//
 
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Transform/IR/TransformDialectAttrDefs.cpp.inc"
+
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops
   // from extensions.
@@ -212,10 +216,32 @@ void transform::TransformDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Transform/IR/TransformDialectAttrDefs.cpp.inc"
+      >();
   initializeTypes();
 
   auto &blobInterface = addInterface<TransformResourceBlobManagerInterface>();
   addInterface<detail::TransformOpAsmInterface>(blobInterface);
+}
+
+Attribute transform::TransformDialect::parseAttribute(DialectAsmParser &parser,
+                                                      Type type) const {
+  // Parse the kind keyword first.
+  StringRef attrKind;
+  Attribute attr;
+  OptionalParseResult result =
+      generatedAttributeParser(parser, &attrKind, type, attr);
+  if (result.has_value())
+    return attr;
+  return {};
+}
+
+void transform::TransformDialect::printAttribute(
+    Attribute attr, DialectAsmPrinter &printer) const {
+  if (succeeded(generatedAttributePrinter(attr, printer)))
+    return;
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {

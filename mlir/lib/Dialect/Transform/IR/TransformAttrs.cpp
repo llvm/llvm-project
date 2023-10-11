@@ -9,4 +9,5 @@
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/IR/BuiltinTypes.h"
 
+#include "mlir/Dialect/Transform/IR/TransformDialectAttrDefs.cpp.inc"
 #include "mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc"

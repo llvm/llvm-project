@@ -9,7 +9,9 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS
 
+include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpAsmInterface.td"
 
 def PropagateFailuresCase : I32EnumAttrCase<"Propagate", 1, "propagate">;
 def SuppressFailuresCase : I32EnumAttrCase<"Suppress", 2, "suppress">;
@@ -31,6 +33,18 @@ def MatchCmpIPredicateAttr : I32EnumAttr<
       I32EnumAttrCase<"ge", 5>,
     ]> {
   let cppNamespace = "::mlir::transform";
+}
+
+class Transform_Attr<string name, list<Trait> traits = []>
+    : AttrDef<Transform_Dialect, name, traits>;
+
+def TransformResouceRef : Transform_Attr<"TransformResourceRef"> {
+  let mnemonic = "rref";
+  let parameters = (ins
+    ResourceHandleParameter<"TransformDialectResourceBlobHandle">:$handle,
+    ArrayRefParameter<"FlatSymbolRefAttr", "">:$nestedReferences
+  );
+  let assemblyFormat = "`<` $handle $nestedReferences `>`";
 }
 
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMATTRS
