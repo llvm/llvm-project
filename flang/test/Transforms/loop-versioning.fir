@@ -1452,6 +1452,7 @@ func.func @sum1drebox(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
   %c1 = arith.constant 1 : index
   %5 = fir.convert %2 : (index) -> i32
   %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) {
+    // rebox is not dominating the loop.
     %rebox = fir.rebox %decl : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
     fir.store %arg3 to %0 : !fir.ref<i32>
     %7 = fir.load %1 : !fir.ref<f64>
@@ -1478,21 +1479,3 @@ func.func @sum1drebox(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
 
 
 } // End module
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

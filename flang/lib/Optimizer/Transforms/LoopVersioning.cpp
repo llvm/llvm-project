@@ -314,6 +314,10 @@ void LoopVersioningPass::runOnOperation() {
           // Use the reboxed value, not the block arg when re-creating the loop.
           a.arg = operand;
 
+          // Check that the operand dominates the loop?
+          // If this is the case, record such operands in argsInLoop.cannot-
+          // Transform, so that they disable the transformation for the parent
+          /// loops as well.
           if (!domInfo.dominates(a.arg, loop))
             argsInLoop.cannotTransform.insert(a.arg);
 
