@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import threading
 import typing
+from typing import Optional, Tuple
 
 import io
 
@@ -1032,7 +1033,7 @@ def formatOutput(title, data, limit=None):
 # from the script, and there is no execution trace.
 def executeScriptInternal(
     test, litConfig, tmpBase, commands, cwd, debug=True
-) -> typing.Tuple[str, str, int, typing.Optional[str]]:
+) -> Tuple[str, str, int, Optional[str]]:
     cmds = []
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
@@ -2149,7 +2150,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
-    ) -> typing.Tuple[str, str, int, typing.Optional[str], Test.ResultCode]:
+    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
