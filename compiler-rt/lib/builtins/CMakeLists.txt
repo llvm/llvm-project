@@ -754,6 +754,10 @@ else ()
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
 
+  # Disable diagnostics about use of reserved priority values (we are the
+  # implementation, so we're allowed to use those reserved values).
+  append_list_if(COMPILER_RT_HAS_WPRIO_CTOR_DTOR_FLAG -Wno-prio-ctor-dtor BUILTIN_CFLAGS)
+
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.
   if(COMPILER_RT_STANDALONE_BUILD)
@@ -908,6 +912,7 @@ if (COMPILER_RT_BUILD_CRT)
   append_list_if(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY -DEH_USE_FRAME_REGISTRY CRT_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC CRT_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic CRT_CFLAGS)
+  
   if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full CRT_CFLAGS)
   endif()
