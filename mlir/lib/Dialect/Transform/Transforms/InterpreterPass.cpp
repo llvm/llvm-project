@@ -26,19 +26,14 @@ public:
   using Base::Base;
 
   LogicalResult initialize(MLIRContext *context) override {
-    // TODO: use a resource blob.
-    ModuleOp transformModule =
-        transform::detail::getPreloadedTransformModule(context);
-    if (transformModule) {
-      sharedTransformModule =
-          std::make_shared<OwningOpRef<ModuleOp>>(transformModule.clone());
-    }
+    // TODO: investigate using a resource blob if some ownership mode allows it.
+    transformModule = transform::detail::getPreloadedTransformModule(context);
     return success();
   }
 
   void runOnOperation() override {
     if (failed(transform::applyTransformNamedSequence(
-            getOperation(), sharedTransformModule->get(),
+            getOperation(), transformModule,
             options.enableExpensiveChecks(true), entryPoint)))
       return signalPassFailure();
   }
@@ -51,6 +46,6 @@ private:
   /// across multiple instances of the pass if it is applied in parallel to
   /// avoid potentially expensive cloning. MUST NOT be modified after the pass
   /// has been initialized.
-  std::shared_ptr<OwningOpRef<ModuleOp>> sharedTransformModule = nullptr;
+  ModuleOp transformModule;
 };
 } // namespace

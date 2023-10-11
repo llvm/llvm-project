@@ -2,10 +2,11 @@
 
 // RUN: mlir-opt %s -test-lower-to-llvm -cse | FileCheck %s
 
-// RUN: mlir-opt %s \
-// RUN:   -transform-preload-library="transform-library-paths=%p/../Transform/Library/lower-to-llvm.mlir" \
-// RUN:   -transform-interpreter="entry-point=some_other_entry_point" -cse \
+// RUN: mlir-opt %s -test-transform-dialect-interpreter="transform-library-paths=%p/lower-to-llvm-transform-symbol-def.mlir debug-payload-root-tag=payload" \
+// RUN:   -test-transform-dialect-erase-schedule -cse \
 // RUN: | FileCheck %s
+
+module attributes {transform.target_tag="payload"} {
 
 // Check that we properly lower to llvm memref operations that require to be
 // expanded first, like `memref.subview`.
@@ -50,14 +51,14 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
   return %1 : memref<?x?xf32, strided<[?, ?], offset: ?>>
 }
 
-module @named_inclusion_in_named attributes { transform.with_named_sequence } {
-  transform.named_sequence @lower_to_llvm(
-    !transform.any_op {transform.readonly}) -> !transform.any_op
+} // transform payload
 
-  transform.named_sequence @some_other_entry_point(
-      %toplevel_module: !transform.any_op {transform.readonly}) {
-    transform.include @lower_to_llvm failures(suppress) (%toplevel_module)
+module @named_inclusion_in_named attributes { transform.with_named_sequence } {
+  transform.named_sequence private @lower_to_cpu(!transform.any_op {transform.consumed}) -> !transform.any_op
+
+  transform.sequence failures(propagate) {
+  ^bb1(%toplevel_module: !transform.any_op):
+    %m2 = transform.include @lower_to_cpu failures(suppress) (%toplevel_module) 
       : (!transform.any_op) -> (!transform.any_op)
-    transform.yield
   }
 }

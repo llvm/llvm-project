@@ -25,17 +25,15 @@ class PreloadLibraryPass
 public:
   using Base::Base;
 
-  LogicalResult initialize(MLIRContext *context) override {
+  void runOnOperation() override {
     OwningOpRef<ModuleOp> mergedParsedLibraries;
     if (failed(transform::detail::assembleTransformLibraryFromPaths(
-            context, transformLibraryPaths, mergedParsedLibraries)))
-      return failure();
-    // TODO: use a resource blob.
-    auto *dialect = context->getOrLoadDialect<transform::TransformDialect>();
+            &getContext(), transformLibraryPaths, mergedParsedLibraries)))
+      return signalPassFailure();
+    // TODO: investigate using a resource blob if some ownership mode allows it.
+    auto *dialect =
+        getContext().getOrLoadDialect<transform::TransformDialect>();
     dialect->registerLibraryModule(std::move(mergedParsedLibraries));
-    return success();
   }
-
-  void runOnOperation() override {}
 };
 } // namespace

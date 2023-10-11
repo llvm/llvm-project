@@ -17,6 +17,7 @@ package(default_visibility = ["//visibility:public"])
             "//mlir/test:lit_data",
         ] + glob([
             "IRDL/*.irdl.mlir",
+            "LLVM/*-symbol-def.mlir",
             "Transform/*-source.mlir",
             "Transform/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",

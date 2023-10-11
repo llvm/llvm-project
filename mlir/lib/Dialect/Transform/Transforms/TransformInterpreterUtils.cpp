@@ -158,10 +158,9 @@ LogicalResult transform::detail::assembleTransformLibraryFromPaths(
   SmallVector<OwningOpRef<ModuleOp>> parsedLibraries;
   for (const std::string &libraryFileName : libraryFileNames) {
     OwningOpRef<ModuleOp> parsedLibrary;
-    auto loc = FileLineColLoc::get(context, libraryFileName, 0, 0);
     if (failed(transform::detail::parseTransformModuleFromFile(
             context, libraryFileName, parsedLibrary)))
-      return emitError(loc) << "failed to parse transform library module";
+      return failure();
     parsedLibraries.push_back(std::move(parsedLibrary));
   }
 
