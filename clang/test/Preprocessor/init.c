@@ -1454,6 +1454,15 @@
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix LANAI %s
 // LANAI: #define __lanai__ 1
 //
+
+// RUN: %clang_cc1 -triple=aarch64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=arm-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=powerpc-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=riscv64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=i386-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// HAIKU: #define __HAIKU__ 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=amd64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-unknown-openbsd6.1-gnueabi < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s

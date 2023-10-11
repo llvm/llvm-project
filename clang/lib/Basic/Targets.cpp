@@ -361,6 +361,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::ppc:
     switch (os) {
+    case llvm::Triple::Haiku:
+      return std::make_unique<HaikuTargetInfo<PPC32TargetInfo>>(Triple, Opts);
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<PPC32TargetInfo>>(Triple, Opts);
     case llvm::Triple::FreeBSD:
