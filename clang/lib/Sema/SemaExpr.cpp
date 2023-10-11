@@ -4351,6 +4351,17 @@ static bool CheckVecStepTraitOperandType(Sema &S, QualType T,
   return false;
 }
 
+static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
+                                         SourceLocation Loc,
+                                         SourceRange ArgRange) {
+  // builtin_vectorelements supports both fixed-sized and scalable vectors.
+  if (!T->isVectorType() && !T->isSizelessVectorType()) {
+    S.Diag(Loc, diag::err_vec_elements_non_vector) << T << ArgRange;
+    return true;
+  }
+  return false;
+}
+
 static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
                                            SourceLocation Loc,
                                            SourceRange ArgRange,
@@ -4742,6 +4753,9 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
 
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc, ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
