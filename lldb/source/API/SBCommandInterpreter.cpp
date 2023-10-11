@@ -83,6 +83,10 @@ protected:
 };
 } // namespace lldb_private
 
+SBCommandInterpreter::SBCommandInterpreter() : m_opaque_ptr() {
+  LLDB_INSTRUMENT_VA(this);
+}
+
 SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
     : m_opaque_ptr(interpreter) {
   LLDB_INSTRUMENT_VA(this, interpreter);

@@ -18,9 +18,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -46,34 +47,121 @@ BasicBlockSectionsProfileReader::getBBClusterInfoForFunction(
              : std::pair(false, SmallVector<BBClusterInfo>{});
 }
 
-// Basic Block Sections can be enabled for a subset of machine basic blocks.
-// This is done by passing a file containing names of functions for which basic
-// block sections are desired.  Additionally, machine basic block ids of the
-// functions can also be specified for a finer granularity. Moreover, a cluster
-// of basic blocks could be assigned to the same section.
-// Optionally, a debug-info filename can be specified for each function to allow
-// distinguishing internal-linkage functions of the same name.
-// A file with basic block sections for all of function main and three blocks
-// for function foo (of which 1 and 2 are placed in a cluster) looks like this:
-// (Profile for function foo is only loaded when its debug-info filename
-// matches 'path/to/foo_file.cc').
-// ----------------------------
-// list.txt:
-// !main
-// !foo M=path/to/foo_file.cc
-// !!1 2
-// !!4
-Error BasicBlockSectionsProfileReader::ReadProfile() {
-  assert(MBuf);
-  line_iterator LineIt(*MBuf, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
+// Reads the version 1 basic block sections profile. Profile for each function
+// is encoded as follows:
+//   m <module_name>
+//   f <function_name_1> <function_name_2> ...
+//   c <bb_id_1> <bb_id_2> <bb_id_3>
+//   c <bb_id_4> <bb_id_5>
+//   ...
+// Module name specifier (starting with 'm') is optional and allows
+// distinguishing profile for internal-linkage functions with the same name. If
+// not specified, it will apply to any function with the same name. Function
+// name specifier (starting with 'f') can specify multiple function name
+// aliases. Basic block clusters are specified by 'c' and specify the cluster of
+// basic blocks, and the internal order in which they must be placed in the same
+// section.
+Error BasicBlockSectionsProfileReader::ReadV1Profile() {
+  auto FI = ProgramBBClusterInfo.end();
 
-  auto invalidProfileError = [&](auto Message) {
-    return make_error<StringError>(
-        Twine("Invalid profile " + MBuf->getBufferIdentifier() + " at line " +
-              Twine(LineIt.line_number()) + ": " + Message),
-        inconvertibleErrorCode());
-  };
+  // Current cluster ID corresponding to this function.
+  unsigned CurrentCluster = 0;
+  // Current position in the current cluster.
+  unsigned CurrentPosition = 0;
 
+  // Temporary set to ensure every basic block ID appears once in the clusters
+  // of a function.
+  SmallSet<unsigned, 4> FuncBBIDs;
+
+  // Debug-info-based module filename for the current function. Empty string
+  // means no filename.
+  StringRef DIFilename;
+
+  for (; !LineIt.is_at_eof(); ++LineIt) {
+    StringRef S(*LineIt);
+    char Specifier = S[0];
+    S = S.drop_front().trim();
+    SmallVector<StringRef, 4> Values;
+    S.split(Values, ' ');
+    switch (Specifier) {
+    case '@':
+      break;
+    case 'm': // Module name speicifer.
+      if (Values.size() != 1) {
+        return createProfileParseError(Twine("invalid module name value: '") +
+                                       S + "'");
+      }
+      DIFilename = sys::path::remove_leading_dotslash(Values[0]);
+      continue;
+    case 'f': { // Function names specifier.
+      bool FunctionFound = any_of(Values, [&](StringRef Alias) {
+        auto It = FunctionNameToDIFilename.find(Alias);
+        // No match if this function name is not found in this module.
+        if (It == FunctionNameToDIFilename.end())
+          return false;
+        // Return a match if debug-info-filename is not specified. Otherwise,
+        // check for equality.
+        return DIFilename.empty() || It->second.equals(DIFilename);
+      });
+      if (!FunctionFound) {
+        // Skip the following profile by setting the profile iterator (FI) to
+        // the past-the-end element.
+        FI = ProgramBBClusterInfo.end();
+        DIFilename = "";
+        continue;
+      }
+      for (size_t i = 1; i < Values.size(); ++i)
+        FuncAliasMap.try_emplace(Values[i], Values.front());
+
+      // Prepare for parsing clusters of this function name.
+      // Start a new cluster map for this function name.
+      auto R = ProgramBBClusterInfo.try_emplace(Values.front());
+      // Report error when multiple profiles have been specified for the same
+      // function.
+      if (!R.second)
+        return createProfileParseError("duplicate profile for function '" +
+                                       Values.front() + "'");
+      FI = R.first;
+      CurrentCluster = 0;
+      FuncBBIDs.clear();
+      // We won't need DIFilename anymore. Clean it up to avoid its application
+      // on the next function.
+      DIFilename = "";
+      continue;
+    }
+    case 'c': // Basic block cluster specifier.
+      // Skip the profile when we the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramBBClusterInfo.end())
+        break;
+      // Reset current cluster position.
+      CurrentPosition = 0;
+      for (auto BBIDStr : Values) {
+        unsigned long long BBID;
+        if (getAsUnsignedInteger(BBIDStr, 10, BBID))
+          return createProfileParseError(Twine("unsigned integer expected: '") +
+                                         BBIDStr + "'");
+        if (!FuncBBIDs.insert(BBID).second)
+          return createProfileParseError(
+              Twine("duplicate basic block id found '") + BBIDStr + "'");
+        if (BBID == 0 && CurrentPosition)
+          return createProfileParseError(
+              "entry BB (0) does not begin a cluster");
+
+        FI->second.emplace_back(
+            BBClusterInfo{((unsigned)BBID), CurrentCluster, CurrentPosition++});
+      }
+      CurrentCluster++;
+      continue;
+    default:
+      return createProfileParseError(Twine("invalid specifier: '") +
+                                     Twine(Specifier) + "'");
+    }
+  }
+  return Error::success();
+}
+
+Error BasicBlockSectionsProfileReader::ReadV0Profile() {
   auto FI = ProgramBBClusterInfo.end();
 
   // Current cluster ID corresponding to this function.
@@ -105,13 +193,14 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
       for (auto BBIDStr : BBIDs) {
         unsigned long long BBID;
         if (getAsUnsignedInteger(BBIDStr, 10, BBID))
-          return invalidProfileError(Twine("Unsigned integer expected: '") +
-                                     BBIDStr + "'.");
+          return createProfileParseError(Twine("unsigned integer expected: '") +
+                                         BBIDStr + "'");
         if (!FuncBBIDs.insert(BBID).second)
-          return invalidProfileError(Twine("Duplicate basic block id found '") +
-                                     BBIDStr + "'.");
+          return createProfileParseError(
+              Twine("duplicate basic block id found '") + BBIDStr + "'");
         if (BBID == 0 && CurrentPosition)
-          return invalidProfileError("Entry BB (0) does not begin a cluster.");
+          return createProfileParseError(
+              "entry BB (0) does not begin a cluster");
 
         FI->second.emplace_back(
             BBClusterInfo{((unsigned)BBID), CurrentCluster, CurrentPosition++});
@@ -126,10 +215,10 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
         DIFilename =
             sys::path::remove_leading_dotslash(DIFilenameStr.substr(2));
         if (DIFilename.empty())
-          return invalidProfileError("Empty module name specifier.");
+          return createProfileParseError("empty module name specifier");
       } else if (!DIFilenameStr.empty()) {
-        return invalidProfileError("Unknown string found: '" + DIFilenameStr +
-                                   "'.");
+        return createProfileParseError("unknown string found: '" +
+                                       DIFilenameStr + "'");
       }
       // Function aliases are separated using '/'. We use the first function
       // name for the cluster info mapping and delegate all other aliases to
@@ -160,14 +249,59 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
       // Report error when multiple profiles have been specified for the same
       // function.
       if (!R.second)
-        return invalidProfileError("Duplicate profile for function '" +
-                                   Aliases.front() + "'.");
+        return createProfileParseError("duplicate profile for function '" +
+                                       Aliases.front() + "'");
       FI = R.first;
       CurrentCluster = 0;
       FuncBBIDs.clear();
     }
   }
   return Error::success();
+}
+
+// Basic Block Sections can be enabled for a subset of machine basic blocks.
+// This is done by passing a file containing names of functions for which basic
+// block sections are desired.  Additionally, machine basic block ids of the
+// functions can also be specified for a finer granularity. Moreover, a cluster
+// of basic blocks could be assigned to the same section.
+// Optionally, a debug-info filename can be specified for each function to allow
+// distinguishing internal-linkage functions of the same name.
+// A file with basic block sections for all of function main and three blocks
+// for function foo (of which 1 and 2 are placed in a cluster) looks like this:
+// (Profile for function foo is only loaded when its debug-info filename
+// matches 'path/to/foo_file.cc').
+// ----------------------------
+// list.txt:
+// !main
+// !foo M=path/to/foo_file.cc
+// !!1 2
+// !!4
+Error BasicBlockSectionsProfileReader::ReadProfile() {
+  assert(MBuf);
+
+  unsigned long long Version = 0;
+  StringRef FirstLine(*LineIt);
+  if (FirstLine.consume_front("v")) {
+    if (getAsUnsignedInteger(FirstLine, 10, Version)) {
+      return createProfileParseError(Twine("version number expected: '") +
+                                     FirstLine + "'");
+    }
+    if (Version > 1) {
+      return createProfileParseError(Twine("invalid profile version: ") +
+                                     Twine(Version));
+    }
+    ++LineIt;
+  }
+
+  switch (Version) {
+  case 0:
+    // TODO: Deprecate V0 once V1 is fully integrated downstream.
+    return ReadV0Profile();
+  case 1:
+    return ReadV1Profile();
+  default:
+    llvm_unreachable("Invalid profile version.");
+  }
 }
 
 bool BasicBlockSectionsProfileReader::doInitialization(Module &M) {

@@ -16,17 +16,17 @@
 #include <errno.h>
 #include <stdint.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
-using __llvm_libc::testing::tlog;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::testing::tlog;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcErffTest, SpecialNumbers) {
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::erff(aNaN));
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::erff(inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, __llvm_libc::erff(neg_inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::erff(zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, __llvm_libc::erff(neg_zero));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::erff(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::erff(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(-1.0f, LIBC_NAMESPACE::erff(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::erff(zero));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::erff(neg_zero));
 }
 
 TEST(LlvmLibcErffTest, TrickyInputs) {
@@ -38,9 +38,9 @@ TEST(LlvmLibcErffTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, x,
-                                   __llvm_libc::erff(x), 0.5);
+                                   LIBC_NAMESPACE::erff(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, -x,
-                                   __llvm_libc::erff(-x), 0.5);
+                                   LIBC_NAMESPACE::erff(-x), 0.5);
   }
 }
 
@@ -67,7 +67,7 @@ TEST(LlvmLibcErffTest, InFloatRange) {
       if (isnan(x))
         continue;
 
-      float result = __llvm_libc::erff(x);
+      float result = LIBC_NAMESPACE::erff(x);
       ++cc;
       if (isnan(result))
         continue;

@@ -163,29 +163,27 @@ namespace {
 
 std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
                                                    Module *RootModule) {
-  std::set<const FileEntry *> ModuleMaps{};
-  std::set<const Module *> ProcessedModules;
   SmallVector<const Module *> ModulesToProcess{RootModule};
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
 
-  SmallVector<const FileEntry *, 16> FilesByUID;
+  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
 
   if (FilesByUID.size() > HS.header_file_size())
     FilesByUID.resize(HS.header_file_size());
 
   for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    const FileEntry *File = FilesByUID[UID];
+    OptionalFileEntryRef File = FilesByUID[UID];
     if (!File)
       continue;
 
     const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(File, /*WantExternal*/ false);
+        HS.getExistingFileInfo(*File, /*WantExternal*/ false);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
-    for (const auto &KH : HS.findResolvedModulesForHeader(File)) {
+    for (const auto &KH : HS.findResolvedModulesForHeader(*File)) {
       if (!KH.getModule())
         continue;
       ModulesToProcess.push_back(KH.getModule());
@@ -195,42 +193,45 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
   const ModuleMap &MM = HS.getModuleMap();
   SourceManager &SourceMgr = PP.getSourceManager();
 
-  auto ForIncludeChain = [&](FileEntryRef F,
-                             llvm::function_ref<void(FileEntryRef)> CB) {
-    CB(F);
+  std::set<const FileEntry *> ModuleMaps{};
+  auto CollectIncludingModuleMaps = [&](FileEntryRef F) {
+    if (!ModuleMaps.insert(F).second)
+      return;
     FileID FID = SourceMgr.translateFile(F);
     SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
     // The include location of inferred module maps can point into the header
     // file that triggered the inferring. Cut off the walk if that's the case.
     while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
       FID = SourceMgr.getFileID(Loc);
-      CB(*SourceMgr.getFileEntryRefForID(FID));
+      if (!ModuleMaps.insert(*SourceMgr.getFileEntryRefForID(FID)).second)
+        break;
       Loc = SourceMgr.getIncludeLoc(FID);
     }
   };
 
-  auto ProcessModuleOnce = [&](const Module *M) {
-    for (const Module *Mod = M; Mod; Mod = Mod->Parent)
-      if (ProcessedModules.insert(Mod).second) {
-        auto Insert = [&](FileEntryRef F) { ModuleMaps.insert(F); };
-        // The containing module map is affecting, because it's being pointed
-        // into by Module::DefinitionLoc.
-        if (auto ModuleMapFile = MM.getContainingModuleMapFile(Mod))
-          ForIncludeChain(*ModuleMapFile, Insert);
-        // For inferred modules, the module map that allowed inferring is not in
-        // the include chain of the virtual containing module map file. It did
-        // affect the compilation, though.
-        if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
-          ForIncludeChain(*ModuleMapFile, Insert);
-      }
+  std::set<const Module *> ProcessedModules;
+  auto CollectIncludingMapsFromAncestors = [&](const Module *M) {
+    for (const Module *Mod = M; Mod; Mod = Mod->Parent) {
+      if (!ProcessedModules.insert(Mod).second)
+        break;
+      // The containing module map is affecting, because it's being pointed
+      // into by Module::DefinitionLoc.
+      if (auto ModuleMapFile = MM.getContainingModuleMapFile(Mod))
+        CollectIncludingModuleMaps(*ModuleMapFile);
+      // For inferred modules, the module map that allowed inferring is not in
+      // the include chain of the virtual containing module map file. It did
+      // affect the compilation, though.
+      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
+        CollectIncludingModuleMaps(*ModuleMapFile);
+    }
   };
 
   for (const Module *CurrentModule : ModulesToProcess) {
-    ProcessModuleOnce(CurrentModule);
+    CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
-      ProcessModuleOnce(ImportedModule);
+      CollectIncludingMapsFromAncestors(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      ProcessModuleOnce(UndeclaredModule);
+      CollectIncludingMapsFromAncestors(UndeclaredModule);
   }
 
   return ModuleMaps;
@@ -838,7 +839,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(METHOD_POOL);
   RECORD(PP_COUNTER_VALUE);
   RECORD(SOURCE_LOCATION_OFFSETS);
-  RECORD(SOURCE_LOCATION_PRELOADS);
   RECORD(EXT_VECTOR_DECLS);
   RECORD(UNUSED_FILESCOPED_DECLS);
   RECORD(PPD_ENTITIES_OFFSETS);
@@ -1029,7 +1029,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_INDIRECTFIELD);
   RECORD(DECL_EXPANDED_NON_TYPE_TEMPLATE_PARM_PACK);
   RECORD(DECL_EXPANDED_TEMPLATE_TEMPLATE_PARM_PACK);
-  RECORD(DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION);
   RECORD(DECL_IMPORT);
   RECORD(DECL_OMP_THREADPRIVATE);
   RECORD(DECL_EMPTY);
@@ -1382,13 +1381,13 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     if (auto *AdditionalModMaps =
             Map.getAdditionalModuleMapFiles(WritingModule)) {
       Record.push_back(AdditionalModMaps->size());
-      SmallVector<const FileEntry *, 1> ModMaps(AdditionalModMaps->begin(),
-                                                AdditionalModMaps->end());
-      llvm::sort(ModMaps, [](const FileEntry *A, const FileEntry *B) {
-        return A->getName() < B->getName();
+      SmallVector<FileEntryRef, 1> ModMaps(AdditionalModMaps->begin(),
+                                           AdditionalModMaps->end());
+      llvm::sort(ModMaps, [](FileEntryRef A, FileEntryRef B) {
+        return A.getName() < B.getName();
       });
-      for (const FileEntry *F : ModMaps)
-        AddPath(F->getName(), Record);
+      for (FileEntryRef F : ModMaps)
+        AddPath(F.getName(), Record);
     } else {
       Record.push_back(0);
     }
@@ -1550,7 +1549,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Original file name and file ID
   SourceManager &SM = Context.getSourceManager();
-  if (const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
+  if (auto MainFile = SM.getFileEntryRefForID(SM.getMainFileID())) {
     auto FileAbbrev = std::make_shared<BitCodeAbbrev>();
     FileAbbrev->Add(BitCodeAbbrevOp(ORIGINAL_FILE));
     FileAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File ID
@@ -2002,14 +2001,14 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     }
   }
 
-  SmallVector<const FileEntry *, 16> FilesByUID;
+  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
   HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
 
   if (FilesByUID.size() > HS.header_file_size())
     FilesByUID.resize(HS.header_file_size());
 
   for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    const FileEntry *File = FilesByUID[UID];
+    OptionalFileEntryRef File = FilesByUID[UID];
     if (!File)
       continue;
 
@@ -2020,7 +2019,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
     const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(File, /*WantExternal*/!Chain);
+        HS.getExistingFileInfo(*File, /*WantExternal*/!Chain);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -2034,13 +2033,13 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
-    bool Included = PP->alreadyIncluded(File);
+    bool Included = PP->alreadyIncluded(*File);
 
     HeaderFileInfoTrait::key_type Key = {
-      Filename, File->getSize(), getTimestampForOutput(File)
+      Filename, File->getSize(), getTimestampForOutput(*File)
     };
     HeaderFileInfoTrait::data_type Data = {
-      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(File), {}
+      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
     };
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;
@@ -2137,7 +2136,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
   // entry, which is always the same dummy entry.
   std::vector<uint32_t> SLocEntryOffsets;
   uint64_t SLocEntryOffsetsBase = Stream.GetCurrentBitNo();
-  RecordData PreloadSLocs;
   SLocEntryOffsets.reserve(SourceMgr.local_sloc_entry_size() - 1);
   for (unsigned I = 1, N = SourceMgr.local_sloc_entry_size();
        I != N; ++I) {
@@ -2213,9 +2211,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
         Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
                                   StringRef(Name.data(), Name.size() + 1));
         EmitBlob = true;
-
-        if (Name == "<built-in>")
-          PreloadSLocs.push_back(SLocEntryOffsets.size());
       }
 
       if (EmitBlob) {
@@ -2277,9 +2272,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
     Stream.EmitRecordWithBlob(SLocOffsetsAbbrev, Record,
                               bytes(SLocEntryOffsets));
   }
-  // Write the source location entry preloads array, telling the AST
-  // reader which source locations entries it should load eagerly.
-  Stream.EmitRecord(SOURCE_LOCATION_PRELOADS, PreloadSLocs);
 
   // Write the line table. It depends on remapping working, so it must come
   // after the source location offsets.
@@ -2778,6 +2770,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExportWild...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ConfigMacrosExh...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ModuleMapIsPriv...
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // NamedModuleHasN...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
   unsigned DefinitionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
@@ -2887,7 +2880,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          Mod->InferExplicitSubmodules,
                                          Mod->InferExportWildcard,
                                          Mod->ConfigMacrosExhaustive,
-                                         Mod->ModuleMapIsPrivate};
+                                         Mod->ModuleMapIsPrivate,
+                                         Mod->NamedModuleHasInit};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -4619,12 +4613,12 @@ time_t ASTWriter::getTimestampForOutput(const FileEntry *E) const {
 
 ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
                                      Module *WritingModule, StringRef isysroot,
-                                     bool hasErrors,
                                      bool ShouldCacheASTInMemory) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
-  ASTHasCompilerErrors = hasErrors;
+  ASTHasCompilerErrors =
+      SemaRef.PP.getDiagnostics().hasUncompilableErrorOccurred();
 
   // Emit the file header.
   Stream.Emit((unsigned)'C', 8);
@@ -6081,7 +6075,7 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
     APValue *Evaluated = VD->getEvaluatedValue();
-    // If the evaluted result is constant, emit it.
+    // If the evaluated result is constant, emit it.
     if (Evaluated && (Evaluated->isInt() || Evaluated->isFloat()))
       Val |= 8;
   }
@@ -7254,6 +7248,8 @@ void OMPClauseWriter::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getEndLoc());
 }
+
+void OMPClauseWriter::VisitOMPXBareClause(OMPXBareClause *C) {}
 
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());

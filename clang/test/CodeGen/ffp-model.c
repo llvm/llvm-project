@@ -49,9 +49,9 @@ float mymuladd(float x, float y, float z) {
 
 typedef float __attribute__((ext_vector_type(2))) v2f;
 
-v2f my_vec_muladd(v2f x, float y, v2f z) {
-  // CHECK: define{{.*}} @my_vec_muladd
-  return x * y + z;
+void my_vec_muladd(v2f x, float y, v2f z, v2f *res) {
+  // CHECK: define{{.*}}@my_vec_muladd
+  *res = x * y + z;
 
   // CHECK-FAST: fmul fast <2 x float>
   // CHECK-FAST: load <2 x float>, ptr
@@ -83,9 +83,9 @@ v2f my_vec_muladd(v2f x, float y, v2f z) {
 
 typedef float __attribute__((matrix_type(2, 1))) m21f;
 
-m21f my_m21_muladd(m21f x, float y, m21f z) {
-  // CHECK: define{{.*}} <2 x float> @my_m21_muladd
-  return x * y + z;
+void my_m21_muladd(m21f x, float y, m21f z, m21f *res) {
+  // CHECK: define{{.*}}@my_m21_muladd
+  *res = x * y + z;
 
   // CHECK-FAST: fmul fast <2 x float>
   // CHECK-FAST: load <2 x float>, ptr
@@ -117,9 +117,9 @@ m21f my_m21_muladd(m21f x, float y, m21f z) {
 
 typedef float __attribute__((matrix_type(2, 2))) m22f;
 
-m22f my_m22_muladd(m22f x, float y, m22f z) {
-  // CHECK: define{{.*}} <4 x float> @my_m22_muladd
-  return x * y + z;
+void my_m22_muladd(m22f x, float y, m22f z, m22f *res) {
+  // CHECK: define{{.*}}@my_m22_muladd
+  *res = x * y + z;
 
   // CHECK-FAST: fmul fast <4 x float>
   // CHECK-FAST: load <4 x float>, ptr

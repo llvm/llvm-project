@@ -111,7 +111,7 @@ CXXRewrittenBinaryOperator::getDecomposedForm() const {
     return Result;
 
   // Otherwise, we expect a <=> to now be on the LHS.
-  E = Result.LHS->IgnoreImplicitAsWritten();
+  E = Result.LHS->IgnoreUnlessSpelledInSource();
   if (auto *BO = dyn_cast<BinaryOperator>(E)) {
     assert(BO->getOpcode() == BO_Cmp);
     Result.LHS = BO->getLHS();
@@ -1513,6 +1513,16 @@ CXXDependentScopeMemberExpr *CXXDependentScopeMemberExpr::CreateEmpty(
   void *Mem = Ctx.Allocate(Size, alignof(CXXDependentScopeMemberExpr));
   return new (Mem) CXXDependentScopeMemberExpr(
       EmptyShell(), HasTemplateKWAndArgsInfo, HasFirstQualifierFoundInScope);
+}
+
+CXXThisExpr *CXXThisExpr::Create(const ASTContext &Ctx, SourceLocation L,
+                                 QualType Ty, bool IsImplicit) {
+  return new (Ctx) CXXThisExpr(L, Ty, IsImplicit,
+                               Ctx.getLangOpts().HLSL ? VK_LValue : VK_PRValue);
+}
+
+CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
+  return new (Ctx) CXXThisExpr(EmptyShell());
 }
 
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,

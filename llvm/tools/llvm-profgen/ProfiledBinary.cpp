@@ -810,24 +810,31 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
     loadSymbolsFromDWARFUnit(*CompilationUnit.get());
 
   // Handles DWO sections that can either be in .o, .dwo or .dwp files.
+  uint32_t NumOfDWOMissing = 0;
   for (const auto &CompilationUnit : DebugContext->compile_units()) {
     DWARFUnit *const DwarfUnit = CompilationUnit.get();
     if (DwarfUnit->getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit->getNonSkeletonUnitDIE(false).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
-        std::string DWOName = dwarf::toString(
-            DwarfUnit->getUnitDIE().find(
-                {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-            "");
-        WithColor::warning()
-            << "DWO debug information for " << DWOName
-            << " was not loaded. Please check the .o, .dwo or .dwp path.\n";
+        NumOfDWOMissing++;
+        if (ShowDetailedWarning) {
+          std::string DWOName = dwarf::toString(
+              DwarfUnit->getUnitDIE().find(
+                  {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+              "");
+          WithColor::warning() << "DWO debug information for " << DWOName
+                               << " was not loaded.\n";
+        }
         continue;
       }
       loadSymbolsFromDWARFUnit(*DWOCU);
     }
   }
 
+  if (NumOfDWOMissing)
+    WithColor::warning()
+        << " DWO debug information was not loaded for " << NumOfDWOMissing
+        << " modules. Please check the .o, .dwo or .dwp path.\n";
   if (BinaryFunctions.empty())
     WithColor::warning() << "Loading of DWARF info completed, but no binary "
                             "functions have been retrieved.\n";
@@ -865,7 +872,7 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
     const auto &CallerFrame = InlineStack.getFrame(I);
-    if (CallerFrame.FunctionName == "<invalid>")
+    if (CallerFrame.FunctionName.empty() || (CallerFrame.FunctionName == "<invalid>"))
       break;
 
     StringRef FunctionName(CallerFrame.FunctionName);

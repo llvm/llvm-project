@@ -13,6 +13,7 @@ __all__ = [
     "get_default_loc_context",
     "get_op_result_or_value",
     "get_op_results_or_values",
+    "get_op_result_or_op_results",
     "segmented_accessor",
 ]
 
@@ -167,3 +168,17 @@ def get_op_results_or_values(
         return arg.results
     else:
         return [get_op_result_or_value(element) for element in arg]
+
+
+def get_op_result_or_op_results(
+    op: _Union[_cext.ir.OpView, _cext.ir.Operation],
+) -> _Union[_cext.ir.Operation, _cext.ir.OpResult, _Sequence[_cext.ir.OpResult]]:
+    if isinstance(op, _cext.ir.OpView):
+        op = op.operation
+    return (
+        list(get_op_results_or_values(op))
+        if len(op.results) > 1
+        else get_op_result_or_value(op)
+        if len(op.results) > 0
+        else op
+    )

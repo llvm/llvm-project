@@ -689,7 +689,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     if (CMD->isStatic())
       Type.MemberType = FuncType::ft_static_member;
     else {
-      Type.This = CMD->getThisType()->getPointeeType();
+      Type.This = CMD->getFunctionObjectParameterType();
       Type.MemberType = FuncType::ft_non_static_member;
     }
     Type.Func = CMD->getType()->castAs<FunctionProtoType>();
@@ -3577,6 +3577,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   CapturingScopeInfo *CurCap = cast<CapturingScopeInfo>(getCurFunction());
   QualType FnRetType = CurCap->ReturnType;
   LambdaScopeInfo *CurLambda = dyn_cast<LambdaScopeInfo>(CurCap);
+  if (CurLambda && CurLambda->CallOperator->getType().isNull())
+    return StmtError();
   bool HasDeducedReturnType =
       CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 

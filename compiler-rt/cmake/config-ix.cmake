@@ -63,6 +63,16 @@ if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
                         moldname mingwex msvcrt)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
   endif()
+  if (NOT TARGET unwind)
+    # Don't check for a library named unwind, if there's a target with that name within
+    # the same build.
+    check_library_exists(unwind _Unwind_GetRegionStart "" COMPILER_RT_HAS_LIBUNWIND)
+    if (COMPILER_RT_HAS_LIBUNWIND)
+      # If we're omitting default libraries, we might need to manually link in libunwind.
+      # This can affect whether we detect a statically linked libc++ correctly.
+      list(APPEND CMAKE_REQUIRED_LIBRARIES unwind)
+    endif()
+  endif()
 endif ()
 
 # CodeGen options.

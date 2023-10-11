@@ -392,11 +392,11 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
 
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(
     CompilerInstance &CI)
-    : Loader(CI, CI.getAnalyzerOpts()->CTUDir,
-             CI.getAnalyzerOpts()->CTUInvocationList),
+    : Loader(CI, CI.getAnalyzerOpts().CTUDir,
+             CI.getAnalyzerOpts().CTUInvocationList),
       LoadGuard(CI.getASTContext().getLangOpts().CPlusPlus
-                    ? CI.getAnalyzerOpts()->CTUImportCppThreshold
-                    : CI.getAnalyzerOpts()->CTUImportThreshold) {}
+                    ? CI.getAnalyzerOpts().CTUImportCppThreshold
+                    : CI.getAnalyzerOpts().CTUImportThreshold) {}
 
 llvm::Expected<ASTUnit *>
 CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFile(

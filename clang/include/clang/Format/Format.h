@@ -593,6 +593,47 @@ struct FormatStyle {
   /// \version 3.3
   bool AllowAllParametersOfDeclarationOnNextLine;
 
+  /// Different ways to break before a noexcept specifier.
+  enum BreakBeforeNoexceptSpecifierStyle : int8_t {
+    /// No line break allowed.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2) noexcept(
+    ///       noexcept(baz(arg1)) &&
+    ///       noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Never,
+    /// For a simple ``noexcept`` there is no line break allowed, but when we
+    /// have a condition it is.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_OnlyWithParen,
+    /// Line breaks are allowed. But note that because of the associated
+    /// penalties ``clang-format`` often prefers not to break before the
+    /// ``noexcept``.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Always,
+  };
+
+  /// Controls if there could be a line break before a ``noexcept`` specifier.
+  /// \version 18
+  BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -2008,6 +2049,8 @@ struct FormatStyle {
   bool BreakAfterJavaFieldAnnotations;
 
   /// Allow breaking string literals when formatting.
+  ///
+  /// In C, C++, and Objective-C:
   /// \code
   ///    true:
   ///    const char* x = "veryVeryVeryVeryVeryVe"
@@ -2016,8 +2059,35 @@ struct FormatStyle {
   ///
   ///    false:
   ///    const char* x =
-  ///      "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
+  ///
+  /// In C# and Java:
+  /// \code
+  ///    true:
+  ///    string x = "veryVeryVeryVeryVeryVe" +
+  ///               "ryVeryVeryVeryVeryVery" +
+  ///               "VeryLongString";
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
+  /// C# interpolated strings are not broken.
+  ///
+  /// In Verilog:
+  /// \code
+  ///    true:
+  ///    string x = {"veryVeryVeryVeryVeryVe",
+  ///                "ryVeryVeryVeryVeryVery",
+  ///                "VeryLongString"};
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
   /// \version 3.9
   bool BreakStringLiterals;
 
@@ -2809,8 +2879,8 @@ struct FormatStyle {
     ///        });
     /// \endcode
     LBI_Signature,
-    /// Align lambda body relative to the indentation level of the outer scope
-    /// the lambda signature resides in.
+    /// For statements within block scope, align lambda body relative to the
+    /// indentation level of the outer scope the lambda signature resides in.
     /// \code
     ///    someMethod(
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {
@@ -4021,35 +4091,35 @@ struct FormatStyle {
     ///    true:                                  false:
     ///    if (...) {}                     vs.    if(...) {}
     /// \endcode
-    bool AfterControlStatements = false;
+    bool AfterControlStatements;
     /// If ``true``, put space between foreach macros and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    FOREACH (...)                   vs.    FOREACH(...)
     ///      <loop-body>                            <loop-body>
     /// \endcode
-    bool AfterForeachMacros = false;
+    bool AfterForeachMacros;
     /// If ``true``, put a space between function declaration name and opening
     /// parentheses.
     /// \code
     ///    true:                                  false:
     ///    void f ();                      vs.    void f();
     /// \endcode
-    bool AfterFunctionDeclarationName = false;
+    bool AfterFunctionDeclarationName;
     /// If ``true``, put a space between function definition name and opening
     /// parentheses.
     /// \code
     ///    true:                                  false:
     ///    void f () {}                    vs.    void f() {}
     /// \endcode
-    bool AfterFunctionDefinitionName = false;
+    bool AfterFunctionDefinitionName;
     /// If ``true``, put space between if macros and opening parentheses.
     /// \code
     ///    true:                                  false:
     ///    IF (...)                        vs.    IF(...)
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
-    bool AfterIfMacros = false;
+    bool AfterIfMacros;
     /// If ``true``, put a space between operator overloading and opening
     /// parentheses.
     /// \code
@@ -4057,7 +4127,7 @@ struct FormatStyle {
     ///    void operator++ (int a);        vs.    void operator++(int a);
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
-    bool AfterOverloadedOperator = false;
+    bool AfterOverloadedOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4066,7 +4136,7 @@ struct FormatStyle {
     ///    requires (A<T> && B<T>)                requires(A<T> && B<T>)
     ///    ...                                    ...
     /// \endcode
-    bool AfterRequiresInClause = false;
+    bool AfterRequiresInClause;
     /// If ``true``, put space between requires keyword in a requires expression
     /// and opening parentheses.
     /// \code
@@ -4076,7 +4146,7 @@ struct FormatStyle {
     ///                  ...                                    ...
     ///                }                                      }
     /// \endcode
-    bool AfterRequiresInExpression = false;
+    bool AfterRequiresInExpression;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -4084,9 +4154,14 @@ struct FormatStyle {
     ///    void f (int a);                 vs.    void f();
     ///    f (a);                                 f();
     /// \endcode
-    bool BeforeNonEmptyParentheses = false;
+    bool BeforeNonEmptyParentheses;
 
-    SpaceBeforeParensCustom() = default;
+    SpaceBeforeParensCustom()
+        : AfterControlStatements(false), AfterForeachMacros(false),
+          AfterFunctionDeclarationName(false),
+          AfterFunctionDefinitionName(false), AfterIfMacros(false),
+          AfterOverloadedOperator(false), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -4276,7 +4351,7 @@ struct FormatStyle {
     SIPO_Custom,
   };
 
-  /// If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
   /// This option is **deprecated**. The previous behavior is preserved by using
   /// ``SpacesInParens`` with ``Custom`` and by setting all
   /// ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
@@ -4542,6 +4617,8 @@ struct FormatStyle {
            AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
+           AllowBreakBeforeNoexceptSpecifier ==
+               R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&

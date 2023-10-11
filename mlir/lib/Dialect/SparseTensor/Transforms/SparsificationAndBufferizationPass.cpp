@@ -39,7 +39,7 @@ namespace sparse_tensor {
 /// Return `true` if one of the given types is a sparse tensor type.
 static bool containsSparseTensor(TypeRange types) {
   for (Type t : types)
-    if (getSparseTensorEncoding(t))
+    if (isa<TensorType>(t) && getSparseTensorEncoding(t))
       return true;
   return false;
 }
@@ -81,23 +81,24 @@ public:
   /// and that all required buffer copies were already inserted by
   /// `insertTensorCopies` in the form of `bufferization.alloc_tensor` ops.
   LogicalResult runDenseBufferization() {
-    bufferization::OpFilter denseOpFilter;
-    denseOpFilter.allowOperation([&](Operation *op) {
+    bufferization::OneShotBufferizationOptions updatedOptions =
+        bufferizationOptions;
+    // Skip all sparse ops.
+    updatedOptions.opFilter.denyOperation([&](Operation *op) {
       if (containsSparseTensor(TypeRange(op->getResults())) ||
           containsSparseTensor(TypeRange(op->getOperands())))
-        return false;
+        return true;
       if (auto funcOp = dyn_cast<func::FuncOp>(op)) {
         FunctionType funcType = funcOp.getFunctionType();
         if (containsSparseTensor(funcType.getInputs()) ||
             containsSparseTensor(funcType.getResults()))
-          return false;
+          return true;
       }
-      return true;
+      return false;
     });
 
-    if (failed(bufferization::bufferizeOp(getOperation(), bufferizationOptions,
-                                          /*copyBeforeWrite=*/false,
-                                          &denseOpFilter)))
+    if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
+                                                updatedOptions)))
       return failure();
 
     bufferization::removeBufferizationAttributesInModule(getOperation());
@@ -141,6 +142,7 @@ public:
     {
       OpPassManager pm("builtin.module");
       pm.addPass(createSparsificationPass(sparsificationOptions));
+      pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createPostSparsificationRewritePass(enableRuntimeLibrary));
       if (vectorLength > 0) {
         pm.addPass(mlir::createLoopInvariantCodeMotionPass());
@@ -154,7 +156,6 @@ public:
         pm.addPass(createSparseTensorCodegenPass(createSparseDeallocs,
                                                  enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
-        pm.addPass(createStorageSpecifierToLLVMPass());
       }
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();
@@ -185,9 +186,6 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
   using namespace mlir::bufferization;
   OneShotBufferizationOptions options;
   options.bufferizeFunctionBoundaries = true;
-  // TODO(springerm): To spot memory leaks more easily, returning dense allocs
-  // should be disallowed.
-  options.allowReturnAllocs = true;
   options.setFunctionBoundaryTypeConversion(LayoutMapOption::IdentityLayoutMap);
   options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {

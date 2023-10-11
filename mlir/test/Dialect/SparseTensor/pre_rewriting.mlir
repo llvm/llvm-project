@@ -1,20 +1,19 @@
 // RUN: mlir-opt %s -pre-sparsification-rewrite | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed", "compressed"]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #Slice = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
-  dimSlices = [ (?, 1, 1), (?, 3, 1) ]
+  map = (d0 : #sparse_tensor<slice(?, 1, 1)>, d1 : #sparse_tensor<slice(?, 3, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #sel_trait = {
@@ -63,7 +62,7 @@ func.func @sparse_fuse_slice(%a : tensor<2x3xi64, #SortedCOO>) -> tensor<1x3xi64
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<4x4xf64, #sparse_tensor.encoding<{{.*}}>>,
 // CHECK-SAME:      %[[VAL_2:.*]]: tensor<4x4xf64, #sparse_tensor.encoding<{{.*}}>>) -> tensor<4x4xf64, #sparse_tensor.encoding<{{.*}}>> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f64
-// CHECK-DAG:       %[[VAL_4:.*]] = bufferization.alloc_tensor() : tensor<4x4xf64, #sparse_tensor.encoding<{{.*}}>>
+// CHECK-DAG:       %[[VAL_4:.*]] = tensor.empty() : tensor<4x4xf64, #sparse_tensor.encoding<{{.*}}>>
 // CHECK-NEXT:      %[[VAL_5:.*]] = linalg.generic {indexing_maps = [#map, #map, #map, #map], iterator_types = ["parallel", "parallel"]}
 // CHECK-SAME:      ins(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]
 // CHECK-NEXT:      ^bb0(%[[VAL_6:.*]]: i1, %[[VAL_7:.*]]: f64, %[[VAL_8:.*]]: f64, %[[VAL_9:.*]]: f64):
@@ -90,7 +89,7 @@ func.func @sparse_fuse_slice(%a : tensor<2x3xi64, #SortedCOO>) -> tensor<1x3xi64
 func.func @sparse_select(%cond: tensor<4x4xi1>,
                          %arga: tensor<4x4xf64, #DCSR>,
                          %argb: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-  %xv = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+  %xv = tensor.empty() : tensor<4x4xf64, #DCSR>
   %0 = linalg.generic #sel_trait
      ins(%cond, %arga, %argb: tensor<4x4xi1>, tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>)
       outs(%xv: tensor<4x4xf64, #DCSR>) {

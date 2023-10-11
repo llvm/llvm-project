@@ -66,88 +66,89 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    stwu 1, -64(1)
 ; PPC32-NEXT:    stw 21, 20(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 21, 123(1)
 ; PPC32-NEXT:    stw 22, 24(1) # 4-byte Folded Spill
-; PPC32-NEXT:    stw 23, 28(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 7, 21, 7
-; PPC32-NEXT:    lbz 23, 115(1)
+; PPC32-NEXT:    lbz 4, 115(1)
 ; PPC32-NEXT:    lbz 22, 119(1)
-; PPC32-NEXT:    lbz 21, 135(1)
-; PPC32-NEXT:    add 5, 23, 5
-; PPC32-NEXT:    lbz 23, 127(1)
-; PPC32-NEXT:    add 6, 22, 6
+; PPC32-NEXT:    lbz 21, 123(1)
+; PPC32-NEXT:    add 4, 4, 5
+; PPC32-NEXT:    add 5, 22, 6
 ; PPC32-NEXT:    lbz 22, 131(1)
-; PPC32-NEXT:    add 10, 21, 10
-; PPC32-NEXT:    stw 26, 40(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 8, 23, 8
-; PPC32-NEXT:    lbz 26, 83(1)
+; PPC32-NEXT:    add 6, 21, 7
+; PPC32-NEXT:    lbz 21, 135(1)
+; PPC32-NEXT:    addi 6, 6, 1
+; PPC32-NEXT:    stw 20, 16(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    add 9, 22, 9
-; PPC32-NEXT:    lbz 21, 147(1)
-; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 20, 127(1)
+; PPC32-NEXT:    add 10, 21, 10
 ; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 26, 21, 26
-; PPC32-NEXT:    lbz 25, 79(1)
-; PPC32-NEXT:    lbz 24, 75(1)
-; PPC32-NEXT:    lbz 23, 139(1)
-; PPC32-NEXT:    lbz 22, 143(1)
-; PPC32-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 24, 23, 24
-; PPC32-NEXT:    lbz 29, 95(1)
-; PPC32-NEXT:    add 25, 22, 25
-; PPC32-NEXT:    lbz 21, 159(1)
-; PPC32-NEXT:    stw 27, 44(1) # 4-byte Folded Spill
-; PPC32-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 29, 21, 29
-; PPC32-NEXT:    lbz 28, 91(1)
-; PPC32-NEXT:    lbz 27, 87(1)
-; PPC32-NEXT:    lbz 23, 151(1)
-; PPC32-NEXT:    lbz 22, 155(1)
-; PPC32-NEXT:    lbz 4, 111(1)
-; PPC32-NEXT:    add 27, 23, 27
-; PPC32-NEXT:    lbz 21, 175(1)
-; PPC32-NEXT:    add 28, 22, 28
-; PPC32-NEXT:    lbz 11, 107(1)
-; PPC32-NEXT:    lbz 12, 171(1)
-; PPC32-NEXT:    add 4, 21, 4
-; PPC32-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
+; PPC32-NEXT:    addi 5, 5, 1
+; PPC32-NEXT:    lbz 25, 83(1)
+; PPC32-NEXT:    add 7, 20, 8
+; PPC32-NEXT:    lbz 21, 147(1)
+; PPC32-NEXT:    addi 7, 7, 1
+; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    addi 4, 4, 1
-; PPC32-NEXT:    lbz 0, 103(1)
-; PPC32-NEXT:    add 11, 12, 11
-; PPC32-NEXT:    lbz 30, 99(1)
-; PPC32-NEXT:    lbz 23, 163(1)
+; PPC32-NEXT:    lbz 24, 79(1)
+; PPC32-NEXT:    add 25, 21, 25
+; PPC32-NEXT:    lbz 22, 143(1)
+; PPC32-NEXT:    stw 23, 28(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 23, 75(1)
+; PPC32-NEXT:    add 24, 22, 24
+; PPC32-NEXT:    lbz 8, 139(1)
+; PPC32-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 28, 95(1)
+; PPC32-NEXT:    add 8, 8, 23
+; PPC32-NEXT:    lbz 21, 159(1)
+; PPC32-NEXT:    addi 8, 8, 1
+; PPC32-NEXT:    stw 27, 44(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 27, 91(1)
+; PPC32-NEXT:    add 28, 21, 28
+; PPC32-NEXT:    lbz 22, 155(1)
+; PPC32-NEXT:    stw 26, 40(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 26, 87(1)
+; PPC32-NEXT:    add 27, 22, 27
+; PPC32-NEXT:    lbz 23, 151(1)
+; PPC32-NEXT:    lbz 11, 111(1)
+; PPC32-NEXT:    lbz 21, 175(1)
+; PPC32-NEXT:    add 26, 23, 26
+; PPC32-NEXT:    lbz 12, 107(1)
+; PPC32-NEXT:    lbz 0, 171(1)
+; PPC32-NEXT:    add 11, 21, 11
+; PPC32-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
+; PPC32-NEXT:    addi 11, 11, 1
+; PPC32-NEXT:    lbz 30, 103(1)
+; PPC32-NEXT:    add 12, 0, 12
 ; PPC32-NEXT:    lbz 22, 167(1)
-; PPC32-NEXT:    add 30, 23, 30
-; PPC32-NEXT:    stb 4, 15(3)
-; PPC32-NEXT:    add 23, 22, 0
-; PPC32-NEXT:    addi 4, 11, 1
-; PPC32-NEXT:    stb 4, 14(3)
-; PPC32-NEXT:    addi 4, 23, 1
-; PPC32-NEXT:    stb 4, 13(3)
-; PPC32-NEXT:    addi 4, 30, 1
-; PPC32-NEXT:    stb 4, 12(3)
-; PPC32-NEXT:    addi 4, 29, 1
-; PPC32-NEXT:    stb 4, 11(3)
-; PPC32-NEXT:    addi 4, 28, 1
-; PPC32-NEXT:    stb 4, 10(3)
-; PPC32-NEXT:    addi 4, 27, 1
-; PPC32-NEXT:    stb 4, 9(3)
-; PPC32-NEXT:    addi 4, 26, 1
-; PPC32-NEXT:    stb 4, 8(3)
-; PPC32-NEXT:    addi 4, 25, 1
-; PPC32-NEXT:    stb 4, 7(3)
-; PPC32-NEXT:    addi 4, 24, 1
-; PPC32-NEXT:    stb 4, 6(3)
-; PPC32-NEXT:    addi 4, 10, 1
-; PPC32-NEXT:    stb 4, 5(3)
-; PPC32-NEXT:    addi 4, 9, 1
-; PPC32-NEXT:    stb 4, 4(3)
-; PPC32-NEXT:    addi 4, 8, 1
-; PPC32-NEXT:    stb 4, 3(3)
-; PPC32-NEXT:    addi 4, 7, 1
-; PPC32-NEXT:    stb 4, 2(3)
-; PPC32-NEXT:    addi 4, 6, 1
-; PPC32-NEXT:    stb 4, 1(3)
-; PPC32-NEXT:    addi 4, 5, 1
+; PPC32-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 29, 99(1)
+; PPC32-NEXT:    add 30, 22, 30
+; PPC32-NEXT:    lbz 23, 163(1)
+; PPC32-NEXT:    stb 11, 15(3)
+; PPC32-NEXT:    addi 11, 12, 1
+; PPC32-NEXT:    add 29, 23, 29
+; PPC32-NEXT:    stb 11, 14(3)
+; PPC32-NEXT:    addi 11, 30, 1
+; PPC32-NEXT:    stb 11, 13(3)
+; PPC32-NEXT:    addi 11, 29, 1
+; PPC32-NEXT:    stb 11, 12(3)
+; PPC32-NEXT:    addi 11, 28, 1
+; PPC32-NEXT:    stb 11, 11(3)
+; PPC32-NEXT:    addi 11, 27, 1
+; PPC32-NEXT:    stb 11, 10(3)
+; PPC32-NEXT:    addi 11, 26, 1
+; PPC32-NEXT:    stb 11, 9(3)
+; PPC32-NEXT:    addi 11, 25, 1
+; PPC32-NEXT:    stb 8, 6(3)
+; PPC32-NEXT:    addi 8, 10, 1
+; PPC32-NEXT:    stb 11, 8(3)
+; PPC32-NEXT:    addi 11, 24, 1
+; PPC32-NEXT:    stb 8, 5(3)
+; PPC32-NEXT:    addi 8, 9, 1
+; PPC32-NEXT:    stb 11, 7(3)
+; PPC32-NEXT:    stb 8, 4(3)
+; PPC32-NEXT:    stb 7, 3(3)
+; PPC32-NEXT:    stb 6, 2(3)
+; PPC32-NEXT:    stb 5, 1(3)
 ; PPC32-NEXT:    stb 4, 0(3)
 ; PPC32-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 29, 52(1) # 4-byte Folded Reload
@@ -159,6 +160,7 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32-NEXT:    lwz 23, 28(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 22, 24(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 21, 20(1) # 4-byte Folded Reload
+; PPC32-NEXT:    lwz 20, 16(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    addi 1, 1, 64
 ; PPC32-NEXT:    blr
 ;

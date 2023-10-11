@@ -172,3 +172,18 @@ description in the ``OVERWRITE_SECTIONS`` command while the insert command
 still applies (possibly after orphan section placement). It is recommended to
 leave the brace empty (i.e. ``section : {}``) for the insert command, because
 its description will be ignored anyway.
+
+Built-in functions
+~~~~~~~~~~~~~~~~~~
+
+``DATA_SEGMENT_RELRO_END(offset, exp)`` defines the end of the ``PT_GNU_RELRO``
+segment when ``-z relro`` (default) is in effect. Sections between
+``DATA_SEGMENT_ALIGN`` and ``DATA_SEGMENT_RELRO_END`` are considered RELRO.
+
+The typical use case is ``. = DATA_SEGMENT_RELRO_END(0, .);`` followed by
+writable but non-RELRO sections. LLD ignores ``offset`` and ``exp`` and aligns
+the current location to a max-page-size boundary, ensuring that the next
+``PT_LOAD`` segment will not overlap with the ``PT_GNU_RELRO`` segment.
+
+LLD will insert ``.relro_padding`` immediately before the symbol assignment
+using ``DATA_SEGMENT_RELRO_END``.

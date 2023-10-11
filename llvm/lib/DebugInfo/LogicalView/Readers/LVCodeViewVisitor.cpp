@@ -1705,6 +1705,31 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+// S_CALLERS, S_CALLEES, S_INLINEES
+Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, CallerSym &Caller) {
+  LLVM_DEBUG({
+    llvm::StringRef FieldName;
+    switch (Caller.getKind()) {
+    case SymbolRecordKind::CallerSym:
+      FieldName = "Callee";
+      break;
+    case SymbolRecordKind::CalleeSym:
+      FieldName = "Caller";
+      break;
+    case SymbolRecordKind::InlineesSym:
+      FieldName = "Inlinee";
+      break;
+    default:
+      return llvm::make_error<CodeViewError>(
+          "Unknown CV Record type for a CallerSym object!");
+    }
+    for (auto FuncID : Caller.Indices) {
+      printTypeIndex(FieldName, FuncID);
+    }
+  });
+  return Error::success();
+}
+
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "CodeViewLogicalVisitor"
 
@@ -2914,7 +2939,7 @@ Error LVLogicalVisitor::finishVisitation(CVType &Record, TypeIndex TI,
 // Customized version of 'FieldListVisitHelper'.
 Error LVLogicalVisitor::visitFieldListMemberStream(
     TypeIndex TI, LVElement *Element, ArrayRef<uint8_t> FieldList) {
-  BinaryByteStream Stream(FieldList, llvm::support::little);
+  BinaryByteStream Stream(FieldList, llvm::endianness::little);
   BinaryStreamReader Reader(Stream);
   FieldListDeserializer Deserializer(Reader);
   TypeVisitorCallbackPipeline Pipeline;

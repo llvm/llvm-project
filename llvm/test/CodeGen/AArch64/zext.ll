@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for zext_v16i10_v16i16
-
 define i16 @zext_i8_to_i16(i8 %a) {
 ; CHECK-LABEL: zext_i8_to_i16:
 ; CHECK:       // %bb.0: // %entry
@@ -108,36 +106,22 @@ entry:
 }
 
 define <2 x i16> @zext_v2i8_v2i16(<2 x i8> %a) {
-; CHECK-SD-LABEL: zext_v2i8_v2i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v2i8_v2i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v2i8_v2i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0x0000ff000000ff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
 entry:
   %c = zext <2 x i8> %a to <2 x i16>
   ret <2 x i16> %c
 }
 
 define <2 x i32> @zext_v2i8_v2i32(<2 x i8> %a) {
-; CHECK-SD-LABEL: zext_v2i8_v2i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v2i8_v2i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI11_0]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v2i8_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0x0000ff000000ff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
 entry:
   %c = zext <2 x i8> %a to <2 x i32>
   ret <2 x i32> %c
@@ -153,9 +137,8 @@ define <2 x i64> @zext_v2i8_v2i64(<2 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v2i8_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI12_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -164,18 +147,11 @@ entry:
 }
 
 define <2 x i32> @zext_v2i16_v2i32(<2 x i16> %a) {
-; CHECK-SD-LABEL: zext_v2i16_v2i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v2i16_v2i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v2i16_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
 entry:
   %c = zext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %c
@@ -191,9 +167,8 @@ define <2 x i64> @zext_v2i16_v2i64(<2 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v2i16_v2i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000000000ffff
 ; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -212,36 +187,22 @@ entry:
 }
 
 define <2 x i16> @zext_v2i10_v2i16(<2 x i10> %a) {
-; CHECK-SD-LABEL: zext_v2i10_v2i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2s, #3, msl #8
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v2i10_v2i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI16_0]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v2i10_v2i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2s, #3, msl #8
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
 entry:
   %c = zext <2 x i10> %a to <2 x i16>
   ret <2 x i16> %c
 }
 
 define <2 x i32> @zext_v2i10_v2i32(<2 x i10> %a) {
-; CHECK-SD-LABEL: zext_v2i10_v2i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2s, #3, msl #8
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: zext_v2i10_v2i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI17_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI17_0]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: zext_v2i10_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.2s, #3, msl #8
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
 entry:
   %c = zext <2 x i10> %a to <2 x i32>
   ret <2 x i32> %c
@@ -279,19 +240,18 @@ define <3 x i16> @zext_v3i8_v3i16(<3 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v3i8_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s0, w0
 ; CHECK-GI-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s2, w1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    fmov s2, w2
-; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    mov v3.h[1], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v3.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-GI-NEXT:    mov v3.h[3], v0.h[0]
-; CHECK-GI-NEXT:    and v0.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w1
+; CHECK-GI-NEXT:    mov v2.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[2], w2
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov v2.h[3], v0.h[0]
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i8> %a to <3 x i16>
@@ -348,15 +308,14 @@ define <3 x i64> @zext_v3i8_v3i64(<3 x i8> %a) {
 ; CHECK-GI-LABEL: zext_v3i8_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-GI-NEXT:    fmov d0, x0
+; CHECK-GI-NEXT:    fmov d1, x0
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-GI-NEXT:    adrp x8, .LCPI21_0
+; CHECK-GI-NEXT:    movi v0.2d, #0x000000000000ff
 ; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
 ; CHECK-GI-NEXT:    and x8, x2, #0xff
 ; CHECK-GI-NEXT:    fmov d2, x8
-; CHECK-GI-NEXT:    mov v0.d[1], x1
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v1.d[1], x1
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -463,19 +422,18 @@ define <3 x i16> @zext_v3i10_v3i16(<3 x i10> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v3i10_v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s0, w0
 ; CHECK-GI-NEXT:    mov w8, #1023 // =0x3ff
-; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s2, w1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    fmov s2, w2
-; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    mov v3.h[1], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v3.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-GI-NEXT:    mov v3.h[3], v0.h[0]
-; CHECK-GI-NEXT:    and v0.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov v0.s[1], w1
+; CHECK-GI-NEXT:    mov v2.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.s[2], w2
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    mov v2.h[3], v0.h[0]
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <3 x i10> %a to <3 x i16>
@@ -556,8 +514,7 @@ define <4 x i16> @zext_v4i8_v4i16(<4 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v4i8_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -574,9 +531,8 @@ define <4 x i32> @zext_v4i8_v4i32(<4 x i8> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v4i8_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI29_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -596,12 +552,11 @@ define <4 x i64> @zext_v4i8_v4i64(<4 x i8> %a) {
 ; CHECK-GI-LABEL: zext_v4i8_v4i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI30_0]
-; CHECK-GI-NEXT:    ushll v1.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ushll2 v2.2d, v0.4s, #0
-; CHECK-GI-NEXT:    and v0.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    movi v1.2d, #0x000000000000ff
+; CHECK-GI-NEXT:    ushll v2.2d, v0.2s, #0
+; CHECK-GI-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <4 x i8> %a to <4 x i64>
@@ -663,8 +618,7 @@ define <4 x i16> @zext_v4i10_v4i16(<4 x i10> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v4i10_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI34_0]
+; CHECK-GI-NEXT:    mvni v1.4h, #252, lsl #8
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -681,9 +635,8 @@ define <4 x i32> @zext_v4i10_v4i32(<4 x i10> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v4i10_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NEXT:    movi v1.4s, #3, msl #8
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI35_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -847,8 +800,7 @@ define <8 x i16> @zext_v8i10_v8i16(<8 x i10> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v8i10_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-GI-NEXT:    mvni v1.8h, #252, lsl #8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -866,12 +818,11 @@ define <8 x i32> @zext_v8i10_v8i32(<8 x i10> %a) {
 ;
 ; CHECK-GI-LABEL: zext_v8i10_v8i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI44_0
-; CHECK-GI-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll2 v2.4s, v0.8h, #0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI44_0]
-; CHECK-GI-NEXT:    and v0.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    movi v1.4s, #3, msl #8
+; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll2 v3.4s, v0.8h, #0
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = zext <8 x i10> %a to <8 x i32>
@@ -1173,14 +1124,13 @@ define <16 x i32> @zext_v16i10_v16i32(<16 x i10> %a) {
 ; CHECK-GI-NEXT:    ldr s0, [sp, #8]
 ; CHECK-GI-NEXT:    ldr s3, [sp, #32]
 ; CHECK-GI-NEXT:    ldr s1, [sp, #40]
-; CHECK-GI-NEXT:    adrp x8, .LCPI53_0
+; CHECK-GI-NEXT:    movi v6.4s, #3, msl #8
 ; CHECK-GI-NEXT:    mov v4.s[1], w1
 ; CHECK-GI-NEXT:    mov v5.s[1], w5
 ; CHECK-GI-NEXT:    mov v2.s[1], v0.s[0]
 ; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    ldr s0, [sp, #16]
 ; CHECK-GI-NEXT:    ldr s1, [sp, #48]
-; CHECK-GI-NEXT:    ldr q6, [x8, :lo12:.LCPI53_0]
 ; CHECK-GI-NEXT:    mov v4.s[2], w2
 ; CHECK-GI-NEXT:    mov v5.s[2], w6
 ; CHECK-GI-NEXT:    mov v2.s[2], v0.s[0]

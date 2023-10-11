@@ -306,8 +306,10 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   {
     Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
   }
-  if (Result != MCDisassembler::Fail)
+  if (Result != MCDisassembler::Fail) {
+    Size = 4;
     return Result;
+  }
 
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
@@ -340,7 +342,7 @@ static DecodeStatus DecodeCall(MCInst &MI, unsigned insn, uint64_t Address,
 
 static DecodeStatus DecodeSIMM13(MCInst &MI, unsigned insn, uint64_t Address,
                                  const MCDisassembler *Decoder) {
-  unsigned tgt = SignExtend32<13>(fieldFromInstruction(insn, 0, 13));
-  MI.addOperand(MCOperand::createImm(tgt));
+  assert(isUInt<13>(insn));
+  MI.addOperand(MCOperand::createImm(SignExtend64<13>(insn)));
   return MCDisassembler::Success;
 }

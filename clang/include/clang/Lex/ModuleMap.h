@@ -57,8 +57,8 @@ public:
   /// contents.
   /// \param File The file itself.
   /// \param IsSystem Whether this is a module map from a system include path.
-  virtual void moduleMapFileRead(SourceLocation FileStart,
-                                 const FileEntry &File, bool IsSystem) {}
+  virtual void moduleMapFileRead(SourceLocation FileStart, FileEntryRef File,
+                                 bool IsSystem) {}
 
   /// Called when a header is added during module map parsing.
   ///
@@ -194,13 +194,12 @@ public:
     }
   };
 
-  using AdditionalModMapsSet = llvm::SmallPtrSet<const FileEntry *, 1>;
+  using AdditionalModMapsSet = llvm::SmallPtrSet<FileEntryRef, 1>;
 
 private:
   friend class ModuleMapParser;
 
-  using HeadersMap =
-      llvm::DenseMap<const FileEntry *, SmallVector<KnownHeader, 1>>;
+  using HeadersMap = llvm::DenseMap<FileEntryRef, SmallVector<KnownHeader, 1>>;
 
   /// Mapping from each header to the module that owns the contents of
   /// that header.
@@ -259,8 +258,8 @@ private:
     Attributes Attrs;
 
     /// If \c InferModules is non-zero, the module map file that allowed
-    /// inferred modules.  Otherwise, nullptr.
-    const FileEntry *ModuleMapFile;
+    /// inferred modules.  Otherwise, nullopt.
+    OptionalFileEntryRef ModuleMapFile;
 
     /// The names of modules that cannot be inferred within this
     /// directory.
@@ -275,7 +274,8 @@ private:
 
   /// A mapping from an inferred module to the module map that allowed the
   /// inference.
-  llvm::DenseMap<const Module *, const FileEntry *> InferredModuleAllowedBy;
+  // FIXME: Consider making the values non-optional.
+  llvm::DenseMap<const Module *, OptionalFileEntryRef> InferredModuleAllowedBy;
 
   llvm::DenseMap<const Module *, AdditionalModMapsSet> AdditionalModMaps;
 
@@ -356,7 +356,7 @@ private:
   /// If \p File represents a builtin header within Clang's builtin include
   /// directory, this also loads all of the module maps to see if it will get
   /// associated with a specific module (e.g. in /usr/include).
-  HeadersMap::iterator findKnownHeader(const FileEntry *File);
+  HeadersMap::iterator findKnownHeader(FileEntryRef File);
 
   /// Searches for a module whose umbrella directory contains \p File.
   ///
@@ -415,8 +415,7 @@ public:
   }
 
   /// Is this a compiler builtin header?
-  static bool isBuiltinHeader(StringRef FileName);
-  bool isBuiltinHeader(const FileEntry *File);
+  bool isBuiltinHeader(FileEntryRef File);
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {
@@ -451,8 +450,7 @@ public:
 
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
-  ArrayRef<KnownHeader>
-  findResolvedModulesForHeader(const FileEntry *File) const;
+  ArrayRef<KnownHeader> findResolvedModulesForHeader(FileEntryRef File) const;
 
   /// Resolve all lazy header directives for the specified file.
   ///
@@ -631,7 +629,7 @@ public:
   /// getContainingModuleMapFile().
   OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
+  void setInferredModuleAllowedBy(Module *M, OptionalFileEntryRef ModMap);
 
   /// Canonicalize \p Path in a manner suitable for a module map file. In
   /// particular, this canonicalizes the parent directory separately from the
@@ -653,7 +651,7 @@ public:
     return &I->second;
   }
 
-  void addAdditionalModuleMapFile(const Module *M, const FileEntry *ModuleMap);
+  void addAdditionalModuleMapFile(const Module *M, FileEntryRef ModuleMap);
 
   /// Resolve all of the unresolved exports in the given module.
   ///
@@ -721,7 +719,7 @@ public:
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
                           DirectoryEntryRef HomeDir, FileID ID = FileID(),
                           unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());

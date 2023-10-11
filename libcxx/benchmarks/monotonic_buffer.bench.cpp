@@ -16,7 +16,7 @@ static void bm_list(benchmark::State& state) {
   std::pmr::monotonic_buffer_resource resource(buffer, sizeof(buffer));
   for (auto _ : state) {
     std::pmr::list<int> l(&resource);
-    for (size_t i = 0; i != state.range(); ++i) {
+    for (int64_t i = 0; i != state.range(); ++i) {
       l.push_back(1);
       benchmark::DoNotOptimize(l);
     }

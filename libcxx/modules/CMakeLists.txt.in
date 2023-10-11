@@ -29,18 +29,17 @@ macro(compile_define_if condition def)
   endif()
 endmacro()
 
-if(NOT @LIBCXX_ENABLE_EXCEPTIONS@ OR NOT @LIBCXXABI_ENABLE_EXCEPTIONS@)
-  message(FATAL_ERROR "Modules without exception support is not yet implemented.")
-endif()
-
 add_library(std)
 target_sources(std
   PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
     std.cppm
 )
 
-target_compile_definitions(std PRIVATE _LIBCPP_ENABLE_EXPERIMENTAL)
-target_include_directories(std SYSTEM PRIVATE @LIBCXX_CONFIGURED_INCLUDE_DIR@)
+target_include_directories(std SYSTEM PRIVATE @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
+
+if (NOT @LIBCXX_ENABLE_EXCEPTIONS@)
+  target_compile_options(std PUBLIC -fno-exceptions)
+endif()
 
 target_compile_options(std
   PUBLIC

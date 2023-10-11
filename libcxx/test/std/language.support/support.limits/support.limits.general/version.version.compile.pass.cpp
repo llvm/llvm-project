@@ -3369,16 +3369,16 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++20"
 #   endif
 #   if __cpp_lib_jthread != 201911L
 #     error "__cpp_lib_jthread should have the value 201911L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_jthread
-#     error "__cpp_lib_jthread should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -4709,16 +4709,16 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++23"
 #   endif
 #   if __cpp_lib_jthread != 201911L
 #     error "__cpp_lib_jthread should have the value 201911L in c++23"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_jthread
-#     error "__cpp_lib_jthread should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -4971,17 +4971,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_chunk_by != 202202L
-#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_chunk_by != 202202L
+#   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6256,16 +6250,16 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++26"
 #   endif
 #   if __cpp_lib_jthread != 201911L
 #     error "__cpp_lib_jthread should have the value 201911L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_jthread
-#     error "__cpp_lib_jthread should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -6518,17 +6512,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_chunk_by != 202202L
-#     error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_chunk_by
-#     error "__cpp_lib_ranges_chunk_by should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_chunk_by
+#   error "__cpp_lib_ranges_chunk_by should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_chunk_by != 202202L
+#   error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

@@ -67,10 +67,10 @@ public:
 
   /// Returns all direct exporter headers for the given header file.
   /// Returns empty if there is none.
-  llvm::SmallVector<const FileEntry *> getExporters(const FileEntry *File,
-                                                    FileManager &FM) const;
-  llvm::SmallVector<const FileEntry *> getExporters(tooling::stdlib::Header,
-                                                    FileManager &FM) const;
+  llvm::SmallVector<FileEntryRef> getExporters(const FileEntry *File,
+                                               FileManager &FM) const;
+  llvm::SmallVector<FileEntryRef> getExporters(tooling::stdlib::Header,
+                                               FileManager &FM) const;
 
   /// Returns true if the given file is a self-contained file.
   bool isSelfContained(const FileEntry *File) const;

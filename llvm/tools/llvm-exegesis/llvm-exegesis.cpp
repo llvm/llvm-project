@@ -477,6 +477,11 @@ void benchmarkMain() {
   if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
+  if (ExecutionMode == BenchmarkRunner::ExecutionModeE::SubProcess &&
+      UseDummyPerfCounters)
+    ExitWithError("Dummy perf counters are not supported in the subprocess "
+                  "execution mode.");
+
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
@@ -498,11 +503,8 @@ void benchmarkMain() {
   }
 
   BitVector AllReservedRegs;
-  llvm::for_each(Repetitors,
-                 [&AllReservedRegs](
-                     const std::unique_ptr<const SnippetRepetitor> &Repetitor) {
-                   AllReservedRegs |= Repetitor->getReservedRegs();
-                 });
+  for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
+    AllReservedRegs |= Repetitor->getReservedRegs();
 
   std::vector<BenchmarkCode> Configurations;
   if (!Opcodes.empty()) {

@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -64,6 +65,42 @@ StringRef transform::MemrefToLLVMTypeConverterOp::getTypeConverterType() {
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+class AllocToAllocaPattern : public OpRewritePattern<memref::AllocOp> {
+public:
+  explicit AllocToAllocaPattern(Operation *analysisRoot, int64_t maxSize = 0)
+      : OpRewritePattern<memref::AllocOp>(analysisRoot->getContext()),
+        dataLayoutAnalysis(analysisRoot), maxSize(maxSize) {}
+
+  LogicalResult matchAndRewrite(memref::AllocOp op,
+                                PatternRewriter &rewriter) const override {
+    return success(memref::allocToAlloca(
+        rewriter, op, [this](memref::AllocOp alloc, memref::DeallocOp dealloc) {
+          MemRefType type = alloc.getMemref().getType();
+          if (!type.hasStaticShape())
+            return false;
+
+          const DataLayout &dataLayout = dataLayoutAnalysis.getAtOrAbove(alloc);
+          int64_t elementSize = dataLayout.getTypeSize(type.getElementType());
+          return maxSize == 0 || type.getNumElements() * elementSize < maxSize;
+        }));
+  }
+
+private:
+  DataLayoutAnalysis dataLayoutAnalysis;
+  int64_t maxSize;
+};
+} // namespace
+
+void transform::ApplyAllocToAllocaOp::populatePatterns(
+    RewritePatternSet &patterns) {}
+
+void transform::ApplyAllocToAllocaOp::populatePatternsWithState(
+    RewritePatternSet &patterns, transform::TransformState &state) {
+  patterns.insert<AllocToAllocaPattern>(
+      state.getTopLevel(), static_cast<int64_t>(getSizeLimit().value_or(0)));
+}
+
 void transform::ApplyExpandOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   memref::populateExpandOpsPatterns(patterns);
@@ -87,6 +124,67 @@ void transform::ApplyFoldMemrefAliasOpsPatternsOp::populatePatterns(
 void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocaToGlobalOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
+                                         transform::TransformResults &results,
+                                         transform::TransformState &state) {
+  auto allocaOps = state.getPayloadOps(getAlloca());
+
+  SmallVector<memref::GlobalOp> globalOps;
+  SmallVector<memref::GetGlobalOp> getGlobalOps;
+
+  // Transform `memref.alloca`s.
+  for (auto *op : allocaOps) {
+    auto alloca = cast<memref::AllocaOp>(op);
+    MLIRContext *ctx = rewriter.getContext();
+    Location loc = alloca->getLoc();
+
+    memref::GlobalOp globalOp;
+    {
+      // Find nearest symbol table.
+      Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
+      assert(symbolTableOp && "expected alloca payload to be in symbol table");
+      SymbolTable symbolTable(symbolTableOp);
+
+      // Insert a `memref.global` into the symbol table.
+      Type resultType = alloca.getResult().getType();
+      OpBuilder builder(rewriter.getContext());
+      // TODO: Add a better builder for this.
+      globalOp = builder.create<memref::GlobalOp>(
+          loc, StringAttr::get(ctx, "alloca"), StringAttr::get(ctx, "private"),
+          TypeAttr::get(resultType), Attribute{}, UnitAttr{}, IntegerAttr{});
+      symbolTable.insert(globalOp);
+    }
+
+    // Replace the `memref.alloca` with a `memref.get_global` accessing the
+    // global symbol inserted above.
+    rewriter.setInsertionPoint(alloca);
+    auto getGlobalOp = rewriter.replaceOpWithNewOp<memref::GetGlobalOp>(
+        alloca, globalOp.getType(), globalOp.getName());
+
+    globalOps.push_back(globalOp);
+    getGlobalOps.push_back(getGlobalOp);
+  }
+
+  // Assemble results.
+  results.set(getGlobal().cast<OpResult>(), globalOps);
+  results.set(getGetGlobal().cast<OpResult>(), getGlobalOps);
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MemRefAllocaToGlobalOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  producesHandle(getGlobal(), effects);
+  producesHandle(getGetGlobal(), effects);
+  consumesHandle(getAlloca(), effects);
+  modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//

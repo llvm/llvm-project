@@ -223,7 +223,7 @@ def InferTypeOpAdaptorWithIsCompatible : InferTypeOpAdaptorBase<
 >;
 
 // Convenient trait to define a wrapper to inferReturnTypeComponents that passes
-// in the Op Adaptor directly
+// in the Op Adaptor directly. Only uses the current types of the operands.
 class InferShapedTypeOpAdaptorBase<list<string> overridenMethods = []> : TraitList<
   [
     // Op implements infer type op interface.
@@ -368,5 +368,8 @@ def ReifyRankedShapedTypeOpInterface :
 // Op has the same operand and result type.
 // TODO: Change from hard coded to utilizing type inference trait.
 def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
+
+// Op has the same ranks for all operands and results types, if known.
+def SameOperandsAndResultRank : NativeOpTrait<"SameOperandsAndResultRank">;
 
 #endif // MLIR_INFERTYPEOPINTERFACE

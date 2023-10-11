@@ -21,7 +21,9 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
+include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td"
+include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
 
 // AccCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenACC/AccCommon.td"
@@ -97,6 +99,8 @@ def OpenACC_UseDevice             : I64EnumAttrCase<"acc_use_device", 20>;
 def OpenACC_Reduction             : I64EnumAttrCase<"acc_reduction", 21>;
 def OpenACC_DeclareDeviceResident : I64EnumAttrCase<"acc_declare_device_resident", 22>;
 def OpenACC_DeclareLink           : I64EnumAttrCase<"acc_declare_link", 23>;
+def OpenACC_Cache                 : I64EnumAttrCase<"acc_cache", 24>;
+def OpenACC_CacheReadonly         : I64EnumAttrCase<"acc_cache_readonly", 25>;
 
 def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
     "data clauses supported by OpenACC",
@@ -108,6 +112,7 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
      OpenACC_IsDevicePtrClause, OpenACC_GetDevicePtrClause, OpenACC_UpdateHost,
      OpenACC_UpdateSelf, OpenACC_UpdateDevice, OpenACC_UseDevice,
      OpenACC_Reduction, OpenACC_DeclareDeviceResident, OpenACC_DeclareLink,
+     OpenACC_Cache, OpenACC_CacheReadonly,
     ]> {
   let cppNamespace = "::mlir::acc";
   let genSpecializedAttr = 0;
@@ -405,6 +410,22 @@ def OpenACC_DeclareLinkOp : OpenACC_DataEntryOp<"declare_link",
   let summary = "Represents acc declare link semantics.";
 }
 
+//===----------------------------------------------------------------------===//
+// 2.10 cache directive
+//===----------------------------------------------------------------------===//
+def OpenACC_CacheOp : OpenACC_DataEntryOp<"cache",
+    "mlir::acc::DataClause::acc_cache", ""> {
+  let summary = "Represents the cache directive that is associated with a "
+                "loop.";
+
+  let extraClassDeclaration = [{
+    /// Check if this is a cache with readonly modifier.
+    bool isCacheReadonly() {
+      return getDataClause() == acc::DataClause::acc_cache_readonly;
+    }
+  }];
+}
+
 // Data exit operation does not refer to OpenACC spec terminology, but to
 // terminology used in this dialect. It refers to data operations that will appear
 // after data or compute region. It will be used as the base of acc dialect
@@ -499,7 +520,7 @@ def OpenACC_UpdateHostOp : OpenACC_DataExitOp<"update_host",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
-    [IsolatedFromAbove, Symbol]> {
+    [IsolatedFromAbove, Symbol, RecipeInterface]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -556,7 +577,7 @@ def OpenACC_PrivateRecipeOp : OpenACC_Op<"private.recipe",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
-    [IsolatedFromAbove, Symbol]> {
+    [IsolatedFromAbove, Symbol, RecipeInterface]> {
   let summary = "privatization recipe";
 
   let description = [{
@@ -622,7 +643,7 @@ def OpenACC_FirstprivateRecipeOp : OpenACC_Op<"firstprivate.recipe",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
-    [IsolatedFromAbove, Symbol]> {
+    [IsolatedFromAbove, Symbol, RecipeInterface]> {
   let summary = "reduction recipe";
 
   let description = [{
@@ -1139,22 +1160,23 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   }];
 
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
-                       Optional<IntOrIndex>:$gangNum,
-                       Optional<IntOrIndex>:$gangDim,
-                       Optional<IntOrIndex>:$gangStatic,
-                       Optional<IntOrIndex>:$workerNum,
-                       Optional<IntOrIndex>:$vectorLength,
-                       UnitAttr:$seq,
-                       UnitAttr:$independent,
-                       UnitAttr:$auto_,
-                       UnitAttr:$hasGang,
-                       UnitAttr:$hasWorker,
-                       UnitAttr:$hasVector,
-                       Variadic<IntOrIndex>:$tileOperands,
-                       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
-                       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
-                       Variadic<AnyType>:$reductionOperands,
-                       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes);
+      Optional<IntOrIndex>:$gangNum,
+      Optional<IntOrIndex>:$gangDim,
+      Optional<IntOrIndex>:$gangStatic,
+      Optional<IntOrIndex>:$workerNum,
+      Optional<IntOrIndex>:$vectorLength,
+      UnitAttr:$seq,
+      UnitAttr:$independent,
+      UnitAttr:$auto_,
+      UnitAttr:$hasGang,
+      UnitAttr:$hasWorker,
+      UnitAttr:$hasVector,
+      Variadic<IntOrIndex>:$tileOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      Variadic<AnyType>:$reductionOperands,
+      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$cacheOperands);
 
   let results = (outs Variadic<AnyType>:$results);
 
@@ -1180,6 +1202,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       | `reduction` `(` custom<SymOperandList>(
             $reductionOperands, type($reductionOperands), $reductionRecipes)
         `)`
+      | `cache` `(` $cacheOperands `:` type($cacheOperands) `)`
     )
     $region
     ( `(` type($results)^ `)` )?
@@ -1191,13 +1214,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
-    ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp, ReductionRecipeOp, SerialOp"]>]> {
+    ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp,"
+                 "ReductionRecipeOp, SerialOp, AtomicUpdateOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
     `acc.yield` is a special terminator operation for block inside regions in
-    acc ops (parallel and loop). It returns values to the immediately enclosing
-    acc op.
+    various acc ops (including parallel, loop, atomic.update). It returns values
+    to the immediately enclosing acc op.
   }];
 
   let arguments = (ins Variadic<AnyType>:$operands);
@@ -1205,6 +1229,153 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.12 atomic construct
+//===----------------------------------------------------------------------===//
+
+def AtomicReadOp : OpenACC_Op<"atomic.read", [AllTypesMatch<["x", "v"]>,
+                                              AtomicReadOpInterface]> {
+
+  let summary = "performs an atomic read";
+
+  let description = [{
+    This operation performs an atomic read.
+
+    The operand `x` is the address from where the value is atomically read.
+    The operand `v` is the address where the value is stored after reading.
+  }];
+
+  let arguments = (ins OpenACC_PointerLikeType:$x,
+                       OpenACC_PointerLikeType:$v,
+                       TypeAttr:$element_type);
+  let assemblyFormat = [{
+    $v `=` $x
+    `:` type($x) `,` $element_type attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
+
+  let summary = "performs an atomic write";
+
+  let description = [{
+    This operation performs an atomic write.
+
+    The operand `x` is the address to where the `expr` is atomically
+    written w.r.t. multiple threads. The evaluation of `expr` need not be
+    atomic w.r.t. the write to address. In general, the type(x) must
+    dereference to type(expr).
+  }];
+
+  let arguments = (ins OpenACC_PointerLikeType:$x,
+                       AnyType:$expr);
+  let assemblyFormat = [{
+    $x `=` $expr
+    `:` type($x) `,` type($expr)
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+def AtomicUpdateOp : OpenACC_Op<"atomic.update",
+                               [SingleBlockImplicitTerminator<"YieldOp">,
+                                RecursiveMemoryEffects,
+                                AtomicUpdateOpInterface]> {
+
+  let summary = "performs an atomic update";
+
+  let description = [{
+    This operation performs an atomic update.
+
+    The operand `x` is exactly the same as the operand `x` in the OpenACC
+    Standard (OpenACC 3.3, section 2.12). It is the address of the variable
+    that is being updated. `x` is atomically read/written.
+
+    The region describes how to update the value of `x`. It takes the value at
+    `x` as an input and must yield the updated value. Only the update to `x` is
+    atomic. Generally the region must have only one instruction, but can
+    potentially have more than one instructions too. The update is sematically
+    similar to a compare-exchange loop based atomic update.
+
+    The syntax of atomic update operation is different from atomic read and
+    atomic write operations. This is because only the host dialect knows how to
+    appropriately update a value. For example, while generating LLVM IR, if
+    there are no special `atomicrmw` instructions for the operation-type
+    combination in atomic update, a compare-exchange loop is generated, where
+    the core update operation is directly translated like regular operations by
+    the host dialect. The front-end must handle semantic checks for allowed
+    operations.
+  }];
+
+  let arguments = (ins Arg<OpenACC_PointerLikeType,
+                           "Address of variable to be updated",
+                           [MemRead, MemWrite]>:$x);
+  let regions = (region SizedRegion<1>:$region);
+  let assemblyFormat = [{
+    $x `:` type($x) $region attr-dict
+  }];
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+  let hasCanonicalizeMethod = 1;
+  let extraClassDeclaration = [{
+    Operation* getFirstOp() {
+      return &getRegion().front().getOperations().front();
+    }
+  }];
+}
+
+def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
+    [SingleBlockImplicitTerminator<"TerminatorOp">,
+     RecursiveMemoryEffects, AtomicCaptureOpInterface]> {
+  let summary = "performs an atomic capture";
+  let description = [{
+    This operation performs an atomic capture.
+
+    The region has the following allowed forms:
+
+    ```
+      acc.atomic.capture {
+        acc.atomic.update ...
+        acc.atomic.read ...
+        acc.terminator
+      }
+
+      acc.atomic.capture {
+        acc.atomic.read ...
+        acc.atomic.update ...
+        acc.terminator
+      }
+
+      acc.atomic.capture {
+        acc.atomic.read ...
+        acc.atomic.write ...
+        acc.terminator
+      }
+    ```
+
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+  let assemblyFormat = [{
+    $region attr-dict
+  }];
+  let hasRegionVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Returns the `atomic.read` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicReadOp getAtomicReadOp();
+
+    /// Returns the `atomic.write` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicWriteOp getAtomicWriteOp();
+
+    /// Returns the `atomic.update` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicUpdateOp getAtomicUpdateOp();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1393,12 +1564,12 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        SymbolNameAttr:$func_name,
                        OptionalAttr<StrAttr>:$bind_name,
-                       OptionalAttr<UnitAttr>:$gang,
-                       OptionalAttr<UnitAttr>:$worker,
-                       OptionalAttr<UnitAttr>:$vector,
-                       OptionalAttr<UnitAttr>:$seq,
-                       OptionalAttr<UnitAttr>:$nohost,
-                       OptionalAttr<UnitAttr>:$implicit,
+                       UnitAttr:$gang,
+                       UnitAttr:$worker,
+                       UnitAttr:$vector,
+                       UnitAttr:$seq,
+                       UnitAttr:$nohost,
+                       UnitAttr:$implicit,
                        OptionalAttr<APIntAttr>:$gangDim);
 
   let extraClassDeclaration = [{

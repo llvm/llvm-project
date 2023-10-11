@@ -2440,3 +2440,274 @@ define i64 @test_and_or_constexpr_infloop() {
   %or = or i64 %and, 1
   ret i64 %or
 }
+
+define i32 @and_zext(i32 %a, i1 %b) {
+; CHECK-LABEL: @and_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mask = zext i1 %b to i32
+  %r = and i32 %a, %mask
+  ret i32 %r
+}
+
+define i32 @and_zext_commuted(i32 %a, i1 %b) {
+; CHECK-LABEL: @and_zext_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mask = zext i1 %b to i32
+  %r = and i32 %mask, %a
+  ret i32 %r
+}
+
+define i32 @and_zext_multiuse(i32 %a, i1 %b) {
+; CHECK-LABEL: @and_zext_multiuse(
+; CHECK-NEXT:    [[MASK:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[MASK]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[MASK]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mask = zext i1 %b to i32
+  call void @use32(i32 %mask)
+  %r = and i32 %a, %mask
+  ret i32 %r
+}
+
+define <2 x i32> @and_zext_vec(<2 x i32> %a, <2 x i1> %b) {
+; CHECK-LABEL: @and_zext_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[B:%.*]], <2 x i32> [[TMP1]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %mask = zext <2 x i1> %b to <2 x i32>
+  %r = and <2 x i32> %a, %mask
+  ret <2 x i32> %r
+}
+
+; tests from PR66606
+define i32 @and_zext_eq_even(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_even(
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp eq i32 %a, 2
+  %not = zext i1 %cond to i32
+  %r = and i32 %a, %not
+  ret i32 %r
+}
+
+define i32 @and_zext_eq_even_commuted(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_even_commuted(
+; CHECK-NEXT:    ret i32 0
+;
+  %cond = icmp eq i32 %a, 2
+  %not = zext i1 %cond to i32
+  %r = and i32 %not, %a
+  ret i32 %r
+}
+
+define i32 @and_zext_eq_odd(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_odd(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cond = icmp eq i32 %a, 3
+  %not = zext i1 %cond to i32
+  %r = and i32 %a, %not
+  ret i32 %r
+}
+
+define i32 @and_zext_eq_odd_commuted(i32 %a) {
+; CHECK-LABEL: @and_zext_eq_odd_commuted(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cond = icmp eq i32 %a, 3
+  %not = zext i1 %cond to i32
+  %r = and i32 %not, %a
+  ret i32 %r
+}
+
+; Tests from PR66733
+define i32 @and_zext_eq_zero(i32 %A, i32 %C)  {
+; CHECK-LABEL: @and_zext_eq_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %1 = icmp eq i32 %A, 0
+  %2 = zext i1 %1 to i32
+  %3 = lshr i32 %A, %C
+  %4 = xor i32 %3, -1
+  %5 = and i32 %2, %4
+  ret i32 %5
+}
+
+define i32 @canonicalize_and_add_power2_or_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[X2:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[X2]], [[P2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %x2 = mul i32 %x, %x ; thwart complexity-based canonicalization
+  %val = add i32 %x2, %p2
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_sub_power2_or_zero(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_sub_power2_or_zero(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = sub i32 [[X:%.*]], [[P2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = sub i32 %x, %p2
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_add_power2_or_zero_commuted1(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero_commuted1(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[P2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = add i32 %p2, %x
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_add_power2_or_zero_commuted2(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero_commuted2(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[X2:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[X2]], [[P2]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P2]], [[VAL]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %x2 = mul i32 %x, %x ; thwart complexity-based canonicalization
+  %val = add i32 %x2, %p2
+  %and = and i32 %p2, %val
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_add_power2_or_zero_commuted3(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero_commuted3(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[P2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P2]], [[VAL]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = add i32 %p2, %x
+  %and = and i32 %p2, %val
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_sub_power2_or_zero_commuted_nofold(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_sub_power2_or_zero_commuted_nofold(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = sub i32 [[P2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = sub i32 %p2, %x
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_add_non_power2_or_zero_nofold(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_non_power2_or_zero_nofold(
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[Y]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %val = add i32 %x, %y
+  %and = and i32 %val, %y
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_add_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_add_power2_or_zero_multiuse_nofold(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[X2:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[X2]], [[P2]]
+; CHECK-NEXT:    call void @use32(i32 [[VAL]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %x2 = mul i32 %x, %x ; thwart complexity-based canonicalization
+  %val = add i32 %x2, %p2
+  call void @use32(i32 %val)
+  %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @canonicalize_and_sub_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) {
+; CHECK-LABEL: @canonicalize_and_sub_power2_or_zero_multiuse_nofold(
+; CHECK-NEXT:    [[NY:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = and i32 [[NY]], [[Y]]
+; CHECK-NEXT:    call void @use32(i32 [[P2]])
+; CHECK-NEXT:    [[VAL:%.*]] = sub i32 [[X:%.*]], [[P2]]
+; CHECK-NEXT:    call void @use32(i32 [[VAL]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[VAL]], [[P2]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %ny = sub i32 0, %y
+  %p2 = and i32 %ny, %y
+  call void @use32(i32 %p2) ; keep p2
+
+  %val = sub i32 %x, %p2
+  call void @use32(i32 %val)
+  %and = and i32 %val, %p2
+  ret i32 %and
+}

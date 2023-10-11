@@ -264,13 +264,14 @@ void SemaSignatureTable::init(ArrayRef<SemaRecord> SemaRecords) {
 
   assert(!SemaRecords.empty());
 
-  llvm::for_each(SemaRecords, [&](const SemaRecord &SR) {
+  for (const SemaRecord &SR : SemaRecords) {
     InsertToSignatureSet(SR.Prototype);
     InsertToSignatureSet(SR.Suffix);
     InsertToSignatureSet(SR.OverloadedSuffix);
-  });
+  }
 
-  llvm::for_each(Signatures, [this](auto &Sig) { insert(Sig); });
+  for (auto &Sig : Signatures)
+    insert(Sig);
 }
 
 void SemaSignatureTable::insert(ArrayRef<PrototypeDescriptor> Signature) {
@@ -289,7 +290,7 @@ unsigned SemaSignatureTable::getIndex(ArrayRef<PrototypeDescriptor> Signature) {
     return 0;
 
   // Checking Signature already in table or not.
-  if (Signature.size() < SignatureTable.size()) {
+  if (Signature.size() <= SignatureTable.size()) {
     size_t Bound = SignatureTable.size() - Signature.size() + 1;
     for (size_t Index = 0; Index < Bound; ++Index) {
       if (equal(Signature.begin(), Signature.end(),

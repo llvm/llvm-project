@@ -184,7 +184,7 @@
 
 # CHECK: FAIL: shtest-shell :: diff-error-2.txt
 # CHECK: *** TEST 'shtest-shell :: diff-error-2.txt' FAILED ***
-# CHECK: diff temp.txt 
+# CHECK: diff temp.txt
 # CHECK: # .---command stderr{{-*}}
 # CHECK: # | Error: missing or extra operand
 # CHECK: # error: command failed with exit status: 1

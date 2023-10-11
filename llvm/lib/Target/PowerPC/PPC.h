@@ -46,13 +46,14 @@ class ModulePass;
   FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
   FunctionPass *createPPCBranchCoalescingPass();
-  FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOpt::Level OL);
+  FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOptLevel OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
   FunctionPass *createPPCExpandISELPass();
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
+  ModulePass *createPPCMergeStringPoolPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
@@ -78,6 +79,7 @@ class ModulePass;
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelPass(PassRegistry &);
+  void initializePPCMergeStringPoolPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 

@@ -132,7 +132,7 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // Create a scalar PHI node that will replace the vector PHI node
   // just before the current PHI node.
   PHINode *scalarPHI = cast<PHINode>(InsertNewInstWith(
-      PHINode::Create(EI.getType(), PN->getNumIncomingValues(), ""), *PN));
+      PHINode::Create(EI.getType(), PN->getNumIncomingValues(), ""), PN->getIterator()));
   // Scalarize each PHI operand.
   for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
     Value *PHIInVal = PN->getIncomingValue(i);
@@ -148,10 +148,10 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
       Value *Op = InsertNewInstWith(
           ExtractElementInst::Create(B0->getOperand(opId), Elt,
                                      B0->getOperand(opId)->getName() + ".Elt"),
-          *B0);
+          B0->getIterator());
       Value *newPHIUser = InsertNewInstWith(
           BinaryOperator::CreateWithCopiedFlags(B0->getOpcode(),
-                                                scalarPHI, Op, B0), *B0);
+                                                scalarPHI, Op, B0), B0->getIterator());
       scalarPHI->addIncoming(newPHIUser, inBB);
     } else {
       // Scalarize PHI input:
@@ -165,7 +165,7 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
         InsertPos = inBB->getFirstInsertionPt();
       }
 
-      InsertNewInstWith(newEI, *InsertPos);
+      InsertNewInstWith(newEI, InsertPos);
 
       scalarPHI->addIncoming(newEI, inBB);
     }
@@ -742,7 +742,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   if (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
     WideVec->insertAfter(ExtVecOpInst);
   else
-    IC.InsertNewInstWith(WideVec, *ExtElt->getParent()->getFirstInsertionPt());
+    IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
@@ -751,7 +751,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
     if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
-    IC.InsertNewInstWith(NewExt, *OldExt);
+    IC.InsertNewInstWith(NewExt, OldExt->getIterator());
     IC.replaceInstUsesWith(*OldExt, NewExt);
     // Add the old extracts to the worklist for DCE. We can't remove the
     // extracts directly, because they may still be used by the calling code.
@@ -1121,7 +1121,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // Note that the same block can be a predecessor more than once,
   // and we need to preserve that invariant for the PHI node.
   BuilderTy::InsertPointGuard Guard(Builder);
-  Builder.SetInsertPoint(UseBB->getFirstNonPHI());
+  Builder.SetInsertPoint(UseBB, UseBB->getFirstNonPHIIt());
   auto *PHI =
       Builder.CreatePHI(AggTy, Preds.size(), OrigIVI.getName() + ".merged");
   for (BasicBlock *Pred : Preds)
@@ -2122,8 +2122,8 @@ static Instruction *foldSelectShuffleOfSelectShuffle(ShuffleVectorInst &Shuf) {
     NewMask[i] = Mask[i] < (signed)NumElts ? Mask[i] : Mask1[i];
 
   // A select mask with undef elements might look like an identity mask.
-  assert((ShuffleVectorInst::isSelectMask(NewMask) ||
-          ShuffleVectorInst::isIdentityMask(NewMask)) &&
+  assert((ShuffleVectorInst::isSelectMask(NewMask, NumElts) ||
+          ShuffleVectorInst::isIdentityMask(NewMask, NumElts)) &&
          "Unexpected shuffle mask");
   return new ShuffleVectorInst(X, Y, NewMask);
 }

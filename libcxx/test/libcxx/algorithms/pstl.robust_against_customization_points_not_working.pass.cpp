@@ -10,14 +10,16 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // Having a customization point outside the module doesn't work, so this test is inherintly module-hostile.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Make sure that the customization points get called properly when overloaded
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
+#include <__utility/empty.h>
 #include <cassert>
+#include <optional>
 
 struct TestPolicy {};
 struct TestBackend {};
@@ -27,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 bool pstl_any_of_called = false;
 
 template <class, class ForwardIterator, class Pred>
-bool __pstl_any_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+optional<bool> __pstl_any_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   assert(!pstl_any_of_called);
   pstl_any_of_called = true;
   return true;
@@ -36,7 +38,7 @@ bool __pstl_any_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
 bool pstl_all_of_called = false;
 
 template <class, class ForwardIterator, class Pred>
-bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+optional<bool> __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   assert(!pstl_all_of_called);
   pstl_all_of_called = true;
   return true;
@@ -45,25 +47,25 @@ bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
 bool pstl_copy_called = false;
 
 template <class, class ForwardIterator, class ForwardOutIterator>
-ForwardIterator __pstl_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator) {
+optional<ForwardOutIterator> __pstl_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator res) {
   assert(!pstl_copy_called);
   pstl_copy_called = true;
-  return 0;
+  return res;
 }
 
 bool pstl_copy_n_called = false;
 
 template <class, class ForwardIterator, class Size, class ForwardOutIterator>
-ForwardIterator __pstl_copy_n(TestBackend, ForwardIterator, Size, ForwardOutIterator) {
+optional<ForwardOutIterator> __pstl_copy_n(TestBackend, ForwardIterator, Size, ForwardOutIterator res) {
   assert(!pstl_copy_n_called);
   pstl_copy_n_called = true;
-  return 0;
+  return res;
 }
 
 bool pstl_count_called = false;
 
 template <class, class ForwardIterator, class T>
-typename std::iterator_traits<ForwardIterator>::difference_type
+optional<typename std::iterator_traits<ForwardIterator>::difference_type>
 __pstl_count(TestBackend, ForwardIterator, ForwardIterator, const T&) {
   assert(!pstl_count_called);
   pstl_count_called = true;
@@ -73,7 +75,7 @@ __pstl_count(TestBackend, ForwardIterator, ForwardIterator, const T&) {
 bool pstl_count_if_called = false;
 
 template <class, class ForwardIterator, class Pred>
-typename std::iterator_traits<ForwardIterator>::difference_type
+optional<typename std::iterator_traits<ForwardIterator>::difference_type>
 __pstl_count_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   assert(!pstl_count_if_called);
   pstl_count_if_called = true;
@@ -83,23 +85,25 @@ __pstl_count_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
 bool pstl_generate_called = false;
 
 template <class, class ForwardIterator, class Gen>
-void __pstl_generate(TestBackend, ForwardIterator, ForwardIterator, Gen) {
+optional<__empty> __pstl_generate(TestBackend, ForwardIterator, ForwardIterator, Gen) {
   assert(!pstl_generate_called);
   pstl_generate_called = true;
+  return __empty{};
 }
 
 bool pstl_generate_n_called = false;
 
 template <class, class ForwardIterator, class Size, class Gen>
-void __pstl_generate_n(TestBackend, Size, ForwardIterator, Gen) {
+optional<__empty> __pstl_generate_n(TestBackend, Size, ForwardIterator, Gen) {
   assert(!pstl_generate_n_called);
   pstl_generate_n_called = true;
+  return __empty{};
 }
 
 bool pstl_none_of_called = false;
 
 template <class, class ForwardIterator, class Pred>
-bool __pstl_none_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+optional<bool> __pstl_none_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   assert(!pstl_none_of_called);
   pstl_none_of_called = true;
   return true;
@@ -108,164 +112,177 @@ bool __pstl_none_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
 bool pstl_find_called = false;
 
 template <class, class ForwardIterator, class Pred>
-ForwardIterator __pstl_find(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+optional<ForwardIterator> __pstl_find(TestBackend, ForwardIterator first, ForwardIterator, Pred) {
   assert(!pstl_find_called);
   pstl_find_called = true;
-  return {};
+  return first;
 }
 
 bool pstl_find_if_called = false;
 
 template <class, class ForwardIterator, class Pred>
-ForwardIterator __pstl_find_if(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+optional<ForwardIterator> __pstl_find_if(TestBackend, ForwardIterator first, ForwardIterator, Pred) {
   assert(!pstl_find_if_called);
   pstl_find_if_called = true;
-  return {};
+  return first;
 }
 
 bool pstl_find_if_not_called = false;
 
 template <class, class ForwardIterator, class Pred>
-ForwardIterator __pstl_find_if_not(TestBackend, ForwardIterator, ForwardIterator, Pred) {
+optional<ForwardIterator> __pstl_find_if_not(TestBackend, ForwardIterator first, ForwardIterator, Pred) {
   assert(!pstl_find_if_not_called);
   pstl_find_if_not_called = true;
-  return {};
+  return first;
 }
 
 bool pstl_for_each_called = false;
 
 template <class, class ForwardIterator, class Size, class Func>
-void __pstl_for_each(TestBackend, ForwardIterator, Size, Func) {
+optional<__empty> __pstl_for_each(TestBackend, ForwardIterator, Size, Func) {
   assert(!pstl_for_each_called);
   pstl_for_each_called = true;
+  return __empty{};
 }
 
 bool pstl_for_each_n_called = false;
 
 template <class, class ForwardIterator, class Size, class Func>
-void __pstl_for_each_n(TestBackend, ForwardIterator, Size, Func) {
+optional<__empty> __pstl_for_each_n(TestBackend, ForwardIterator, Size, Func) {
   assert(!pstl_for_each_n_called);
   pstl_for_each_n_called = true;
+  return __empty{};
 }
 
 bool pstl_fill_called = false;
 
 template <class, class ForwardIterator, class Size, class Func>
-void __pstl_fill(TestBackend, ForwardIterator, Size, Func) {
+optional<__empty> __pstl_fill(TestBackend, ForwardIterator, Size, Func) {
   assert(!pstl_fill_called);
   pstl_fill_called = true;
+  return __empty{};
 }
 
 bool pstl_fill_n_called = false;
 
 template <class, class ForwardIterator, class Size, class Func>
-void __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
+optional<__empty> __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
   assert(!pstl_fill_n_called);
   pstl_fill_n_called = true;
+  return __empty{};
 }
 
 bool pstl_is_partitioned_called = false;
 
 template <class, class ForwardIterator, class Func>
-bool __pstl_is_partitioned(TestBackend, ForwardIterator, ForwardIterator, Func) {
+optional<bool> __pstl_is_partitioned(TestBackend, ForwardIterator, ForwardIterator, Func) {
   assert(!pstl_is_partitioned_called);
   pstl_is_partitioned_called = true;
-  return {};
+  return true;
 }
 
 bool pstl_replace_called = false;
 
 template <class, class ForwardIterator, class T>
-void __pstl_replace(TestBackend, ForwardIterator, ForwardIterator, const T&, const T&) {
+optional<__empty> __pstl_replace(TestBackend, ForwardIterator, ForwardIterator, const T&, const T&) {
   assert(!pstl_replace_called);
   pstl_replace_called = true;
+  return __empty{};
 }
 
 bool pstl_replace_if_called = false;
 
 template <class, class ForwardIterator, class T, class Func>
-void __pstl_replace_if(TestBackend, ForwardIterator, ForwardIterator, Func, const T&) {
+optional<__empty> __pstl_replace_if(TestBackend, ForwardIterator, ForwardIterator, Func, const T&) {
   assert(!pstl_replace_if_called);
   pstl_replace_if_called = true;
+  return __empty{};
 }
 
 bool pstl_replace_copy_called = false;
 
 template <class, class ForwardIterator, class ForwardOutIterator, class T>
-void __pstl_replace_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, const T&, const T&) {
+optional<__empty>
+__pstl_replace_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, const T&, const T&) {
   assert(!pstl_replace_copy_called);
   pstl_replace_copy_called = true;
+  return __empty{};
 }
 
 bool pstl_replace_copy_if_called = false;
 
 template <class, class ForwardIterator, class ForwardOutIterator, class T, class Func>
-void __pstl_replace_copy_if(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, Func, const T&) {
+optional<__empty>
+__pstl_replace_copy_if(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, Func, const T&) {
   assert(!pstl_replace_copy_if_called);
   pstl_replace_copy_if_called = true;
+  return __empty{};
 }
 
 bool pstl_unary_transform_called = false;
 
 template <class, class ForwardIterator, class ForwardOutIterator, class UnaryOperation>
-ForwardOutIterator __pstl_transform(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator, UnaryOperation) {
+optional<ForwardOutIterator>
+__pstl_transform(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator res, UnaryOperation) {
   assert(!pstl_unary_transform_called);
   pstl_unary_transform_called = true;
-  return {};
+  return res;
 }
 
 bool pstl_binary_transform_called = false;
 
 template <class, class ForwardIterator1, class ForwardIterator2, class ForwardOutIterator, class BinaryOperation>
-ForwardOutIterator __pstl_transform(
-    TestBackend, ForwardIterator1, ForwardIterator1, ForwardIterator2, ForwardOutIterator, BinaryOperation) {
+optional<ForwardOutIterator> __pstl_transform(
+    TestBackend, ForwardIterator1, ForwardIterator1, ForwardIterator2, ForwardOutIterator res, BinaryOperation) {
   assert(!pstl_binary_transform_called);
   pstl_binary_transform_called = true;
-  return {};
+  return res;
 }
 
 bool pstl_reduce_with_init_called = false;
 
 template <class, class ForwardIterator, class T, class BinaryOperation>
-T __pstl_reduce(TestBackend, ForwardIterator, ForwardIterator, T, BinaryOperation) {
+optional<T> __pstl_reduce(TestBackend, ForwardIterator, ForwardIterator, T v, BinaryOperation) {
   assert(!pstl_reduce_with_init_called);
   pstl_reduce_with_init_called = true;
-  return {};
+  return v;
 }
 
 bool pstl_reduce_without_init_called = false;
 
 template <class, class ForwardIterator>
-typename std::iterator_traits<ForwardIterator>::value_type
-__pstl_reduce(TestBackend, ForwardIterator, ForwardIterator) {
+optional<typename std::iterator_traits<ForwardIterator>::value_type>
+__pstl_reduce(TestBackend, ForwardIterator first, ForwardIterator) {
   assert(!pstl_reduce_without_init_called);
   pstl_reduce_without_init_called = true;
-  return {};
+  return *first;
 }
 
 bool pstl_sort_called = false;
 
 template <class, class RandomAccessIterator, class Comp>
-void __pstl_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
+optional<__empty> __pstl_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
   assert(!pstl_sort_called);
   pstl_sort_called = true;
+  return __empty{};
 }
 
 bool pstl_stable_sort_called = false;
 
 template <class, class RandomAccessIterator, class Comp>
-void __pstl_stable_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
+optional<__empty> __pstl_stable_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
   assert(!pstl_stable_sort_called);
   pstl_stable_sort_called = true;
+  return __empty{};
 }
 
 bool pstl_unary_transform_reduce_called = false;
 
 template <class, class ForwardIterator, class T, class UnaryOperation, class BinaryOperation>
-T __pstl_transform_reduce(TestBackend, ForwardIterator, ForwardIterator, T, UnaryOperation, BinaryOperation) {
+T __pstl_transform_reduce(TestBackend, ForwardIterator, ForwardIterator, T v, UnaryOperation, BinaryOperation) {
   assert(!pstl_unary_transform_reduce_called);
   pstl_unary_transform_reduce_called = true;
-  return {};
+  return v;
 }
 
 bool pstl_binary_transform_reduce_called = false;
@@ -277,10 +294,10 @@ template <class,
           class BinaryOperation1,
           class BinaryOperation2>
 typename std::iterator_traits<ForwardIterator1>::value_type __pstl_transform_reduce(
-    TestBackend, ForwardIterator1, ForwardIterator1, ForwardIterator2, T, BinaryOperation1, BinaryOperation2) {
+    TestBackend, ForwardIterator1, ForwardIterator1, ForwardIterator2, T v, BinaryOperation1, BinaryOperation2) {
   assert(!pstl_binary_transform_reduce_called);
   pstl_binary_transform_reduce_called = true;
-  return {};
+  return v;
 }
 
 _LIBCPP_END_NAMESPACE_STD

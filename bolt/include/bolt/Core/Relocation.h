@@ -84,6 +84,7 @@ struct Relocation {
 
   /// Special relocation type that allows the linker to modify the instruction.
   static bool isX86GOTPCRELX(uint64_t Type);
+  static bool isX86GOTPC64(uint64_t Type);
 
   /// Return true if relocation type is NONE
   static bool isNone(uint64_t Type);
@@ -96,6 +97,10 @@ struct Relocation {
 
   /// Return true if relocation type is for thread local storage.
   static bool isTLS(uint64_t Type);
+
+  /// Return true of relocation type is for referencing a specific instruction
+  /// (as opposed to a function, basic block, etc).
+  static bool isInstructionReference(uint64_t Type);
 
   /// Return code for a NONE relocation
   static uint64_t getNone();

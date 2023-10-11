@@ -390,7 +390,7 @@ static bool collectSRATypes(DenseMap<uint64_t, GlobalPart> &Parts,
       }
 
       // Scalable types not currently supported.
-      if (isa<ScalableVectorType>(Ty))
+      if (Ty->isScalableTy())
         return false;
 
       auto IsStored = [](Value *V, Constant *Initializer) {
@@ -1453,7 +1453,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
   if (!GS.HasMultipleAccessingFunctions &&
       GS.AccessingFunction &&
       GV->getValueType()->isSingleValueType() &&
-      GV->getType()->getAddressSpace() == 0 &&
+      GV->getType()->getAddressSpace() == DL.getAllocaAddrSpace() &&
       !GV->isExternallyInitialized() &&
       GS.AccessingFunction->doesNotRecurse() &&
       isPointerValueDeadOnEntryToFunction(GS.AccessingFunction, GV,

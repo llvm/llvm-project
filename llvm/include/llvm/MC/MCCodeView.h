@@ -182,6 +182,7 @@ public:
   std::vector<MCCVLoc> getFunctionLineEntries(unsigned FuncId);
 
   std::pair<size_t, size_t> getLineExtent(unsigned FuncId);
+  std::pair<size_t, size_t> getLineExtentIncludingInlinees(unsigned FuncId);
 
   ArrayRef<MCCVLoc> getLinesForExtent(size_t L, size_t R);
 

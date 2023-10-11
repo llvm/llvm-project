@@ -15,8 +15,8 @@ define zeroext i32 @geti(<4 x i32> %a, i32 zeroext %b) {
 ; CHECK-NEXT:    lvsl 3, 0, 3
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    and 3, 3, 5
-; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    sldi 3, 3, 5
+; CHECK-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-NEXT:    mfvsrd 4, 34
 ; CHECK-NEXT:    srd 3, 4, 3
 ; CHECK-NEXT:    clrldi 3, 3, 32
@@ -24,11 +24,11 @@ define zeroext i32 @geti(<4 x i32> %a, i32 zeroext %b) {
 ;
 ; CHECK-BE-LABEL: geti:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    andi. 4, 5, 2
+; CHECK-BE-NEXT:    andi. 3, 5, 2
+; CHECK-BE-NEXT:    sldi 3, 3, 2
+; CHECK-BE-NEXT:    lvsl 3, 0, 3
 ; CHECK-BE-NEXT:    li 3, 1
-; CHECK-BE-NEXT:    sldi 4, 4, 2
 ; CHECK-BE-NEXT:    andc 3, 3, 5
-; CHECK-BE-NEXT:    lvsl 3, 0, 4
 ; CHECK-BE-NEXT:    sldi 3, 3, 5
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    mfvsrd 4, 34
@@ -38,10 +38,10 @@ define zeroext i32 @geti(<4 x i32> %a, i32 zeroext %b) {
 ;
 ; CHECK-P7-LABEL: geti:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    addi 3, 1, -16
-; CHECK-P7-NEXT:    rlwinm 4, 5, 2, 28, 29
-; CHECK-P7-NEXT:    stxvw4x 34, 0, 3
-; CHECK-P7-NEXT:    lwzx 3, 3, 4
+; CHECK-P7-NEXT:    addi 4, 1, -16
+; CHECK-P7-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-P7-NEXT:    stxvw4x 34, 0, 4
+; CHECK-P7-NEXT:    lwzx 3, 4, 3
 ; CHECK-P7-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 %b
@@ -71,10 +71,10 @@ define i64 @getl(<2 x i64> %a, i32 zeroext %b) {
 ;
 ; CHECK-P7-LABEL: getl:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    addi 3, 1, -16
-; CHECK-P7-NEXT:    rlwinm 4, 5, 3, 28, 28
-; CHECK-P7-NEXT:    stxvd2x 34, 0, 3
-; CHECK-P7-NEXT:    ldx 3, 3, 4
+; CHECK-P7-NEXT:    addi 4, 1, -16
+; CHECK-P7-NEXT:    rlwinm 3, 5, 3, 28, 28
+; CHECK-P7-NEXT:    stxvd2x 34, 0, 4
+; CHECK-P7-NEXT:    ldx 3, 4, 3
 ; CHECK-P7-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %a, i32 %b
@@ -102,10 +102,10 @@ define float @getf(<4 x float> %a, i32 zeroext %b) {
 ;
 ; CHECK-P7-LABEL: getf:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    addi 3, 1, -16
-; CHECK-P7-NEXT:    rlwinm 4, 5, 2, 28, 29
-; CHECK-P7-NEXT:    stxvw4x 34, 0, 3
-; CHECK-P7-NEXT:    lfsx 1, 3, 4
+; CHECK-P7-NEXT:    addi 4, 1, -16
+; CHECK-P7-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-P7-NEXT:    stxvw4x 34, 0, 4
+; CHECK-P7-NEXT:    lfsx 1, 4, 3
 ; CHECK-P7-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 %b

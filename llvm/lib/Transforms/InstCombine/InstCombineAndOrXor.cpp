@@ -1669,7 +1669,7 @@ bool InstCombinerImpl::shouldOptimizeCast(CastInst *CI) {
 
 /// Fold {and,or,xor} (cast X), C.
 static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
-                                          InstCombiner::BuilderTy &Builder) {
+                                          InstCombinerImpl &IC) {
   Constant *C = dyn_cast<Constant>(Logic.getOperand(1));
   if (!C)
     return nullptr;
@@ -1684,21 +1684,17 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   // instruction may be cheaper (particularly in the case of vectors).
   Value *X;
   if (match(Cast, m_OneUse(m_ZExt(m_Value(X))))) {
-    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
-    Constant *ZextTruncC = ConstantExpr::getZExt(TruncC, DestTy);
-    if (ZextTruncC == C) {
+    if (Constant *TruncC = IC.getLosslessUnsignedTrunc(C, SrcTy)) {
       // LogicOpc (zext X), C --> zext (LogicOpc X, C)
-      Value *NewOp = Builder.CreateBinOp(LogicOpc, X, TruncC);
+      Value *NewOp = IC.Builder.CreateBinOp(LogicOpc, X, TruncC);
       return new ZExtInst(NewOp, DestTy);
     }
   }
 
   if (match(Cast, m_OneUse(m_SExt(m_Value(X))))) {
-    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
-    Constant *SextTruncC = ConstantExpr::getSExt(TruncC, DestTy);
-    if (SextTruncC == C) {
+    if (Constant *TruncC = IC.getLosslessSignedTrunc(C, SrcTy)) {
       // LogicOpc (sext X), C --> sext (LogicOpc X, C)
-      Value *NewOp = Builder.CreateBinOp(LogicOpc, X, TruncC);
+      Value *NewOp = IC.Builder.CreateBinOp(LogicOpc, X, TruncC);
       return new SExtInst(NewOp, DestTy);
     }
   }
@@ -1756,7 +1752,7 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (!SrcTy->isIntOrIntVectorTy())
     return nullptr;
 
-  if (Instruction *Ret = foldLogicCastConstant(I, Cast0, Builder))
+  if (Instruction *Ret = foldLogicCastConstant(I, Cast0, *this))
     return Ret;
 
   CastInst *Cast1 = dyn_cast<CastInst>(Op1);
@@ -2501,14 +2497,14 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (I.getType()->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ true))
-        return I;
+        return R;
     }
     if (auto *SI1 = dyn_cast<SelectInst>(Op1)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op0, *SI1, /* IsAnd */ true))
-        return I;
+        return R;
     }
   }
 
@@ -2643,23 +2639,34 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   //       with binop identity constant. But creating a select with non-constant
   //       arm may not be reversible due to poison semantics. Is that a good
   //       canonicalization?
-  Value *A;
-  if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
+  Value *A, *B;
+  if (match(&I, m_c_And(m_OneUse(m_SExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Op1, Constant::getNullValue(Ty));
-  if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
-      A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
+    return SelectInst::Create(A, B, Constant::getNullValue(Ty));
 
   // Similarly, a 'not' of the bool translates to a swap of the select arms:
-  // ~sext(A) & Op1 --> A ? 0 : Op1
-  // Op0 & ~sext(A) --> A ? 0 : Op0
-  if (match(Op0, m_Not(m_SExt(m_Value(A)))) &&
+  // ~sext(A) & B / B & ~sext(A) --> A ? 0 : B
+  if (match(&I, m_c_And(m_Not(m_SExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Constant::getNullValue(Ty), Op1);
-  if (match(Op1, m_Not(m_SExt(m_Value(A)))) &&
+    return SelectInst::Create(A, Constant::getNullValue(Ty), B);
+
+  // and(zext(A), B) -> A ? (B & 1) : 0
+  if (match(&I, m_c_And(m_OneUse(m_ZExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Constant::getNullValue(Ty), Op0);
+    return SelectInst::Create(A, Builder.CreateAnd(B, ConstantInt::get(Ty, 1)),
+                              Constant::getNullValue(Ty));
+
+  // (-1 + A) & B --> A ? 0 : B where A is 0/1.
+  if (match(&I, m_c_And(m_OneUse(m_Add(m_ZExtOrSelf(m_Value(A)), m_AllOnes())),
+                        m_Value(B)))) {
+    if (A->getType()->isIntOrIntVectorTy(1))
+      return SelectInst::Create(A, Constant::getNullValue(Ty), B);
+    if (computeKnownBits(A, /* Depth */ 0, &I).countMaxActiveBits() <= 1) {
+      return SelectInst::Create(
+          Builder.CreateICmpEQ(A, Constant::getNullValue(A->getType())), B,
+          Constant::getNullValue(Ty));
+    }
+  }
 
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0 -- with optional sext
   if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
@@ -3294,14 +3301,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ false))
-        return I;
+        return R;
     }
     if (auto *SI1 = dyn_cast<SelectInst>(Op1)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op0, *SI1, /* IsAnd */ false))
-        return I;
+        return R;
     }
   }
 
@@ -3603,12 +3610,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   //       with binop identity constant. But creating a select with non-constant
   //       arm may not be reversible due to poison semantics. Is that a good
   //       canonicalization?
-  if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
+  if (match(&I, m_c_Or(m_OneUse(m_SExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, ConstantInt::getAllOnesValue(Ty), Op1);
-  if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
-      A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, ConstantInt::getAllOnesValue(Ty), Op0);
+    return SelectInst::Create(A, ConstantInt::getAllOnesValue(Ty), B);
 
   // Note: If we've gotten to the point of visiting the outer OR, then the
   // inner one couldn't be simplified.  If it was a constant, then it won't
@@ -3648,6 +3652,26 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       Value *AllOnes = ConstantInt::getAllOnesValue(Ty);
       return SelectInst::Create(NewICmpInst, AllOnes, X);
     }
+  }
+
+  {
+    // ((A & B) ^ A) | ((A & B) ^ B) -> A ^ B
+    // (A ^ (A & B)) | (B ^ (A & B)) -> A ^ B
+    // ((A & B) ^ B) | ((A & B) ^ A) -> A ^ B
+    // (B ^ (A & B)) | (A ^ (A & B)) -> A ^ B
+    const auto TryXorOpt = [&](Value *Lhs, Value *Rhs) -> Instruction * {
+      if (match(Lhs, m_c_Xor(m_And(m_Value(A), m_Value(B)), m_Deferred(A))) &&
+          match(Rhs,
+                m_c_Xor(m_And(m_Specific(A), m_Specific(B)), m_Deferred(B)))) {
+        return BinaryOperator::CreateXor(A, B);
+      }
+      return nullptr;
+    };
+
+    if (Instruction *Result = TryXorOpt(Op0, Op1))
+      return Result;
+    if (Instruction *Result = TryXorOpt(Op1, Op0))
+      return Result;
   }
 
   if (Instruction *V =

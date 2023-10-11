@@ -15,7 +15,7 @@ def InstTest0 : GICombineRule<
   (apply  (G_ADD i64:$tmp, $b, i32:$c),
           (G_ADD i8:$a, $b, i64:$tmp))>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   InstTest0,
 ]>;
 

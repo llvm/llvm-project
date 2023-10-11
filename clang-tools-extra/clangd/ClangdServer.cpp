@@ -83,7 +83,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
 
     auto &PP = ASTCtx.getPreprocessor();
     auto &CI = ASTCtx.getCompilerInvocation();
-    if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
+    if (auto Loc = Stdlib->add(CI.getLangOpts(), PP.getHeaderSearchInfo()))
       indexStdlib(CI, std::move(*Loc));
 
     // FIndex outlives the UpdateIndexCallbacks.
@@ -105,7 +105,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     // This task is owned by Tasks, which outlives the TUScheduler and
     // therefore the UpdateIndexCallbacks.
     // We must be careful that the references we capture outlive TUScheduler.
-    auto Task = [LO(*CI.getLangOpts()), Loc(std::move(Loc)),
+    auto Task = [LO(CI.getLangOpts()), Loc(std::move(Loc)),
                  CI(std::make_unique<CompilerInvocation>(CI)),
                  // External values that outlive ClangdServer
                  TFS(&TFS),
@@ -701,38 +701,6 @@ void ClangdServer::codeAction(const CodeActionInputs &Params,
   };
 
   WorkScheduler->runWithAST("codeAction", Params.File, std::move(Action),
-                            Transient);
-}
-
-void ClangdServer::enumerateTweaks(
-    PathRef File, Range Sel, llvm::unique_function<bool(const Tweak &)> Filter,
-    Callback<std::vector<TweakRef>> CB) {
-  auto Action = [Sel, CB = std::move(CB), Filter = std::move(Filter),
-                 FeatureModules(this->FeatureModules)](
-                    Expected<InputsAndAST> InpAST) mutable {
-    if (!InpAST)
-      return CB(InpAST.takeError());
-    auto Selections = tweakSelection(Sel, *InpAST, /*FS=*/nullptr);
-    if (!Selections)
-      return CB(Selections.takeError());
-    std::vector<TweakRef> Res;
-    // Don't allow a tweak to fire more than once across ambiguous selections.
-    llvm::DenseSet<llvm::StringRef> PreparedTweaks;
-    auto DeduplicatingFilter = [&](const Tweak &T) {
-      return Filter(T) && !PreparedTweaks.count(T.id());
-    };
-    for (const auto &Sel : *Selections) {
-      for (auto &T : prepareTweaks(*Sel, DeduplicatingFilter, FeatureModules)) {
-        Res.push_back({T->id(), T->title(), T->kind()});
-        PreparedTweaks.insert(T->id());
-        TweakAvailable.record(1, T->id());
-      }
-    }
-
-    CB(std::move(Res));
-  };
-
-  WorkScheduler->runWithAST("EnumerateTweaks", File, std::move(Action),
                             Transient);
 }
 

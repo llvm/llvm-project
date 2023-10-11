@@ -286,7 +286,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       Instruction *Or =
         BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1),
                                  I->getName());
-      return InsertNewInstWith(Or, *I);
+      return InsertNewInstWith(Or, I->getIterator());
     }
 
     // If all of the demanded bits on one side are known, and all of the set
@@ -298,7 +298,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       Constant *AndC = Constant::getIntegerValue(VTy,
                                                  ~RHSKnown.One & DemandedMask);
       Instruction *And = BinaryOperator::CreateAnd(I->getOperand(0), AndC);
-      return InsertNewInstWith(And, *I);
+      return InsertNewInstWith(And, I->getIterator());
     }
 
     // If the RHS is a constant, see if we can change it. Don't alter a -1
@@ -330,11 +330,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
         Constant *AndC = ConstantInt::get(VTy, NewMask & AndRHS->getValue());
         Instruction *NewAnd = BinaryOperator::CreateAnd(I->getOperand(0), AndC);
-        InsertNewInstWith(NewAnd, *I);
+        InsertNewInstWith(NewAnd, I->getIterator());
 
         Constant *XorC = ConstantInt::get(VTy, NewMask & XorRHS->getValue());
         Instruction *NewXor = BinaryOperator::CreateXor(NewAnd, XorC);
-        return InsertNewInstWith(NewXor, *I);
+        return InsertNewInstWith(NewXor, I->getIterator());
       }
     }
     break;
@@ -461,8 +461,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (InputKnown.isNonNegative() ||
         DemandedMask.getActiveBits() <= SrcBitWidth) {
       // Convert to ZExt cast.
-      CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy, I->getName());
-      return InsertNewInstWith(NewCast, *I);
+      CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy);
+      NewCast->takeName(I);
+      return InsertNewInstWith(NewCast, I->getIterator());
      }
 
     // If the sign bit of the input is known set or clear, then we know the
@@ -586,7 +587,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (match(I->getOperand(1), m_APInt(C)) && C->countr_zero() == CTZ) {
         Constant *ShiftC = ConstantInt::get(VTy, CTZ);
         Instruction *Shl = BinaryOperator::CreateShl(I->getOperand(0), ShiftC);
-        return InsertNewInstWith(Shl, *I);
+        return InsertNewInstWith(Shl, I->getIterator());
       }
     }
     // For a squared value "X * X", the bottom 2 bits are 0 and X[0] because:
@@ -595,7 +596,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (I->getOperand(0) == I->getOperand(1) && DemandedMask.ult(4)) {
       Constant *One = ConstantInt::get(VTy, 1);
       Instruction *And1 = BinaryOperator::CreateAnd(I->getOperand(0), One);
-      return InsertNewInstWith(And1, *I);
+      return InsertNewInstWith(And1, I->getIterator());
     }
 
     computeKnownBits(I, Known, Depth, CxtI);
@@ -627,7 +628,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Constant *NewC = ConstantExpr::getShl(C, LeftShiftAmtC);
         if (ConstantExpr::getLShr(NewC, LeftShiftAmtC) == C) {
           Instruction *Lshr = BinaryOperator::CreateLShr(NewC, X);
-          return InsertNewInstWith(Lshr, *I);
+          return InsertNewInstWith(Lshr, I->getIterator());
         }
       }
 
@@ -691,7 +692,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           Constant *NewC = ConstantExpr::getLShr(C, RightShiftAmtC);
           if (ConstantExpr::getShl(NewC, RightShiftAmtC) == C) {
             Instruction *Shl = BinaryOperator::CreateShl(NewC, X);
-            return InsertNewInstWith(Shl, *I);
+            return InsertNewInstWith(Shl, I->getIterator());
           }
         }
       }
@@ -733,7 +734,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       // Perform the logical shift right.
       Instruction *NewVal = BinaryOperator::CreateLShr(
                         I->getOperand(0), I->getOperand(1), I->getName());
-      return InsertNewInstWith(NewVal, *I);
+      return InsertNewInstWith(NewVal, I->getIterator());
     }
 
     const APInt *SA;
@@ -770,7 +771,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         BinaryOperator *LShr = BinaryOperator::CreateLShr(I->getOperand(0),
                                                           I->getOperand(1));
         LShr->setIsExact(cast<BinaryOperator>(I)->isExact());
-        return InsertNewInstWith(LShr, *I);
+        LShr->takeName(I);
+        return InsertNewInstWith(LShr, I->getIterator());
       } else if (Known.One[BitWidth-ShiftAmt-1]) { // New bits are known one.
         Known.One |= HighBits;
       }
@@ -867,7 +869,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
             match(II->getArgOperand(0), m_Not(m_Value(X)))) {
           Function *Ctpop = Intrinsic::getDeclaration(
               II->getModule(), Intrinsic::ctpop, VTy);
-          return InsertNewInstWith(CallInst::Create(Ctpop, {X}), *I);
+          return InsertNewInstWith(CallInst::Create(Ctpop, {X}), I->getIterator());
         }
         break;
       }
@@ -894,7 +896,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
             NewVal = BinaryOperator::CreateShl(
                 II->getArgOperand(0), ConstantInt::get(VTy, NTZ - NLZ));
           NewVal->takeName(I);
-          return InsertNewInstWith(NewVal, *I);
+          return InsertNewInstWith(NewVal, I->getIterator());
         }
         break;
       }
@@ -1219,7 +1221,7 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
         New->setIsExact(true);
     }
 
-    return InsertNewInstWith(New, *Shl);
+    return InsertNewInstWith(New, Shl->getIterator());
   }
 
   return nullptr;
@@ -1549,7 +1551,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         Instruction *New = InsertElementInst::Create(
             Op, Value, ConstantInt::get(Type::getInt64Ty(I->getContext()), Idx),
             Shuffle->getName());
-        InsertNewInstWith(New, *Shuffle);
+        InsertNewInstWith(New, Shuffle->getIterator());
         return New;
       }
     }
@@ -1780,4 +1782,140 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     return UndefValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
+}
+
+/// For floating-point classes that resolve to a single bit pattern, return that
+/// value.
+static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
+  switch (Mask) {
+  case fcPosZero:
+    return ConstantFP::getZero(Ty);
+  case fcNegZero:
+    return ConstantFP::getZero(Ty, true);
+  case fcPosInf:
+    return ConstantFP::getInfinity(Ty);
+  case fcNegInf:
+    return ConstantFP::getInfinity(Ty, true);
+  case fcNone:
+    return PoisonValue::get(Ty);
+  default:
+    return nullptr;
+  }
+}
+
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
+    Value *V, const FPClassTest DemandedMask, KnownFPClass &Known,
+    unsigned Depth, Instruction *CxtI) {
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+  Type *VTy = V->getType();
+
+  assert(Known == KnownFPClass() && "expected uninitialized state");
+
+  if (DemandedMask == fcNone)
+    return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return nullptr;
+
+  Instruction *I = dyn_cast<Instruction>(V);
+  if (!I) {
+    // Handle constants and arguments
+    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
+    Value *FoldedToConst =
+        getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+    return FoldedToConst == V ? nullptr : FoldedToConst;
+  }
+
+  if (!I->hasOneUse())
+    return nullptr;
+
+  // TODO: Should account for nofpclass/FastMathFlags on current instruction
+  switch (I->getOpcode()) {
+  case Instruction::FNeg: {
+    if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
+                                Depth + 1))
+      return I;
+    Known.fneg();
+    break;
+  }
+  case Instruction::Call: {
+    CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::fabs:
+      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
+                                  Depth + 1))
+        return I;
+      Known.fabs();
+      break;
+    case Intrinsic::arithmetic_fence:
+      if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
+        return I;
+      break;
+    case Intrinsic::copysign: {
+      // Flip on more potentially demanded classes
+      const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
+      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
+        return I;
+
+      if ((DemandedMask & fcPositive) == fcNone) {
+        // Roundabout way of replacing with fneg(fabs)
+        I->setOperand(1, ConstantFP::get(VTy, -1.0));
+        return I;
+      }
+
+      if ((DemandedMask & fcNegative) == fcNone) {
+        // Roundabout way of replacing with fabs
+        I->setOperand(1, ConstantFP::getZero(VTy));
+        return I;
+      }
+
+      KnownFPClass KnownSign =
+          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
+      Known.copysign(KnownSign);
+      break;
+    }
+    default:
+      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      break;
+    }
+
+    break;
+  }
+  case Instruction::Select: {
+    KnownFPClass KnownLHS, KnownRHS;
+    if (SimplifyDemandedFPClass(I, 2, DemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    if (KnownLHS.isKnownNever(DemandedMask))
+      return I->getOperand(2);
+    if (KnownRHS.isKnownNever(DemandedMask))
+      return I->getOperand(1);
+
+    // TODO: Recognize clamping patterns
+    Known = KnownLHS | KnownRHS;
+    break;
+  }
+  default:
+    Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+    break;
+  }
+
+  return getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+}
+
+bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
+                                               FPClassTest DemandedMask,
+                                               KnownFPClass &Known,
+                                               unsigned Depth) {
+  Use &U = I->getOperandUse(OpNo);
+  Value *NewVal =
+      SimplifyDemandedUseFPClass(U.get(), DemandedMask, Known, Depth, I);
+  if (!NewVal)
+    return false;
+  if (Instruction *OpInst = dyn_cast<Instruction>(U))
+    salvageDebugInfo(*OpInst);
+
+  replaceUse(U, NewVal);
+  return true;
 }

@@ -58,21 +58,21 @@ INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect(CodeGenOpt::Level OL)
+InstructionSelect::InstructionSelect(CodeGenOptLevel OL)
     : MachineFunctionPass(ID), OptLevel(OL) {}
 
 // In order not to crash when calling getAnalysis during testing with -run-pass
 // we use the default opt level here instead of None, so that the addRequired()
 // calls are made in getAnalysisUsage().
 InstructionSelect::InstructionSelect()
-    : MachineFunctionPass(ID), OptLevel(CodeGenOpt::Default) {}
+    : MachineFunctionPass(ID), OptLevel(CodeGenOptLevel::Default) {}
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
 
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOptLevel::None) {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   }
@@ -91,13 +91,13 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
 
-  CodeGenOpt::Level OldOptLevel = OptLevel;
+  CodeGenOptLevel OldOptLevel = OptLevel;
   auto RestoreOptLevel = make_scope_exit([=]() { OptLevel = OldOptLevel; });
-  OptLevel = MF.getFunction().hasOptNone() ? CodeGenOpt::None
+  OptLevel = MF.getFunction().hasOptNone() ? CodeGenOptLevel::None
                                            : MF.getTarget().getOptLevel();
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOptLevel::None) {
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI && PSI->hasProfileSummary())
       BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();

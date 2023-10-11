@@ -272,12 +272,6 @@ def : Flag<["-"], "fno-slp-vectorize-aggressive">, Group<clang_ignored_legacy_op
 def mmpx : Flag<["-"], "mmpx">, Group<clang_ignored_legacy_options_Group>;
 def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 
-// Retired with clang-16.0, to provide a deprecation period; it should
-// be removed in Clang 18 or later.
-def enable_trivial_var_init_zero : Flag<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, CLOption]>,
-  Group<clang_ignored_legacy_options_Group>;
-
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
   "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
@@ -1189,6 +1183,10 @@ def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for supported offloading devices">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+
+def offload_compress : Flag<["--"], "offload-compress">,
+  HelpText<"Compress offload device binaries (HIP only)">;
+def no_offload_compress : Flag<["--"], "no-offload-compress">;
 }
 
 // CUDA options
@@ -1264,6 +1262,32 @@ def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<hip_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_path_EQ : Joined<["--"], "hip-path=">, Group<hip_Group>,
   HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
+def hipstdpar : Flag<["--"], "hipstdpar">,
+  Visibility<[ClangOption, CC1Option]>,
+  Group<CompileOnly_Group>,
+  HelpText<"Enable HIP acceleration for standard parallel algorithms">,
+  MarshallingInfoFlag<LangOpts<"HIPStdPar">>;
+def hipstdpar_interpose_alloc : Flag<["--"], "hipstdpar-interpose-alloc">,
+  Visibility<[ClangOption, CC1Option]>,
+  Group<CompileOnly_Group>,
+  HelpText<"Replace all memory allocation / deallocation calls with "
+           "hipManagedMalloc / hipFree equivalents">,
+  MarshallingInfoFlag<LangOpts<"HIPStdParInterposeAlloc">>;
+// TODO: use MarshallingInfo here
+def hipstdpar_path_EQ : Joined<["--"], "hipstdpar-path=">, Group<i_Group>,
+  HelpText<
+    "HIP Standard Parallel Algorithm Acceleration library path, used for "
+    "finding and implicitly including the library header">;
+def hipstdpar_thrust_path_EQ : Joined<["--"], "hipstdpar-thrust-path=">,
+  Group<i_Group>,
+  HelpText<
+    "rocThrust path, required by the HIP Standard Parallel Algorithm "
+    "Acceleration library, used to implicitly include the rocThrust library">;
+def hipstdpar_prim_path_EQ : Joined<["--"], "hipstdpar-prim-path=">,
+  Group<i_Group>,
+  HelpText<
+    "rocPrim path, required by the HIP Standard Parallel Algorithm "
+    "Acceleration library, used to implicitly include the rocPrim library">;
 def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<hip_Group>,
   HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
@@ -1885,6 +1909,12 @@ defm safe_buffer_usage_suggestions : BoolFOption<"safe-buffer-usage-suggestions"
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Display suggestions to update code associated with -Wunsafe-buffer-usage warnings">,
   NegFlag<SetFalse>>;
+def fverify_intermediate_code : Flag<["-"], "fverify-intermediate-code">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Enable verification of LLVM IR">, Flags<[NoXarchOption]>;
+def fno_verify_intermediate_code : Flag<["-"], "fno-verify-intermediate-code">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Disable verification of LLVM IR">, Flags<[NoXarchOption]>;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">,
   Group<f_clang_Group>, Visibility<[ClangOption, DXCOption]>,
   HelpText<"Discard value names in LLVM IR">, Flags<[NoXarchOption]>;
@@ -2060,7 +2090,7 @@ defm fixed_point : BoolFOption<"fixed-point",
   LangOpts<"FixedPoint">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " fixed point types">>, ShouldParseIf<!strconcat("!", cplusplus.KeyPath)>;
+  BothFlags<[], [ClangOption], " fixed point types">>;
 defm cxx_static_destructors : BoolFOption<"c++-static-destructors",
   LangOpts<"RegisterStaticDestructors">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -2489,6 +2519,17 @@ defm minimize_whitespace : BoolFOption<"minimize-whitespace",
           "whitespace such that two files with only formatting changes are "
           "equal.\n\nOnly valid with -E on C-like inputs and incompatible "
           "with -traditional-cpp.">, NegFlag<SetFalse>>;
+defm keep_system_includes : BoolFOption<"keep-system-includes",
+  PreprocessorOutputOpts<"KeepSystemIncludes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Instead of expanding system headers when emitting preprocessor "
+          "output, preserve the #include directive. Useful when producing "
+          "preprocessed output for test case reduction. May produce incorrect "
+          "output if preprocessor symbols that control the included content "
+          "(e.g. _XOPEN_SOURCE) are defined in the including source file. The "
+          "portability of the resulting source to other compilation environments "
+          "is not guaranteed.\n\nOnly valid with -E.">,
+  NegFlag<SetFalse>>;
 
 def ffreestanding : Flag<["-"], "ffreestanding">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -2676,6 +2717,12 @@ def fno_experimental_relative_cxx_abi_vtables :
   Flag<["-"], "fno-experimental-relative-c++-abi-vtables">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not use the experimental C++ class ABI for classes with virtual tables">;
+
+defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti",
+  LangOpts<"OmitVTableRTTI">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Omit">,
+  NegFlag<SetFalse, [], [CC1Option], "Do not omit">,
+  BothFlags<[], [CC1Option], " the RTTI component from virtual tables">>;
 
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -2912,6 +2959,11 @@ def fvalidate_ast_input_files_content:
            " Files with mismatching mtime's are considered valid"
            " if both contents is identical">,
   MarshallingInfoFlag<HeaderSearchOpts<"ValidateASTInputFilesContent">>;
+def fforce_check_cxx20_modules_input_files:
+  Flag <["-"], "fforce-check-cxx20-modules-input-files">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Check the input source files from C++20 modules explicitly">,
+  MarshallingInfoFlag<HeaderSearchOpts<"ForceCheckCXX20ModulesInputFiles">>;
 def fmodules_validate_input_files_content:
   Flag <["-"], "fmodules-validate-input-files-content">,
   Group<f_Group>, Flags<[NoXarchOption]>,
@@ -2947,6 +2999,13 @@ defm modules : BoolFOption<"modules",
           "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<
           [NoXarchOption], [ClangOption, CLOption]>>;
+def fbuiltin_headers_in_system_modules : Flag <["-"], "fbuiltin-headers-in-system-modules">,
+  Group<f_Group>,
+  Flags<[NoXarchOption]>,
+  Visibility<[CC1Option]>,
+  ShouldParseIf<fmodules.KeyPath>,
+  HelpText<"builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers">,
+  MarshallingInfoFlag<LangOpts<"BuiltinHeadersInSystemModules">>;
 def fmodule_maps : Flag <["-"], "fmodule-maps">,
   Visibility<[ClangOption, CLOption]>, Alias<fimplicit_module_maps>;
 def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
@@ -3093,7 +3152,8 @@ defm diagnostics_show_line_numbers : BoolFOption<"diagnostics-show-line-numbers"
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>;
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Disable optimizations based on strict aliasing rules">;
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
@@ -3536,7 +3596,8 @@ def fno_debug_macro : Flag<["-"], "fno-debug-macro">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Do not emit macro debug information">;
 def fstrict_aliasing : Flag<["-"], "fstrict-aliasing">, Group<f_Group>,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>;
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Enable optimizations based on strict aliasing rules">;
 def fstrict_enums : Flag<["-"], "fstrict-enums">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable optimizations based on the strict definition of an enum's "
@@ -4243,6 +4304,9 @@ def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
 def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
+def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "65535">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
@@ -4542,18 +4606,17 @@ foreach i = {8-15,18} in
     HelpText<"Make the x"#i#" register call-saved (AArch64 only)">;
 
 def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Features_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
-  Group<m_aarch64_Features_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[CC1Option, FC1Option]>,
   HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMin">>;
 def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
-  Group<m_aarch64_Features_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[CC1Option, FC1Option]>,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
@@ -4619,9 +4682,9 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,2,3,4,5">,
+  Values<"none,3,4,5">,
   NormalizedValuesScope<"TargetOptions">,
-  NormalizedValues<["COV_None", "COV_2", "COV_3", "COV_4", "COV_5"]>,
+  NormalizedValues<["COV_None", "COV_3", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
 defm cumode : SimpleMFlag<"cumode",
@@ -4729,6 +4792,12 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
 } // let Flags = [TargetSpecific]
+def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"Produce a faster access sequence for local-exec TLS variables "
+           "where the offset from the TLS base is encoded as an "
+           "immediate operand (AIX 64-bit only). "
+           "This access sequence is not used for variables larger than 32KB.">;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">,
@@ -5041,6 +5110,9 @@ def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not link device library for CUDA/HIP device compilation">;
 def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
+def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Link the LLVM C Library for GPUs">;
+def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option]>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
 def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
@@ -5266,7 +5338,7 @@ def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
 def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
-  HelpText<"Print supported extensions for RISC-V">,
+  HelpText<"Print supported -march extensions (RISC-V, AArch64 and ARM only)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedExtensions">>;
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
@@ -5750,6 +5822,8 @@ def mcx16 : Flag<["-"], "mcx16">, Group<m_x86_Features_Group>;
 def mno_cx16 : Flag<["-"], "mno-cx16">, Group<m_x86_Features_Group>;
 def menqcmd : Flag<["-"], "menqcmd">, Group<m_x86_Features_Group>;
 def mno_enqcmd : Flag<["-"], "mno-enqcmd">, Group<m_x86_Features_Group>;
+def mevex512 : Flag<["-"], "mevex512">, Group<m_x86_Features_Group>;
+def mno_evex512 : Flag<["-"], "mno-evex512">, Group<m_x86_Features_Group>;
 def mf16c : Flag<["-"], "mf16c">, Group<m_x86_Features_Group>;
 def mno_f16c : Flag<["-"], "mno-f16c">, Group<m_x86_Features_Group>;
 def mfma : Flag<["-"], "mfma">, Group<m_x86_Features_Group>;
@@ -5852,9 +5926,9 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
-def mno_gather : Flag<["-"], "mno-gather">, Group<m_x86_Features_Group>,
+def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
                  HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
-def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_x86_Features_Group>,
+def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 } // let Flags = [TargetSpecific]
 

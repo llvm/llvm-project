@@ -11,6 +11,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   condition_variable.cpp
   condition_variable_destructor.cpp
+  error_category.cpp
   exception.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
@@ -322,6 +323,13 @@ set(LIBCXX_EXPERIMENTAL_SOURCES
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
+    )
+endif()
+
+if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
+  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
+    tz.cpp
+    tzdb_list.cpp
     )
 endif()
 

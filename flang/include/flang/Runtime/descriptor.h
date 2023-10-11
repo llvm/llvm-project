@@ -180,21 +180,26 @@ public:
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
-  // CUDA_TODO: Clang does not support unique_ptr on device.
-  static OwningPtr<Descriptor> Create(TypeCode t, std::size_t elementBytes,
-      void *p = nullptr, int rank = maxRank,
+  // To create a descriptor for a derived type the caller
+  // must provide non-null dt argument.
+  // The addendum argument is only used for testing purposes,
+  // and it may force a descriptor with an addendum while
+  // dt may be null.
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCode t,
+      std::size_t elementBytes, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other,
-      int derivedTypeLenParameters = 0);
-  static OwningPtr<Descriptor> Create(TypeCategory, int kind, void *p = nullptr,
-      int rank = maxRank, const SubscriptValue *extent = nullptr,
+      bool addendum = false, const typeInfo::DerivedType *dt = nullptr);
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(TypeCategory, int kind,
+      void *p = nullptr, int rank = maxRank,
+      const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(int characterKind,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(int characterKind,
       SubscriptValue characters, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
-  static OwningPtr<Descriptor> Create(const typeInfo::DerivedType &dt,
-      void *p = nullptr, int rank = maxRank,
+  static RT_API_ATTRS OwningPtr<Descriptor> Create(
+      const typeInfo::DerivedType &dt, void *p = nullptr, int rank = maxRank,
       const SubscriptValue *extent = nullptr,
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
@@ -248,6 +253,13 @@ public:
   template <typename A>
   RT_API_ATTRS A *Element(const SubscriptValue subscript[]) const {
     return OffsetElement<A>(SubscriptsToByteOffset(subscript));
+  }
+
+  template <typename A>
+  RT_API_ATTRS A *ElementComponent(
+      const SubscriptValue subscript[], std::size_t componentOffset) const {
+    return OffsetElement<A>(
+        SubscriptsToByteOffset(subscript) + componentOffset);
   }
 
   template <typename A>
@@ -415,11 +427,13 @@ static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 template <int MAX_RANK = maxRank, bool ADDENDUM = false, int MAX_LEN_PARMS = 0>
 class alignas(Descriptor) StaticDescriptor {
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr int maxRank{MAX_RANK};
   static constexpr int maxLengthTypeParameters{MAX_LEN_PARMS};
   static constexpr bool hasAddendum{ADDENDUM || MAX_LEN_PARMS > 0};
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
+  RT_OFFLOAD_VAR_GROUP_END
 
   RT_API_ATTRS Descriptor &descriptor() {
     return *reinterpret_cast<Descriptor *>(storage_);

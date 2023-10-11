@@ -798,7 +798,7 @@ TEST(LinkGraphTest, BasicLayoutHonorsNoAlloc) {
   // Create a NoAlloc section and block.
   auto &Sec2 =
       G.createSection("__metadata", orc::MemProt::Read | orc::MemProt::Write);
-  Sec2.setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+  Sec2.setMemLifetime(orc::MemLifetime::NoAlloc);
   G.createContentBlock(Sec2, BlockContent.slice(0, 8), orc::ExecutorAddr(), 8,
                        0);
 

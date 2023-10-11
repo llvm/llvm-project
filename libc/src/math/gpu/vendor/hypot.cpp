@@ -11,10 +11,10 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, hypot, (double x, double y)) {
   return internal::hypot(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

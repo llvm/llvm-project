@@ -29,6 +29,8 @@ namespace interp {
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
+template <bool Signed> class IntegralAP;
+
 // Helper structure to select the representation.
 template <unsigned Bits, bool Signed> struct Repr;
 template <> struct Repr<8, false> { using Type = uint8_t; };
@@ -61,6 +63,8 @@ private:
   template <typename T> explicit Integral(T V) : V(V) {}
 
 public:
+  using AsUnsigned = Integral<Bits, false>;
+
   /// Zero-initializes an integral.
   Integral() : V(0) {}
 
@@ -128,6 +132,13 @@ public:
     return Compare(V, RHS.V);
   }
 
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    OS << V;
+    return NameStr;
+  }
+
   unsigned countLeadingZeros() const {
     if constexpr (!Signed)
       return llvm::countl_zero<ReprT>(V);
@@ -163,13 +174,6 @@ public:
   static std::enable_if_t<SrcBits != 0, Integral>
   from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if constexpr (SrcSign)
-      return Integral(Value.V.getSExtValue());
-    else
-      return Integral(Value.V.getZExtValue());
   }
 
   static Integral zero() { return from(0); }

@@ -26,12 +26,13 @@
 // GNU: @[[HNSKERN:_ZN2ns8nskernelEv]] = constant ptr @[[NSSTUB:_ZN2ns23__device_stub__nskernelEv]], align 8
 // GNU: @[[HTKERN:_Z10kernelfuncIiEvv]] = linkonce_odr constant ptr @[[TSTUB:_Z25__device_stub__kernelfuncIiEvv]], comdat, align 8
 // GNU: @[[HDKERN:_Z11kernel_declv]] = external constant ptr, align 8
+// GNU: @[[HTDKERN:_Z20template_kernel_declIiEvT_]] = external constant ptr, align 8
 
 // MSVC: @[[HCKERN:ckernel]] = dso_local constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
 // MSVC: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant ptr @[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]], align 8
 // MSVC: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant ptr @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]], comdat, align 8
 // MSVC: @[[HDKERN:"\?kernel_decl@@YAXXZ.*"]] = external dso_local constant ptr, align 8
-
+// MSVC: @[[HTDKERN:"\?\?\$template_kernel_decl@H@@YAXH.*"]] = external dso_local constant ptr, align 8
 extern "C" __global__ void ckernel() {}
 
 namespace ns {
@@ -42,6 +43,9 @@ template<class T>
 __global__ void kernelfunc() {}
 
 __global__ void kernel_decl();
+
+template<class T>
+__global__ void template_kernel_decl(T x);
 
 extern "C" void (*kernel_ptr)();
 extern "C" void *void_ptr;
@@ -69,13 +73,16 @@ extern "C" void launch(void *kern);
 // CHECK: call void @[[NSSTUB]]()
 // CHECK: call void @[[TSTUB]]()
 // GNU: call void @[[DSTUB:_Z26__device_stub__kernel_declv]]()
+// GNU: call void @[[TDSTUB:_Z35__device_stub__template_kernel_declIiEvT_]](
 // MSVC: call void @[[DSTUB:"\?__device_stub__kernel_decl@@YAXXZ"]]()
+// MSVC: call void @[[TDSTUB:"\?\?\$__device_stub__template_kernel_decl@H@@YAXH@Z"]](
 
 extern "C" void fun1(void) {
   ckernel<<<1, 1>>>();
   ns::nskernel<<<1, 1>>>();
   kernelfunc<int><<<1, 1>>>();
   kernel_decl<<<1, 1>>>();
+  template_kernel_decl<<<1, 1>>>(1);
 }
 
 // Template kernel stub functions
@@ -86,6 +93,7 @@ extern "C" void fun1(void) {
 // Check declaration of stub function for external kernel.
 
 // CHECK: declare{{.*}}@[[DSTUB]]
+// CHECK: declare{{.*}}@[[TDSTUB]]
 
 // Check kernel handle is used for passing the kernel as a function pointer.
 
@@ -94,11 +102,13 @@ extern "C" void fun1(void) {
 // CHECK: call void @launch({{.*}}[[HNSKERN]]
 // CHECK: call void @launch({{.*}}[[HTKERN]]
 // CHECK: call void @launch({{.*}}[[HDKERN]]
+// CHECK: call void @launch({{.*}}[[HTDKERN]]
 extern "C" void fun2() {
   launch((void *)ckernel);
   launch((void *)ns::nskernel);
   launch((void *)kernelfunc<int>);
   launch((void *)kernel_decl);
+  launch((void *)template_kernel_decl<int>);
 }
 
 // Check kernel handle is used for assigning a kernel to a function pointer.
@@ -148,3 +158,4 @@ extern "C" void fun5() {
 // CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HTKERN]]{{.*}}@[[TKERN]]
 // NEG-NOT: call{{.*}}@__hipRegisterFunction{{.*}}__device_stub
 // NEG-NOT: call{{.*}}@__hipRegisterFunction{{.*}}kernel_decl
+// NEG-NOT: call{{.*}}@__hipRegisterFunction{{.*}}template_kernel_decl

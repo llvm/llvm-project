@@ -56,7 +56,7 @@ const char *DemangleCXXABI(const char *name) {
           __cxxabiv1::__cxa_demangle(name, 0, 0, 0))
       return demangled_name;
 
-  return name;
+  return nullptr;
 }
 
 // As of now, there are no headers for the Swift runtime. Once they are
@@ -324,9 +324,12 @@ __sanitizer_symbolize_code(const char *ModuleName, u64 ModuleOffset,
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_data(const char *ModuleName, u64 ModuleOffset,
                            char *Buffer, int MaxLength);
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
+__sanitizer_symbolize_frame(const char *ModuleName, u64 ModuleOffset,
+                            char *Buffer, int MaxLength);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_symbolize_flush();
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE int
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_demangle(const char *Name, char *Buffer, int MaxLength);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_set_demangle(bool Demangle);
@@ -337,19 +340,20 @@ __sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
-    if (__sanitizer_symbolize_set_demangle)
+    if (&__sanitizer_symbolize_set_demangle)
       CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
-    if (__sanitizer_symbolize_set_inline_frames)
+    if (&__sanitizer_symbolize_set_inline_frames)
       CHECK(__sanitizer_symbolize_set_inline_frames(
           common_flags()->symbolize_inline_frames));
-    if (__sanitizer_symbolize_code && __sanitizer_symbolize_data)
+    // These are essential, we don't have InternalSymbolizer without them.
+    if (&__sanitizer_symbolize_code && &__sanitizer_symbolize_data)
       return new (*alloc) InternalSymbolizer();
     return 0;
   }
 
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override {
     bool result = __sanitizer_symbolize_code(
-        stack->info.module, stack->info.module_offset, buffer_, kBufferSize);
+        stack->info.module, stack->info.module_offset, buffer_, sizeof(buffer_));
     if (result)
       ParseSymbolizePCOutput(buffer_, stack);
     return result;
@@ -357,7 +361,7 @@ class InternalSymbolizer final : public SymbolizerTool {
 
   bool SymbolizeData(uptr addr, DataInfo *info) override {
     bool result = __sanitizer_symbolize_data(info->module, info->module_offset,
-                                             buffer_, kBufferSize);
+                                             buffer_, sizeof(buffer_));
     if (result) {
       ParseSymbolizeDataOutput(buffer_, info);
       info->start += (addr - info->module_offset);  // Add the base address.
@@ -365,34 +369,35 @@ class InternalSymbolizer final : public SymbolizerTool {
     return result;
   }
 
+  bool SymbolizeFrame(uptr addr, FrameInfo *info) override {
+    if (&__sanitizer_symbolize_frame == nullptr)
+      return false;
+    bool result = __sanitizer_symbolize_frame(info->module, info->module_offset,
+                                              buffer_, sizeof(buffer_));
+    if (result)
+      ParseSymbolizeFrameOutput(buffer_, &info->locals);
+    return result;
+  }
+
   void Flush() override {
-    if (__sanitizer_symbolize_flush)
+    if (&__sanitizer_symbolize_flush)
       __sanitizer_symbolize_flush();
   }
 
   const char *Demangle(const char *name) override {
-    if (__sanitizer_symbolize_demangle) {
-      for (uptr res_length = 1024;
-           res_length <= InternalSizeClassMap::kMaxSize;) {
-        char *res_buff = static_cast<char *>(InternalAlloc(res_length));
-        uptr req_length =
-            __sanitizer_symbolize_demangle(name, res_buff, res_length);
-        if (req_length > res_length) {
-          res_length = req_length + 1;
-          InternalFree(res_buff);
-          continue;
-        }
-        return res_buff;
-      }
+    if (&__sanitizer_symbolize_demangle &&
+        __sanitizer_symbolize_demangle(name, buffer_, sizeof(buffer_))) {
+      char *res_buff = nullptr;
+      ExtractToken(buffer_, "", &res_buff);
+      return res_buff;
     }
-    return name;
+    return nullptr;
   }
 
  private:
   InternalSymbolizer() {}
 
-  static const int kBufferSize = 16 * 1024;
-  char buffer_[kBufferSize];
+  char buffer_[16 * 1024];
 };
 #  else  // SANITIZER_SUPPORTS_WEAK_HOOKS
 

@@ -128,6 +128,82 @@ func.func @selToArith(%arg0: i1, %arg1 : i1, %arg2 : i1) -> i1 {
   return %res : i1
 }
 
+// CHECK-LABEL: @redundantSelectTrue
+//       CHECK-NEXT: %[[res:.+]] = arith.select %arg0, %arg1, %arg3
+//       CHECK-NEXT: return %[[res]]
+func.func @redundantSelectTrue(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
+  %0 = arith.select %arg0, %arg1, %arg2 : i32
+  %res = arith.select %arg0, %0, %arg3 : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @redundantSelectFalse
+//       CHECK-NEXT: %[[res:.+]] = arith.select %arg0, %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @redundantSelectFalse(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
+  %0 = arith.select %arg0, %arg1, %arg2 : i32
+  %res = arith.select %arg0, %arg3, %0 : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @selNotCond
+//       CHECK-NEXT: %[[res1:.+]] = arith.select %arg0, %arg2, %arg1
+//       CHECK-NEXT: %[[res2:.+]] = arith.select %arg0, %arg4, %arg3
+//       CHECK-NEXT: return %[[res1]], %[[res2]]
+func.func @selNotCond(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : i32) -> (i32, i32) {
+  %one = arith.constant 1 : i1
+  %cond1 = arith.xori %arg0, %one : i1
+  %cond2 = arith.xori %one, %arg0 : i1
+
+  %res1 = arith.select %cond1, %arg1, %arg2 : i32
+  %res2 = arith.select %cond2, %arg3, %arg4 : i32
+  return %res1, %res2 : i32, i32
+}
+
+// CHECK-LABEL: @selAndCond
+//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %arg0
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg2, %arg3
+//       CHECK-NEXT: return %[[res]]
+func.func @selAndCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
+  %sel = arith.select %arg0, %arg2, %arg3 : i32
+  %res = arith.select %arg1, %sel, %arg3 : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @selAndNotCond
+//       CHECK-NEXT: %[[one:.+]] = arith.constant true
+//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
+//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %[[not]]
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @selAndNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
+  %sel = arith.select %arg0, %arg2, %arg3 : i32
+  %res = arith.select %arg1, %sel, %arg2 : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @selOrCond
+//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %arg0
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg2, %arg3
+//       CHECK-NEXT: return %[[res]]
+func.func @selOrCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
+  %sel = arith.select %arg0, %arg2, %arg3 : i32
+  %res = arith.select %arg1, %arg2, %sel : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @selOrNotCond
+//       CHECK-NEXT: %[[one:.+]] = arith.constant true
+//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
+//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %[[not]]
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @selOrNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
+  %sel = arith.select %arg0, %arg2, %arg3 : i32
+  %res = arith.select %arg1, %arg3, %sel : i32
+  return %res : i32
+}
+
 // Test case: Folding of comparisons with equal operands.
 // CHECK-LABEL: @cmpi_equal_operands
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true
@@ -1635,31 +1711,61 @@ func.func @test_minui2(%arg0 : i8) -> (i8, i8, i8, i8) {
 
 // -----
 
-// CHECK-LABEL: @test_minf(
-func.func @test_minf(%arg0 : f32) -> (f32, f32, f32) {
+// CHECK-LABEL: @test_minimumf(
+func.func @test_minimumf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
-  // CHECK-NEXT:  %[[X:.+]] = arith.minf %arg0, %[[C0]]
+  // CHECK-NEXT:  %[[X:.+]] = arith.minimumf %arg0, %[[C0]]
   // CHECK-NEXT:  return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
   %inf = arith.constant 0x7F800000 : f32
-  %0 = arith.minf %c0, %arg0 : f32
-  %1 = arith.minf %arg0, %arg0 : f32
-  %2 = arith.minf %inf, %arg0 : f32
+  %0 = arith.minimumf %c0, %arg0 : f32
+  %1 = arith.minimumf %arg0, %arg0 : f32
+  %2 = arith.minimumf %inf, %arg0 : f32
   return %0, %1, %2 : f32, f32, f32
 }
 
 // -----
 
-// CHECK-LABEL: @test_maxf(
-func.func @test_maxf(%arg0 : f32) -> (f32, f32, f32) {
+// CHECK-LABEL: @test_maximumf(
+func.func @test_maximumf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant
-  // CHECK-NEXT:  %[[X:.+]] = arith.maxf %arg0, %[[C0]]
+  // CHECK-NEXT:  %[[X:.+]] = arith.maximumf %arg0, %[[C0]]
   // CHECK-NEXT:   return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
   %-inf = arith.constant 0xFF800000 : f32
-  %0 = arith.maxf %c0, %arg0 : f32
-  %1 = arith.maxf %arg0, %arg0 : f32
-  %2 = arith.maxf %-inf, %arg0 : f32
+  %0 = arith.maximumf %c0, %arg0 : f32
+  %1 = arith.maximumf %arg0, %arg0 : f32
+  %2 = arith.maximumf %-inf, %arg0 : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_minnumf(
+func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-NEXT:  %[[X:.+]] = arith.minnumf %arg0, %[[C0]]
+  // CHECK-NEXT:  return %[[X]], %arg0, %arg0
+  %c0 = arith.constant 0.0 : f32
+  %inf = arith.constant 0x7F800000 : f32
+  %0 = arith.minnumf %c0, %arg0 : f32
+  %1 = arith.minnumf %arg0, %arg0 : f32
+  %2 = arith.minnumf %inf, %arg0 : f32
+  return %0, %1, %2 : f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_maxnumf(
+func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant
+  // CHECK-NEXT:  %[[X:.+]] = arith.maxnumf %arg0, %[[C0]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %arg0
+  %c0 = arith.constant 0.0 : f32
+  %-inf = arith.constant 0xFF800000 : f32
+  %0 = arith.maxnumf %c0, %arg0 : f32
+  %1 = arith.maxnumf %arg0, %arg0 : f32
+  %2 = arith.maxnumf %-inf, %arg0 : f32
   return %0, %1, %2 : f32, f32, f32
 }
 
@@ -2584,3 +2690,75 @@ func.func @selectOfPoison(%cond : i1, %arg: i32) -> (i32, i32, i32, i32) {
   %select4 = arith.select %false, %poison, %arg : i32
   return %select1, %select2, %select3, %select4 : i32, i32, i32, i32
 }
+
+// CHECK-LABEL: @addi_poison1
+//       CHECK:   %[[P:.*]] = ub.poison : i32
+//       CHECK:   return %[[P]]
+func.func @addi_poison1(%arg: i32) -> i32 {
+  %0 = ub.poison : i32
+  %1 = arith.addi %0, %arg : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @addi_poison2
+//       CHECK:   %[[P:.*]] = ub.poison : i32
+//       CHECK:   return %[[P]]
+func.func @addi_poison2(%arg: i32) -> i32 {
+  %0 = ub.poison : i32
+  %1 = arith.addi %arg, %0 : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @addf_poison1
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @addf_poison1(%arg: f32) -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.addf %0, %arg : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @addf_poison2
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @addf_poison2(%arg: f32) -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.addf %arg, %0 : f32
+  return %1 : f32
+}
+
+
+// CHECK-LABEL: @negf_poison
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @negf_poison() -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.negf %0 : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extsi_poison
+//       CHECK:   %[[P:.*]] = ub.poison : i64
+//       CHECK:   return %[[P]]
+func.func @extsi_poison() -> i64 {
+  %0 = ub.poison : i32
+  %1 = arith.extsi %0 : i32 to i64
+  return %1 : i64
+}
+
+// Just checks that this doesn't crash.
+// CHECK-LABEL: @unsignedExtendConstantResource
+func.func @unsignedExtendConstantResource() -> tensor<i16> {
+  %c2 = arith.constant dense_resource<blob1> : tensor<i8>
+  %ext = arith.extui %c2 : tensor<i8> to tensor<i16>
+  return %ext : tensor<i16>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      // Note: This is just copied blob, the actual value isn't used or checked.
+      blob1: "0x08000000010000000000000002000000000000000300000000000000"
+    }
+  }
+#-}

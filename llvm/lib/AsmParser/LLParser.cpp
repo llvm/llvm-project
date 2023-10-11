@@ -3903,7 +3903,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_mul:
   case lltok::kw_shl:
   case lltok::kw_lshr:
-  case lltok::kw_ashr: {
+  case lltok::kw_ashr:
+  case lltok::kw_xor: {
     bool NUW = false;
     bool NSW = false;
     bool Exact = false;
@@ -3933,57 +3934,14 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     if (Val0->getType() != Val1->getType())
       return error(ID.Loc, "operands of constexpr must have same type");
     // Check that the type is valid for the operator.
-    switch (Opc) {
-    case Instruction::Add:
-    case Instruction::Sub:
-    case Instruction::Mul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::Shl:
-    case Instruction::AShr:
-    case Instruction::LShr:
-      if (!Val0->getType()->isIntOrIntVectorTy())
-        return error(ID.Loc, "constexpr requires integer operands");
-      break;
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-    case Instruction::FDiv:
-    case Instruction::FRem:
-      if (!Val0->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "constexpr requires fp operands");
-      break;
-    default: llvm_unreachable("Unknown binary operator!");
-    }
+    if (!Val0->getType()->isIntOrIntVectorTy())
+      return error(ID.Loc,
+                   "constexpr requires integer or integer vector operands");
     unsigned Flags = 0;
     if (NUW)   Flags |= OverflowingBinaryOperator::NoUnsignedWrap;
     if (NSW)   Flags |= OverflowingBinaryOperator::NoSignedWrap;
     if (Exact) Flags |= PossiblyExactOperator::IsExact;
-    Constant *C = ConstantExpr::get(Opc, Val0, Val1, Flags);
-    ID.ConstantVal = C;
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
-
-  // Logical Operations
-  case lltok::kw_xor: {
-    unsigned Opc = Lex.getUIntVal();
-    Constant *Val0, *Val1;
-    Lex.Lex();
-    if (parseToken(lltok::lparen, "expected '(' in logical constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma, "expected comma in logical constantexpr") ||
-        parseGlobalTypeAndValue(Val1) ||
-        parseToken(lltok::rparen, "expected ')' in logical constantexpr"))
-      return true;
-    if (Val0->getType() != Val1->getType())
-      return error(ID.Loc, "operands of constexpr must have same type");
-    if (!Val0->getType()->isIntOrIntVectorTy())
-      return error(ID.Loc,
-                   "constexpr requires integer or integer vector operands");
-    ID.ConstantVal = ConstantExpr::get(Opc, Val0, Val1);
+    ID.ConstantVal = ConstantExpr::get(Opc, Val0, Val1, Flags);
     ID.Kind = ValID::t_Constant;
     return false;
   }

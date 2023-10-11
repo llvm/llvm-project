@@ -61,6 +61,9 @@ protected:
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
 
+  static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags);
+  static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
+                                     SDNodeFlags Flags);
   SDValue getIsLtSmallestNormal(SelectionDAG &DAG, SDValue Op,
                                 SDNodeFlags Flags) const;
   SDValue getIsFinite(SelectionDAG &DAG, SDValue Op, SDNodeFlags Flags) const;
@@ -368,9 +371,6 @@ public:
   }
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
-
-  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                              LLT Ty2) const override;
 
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;

@@ -1,10 +1,10 @@
 ! RUN: bbc -o - %s | FileCheck %s
 
-! CHECK-LABEL: fir.global @_QCblock
+! CHECK-LABEL: fir.global @block_
 ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant 2.400000e+00 : f32
 ! CHECK-DAG: %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK: %[[VAL_4:.*]] = fir.undefined tuple<!fir.array<5x5xf32>>
+! CHECK: %[[VAL_4:.*]] = fir.zero_bits tuple<!fir.array<5x5xf32>>
 ! CHECK: %[[VAL_5:.*]] = fir.undefined !fir.array<5x5xf32>
 ! CHECK: %[[VAL_6:.*]] = fir.insert_on_range %[[VAL_5]], %[[VAL_1]] from (0, 0) to (1, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
 ! CHECK: %[[VAL_7:.*]] = fir.insert_on_range %[[VAL_6]], %[[VAL_3]] from (2, 0) to (4, 0) : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>

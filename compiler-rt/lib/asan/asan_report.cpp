@@ -60,9 +60,9 @@ void AppendToErrorMessageBuffer(const char *buffer) {
 void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
                      bool in_shadow, const char *after) {
   Decorator d;
-  str->append("%s%s%x%x%s%s", before,
-              in_shadow ? d.ShadowByte(byte) : d.MemoryByte(), byte >> 4,
-              byte & 15, d.Default(), after);
+  str->AppendF("%s%s%x%x%s%s", before,
+               in_shadow ? d.ShadowByte(byte) : d.MemoryByte(), byte >> 4,
+               byte & 15, d.Default(), after);
 }
 
 static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,

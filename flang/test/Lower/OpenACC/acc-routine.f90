@@ -1,7 +1,10 @@
 ! This test checks lowering of OpenACC routine directive.
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
+
+! CHECK: acc.routine @acc_routine_10 func(@_QPacc_routine11) seq
 ! CHECK: acc.routine @acc_routine_9 func(@_QPacc_routine10) seq
 ! CHECK: acc.routine @acc_routine_8 func(@_QPacc_routine9) bind("_QPacc_routine9a")
 ! CHECK: acc.routine @acc_routine_7 func(@_QPacc_routine8) bind("routine8_")
@@ -75,3 +78,21 @@ function acc_routine10()
 end function
 
 ! CHECK-LABEL: func.func @_QPacc_routine10() -> f32 attributes {acc.routine_info = #acc.routine_info<[@acc_routine_9]>}
+
+subroutine acc_routine11(a)
+  real :: a
+  !$acc routine(acc_routine11) seq
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_routine11(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_10]>}
+
+subroutine acc_routine12()
+
+  interface
+  subroutine acc_routine11(a)
+    real :: a
+    !$acc routine(acc_routine11) seq
+  end subroutine
+  end interface
+
+end subroutine

@@ -4180,6 +4180,16 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "void foo() {}\n"
                "} // namespace ns",
                Style);
+
+  FormatStyle LLVMWithCompactInnerNamespace = getLLVMStyle();
+  LLVMWithCompactInnerNamespace.CompactNamespaces = true;
+  LLVMWithCompactInnerNamespace.NamespaceIndentation = FormatStyle::NI_Inner;
+  verifyFormat("namespace ns1 { namespace ns2 { namespace ns3 {\n"
+               "// block for debug mode\n"
+               "#ifndef NDEBUG\n"
+               "#endif\n"
+               "}}} // namespace ns1::ns2::ns3",
+               LLVMWithCompactInnerNamespace);
 }
 
 TEST_F(FormatTest, NamespaceMacros) {
@@ -7097,6 +7107,29 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                "return someVeryVeryLongConditionThatBarelyFitsOnALine && "
                "(someOtherLongishConditionPart1 || "
                "someOtherEvenLongerNestedConditionPart2);",
+               Style);
+
+  Style = getLLVMStyleWithColumns(20);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BinPackParameters = false;
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  Style.ContinuationIndentWidth = 2;
+  verifyFormat("struct Foo {\n"
+               "  Foo(\n"
+               "    int arg1,\n"
+               "    int arg2)\n"
+               "      : Base(\n"
+               "          arg1,\n"
+               "          arg2) {}\n"
+               "};",
+               Style);
+  verifyFormat("return abc\n"
+               "         ? foo(\n"
+               "             a,\n"
+               "             b,\n"
+               "             bar(\n"
+               "               abc))\n"
+               "         : g(abc);",
                Style);
 }
 
@@ -10589,6 +10622,12 @@ TEST_F(FormatTest, WrapsAtNestedNameSpecifiers) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa::\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "        .aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa();");
+
+  verifyFormat(
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    AndAnotherLongClassNameToShowTheIssue() {}\n"
+      "LongClassNameToShowTheIssue::AndAnotherLongClassNameToShowTheIssue::\n"
+      "    ~AndAnotherLongClassNameToShowTheIssue() {}");
 }
 
 TEST_F(FormatTest, UnderstandsTemplateParameters) {
@@ -10646,8 +10685,8 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("f(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "      .template operator()<A>());",
                getLLVMStyleWithColumns(35));
-  verifyFormat("bool_constant<a && noexcept(f())>");
-  verifyFormat("bool_constant<a || noexcept(f())>");
+  verifyFormat("bool_constant<a && noexcept(f())>;");
+  verifyFormat("bool_constant<a || noexcept(f())>;");
 
   verifyFormat("if (std::tuple_size_v<T> > 0)");
 
@@ -16306,7 +16345,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
   verifyFormat("#define A (x) x", SpaceFuncDef);
@@ -16331,7 +16370,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   // verifyFormat("T A::operator() () {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();
@@ -18492,11 +18531,16 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "                     a_longer_name_for_wrap}};",
                Alignment);
 
-  Alignment.ColumnLimit = 60;
+  Alignment = getLLVMStyleWithColumns(60);
+  Alignment.AlignConsecutiveAssignments.Enabled = true;
   verifyFormat("using II = typename TI<T, std::tuple<Types...>>::I;\n"
                "using I  = std::conditional_t<II::value >= 0,\n"
                "                              std::ic<int, II::value + 1>,\n"
                "                              std::ic<int, -1>>;",
+               Alignment);
+  verifyFormat("SomeName = Foo;\n"
+               "X        = func<Type, Type>(looooooooooooooooooooooooong,\n"
+               "                            arrrrrrrrrrg);",
                Alignment);
 }
 
@@ -18644,6 +18688,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int    a(int x);\n"
                "double b();",
                Alignment);
+  verifyFormat("struct Test {\n"
+               "  Test(const Test &) = default;\n"
+               "  ~Test() = default;\n"
+               "  Test &operator=(const Test &) = default;\n"
+               "};",
+               Alignment);
   unsigned OldColumnLimit = Alignment.ColumnLimit;
   // We need to set ColumnLimit to zero, in order to stress nested alignments,
   // otherwise the function parameters will be re-flowed onto a single line.
@@ -18680,6 +18730,12 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "double b();",
                Alignment);
   Alignment.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("struct Test {\n"
+               "  Test(const Test &)            = default;\n"
+               "  ~Test()                       = default;\n"
+               "  Test &operator=(const Test &) = default;\n"
+               "};",
+               Alignment);
   // Ensure recursive alignment is broken by function braces, so that the
   // "a = 1" does not align with subsequent assignments inside the function
   // body.
@@ -22504,18 +22560,19 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  }\n"
                "}",
                Style);
-  verifyFormat("std::sort(v.begin(), v.end(),\n"
-               "          [](const auto &foo, const auto &bar) {\n"
-               "  return foo.baz < bar.baz;\n"
-               "});",
+  verifyFormat("void test() {\n"
+               "  std::sort(v.begin(), v.end(),\n"
+               "            [](const auto &foo, const auto &bar) {\n"
+               "    return foo.baz < bar.baz;\n"
+               "  });\n"
+               "};",
                Style);
   verifyFormat("void test() {\n"
                "  (\n"
                "      []() -> auto {\n"
                "    int b = 32;\n"
                "    return 3;\n"
-               "  },\n"
-               "      foo, bar)\n"
+               "  }, foo, bar)\n"
                "      .foo();\n"
                "}",
                Style);
@@ -22534,6 +22591,12 @@ TEST_F(FormatTest, FormatsLambdas) {
                "        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx);            \\\n"
                "  }",
                Style);
+  verifyFormat("#define SORT(v)                                            \\\n"
+               "  std::sort(v.begin(), v.end(),                            \\\n"
+               "            [](const auto &foo, const auto &bar) {         \\\n"
+               "    return foo.baz < bar.baz;                              \\\n"
+               "  });",
+               Style);
   verifyFormat("void foo() {\n"
                "  aFunction(1, b(c(foo, bar, baz, [](d) {\n"
                "    auto f = e(d);\n"
@@ -22541,32 +22604,12 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
-  verifyFormat("void foo() {\n"
-               "  aFunction(\n"
-               "      1, b(c(\n"
-               "             [](d) -> Foo {\n"
-               "    auto f = e(d);\n"
-               "    return f;\n"
-               "  },\n"
-               "             foo, Bar{},\n"
-               "             [] {\n"
-               "    auto g = h();\n"
-               "    return g;\n"
-               "  },\n"
-               "             baz)));\n"
-               "}",
-               Style);
   verifyFormat("void foo() {\n"
                "  aFunction(1, b(c(foo, Bar{}, baz, [](d) -> Foo {\n"
-               "    auto f = e(\n"
-               "        foo,\n"
-               "        [&] {\n"
+               "    auto f = e(foo, [&] {\n"
                "      auto g = h();\n"
                "      return g;\n"
-               "    },\n"
-               "        qux,\n"
-               "        [&] -> Bar {\n"
+               "    }, qux, [&] -> Bar {\n"
                "      auto i = j();\n"
                "      return i;\n"
                "    });\n"
@@ -22574,28 +22617,108 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  })));\n"
                "}",
                Style);
-  verifyFormat("Namespace::Foo::Foo(\n"
-               "    LongClassName bar, AnotherLongClassName baz)\n"
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
+               "                    AnotherLongClassName baz)\n"
                "    : baz{baz}, func{[&] {\n"
-               "  auto qux = bar;\n"
-               "  return aFunkyFunctionCall(qux);\n"
-               "}} {}",
+               "        auto qux = bar;\n"
+               "        return aFunkyFunctionCall(qux);\n"
+               "      }} {}",
                Style);
+  verifyFormat("void foo() {\n"
+               "  class Foo {\n"
+               "  public:\n"
+               "    Foo()\n"
+               "        : qux{[](int quux) {\n"
+               "            auto tmp = quux;\n"
+               "            return tmp;\n"
+               "          }} {}\n"
+               "\n"
+               "  private:\n"
+               "    std::function<void(int quux)> qux;\n"
+               "  };\n"
+               "}",
+               Style);
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterColon;
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
+               "                    AnotherLongClassName baz) :\n"
+               "    baz{baz}, func{[&] {\n"
+               "      auto qux = bar;\n"
+               "      return aFunkyFunctionCall(qux);\n"
+               "    }} {}",
+               Style);
+  Style.PackConstructorInitializers = FormatStyle::PCIS_Never;
+  verifyFormat("Namespace::Foo::Foo(LongClassName bar,\n"
+               "                    AnotherLongClassName baz) :\n"
+               "    baz{baz},\n"
+               "    func{[&] {\n"
+               "      auto qux = bar;\n"
+               "      return aFunkyFunctionCall(qux);\n"
+               "    }} {}",
+               Style);
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  // FIXME: The following test should pass, but fails at the time of writing.
+#if 0
+  // As long as all the non-lambda arguments fit on a single line, AlwaysBreak
+  // doesn't force an initial line break, even if lambdas span multiple lines.
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  }, foo, Bar{}, [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  }, baz);\n"
+               "}",
+               Style);
+#endif
+  // A long non-lambda argument forces arguments to span multiple lines and thus
+  // forces an initial line break when using AlwaysBreak.
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      1,\n"
+               "      [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  }, foo, Bar{},\n"
+               "      [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  }, bazzzzz,\n"
+               "      quuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuux);\n"
+               "}",
+               Style);
+  Style.BinPackArguments = false;
+  verifyFormat("void foo() {\n"
+               "  aFunction(\n"
+               "      1,\n"
+               "      [](d) -> Foo {\n"
+               "    auto f = e(d);\n"
+               "    return f;\n"
+               "  },\n"
+               "      foo,\n"
+               "      Bar{},\n"
+               "      [] {\n"
+               "    auto g = h();\n"
+               "    return g;\n"
+               "  },\n"
+               "      bazzzzz,\n"
+               "      quuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuux);\n"
+               "}",
+               Style);
+  Style.BinPackArguments = true;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.BeforeLambdaBody = true;
   verifyFormat("void foo() {\n"
                "  aFunction(\n"
-               "      1, b(c(foo, Bar{}, baz,\n"
-               "             [](d) -> Foo\n"
+               "      1, b(c(foo, Bar{}, baz, [](d) -> Foo\n"
                "  {\n"
                "    auto f = e(\n"
                "        [&]\n"
                "    {\n"
                "      auto g = h();\n"
                "      return g;\n"
-               "    },\n"
-               "        qux,\n"
-               "        [&] -> Bar\n"
+               "    }, qux, [&] -> Bar\n"
                "    {\n"
                "      auto i = j();\n"
                "      return i;\n"
@@ -26193,11 +26316,107 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("co_return 0;", "co_return ((0));", Style);
   verifyFormat("return 0;", "return (((0)));", Style);
   verifyFormat("return ({ 0; });", "return ((({ 0; })));", Style);
+  verifyFormat("inline decltype(auto) f() {\n"
+               "  if (a) {\n"
+               "    return (a);\n"
+               "  }\n"
+               "  return (b);\n"
+               "}",
+               "inline decltype(auto) f() {\n"
+               "  if (a) {\n"
+               "    return ((a));\n"
+               "  }\n"
+               "  return ((b));\n"
+               "}",
+               Style);
+  verifyFormat("auto g() {\n"
+               "  decltype(auto) x = [] {\n"
+               "    auto y = [] {\n"
+               "      if (a) {\n"
+               "        return a;\n"
+               "      }\n"
+               "      return b;\n"
+               "    };\n"
+               "    if (c) {\n"
+               "      return (c);\n"
+               "    }\n"
+               "    return (d);\n"
+               "  };\n"
+               "  if (e) {\n"
+               "    return e;\n"
+               "  }\n"
+               "  return f;\n"
+               "}",
+               "auto g() {\n"
+               "  decltype(auto) x = [] {\n"
+               "    auto y = [] {\n"
+               "      if (a) {\n"
+               "        return ((a));\n"
+               "      }\n"
+               "      return ((b));\n"
+               "    };\n"
+               "    if (c) {\n"
+               "      return ((c));\n"
+               "    }\n"
+               "    return ((d));\n"
+               "  };\n"
+               "  if (e) {\n"
+               "    return ((e));\n"
+               "  }\n"
+               "  return ((f));\n"
+               "}",
+               Style);
 
   Style.ColumnLimit = 25;
   verifyFormat("return (a + b) - (c + d);",
                "return (((a + b)) -\n"
                "        ((c + d)));",
+               Style);
+}
+
+TEST_F(FormatTest, AllowBreakBeforeNoexceptSpecifier) {
+  auto Style = getLLVMStyleWithColumns(35);
+
+  EXPECT_EQ(Style.AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  // The following line does not fit within the 35 column limit, but that's what
+  // happens with no break allowed.
+  verifyFormat("void bar(int arg1, double arg2) noexcept(\n"
+               "    noexcept(baz(arg1)) &&\n"
+               "    noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
+               Style);
+
+  Style.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Always;
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  verifyFormat("void bar(int arg1, double arg2)\n"
+               "    noexcept(noexcept(baz(arg1)) &&\n"
+               "             noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments()\n"
+               "    noexcept;",
+               Style);
+
+  Style.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_OnlyWithParen;
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  verifyFormat("void bar(int arg1, double arg2)\n"
+               "    noexcept(noexcept(baz(arg1)) &&\n"
+               "             noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
                Style);
 }
 

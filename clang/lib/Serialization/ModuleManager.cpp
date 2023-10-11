@@ -143,15 +143,15 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // being consistent across operating systems and across subsequent accesses
   // to the Modules map.
   auto implicitModuleNamesMatch = [](ModuleKind Kind, const ModuleFile *MF,
-                                     const FileEntry *Entry) -> bool {
+                                     FileEntryRef Entry) -> bool {
     if (Kind != MK_ImplicitModule)
       return true;
-    return Entry->getName() == MF->FileName;
+    return Entry.getName() == MF->FileName;
   };
 
   // Check whether we already loaded this module, before
   if (ModuleFile *ModuleEntry = Modules.lookup(Entry)) {
-    if (implicitModuleNamesMatch(Type, ModuleEntry, Entry)) {
+    if (implicitModuleNamesMatch(Type, ModuleEntry, *Entry)) {
       // Check the stored signature.
       if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
         return OutOfDate;
@@ -209,7 +209,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       //
       // RequiresNullTerminator is false because module files don't need it, and
       // this allows the file to still be mmapped.
-      Buf = FileMgr.getBufferForFile(NewModule->File,
+      Buf = FileMgr.getBufferForFile(*NewModule->File,
                                      /*IsVolatile=*/true,
                                      /*RequiresNullTerminator=*/false);
     }

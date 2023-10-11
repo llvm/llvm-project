@@ -138,17 +138,16 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
-
+std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *PD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyParams.find(PD);
       It != DummyParams.end())
     return It->second;
 
-  auto &ASTCtx = Ctx.getASTContext();
   // Create a pointer to an incomplete array of the specified elements.
-  QualType ElemTy = PD->getType()->castAs<PointerType>()->getPointeeType();
-  QualType Ty = ASTCtx.getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
+  QualType ElemTy = PD->getType();
+  QualType Ty =
+      Ctx.getASTContext().getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
 
   if (auto Idx = createGlobal(PD, Ty, /*isStatic=*/true, /*isExtern=*/true)) {
     DummyParams[PD] = *Idx;
@@ -161,9 +160,12 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
   assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
-  if (auto *Var = dyn_cast<VarDecl>(VD)) {
+  if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
     IsExtern = !Var->getAnyInitializer();
+  } else if (isa<UnnamedGlobalConstantDecl>(VD)) {
+    IsStatic = true;
+    IsExtern = false;
   } else {
     IsStatic = false;
     IsExtern = true;

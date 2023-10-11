@@ -10,6 +10,7 @@
 #define LLVM_CLANG_APINOTES_TYPES_H
 
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <climits>
 #include <optional>
@@ -659,6 +660,10 @@ class TagInfo : public CommonTypeInfo {
   unsigned IsFlagEnum : 1;
 
 public:
+  std::optional<std::string> SwiftImportAs;
+  std::optional<std::string> SwiftRetainOp;
+  std::optional<std::string> SwiftReleaseOp;
+
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
   TagInfo() : HasFlagEnum(0), IsFlagEnum(0) {}
@@ -676,6 +681,13 @@ public:
   TagInfo &operator|=(const TagInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
+    if (!SwiftImportAs)
+      SwiftImportAs = RHS.SwiftImportAs;
+    if (!SwiftRetainOp)
+      SwiftRetainOp = RHS.SwiftRetainOp;
+    if (!SwiftReleaseOp)
+      SwiftReleaseOp = RHS.SwiftReleaseOp;
+
     if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
@@ -692,6 +704,9 @@ public:
 
 inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
   return static_cast<const CommonTypeInfo &>(LHS) == RHS &&
+         LHS.SwiftImportAs == RHS.SwiftImportAs &&
+         LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
+         LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
@@ -748,6 +763,16 @@ struct Context {
   ContextKind kind;
 
   Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
+};
+
+/// A temporary reference to an Objective-C selector, suitable for
+/// referencing selector data on the stack.
+///
+/// Instances of this struct do not store references to any of the
+/// data they contain; it is up to the user to ensure that the data
+/// referenced by the identifier list persists.
+struct ObjCSelectorRef {
+  llvm::ArrayRef<llvm::StringRef> Identifiers;
 };
 } // namespace api_notes
 } // namespace clang

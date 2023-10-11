@@ -1,17 +1,15 @@
 // RUN: mlir-opt %s --sparse-compiler="enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 
 #MAT_D_C = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed)
 }>
 
 #MAT_C_D_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : dense)
 }>
 
 //

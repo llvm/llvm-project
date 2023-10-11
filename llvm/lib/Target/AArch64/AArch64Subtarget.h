@@ -16,6 +16,7 @@
 #include "AArch64FrameLowering.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64SelectionDAGInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
@@ -402,10 +403,10 @@ public:
 
   bool useSVEForFixedLengthVectors() const {
     if (!isNeonAvailable())
-      return hasSVE();
+      return hasSVEorSME();
 
     // Prefer NEON unless larger SVE registers are available.
-    return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
+    return hasSVEorSME() && getMinSVEVectorSizeInBits() >= 256;
   }
 
   bool useSVEForFixedLengthVectors(EVT VT) const {
@@ -432,6 +433,32 @@ public:
       return "__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
+
+  /// Choose a method of checking LR before performing a tail call.
+  AArch64PAuth::AuthCheckMethod getAuthenticatedLRCheckMethod() const;
+
+  const PseudoSourceValue *getAddressCheckPSV() const {
+    return AddressCheckPSV.get();
+  }
+
+private:
+  /// Pseudo value representing memory load performed to check an address.
+  ///
+  /// This load operation is solely used for its side-effects: if the address
+  /// is not mapped (or not readable), it triggers CPU exception, otherwise
+  /// execution proceeds and the value is not used.
+  class AddressCheckPseudoSourceValue : public PseudoSourceValue {
+  public:
+    AddressCheckPseudoSourceValue(const TargetMachine &TM)
+        : PseudoSourceValue(TargetCustom, TM) {}
+
+    bool isConstant(const MachineFrameInfo *) const override { return false; }
+    bool isAliased(const MachineFrameInfo *) const override { return true; }
+    bool mayAlias(const MachineFrameInfo *) const override { return true; }
+    void printCustom(raw_ostream &OS) const override { OS << "AddressCheck"; }
+  };
+
+  std::unique_ptr<AddressCheckPseudoSourceValue> AddressCheckPSV;
 };
 } // End llvm namespace
 

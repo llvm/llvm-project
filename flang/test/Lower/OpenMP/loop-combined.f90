@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP combined loop constructs.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 program main
   integer :: i

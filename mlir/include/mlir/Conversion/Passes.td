@@ -113,6 +113,21 @@ def ConvertAMDGPUToROCDL : Pass<"convert-amdgpu-to-rocdl"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAMDGPU
+//===----------------------------------------------------------------------===//
+def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
+  let summary = "Convert Arith operations to AMDGPU-specific implementations";
+  let description = [{
+    Convert `arith` operations (currently extf and truncf on 8-bit floats)
+    to operations in the `amdgpu` dialect. This pass is done in two steps
+    in order to avoid running a notional arith-to-rocdl and arith-to-llvm
+    simultaniously.
+  }];
+
+  let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -341,6 +356,21 @@ def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv"> {
 // FuncToLLVM
 //===----------------------------------------------------------------------===//
 
+def SetLLVMModuleDataLayoutPass : Pass<"set-llvm-module-datalayout", "ModuleOp"> {
+  let summary = "Attach a datalayout string as a module attribute";
+  let description = [{
+    Verify that the dataLayout string is a valid LLVM datalayout string and
+    attach it as an attribute `LLVMDialect::getDataLayoutAttrName()` to the
+    module, overriding the existing one.
+  }];
+  let options = [
+    Option<"dataLayout", "data-layout", "std::string",
+           /*default=*/"\"\"",
+           "String description (LLVM format) of the data layout that is "
+           "expected on the produced module">,
+  ];
+}
+
 def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
   let summary = "Convert from the Func dialect to the LLVM dialect";
   let description = [{
@@ -356,6 +386,11 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     If other operations are present and their results are required by the LLVM
     IR dialect operations, the pass will fail.  Any LLVM IR operations or types
     already present in the IR will be kept as is.
+
+    An LLVM datalayout string can be attached as an attribute to the module on
+    which the pass anchors. Such an attribute is attached by calling the 
+    set-module-datalayout pass. If present, an llvm::DataLayout object is 
+    created from this attribute and used in the conversion to LLVM.
 
     #### Output IR
 
@@ -374,10 +409,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"dataLayout", "data-layout", "std::string",
-           /*default=*/"\"\"",
-           "String description (LLVM format) of the data layout that is "
-           "expected on the produced module">,
     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
                        /*default=*/"true", "Generate LLVM IR using opaque pointers "
                        "instead of typed pointers">,
@@ -470,7 +501,6 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 
 def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
-  let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",
@@ -552,7 +582,11 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
   let options = [
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
-           "Use 64-bit integers to convert index types">
+           "Use 64-bit integers to convert index types">,
+    Option<"useCoopMatrixNV", "use-coop-matrix-nv",
+           "bool", /*default=*/"false",
+           "Use the NV cooperative matrix extension insted of the KHR extension"
+           " to lower GPU WMMA ops">,
   ];
 }
 
@@ -910,6 +944,16 @@ def ConvertParallelLoopToGpu : Pass<"convert-parallel-loops-to-gpu"> {
   let summary = "Convert mapped scf.parallel ops to gpu launch operations";
   let constructor = "mlir::createParallelLoopToGpuPass()";
   let dependentDialects = ["affine::AffineDialect", "gpu::GPUDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// SCFToEmitC
+//===----------------------------------------------------------------------===//
+
+def SCFToEmitC : Pass<"convert-scf-to-emitc"> {
+  let summary = "Convert SCF dialect to EmitC dialect, maintaining structured"
+                " control flow";
+  let dependentDialects = ["emitc::EmitCDialect"];
 }
 
 //===----------------------------------------------------------------------===//

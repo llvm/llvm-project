@@ -35,28 +35,45 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 18.0.0?
 ==============================
 
+- A new debug mode has been added, replacing the legacy debug mode that was
+  removed in the LLVM 17 release. See ``libcxx/docs/Hardening.rst`` for more
+  details.
 
 Implemented Papers
 ------------------
 
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
+- P2443R1 - ``views::chunk_by``
+- P2538R1 - ADL-proof ``std::projected``
+- P2614R2 - Deprecate ``numeric_limits::has_denorm``
 
 
 Improvements and New Features
 -----------------------------
 
+- ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
+  can lead up to 350x performance improvements.
+
+- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
+  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
+  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
+  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
+  :ref:`the hardening documentation <using-hardening-modes>` for more details.
+
+- The library now provides a debug mode which is a superset of the safe mode, additionally enabling more expensive
+  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
+  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
+  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
+  Users can control whether the debug mode is enabled on a per translation unit basis using the
+  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See :ref:`the hardening documentation <using-hardening-modes>` for more
+  details.
 
 Deprecations and Removals
 -------------------------
 
-- The base template for ``std::char_traits`` has been removed. If you are using
-  ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``,
-  ``char16_t``, ``char32_t`` or a custom character type for which you
-  specialized ``std::char_traits``, your code will no longer work. The Standard
-  does not mandate that a base template is provided, and such a base template is
-  bound to be incorrect for some types, which could previously cause unexpected
-  behavior while going undetected.
+- The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
+  ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -74,6 +91,30 @@ LLVM 18
   and ``<experimental/vector>`` will be removed in LLVM 18, as all their contents will have been implemented in
   namespace ``std`` for at least two releases.
 
+LLVM 19
+~~~~~~~
+
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode will be deprecated and setting
+  it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``safe`` instead. Similarly, the
+  ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the safe mode the LLVM 19
+  release while also issuing a deprecation warning). See :ref:`the hardening documentation <using-hardening-modes>` for
+  more details.
+
+- The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 19. If you
+  are using ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t``
+  or a custom character type for which you specialized ``std::char_traits``, your code will stop working when we
+  remove the base template. The Standard does not mandate that a base template is provided, and such a base template
+  is bound to be incorrect for some types, which could currently cause unexpected behavior while going undetected.
+  Note that the ``_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION`` macro can be defined in LLVM 18 to eagerly remove
+  the specialization and prepare code bases for the unconditional removal in LLVM 19.
+
+LLVM 20
+~~~~~~~
+
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
+  the safe mode will be removed.
+
+
 ABI Affecting Changes
 ---------------------
 
@@ -88,5 +129,14 @@ ABI Affecting Changes
   and you notice changes to your exported symbols list, then this means that you were not properly preventing libc++
   symbols from being part of your ABI.
 
+- The name mangling for intantiations of ``std::projected`` has changed in order to implement P2538R1. This technically
+  results in an ABI break, however in practice we expect uses of ``std::projected`` in ABI-sensitive places to be
+  extremely rare. Any error resulting from this change should result in a link-time error.
+
 Build System Changes
 --------------------
+
+- The ``LIBCXX_EXECUTOR`` CMake variable has been deprecated. If you are relying on this, the new replacement is
+  passing ``-Dexecutor=...`` to ``llvm-lit``. Alternatively, this flag can be made persistent in the generated test
+  configuration file by passing ``-DLIBCXX_TEST_PARAMS=executor=...``. This also applies to the ``LIBUWIND_EXECTOR``
+  and ``LIBCXXABI_EXECUTOR`` CMake variables. LLVM 19 will completely remove support for the ``*_EXECUTOR`` variables.

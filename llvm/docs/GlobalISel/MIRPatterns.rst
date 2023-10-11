@@ -101,6 +101,46 @@ pattern, you can try naming your patterns to see exactly where the issue is.
   // using $x again here copies operand 1 from G_AND into the new inst.
   (apply (COPY $root, $x))
 
+Builtin Operations
+------------------
+
+MIR Patterns also offer builtin operations, also called "builtin instructions".
+They offer some powerful features that would otherwise require use of C++ code.
+
+GIReplaceReg
+~~~~~~~~~~~~
+
+.. code-block:: text
+  :caption: Usage
+
+  (apply (GIReplaceReg $old, $new))
+
+Operands:
+
+* ``$old`` (out) register defined by a matched instruction
+* ``$new`` (in)  register
+
+Semantics:
+
+* Can only appear in an 'apply' pattern.
+* If both old/new are operands of matched instructions,
+  ``canReplaceReg`` is checked before applying the rule.
+
+
+GIEraseRoot
+~~~~~~~~~~~
+
+.. code-block:: text
+  :caption: Usage
+
+  (apply (GIEraseRoot))
+
+Semantics:
+
+* Can only appear as the only pattern of an 'apply' pattern list.
+* The root cannot have any output operands.
+* The root must be a CodeGenInstruction
+
 
 Limitations
 -----------
@@ -114,10 +154,6 @@ This a non-exhaustive list of known issues with MIR patterns at this time.
 * Instructions with multiple defs cannot be the root of a ``GICombinePatFrag``.
 * Using ``GICombinePatFrag`` in the ``apply`` pattern of a ``GICombineRule``
   is not supported.
-* Deleting the matched pattern in a ``GICombineRule`` needs to be done using
-  ``G_IMPLICIT_DEF`` or C++.
-* Replacing the root of a pattern with another instruction needs to be done
-  using COPY.
 * We cannot rewrite a matched instruction other than the root.
 * Matching/creating a (CImm) immediate >64 bits is not supported
   (see comment in ``GIM_CheckConstantInt``)
@@ -179,33 +215,41 @@ The following expansions are available for MIR patterns:
 Common Pattern #1: Replace a Register with Another
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The 'apply' pattern must always redefine its root.
-It cannot just replace it with something else directly.
-A simple workaround is to just use a COPY that'll be eliminated later.
+The 'apply' pattern must always redefine all operands defined by the match root.
+Sometimes, we do not need to create instructions, simply replace a def with
+another matched register. The ``GIReplaceReg`` builtin can do just that.
 
 .. code-block:: text
 
   def Foo : GICombineRule<
     (defs root:$dst),
     (match (G_FNEG $tmp, $src), (G_FNEG $dst, $tmp)),
-    (apply (COPY $dst, $src))>;
+    (apply (GIReplaceReg $dst, $src))>;
 
-Common Pattern #2: Erasing a Pattern
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This also works if the replacement register is a temporary register from the
+``apply`` pattern.
 
-As said before, we must always emit something in the 'apply' pattern.
-If we wish to delete the matched instruction, we can simply replace its
-definition with a ``G_IMPLICIT_DEF``.
+.. code-block:: text
+
+  def ReplaceTemp : GICombineRule<
+    (defs root:$a),
+    (match    (G_BUILD_VECTOR $tmp, $x, $y),
+              (G_UNMERGE_VALUES $a, $b, $tmp)),
+    (apply  (G_UNMERGE_VALUES $a, i32:$new, $y),
+            (GIReplaceReg $b, $new))>
+
+Common Pattern #2: Erasing a Def-less Root
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If we simply want to erase a def-less match root, we can use the
+``GIEraseRoot`` builtin.
 
 .. code-block:: text
 
   def Foo : GICombineRule<
-    (defs root:$dst),
-    (match (G_FOO $tmp, $src), (G_BAR $dst, $tmp)),
-    (apply (G_IMPLICIT_DEF $dst))>;
-
-If the instruction has no definition, like ``G_STORE``, we cannot use
-an instruction pattern in 'apply' - C++ has to be used.
+    (defs root:$mi),
+    (match (G_STORE $a, $b):$mi),
+    (apply (GIEraseRoot))>;
 
 Common Pattern #3: Emitting a Constant Value
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

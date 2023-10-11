@@ -26,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
+#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -1258,6 +1259,12 @@ public:
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
                               bool AttrOnCallSite, bool IsThunk);
+
+  /// Adjust Memory attribute to ensure that the BE gets the right attribute
+  // in order to generate the library call or the intrinsic for the function
+  // name 'Name'.
+  void AdjustMemoryAttribute(StringRef Name, CGCalleeInfo CalleeInfo,
+                             llvm::AttributeList &Attrs);
 
   /// Like the overload taking a `Function &`, but intended specifically
   /// for frontends that want to build on Clang's target-configuration logic.

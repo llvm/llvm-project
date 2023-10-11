@@ -71,19 +71,3 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.op<"linalg.generic">
 
 }
-
-// -----
-
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  // expected-error @below {{expected 4 result types, got 2}}
-  transform.structured.tile_to_scf_for %arg0 [1, 2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-}
-
-// -----
-
-transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op):
-  // expected-error @below {{expected 2 operand types, got 1}}
-  transform.structured.tile_to_scf_for %arg0 [%arg1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-}

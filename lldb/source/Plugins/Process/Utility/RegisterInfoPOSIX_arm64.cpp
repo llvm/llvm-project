@@ -83,6 +83,13 @@ static lldb_private::RegisterInfo g_register_infos_tls[] = {
     // Only present when SME is present
     DEFINE_EXTENSION_REG(tpidr2)};
 
+static lldb_private::RegisterInfo g_register_infos_sme[] = {
+    DEFINE_EXTENSION_REG(svcr),
+    DEFINE_EXTENSION_REG(svg),
+    // 16 is a default size we will change later.
+    {"za", nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
+     KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
+
 // Number of register sets provided by this context.
 enum {
   k_num_gpr_registers = gpr_w28 - gpr_x0 + 1,
@@ -91,6 +98,7 @@ enum {
   k_num_mte_register = 1,
   // Number of TLS registers is dynamic so it is not listed here.
   k_num_pauth_register = 2,
+  k_num_sme_register = 3,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
 };
@@ -197,6 +205,9 @@ static const lldb_private::RegisterSet g_reg_set_mte_arm64 = {
 
 // The size of the TLS set is dynamic, so not listed here.
 
+static const lldb_private::RegisterSet g_reg_set_sme_arm64 = {
+    "Scalable Matrix Extension Registers", "sme", k_num_sme_register, nullptr};
+
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
@@ -240,6 +251,9 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
       // The TLS set always contains tpidr but only has tpidr2 when SME is
       // present.
       AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
+
+      if (m_opt_regsets.AnySet(eRegsetMaskSSVE))
+        AddRegSetSME();
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -344,7 +358,25 @@ void RegisterInfoPOSIX_arm64::AddRegSetTLS(bool has_tpidr2) {
   m_dynamic_reg_sets.back().registers = m_tls_regnum_collection.data();
 }
 
-uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLength(uint32_t sve_vq) {
+void RegisterInfoPOSIX_arm64::AddRegSetSME() {
+  uint32_t sme_regnum = m_dynamic_reg_infos.size();
+  for (uint32_t i = 0; i < k_num_sme_register; i++) {
+    m_sme_regnum_collection.push_back(sme_regnum + i);
+    m_dynamic_reg_infos.push_back(g_register_infos_sme[i]);
+    m_dynamic_reg_infos[sme_regnum + i].byte_offset =
+        m_dynamic_reg_infos[sme_regnum + i - 1].byte_offset +
+        m_dynamic_reg_infos[sme_regnum + i - 1].byte_size;
+    m_dynamic_reg_infos[sme_regnum + i].kinds[lldb::eRegisterKindLLDB] =
+        sme_regnum + i;
+  }
+
+  m_per_regset_regnum_range[m_register_set_count] =
+      std::make_pair(sme_regnum, m_dynamic_reg_infos.size());
+  m_dynamic_reg_sets.push_back(g_reg_set_sme_arm64);
+  m_dynamic_reg_sets.back().registers = m_sme_regnum_collection.data();
+}
+
+uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLengthSVE(uint32_t sve_vq) {
   // sve_vq contains SVE Quad vector length in context of AArch64 SVE.
   // SVE register infos if enabled cannot be disabled by selecting sve_vq = 0.
   // Also if an invalid or previously set vector length is passed to this
@@ -408,6 +440,20 @@ uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLength(uint32_t sve_vq) {
   return m_vector_reg_vq;
 }
 
+void RegisterInfoPOSIX_arm64::ConfigureVectorLengthZA(uint32_t za_vq) {
+  if (!VectorSizeIsValid(za_vq) || m_za_reg_vq == za_vq)
+    return;
+
+  m_za_reg_vq = za_vq;
+
+  // For SVE changes, we replace m_register_info_p completely. ZA is in a
+  // dynamic set and is just 1 register so we make an exception to const here.
+  lldb_private::RegisterInfo *non_const_reginfo =
+      const_cast<lldb_private::RegisterInfo *>(m_register_info_p);
+  non_const_reginfo[m_sme_regnum_collection[2]].byte_size =
+      (za_vq * 16) * (za_vq * 16);
+}
+
 bool RegisterInfoPOSIX_arm64::IsSVEReg(unsigned reg) const {
   if (m_vector_reg_vq > eVectorQuadwordAArch64)
     return (sve_vg <= reg && reg <= sve_ffr);
@@ -427,6 +473,10 @@ bool RegisterInfoPOSIX_arm64::IsSVERegVG(unsigned reg) const {
   return sve_vg == reg;
 }
 
+bool RegisterInfoPOSIX_arm64::IsSMERegZA(unsigned reg) const {
+  return reg == m_sme_regnum_collection[2];
+}
+
 bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {
   return llvm::is_contained(pauth_regnum_collection, reg);
 }
@@ -439,6 +489,10 @@ bool RegisterInfoPOSIX_arm64::IsTLSReg(unsigned reg) const {
   return llvm::is_contained(m_tls_regnum_collection, reg);
 }
 
+bool RegisterInfoPOSIX_arm64::IsSMEReg(unsigned reg) const {
+  return llvm::is_contained(m_sme_regnum_collection, reg);
+}
+
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
@@ -448,6 +502,10 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPSR() const { return fpu_fpsr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEVG() const { return sve_vg; }
+
+uint32_t RegisterInfoPOSIX_arm64::GetRegNumSMESVG() const {
+  return m_sme_regnum_collection[1];
+}
 
 uint32_t RegisterInfoPOSIX_arm64::GetPAuthOffset() const {
   return m_register_info_p[pauth_regnum_collection[0]].byte_offset;
@@ -459,4 +517,8 @@ uint32_t RegisterInfoPOSIX_arm64::GetMTEOffset() const {
 
 uint32_t RegisterInfoPOSIX_arm64::GetTLSOffset() const {
   return m_register_info_p[m_tls_regnum_collection[0]].byte_offset;
+}
+
+uint32_t RegisterInfoPOSIX_arm64::GetSMEOffset() const {
+  return m_register_info_p[m_sme_regnum_collection[0]].byte_offset;
 }

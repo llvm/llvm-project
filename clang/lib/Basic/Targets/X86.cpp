@@ -119,6 +119,8 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabled(Features, F, true);
 
   std::vector<std::string> UpdatedFeaturesVec;
+  bool HasEVEX512 = true;
+  bool HasAVX512F = false;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
     if (Feature == "+general-regs-only") {
@@ -128,8 +130,17 @@ bool X86TargetInfo::initFeatureMap(
       continue;
     }
 
+    if (!HasAVX512F && Feature.substr(0, 7) == "+avx512")
+      HasAVX512F = true;
+    if (HasAVX512F && Feature == "-avx512f")
+      HasAVX512F = false;
+    if (HasEVEX512 && Feature == "-evex512")
+      HasEVEX512 = false;
+
     UpdatedFeaturesVec.push_back(Feature);
   }
+  if (HasAVX512F && HasEVEX512)
+    UpdatedFeaturesVec.push_back("+evex512");
 
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec))
     return false;
@@ -228,6 +239,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasF16C = true;
     } else if (Feature == "+gfni") {
       HasGFNI = true;
+    } else if (Feature == "+evex512") {
+      HasEVEX512 = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
@@ -731,6 +744,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasGFNI)
     Builder.defineMacro("__GFNI__");
 
+  if (HasEVEX512)
+    Builder.defineMacro("__EVEX512__");
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
@@ -986,6 +1001,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("crc32", true)
       .Case("cx16", true)
       .Case("enqcmd", true)
+      .Case("evex512", true)
       .Case("f16c", true)
       .Case("fma", true)
       .Case("fma4", true)
@@ -1093,6 +1109,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("cx8", HasCX8)
       .Case("cx16", HasCX16)
       .Case("enqcmd", HasENQCMD)
+      .Case("evex512", HasEVEX512)
       .Case("f16c", HasF16C)
       .Case("fma", HasFMA)
       .Case("fma4", XOPLevel >= FMA4)
@@ -1533,8 +1550,9 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
       return Size <= 64;
     case 'z':
       // XMM0/YMM/ZMM0
-      if (hasFeatureEnabled(FeatureMap, "avx512f"))
-        // ZMM0 can be used if target supports AVX512F.
+      if (hasFeatureEnabled(FeatureMap, "avx512f") &&
+          hasFeatureEnabled(FeatureMap, "evex512"))
+        // ZMM0 can be used if target supports AVX512F and EVEX512 is set.
         return Size <= 512U;
       else if (hasFeatureEnabled(FeatureMap, "avx"))
         // YMM0 can be used if target supports AVX.
@@ -1553,8 +1571,10 @@ bool X86TargetInfo::validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
     break;
   case 'v':
   case 'x':
-    if (hasFeatureEnabled(FeatureMap, "avx512f"))
-      // 512-bit zmm registers can be used if target supports AVX512F.
+    if (hasFeatureEnabled(FeatureMap, "avx512f") &&
+        hasFeatureEnabled(FeatureMap, "evex512"))
+      // 512-bit zmm registers can be used if target supports AVX512F and
+      // EVEX512 is set.
       return Size <= 512U;
     else if (hasFeatureEnabled(FeatureMap, "avx"))
       // 256-bit ymm registers can be used if target supports AVX.

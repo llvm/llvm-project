@@ -18,8 +18,8 @@ Parts:
       SampleFrequency: 96
       MinimumWaveLaneCount: 0
       MaximumWaveLaneCount: 4294967295
-      UsesViewID:      128
-      SigInputVectors: 64
+      UsesViewID:      0
+      SigInputVectors: 0
       SigOutputVectors: [ 8, 16, 32, 64 ]
       ResourceStride:       16
       Resources:
@@ -78,6 +78,11 @@ Parts:
           Interpolation:   LinearSample
           DynamicMask:     0x2
           Stream:          3
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
   - Name:            DXIL
     Size:            24
     Program:

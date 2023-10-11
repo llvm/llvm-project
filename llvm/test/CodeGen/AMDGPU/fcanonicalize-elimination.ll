@@ -83,7 +83,7 @@ define amdgpu_kernel void @test_fold_canonicalize_sqrt_value_f32(ptr addrspace(1
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load = load float, ptr addrspace(1) %gep, align 4
-  %v = call float @llvm.sqrt.f32(float %load)
+  %v = call afn float @llvm.sqrt.f32(float %load)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, ptr addrspace(1) %gep, align 4
   ret void

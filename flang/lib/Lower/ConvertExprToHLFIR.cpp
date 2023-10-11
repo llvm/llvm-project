@@ -28,6 +28,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
+#include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -268,8 +269,36 @@ private:
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::SymbolRef &symbolRef) {
     if (std::optional<fir::FortranVariableOpInterface> varDef =
-            getSymMap().lookupVariableDefinition(symbolRef))
+            getSymMap().lookupVariableDefinition(symbolRef)) {
+      if (symbolRef->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+        // The pointee is represented with a descriptor inheriting
+        // the shape and type parameters of the pointee.
+        // We have to update the base_addr to point to the current
+        // value of the Cray pointer variable.
+        fir::FirOpBuilder &builder = getBuilder();
+        fir::FortranVariableOpInterface ptrVar =
+            gen(Fortran::lower::getCrayPointer(symbolRef));
+        mlir::Value ptrAddr = ptrVar.getBase();
+
+        // Reinterpret the reference to a Cray pointer so that
+        // we have a pointer-compatible value after loading
+        // the Cray pointer value.
+        mlir::Type refPtrType = builder.getRefType(
+            fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())));
+        mlir::Value cast = builder.createConvert(loc, refPtrType, ptrAddr);
+        mlir::Value ptrVal = builder.create<fir::LoadOp>(loc, cast);
+
+        // Update the base_addr to the value of the Cray pointer.
+        // This is a hacky way to do the update, and it may harm
+        // performance around Cray pointer references.
+        // TODO: we should introduce an operation that updates
+        // just the base_addr of the given box. The CodeGen
+        // will just convert it into a single store.
+        fir::runtime::genPointerAssociateScalar(builder, loc, varDef->getBase(),
+                                                ptrVal);
+      }
       return *varDef;
+    }
     TODO(getLoc(), "lowering symbol to HLFIR");
   }
 
@@ -713,7 +742,7 @@ private:
     assert(
         !componentSym.test(Fortran::semantics::Symbol::Flag::ParentComp) &&
         "parent components are skipped and must not reach visitComponentImpl");
-    partInfo.componentName = componentSym.name().ToString();
+    partInfo.componentName = converter.getRecordTypeFieldName(componentSym);
     auto recordType =
         hlfir::getFortranElementType(baseType).cast<fir::RecordType>();
     if (recordType.isDependentType())
@@ -1385,7 +1414,6 @@ struct UnaryOp<
                                          hlfir::Entity lhs) {
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
-      // TODO(loc, "character conversion in HLFIR");
       auto kindMap = builder.getKindMap();
       mlir::Type fromTy = lhs.getFortranElementType();
       mlir::Value origBufferSize = genCharLength(loc, builder, lhs);
@@ -1406,8 +1434,12 @@ struct UnaryOp<
       // allocate space on the stack for toBuffer
       auto dest = builder.create<fir::AllocaOp>(loc, toTy,
                                                 mlir::ValueRange{bufferSize});
-      builder.create<fir::CharConvertOp>(loc, lhs.getFirBase(), origBufferSize,
-                                         dest);
+      auto src = hlfir::convertToAddress(loc, builder, lhs,
+                                         lhs.getFortranElementType());
+      builder.create<fir::CharConvertOp>(loc, src.first.getCharBox()->getAddr(),
+                                         origBufferSize, dest);
+      if (src.second.has_value())
+        src.second.value()();
 
       return hlfir::EntityWithAttributes{builder.create<hlfir::DeclareOp>(
           loc, dest, "ctor.temp", /*shape=*/nullptr,
@@ -1692,7 +1724,7 @@ private:
     for (const auto &value : ctor.values()) {
       const Fortran::semantics::Symbol &sym = *value.first;
       const Fortran::lower::SomeExpr &expr = value.second.value();
-      llvm::StringRef name = toStringRef(sym.name());
+      std::string name = converter.getRecordTypeFieldName(sym);
       if (sym.test(Fortran::semantics::Symbol::Flag::ParentComp)) {
         const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType();
         assert(declTypeSpec && declTypeSpec->AsDerived() &&

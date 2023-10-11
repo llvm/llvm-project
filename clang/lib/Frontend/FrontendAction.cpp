@@ -510,8 +510,8 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   }
 
   // Check whether we can build this module at all.
-  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(),
-                                           CI.getDiagnostics(), M))
+  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(), *M,
+                                           CI.getDiagnostics()))
     return nullptr;
 
   // Inform the preprocessor that includes from within the input buffer should
@@ -525,15 +525,15 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   StringRef OriginalModuleMapName = CI.getFrontendOpts().OriginalModuleMap;
   if (!OriginalModuleMapName.empty()) {
     auto OriginalModuleMap =
-        CI.getFileManager().getFile(OriginalModuleMapName,
-                                    /*openFile*/ true);
+        CI.getFileManager().getOptionalFileRef(OriginalModuleMapName,
+                                               /*openFile*/ true);
     if (!OriginalModuleMap) {
       CI.getDiagnostics().Report(diag::err_module_map_not_found)
         << OriginalModuleMapName;
       return nullptr;
     }
-    if (*OriginalModuleMap != CI.getSourceManager().getFileEntryForID(
-                                 CI.getSourceManager().getMainFileID())) {
+    if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
+                                  CI.getSourceManager().getMainFileID())) {
       M->IsInferred = true;
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
         .setInferredModuleAllowedBy(M, *OriginalModuleMap);
@@ -666,7 +666,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     } else {
       auto &OldSM = AST->getSourceManager();
       FileID ID = OldSM.getMainFileID();
-      if (auto *File = OldSM.getFileEntryForID(ID))
+      if (auto File = OldSM.getFileEntryRefForID(ID))
         Input = FrontendInputFile(File->getName(), Kind);
       else
         Input = FrontendInputFile(OldSM.getBufferOrFake(ID), Kind);
@@ -742,7 +742,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.
   for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
-    if (auto FE = CI.getFileManager().getFile(F, /*openFile*/true))
+    if (auto FE = CI.getFileManager().getOptionalFileRef(F, /*openFile*/true))
       CI.getSourceManager().setFileIsTransient(*FE);
     else
       CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
@@ -830,8 +830,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
       // Relative searches begin from CWD.
       auto Dir = CI.getFileManager().getOptionalDirectoryRef(".");
-      SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 1> CWD;
-      CWD.push_back({nullptr, *Dir});
+      SmallVector<std::pair<OptionalFileEntryRef, DirectoryEntryRef>, 1> CWD;
+      CWD.push_back({std::nullopt, *Dir});
       OptionalFileEntryRef FE =
           HS.LookupFile(FileName, SourceLocation(),
                         /*Angled*/ Input.getKind().getHeaderUnitKind() ==
@@ -844,7 +844,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         return false;
       }
       // We now have the filename...
-      FileName = FE->getFileEntry().getName();
+      FileName = FE->getName();
       // ... still a header unit, but now use the path as written.
       Kind = Input.getKind().withHeaderUnit(InputKind::HeaderUnit_Abs);
       Input = FrontendInputFile(FileName, Kind, Input.isSystem());
@@ -1023,9 +1023,15 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   }
 
   // If we were asked to load any module files, do so now.
-  for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)
-    if (!CI.loadModuleFile(ModuleFile))
+  for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
+    serialization::ModuleFile *Loaded = nullptr;
+    if (!CI.loadModuleFile(ModuleFile, Loaded))
       return false;
+
+    if (Loaded && Loaded->StandardCXXModule)
+      CI.getDiagnostics().Report(
+          diag::warn_eagerly_load_for_standard_cplusplus_modules);
+  }
 
   // If there is a layout overrides file, attach an external AST source that
   // provides the layouts from that file.

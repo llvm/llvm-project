@@ -34,6 +34,7 @@
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -333,16 +334,18 @@ protected:
     return rewriter.create<mlir::LLVM::GEPOp>(loc, ty, base, cv);
   }
 
-  // Find the LLVMFuncOp in whose entry block the alloca should be inserted.
-  // The order to find the LLVMFuncOp is as follows:
-  // 1. The parent operation of the current block if it is a LLVMFuncOp.
-  // 2. The first ancestor that is a LLVMFuncOp.
-  mlir::LLVM::LLVMFuncOp
-  getFuncForAllocaInsert(mlir::ConversionPatternRewriter &rewriter) const {
-    mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-    return mlir::isa<mlir::LLVM::LLVMFuncOp>(parentOp)
-               ? mlir::cast<mlir::LLVM::LLVMFuncOp>(parentOp)
-               : parentOp->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+  // Find the Block in which the alloca should be inserted.
+  // The order to recursively find the proper block:
+  // 1. An OpenMP Op that will be outlined.
+  // 2. A LLVMFuncOp
+  // 3. The first ancestor that is an OpenMP Op or a LLVMFuncOp
+  static mlir::Block *getBlockForAllocaInsert(mlir::Operation *op) {
+    if (auto iface =
+            mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(op))
+      return iface.getAllocaBlock();
+    if (auto llvmFuncOp = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op))
+      return &llvmFuncOp.front();
+    return getBlockForAllocaInsert(op->getParentOp());
   }
 
   // Generate an alloca of size 1 and type \p toTy.
@@ -350,8 +353,9 @@ protected:
   genAllocaWithType(mlir::Location loc, mlir::Type toTy, unsigned alignment,
                     mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
-    mlir::LLVM::LLVMFuncOp func = getFuncForAllocaInsert(rewriter);
-    rewriter.setInsertionPointToStart(&func.front());
+    mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+    mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
+    rewriter.setInsertionPointToStart(insertBlock);
     auto size = genI32Constant(loc, rewriter, 1);
     auto al = rewriter.create<mlir::LLVM::AllocaOp>(loc, toTy, size, alignment);
     rewriter.restoreInsertionPoint(thisPt);
@@ -1022,14 +1026,15 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   }
 };
 
-/// `fir.disptach_table` operation has no specific CodeGen. The operation is
-/// only used to carry information during FIR to FIR passes.
-struct DispatchTableOpConversion
-    : public FIROpConversion<fir::DispatchTableOp> {
+/// `fir.type_info` operation has no specific CodeGen. The operation is
+/// only used to carry information during FIR to FIR passes. It may be used
+/// in the future to generate the runtime type info data structures instead
+/// of generating them in lowering.
+struct TypeInfoOpConversion : public FIROpConversion<fir::TypeInfoOp> {
   using FIROpConversion::FIROpConversion;
 
   mlir::LogicalResult
-  matchAndRewrite(fir::DispatchTableOp op, OpAdaptor,
+  matchAndRewrite(fir::TypeInfoOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
     return mlir::success();
@@ -1146,7 +1151,7 @@ computeElementDistance(mlir::Location loc, mlir::Type ptrTy, mlir::Type idxTy,
   // *)0 + 1)' trick for all types. The generated instructions are optimized
   // into constant by the first pass of InstCombine, so it should not be a
   // performance issue.
-  auto nullPtr = rewriter.create<mlir::LLVM::NullOp>(loc, ptrTy);
+  auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, ptrTy);
   auto gep = rewriter.create<mlir::LLVM::GEPOp>(
       loc, ptrTy, nullPtr, llvm::ArrayRef<mlir::LLVM::GEPArg>{1});
   return rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, gep);
@@ -1427,7 +1432,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
             name, Fortran::semantics::typeInfoBuiltinModule))
       fir::emitFatalError(
           loc, "runtime derived type info descriptor was not generated");
-    return rewriter.create<mlir::LLVM::NullOp>(
+    return rewriter.create<mlir::LLVM::ZeroOp>(
         loc, ::getVoidPtrType(mod.getContext()));
   }
 
@@ -1470,7 +1475,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
           } else {
             // Unlimited polymorphic type descriptor with no record type. Set
             // type descriptor address to a clean state.
-            typeDesc = rewriter.create<mlir::LLVM::NullOp>(
+            typeDesc = rewriter.create<mlir::LLVM::ZeroOp>(
                 loc, ::getVoidPtrType(mod.getContext()));
           }
         } else {
@@ -3081,7 +3086,10 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(
           loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
           inputBoxStorage);
-      attachTBAATag(boxValue, boxTy, boxTy, nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        boxValue.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
           genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
       auto storeOp =
@@ -3092,7 +3100,10 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       mlir::Type loadTy = convertType(load.getType());
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
           load.getLoc(), loadTy, adaptor.getOperands(), load->getAttrs());
-      attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        loadOp.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
       rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
@@ -3336,7 +3347,10 @@ struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
       newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
           loc, adaptor.getOperands()[0], adaptor.getOperands()[1]);
     }
-    attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
+    if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
+      newStoreOp.setTBAATags(*optionalTag);
+    else
+      attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
     rewriter.eraseOp(store);
     return mlir::success();
   }
@@ -3402,20 +3416,7 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
   matchAndRewrite(fir::ZeroOp zero, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type ty = convertType(zero.getType());
-    if (ty.isa<mlir::LLVM::LLVMPointerType>()) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(zero, ty);
-    } else if (ty.isa<mlir::IntegerType>()) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
-          zero, ty, mlir::IntegerAttr::get(ty, 0));
-    } else if (mlir::LLVM::isCompatibleFloatingPointType(ty)) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
-          zero, ty, mlir::FloatAttr::get(zero.getType(), 0.0));
-    } else {
-      // TODO: create ConstantAggregateZero for FIR aggregate/array types.
-      return rewriter.notifyMatchFailure(
-          zero,
-          "conversion of fir.zero with aggregate type not implemented yet");
-    }
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(zero, ty);
     return mlir::success();
   }
 };
@@ -3466,7 +3467,7 @@ struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
 };
 
 /// Create value signaling an absent optional argument in a call, e.g.
-/// `fir.absent !fir.ref<i64>` -->  `llvm.mlir.null : !llvm.ptr<i64>`
+/// `fir.absent !fir.ref<i64>` -->  `llvm.mlir.zero : !llvm.ptr<i64>`
 struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
   using FIROpConversion::FIROpConversion;
 
@@ -3481,11 +3482,11 @@ struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
       assert(!structTy.isOpaque() && !structTy.getBody().empty());
       auto undefStruct = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
       auto nullField =
-          rewriter.create<mlir::LLVM::NullOp>(loc, structTy.getBody()[0]);
+          rewriter.create<mlir::LLVM::ZeroOp>(loc, structTy.getBody()[0]);
       rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
           absent, undefStruct, nullField, 0);
     } else {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(absent, ty);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(absent, ty);
     }
     return mlir::success();
   }
@@ -3796,19 +3797,19 @@ public:
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
         BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
         ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-        FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion,
-        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-        NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, TypeDescOpConversion, UnboxCharOpConversion,
-        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        DTEntryOpConversion, DivcOpConversion, EmboxOpConversion,
+        EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
+        FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+        MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+        TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion,
         UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
         XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
                                                                   options);
@@ -3857,6 +3858,14 @@ public:
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
                                                std::move(pattern)))) {
       signalPassFailure();
+    }
+
+    // Run pass to add comdats to functions that have weak linkage on relevant platforms
+    if (fir::getTargetTriple(mod).supportsCOMDAT()) {
+      mlir::OpPassManager comdatPM("builtin.module");
+      comdatPM.addPass(mlir::LLVM::createLLVMAddComdats());
+      if (mlir::failed(runPipeline(comdatPM, mod)))
+        return signalPassFailure();
     }
   }
 

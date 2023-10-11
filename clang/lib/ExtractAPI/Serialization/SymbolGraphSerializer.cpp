@@ -597,7 +597,7 @@ std::optional<Object> serializeTemplateMixinImpl(const RecordTy &Record,
 
   Object Generics;
   Array GenericParameters;
-  for (const auto Param : Template.getParameters()) {
+  for (const auto &Param : Template.getParameters()) {
     Object Parameter;
     Parameter["name"] = Param.Name;
     Parameter["index"] = Param.Index;
@@ -608,7 +608,7 @@ std::optional<Object> serializeTemplateMixinImpl(const RecordTy &Record,
     Generics["parameters"] = std::move(GenericParameters);
 
   Array GenericConstraints;
-  for (const auto Constr : Template.getConstraints()) {
+  for (const auto &Constr : Template.getConstraints()) {
     Object Constraint;
     Constraint["kind"] = Constr.Kind;
     Constraint["lhs"] = Constr.LHS;
@@ -900,7 +900,7 @@ void SymbolGraphSerializer::visitCXXClassRecord(const CXXClassRecord &Record) {
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,
@@ -914,7 +914,7 @@ void SymbolGraphSerializer::visitClassTemplateRecord(
     return;
 
   Symbols.emplace_back(std::move(*Class));
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,
@@ -929,7 +929,7 @@ void SymbolGraphSerializer::visitClassTemplateSpecializationRecord(
 
   Symbols.emplace_back(std::move(*Class));
 
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,
@@ -944,7 +944,7 @@ void SymbolGraphSerializer::visitClassTemplatePartialSpecializationRecord(
 
   Symbols.emplace_back(std::move(*Class));
 
-  for (const auto Base : Record.Bases)
+  for (const auto &Base : Record.Bases)
     serializeRelationship(RelationshipKind::InheritsFrom, Record, Base);
   if (!Record.ParentInformation.empty())
     serializeRelationship(RelationshipKind::MemberOf, Record,

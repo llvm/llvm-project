@@ -1108,6 +1108,54 @@ the configuration (without a prefix: ``Auto``).
                     int d,
                     int e);
 
+.. _AllowBreakBeforeNoexceptSpecifier:
+
+**AllowBreakBeforeNoexceptSpecifier** (``BreakBeforeNoexceptSpecifierStyle``) :versionbadge:`clang-format 18` :ref:`¶ <AllowBreakBeforeNoexceptSpecifier>`
+  Controls if there could be a line break before a ``noexcept`` specifier.
+
+  Possible values:
+
+  * ``BBNSS_Never`` (in configuration: ``Never``)
+    No line break allowed.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2) noexcept(
+          noexcept(baz(arg1)) &&
+          noexcept(baz(arg2)));
+
+  * ``BBNSS_OnlyWithParen`` (in configuration: ``OnlyWithParen``)
+    For a simple ``noexcept`` there is no line break allowed, but when we
+    have a condition it is.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2)
+          noexcept(noexcept(baz(arg1)) &&
+                   noexcept(baz(arg2)));
+
+  * ``BBNSS_Always`` (in configuration: ``Always``)
+    Line breaks are allowed. But note that because of the associated
+    penalties ``clang-format`` often prefers not to break before the
+    ``noexcept``.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2)
+          noexcept(noexcept(baz(arg1)) &&
+                   noexcept(baz(arg2)));
+
+
+
 .. _AllowShortBlocksOnASingleLine:
 
 **AllowShortBlocksOnASingleLine** (``ShortBlockStyle``) :versionbadge:`clang-format 3.5` :ref:`¶ <AllowShortBlocksOnASingleLine>`
@@ -2722,6 +2770,8 @@ the configuration (without a prefix: ``Auto``).
 **BreakStringLiterals** (``Boolean``) :versionbadge:`clang-format 3.9` :ref:`¶ <BreakStringLiterals>`
   Allow breaking string literals when formatting.
 
+  In C, C++, and Objective-C:
+
   .. code-block:: c++
 
      true:
@@ -2731,7 +2781,35 @@ the configuration (without a prefix: ``Auto``).
 
      false:
      const char* x =
-       "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  In C# and Java:
+
+  .. code-block:: c++
+
+     true:
+     string x = "veryVeryVeryVeryVeryVe" +
+                "ryVeryVeryVeryVeryVery" +
+                "VeryLongString";
+
+     false:
+     string x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  C# interpolated strings are not broken.
+
+  In Verilog:
+
+  .. code-block:: c++
+
+     true:
+     string x = {"veryVeryVeryVeryVeryVe",
+                 "ryVeryVeryVeryVeryVery",
+                 "VeryLongString"};
+
+     false:
+     string x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
 .. _ColumnLimit:
 
@@ -3710,8 +3788,8 @@ the configuration (without a prefix: ``Auto``).
            });
 
   * ``LBI_OuterScope`` (in configuration: ``OuterScope``)
-    Align lambda body relative to the indentation level of the outer scope
-    the lambda signature resides in.
+    For statements within block scope, align lambda body relative to the
+    indentation level of the outer scope the lambda signature resides in.
 
     .. code-block:: c++
 
@@ -5436,7 +5514,7 @@ the configuration (without a prefix: ``Auto``).
 .. _SpacesInParentheses:
 
 **SpacesInParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInParentheses>`
-  If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  If ``true``, spaces will be inserted after ``(`` and before ``)``.
   This option is **deprecated**. The previous behavior is preserved by using
   ``SpacesInParens`` with ``Custom`` and by setting all
   ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
@@ -5652,7 +5730,7 @@ Examples
 ========
 
 A style similar to the `Linux Kernel style
-<https://www.kernel.org/doc/Documentation/CodingStyle>`_:
+<https://www.kernel.org/doc/html/latest/process/coding-style.html>`_:
 
 .. code-block:: yaml
 

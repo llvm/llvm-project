@@ -341,6 +341,7 @@ LogicalResult verifySameOperandsAndResultShape(Operation *op);
 LogicalResult verifySameOperandsElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultType(Operation *op);
+LogicalResult verifySameOperandsAndResultRank(Operation *op);
 LogicalResult verifyResultsAreBoolLike(Operation *op);
 LogicalResult verifyResultsAreFloatLike(Operation *op);
 LogicalResult verifyResultsAreSignlessIntegerLike(Operation *op);
@@ -943,7 +944,8 @@ public:
 template <typename TerminatorOpType>
 struct SingleBlockImplicitTerminator {
   template <typename ConcreteType>
-  class Impl {
+  class Impl : public TraitBase<ConcreteType, SingleBlockImplicitTerminator<
+                                                  TerminatorOpType>::Impl> {
   private:
     /// Builds a terminator operation without relying on OpBuilder APIs to avoid
     /// cyclic header inclusion.
@@ -994,37 +996,6 @@ struct SingleBlockImplicitTerminator {
                                  Location loc) {
       ::mlir::impl::ensureRegionTerminator(region, builder, loc,
                                            buildTerminator);
-    }
-
-    //===------------------------------------------------------------------===//
-    // Single Region Utilities
-    //===------------------------------------------------------------------===//
-
-    template <typename OpT, typename T = void>
-    using enable_if_single_region =
-        std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
-
-    /// Insert the operation into the back of the body, before the terminator.
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> push_back(Operation *op) {
-      Block *body = static_cast<SingleBlock<ConcreteType> *>(this)->getBody();
-      insert(Block::iterator(body->getTerminator()), op);
-    }
-
-    /// Insert the operation at the given insertion point. Note: The operation
-    /// is never inserted after the terminator, even if the insertion point is
-    /// end().
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> insert(Operation *insertPt, Operation *op) {
-      insert(Block::iterator(insertPt), op);
-    }
-    template <typename OpT = ConcreteType>
-    enable_if_single_region<OpT> insert(Block::iterator insertPt,
-                                        Operation *op) {
-      Block *body = static_cast<SingleBlock<ConcreteType> *>(this)->getBody();
-      if (insertPt == body->end())
-        insertPt = Block::iterator(body->getTerminator());
-      body->getOperations().insert(insertPt, op);
     }
   };
 };
@@ -1111,6 +1082,17 @@ class SameOperandsAndResultType
 public:
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifySameOperandsAndResultType(op);
+  }
+};
+
+/// This class verifies that op has same ranks for all
+/// operands and results types, if known.
+template <typename ConcreteType>
+class SameOperandsAndResultRank
+    : public TraitBase<ConcreteType, SameOperandsAndResultRank> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifySameOperandsAndResultRank(op);
   }
 };
 
@@ -1757,9 +1739,10 @@ public:
   /// the namespace where the properties are defined. It can also be overridden
   /// in the derived ConcreteOp.
   template <typename PropertiesTy>
-  static LogicalResult setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
-                                             InFlightDiagnostic *diag) {
-    return setPropertiesFromAttribute(prop, attr, diag);
+  static LogicalResult
+  setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
+                        function_ref<InFlightDiagnostic()> emitError) {
+    return setPropertiesFromAttribute(prop, attr, emitError);
   }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that
@@ -2075,7 +2058,7 @@ protected:
     // given operation.
     if (Dialect *dialect = name.getDialect()) {
       dialect_extension_detail::handleUseOfUndefinedPromisedInterface(
-          *dialect, ConcreteType::getInterfaceID(),
+          *dialect, name.getTypeID(), ConcreteType::getInterfaceID(),
           llvm::getTypeName<ConcreteType>());
     }
 #endif

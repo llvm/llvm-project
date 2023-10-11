@@ -1131,7 +1131,8 @@ private:
   bool OkToAddComponent(const parser::Name &, const Symbol * = nullptr);
   ParamValue GetParamValue(
       const parser::TypeParamValue &, common::TypeParamAttr attr);
-  void CheckCommonBlockDerivedType(const SourceName &, const Symbol &);
+  void CheckCommonBlockDerivedType(
+      const SourceName &, const Symbol &, UnorderedSymbolSet &);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
@@ -1738,9 +1739,11 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
 }
 
 void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
-  if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
+  if ((!attrs_ || !attrs_->test(Attr::BIND_C)) &&
+      !symbol.attrs().test(Attr::BIND_C)) {
     return;
   }
+
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
   // 18.9.2(2): discard leading and trailing blanks
@@ -1753,6 +1756,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     }
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
+  } else if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
+    // BIND(C) does not give an implicit binding label to internal procedures.
+    return;
   } else {
     label = symbol.name().ToString();
   }
@@ -2390,6 +2396,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // on the host-associated name, at most once (C815).
   symbol.implicitAttrs() =
       symbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+  // SAVE statement in the inner scope will create a new symbol.
+  // If the host variable is used via host association,
+  // we have to propagate whether SAVE is implicit in the host scope.
+  // Otherwise, verifications that do not allow explicit SAVE
+  // attribute would fail.
+  symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
   return symbol;
 }
@@ -4099,6 +4111,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       if (GenericDetails *
           generic{DEREF(FindSymbol(name)).detailsIf<GenericDetails>()}) {
         generic->clear_specific();
+        name.symbol = nullptr;
       } else {
         EraseSymbol(name);
       }
@@ -4827,6 +4840,13 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
       } else if (interface->test(Symbol::Flag::Subroutine)) {
         symbol.set(Symbol::Flag::Subroutine);
       }
+      if (IsBindCProcedure(*interface) && !IsPointer(symbol) &&
+          !IsDummy(symbol)) {
+        // Inherit BIND_C attribute from the interface, but not the NAME="..."
+        // if any. This is not clearly described in the standard, but matches
+        // the behavior of other compilers.
+        SetImplicitAttr(symbol, Attr::BIND_C);
+      }
     } else if (auto *type{GetDeclTypeSpec()}) {
       SetType(name, *type);
       symbol.set(Symbol::Flag::Function);
@@ -5188,7 +5208,6 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   CHECK(scope.symbol());
   CHECK(scope.symbol()->scope() == &scope);
   auto &details{scope.symbol()->get<DerivedTypeDetails>()};
-  details.set_isForwardReferenced(false);
   std::set<SourceName> paramNames;
   for (auto &paramName : std::get<std::list<parser::Name>>(stmt.statement.t)) {
     details.add_paramName(paramName.source);
@@ -5225,9 +5244,10 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   Walk(componentDefs);
   if (derivedTypeInfo_.sequence) {
     details.set_sequence(true);
-    if (componentDefs.empty()) { // C740
+    if (componentDefs.empty()) {
+      // F'2023 C745 - not enforced by any compiler
       Say(stmt.source,
-          "A sequence type must have at least one component"_err_en_US);
+          "A sequence type should have at least one component"_warn_en_US);
     }
     if (!details.paramNames().empty()) { // C740
       Say(stmt.source,
@@ -5240,6 +5260,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   }
   Walk(std::get<std::optional<parser::TypeBoundProcedurePart>>(x.t));
   Walk(std::get<parser::Statement<parser::EndTypeStmt>>(x.t));
+  details.set_isForwardReferenced(false);
   derivedTypeInfo_ = {};
   PopScope();
   return false;
@@ -5255,7 +5276,13 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   auto *extendsName{derivedTypeInfo_.extends};
   std::optional<DerivedTypeSpec> extendsType{
       ResolveExtendsType(name, extendsName)};
-  auto &symbol{MakeSymbol(name, GetAttrs(), DerivedTypeDetails{})};
+  DerivedTypeDetails derivedTypeDetails;
+  if (Symbol *typeSymbol{FindInScope(currScope(), name)}; typeSymbol &&
+      typeSymbol->has<DerivedTypeDetails>() &&
+      typeSymbol->get<DerivedTypeDetails>().isForwardReferenced()) {
+    derivedTypeDetails.set_isForwardReferenced(true);
+  }
+  auto &symbol{MakeSymbol(name, GetAttrs(), std::move(derivedTypeDetails))};
   symbol.ReplaceName(name.source);
   derivedTypeInfo_.type = &symbol;
   PushScope(Scope::Kind::DerivedType, &symbol);
@@ -6096,7 +6123,8 @@ void DeclarationVisitor::CheckCommonBlocks() {
               "Derived type '%s' in COMMON block must have the BIND or"
               " SEQUENCE attribute"_err_en_US);
         }
-        CheckCommonBlockDerivedType(name, typeSymbol);
+        UnorderedSymbolSet typeSet;
+        CheckCommonBlockDerivedType(name, typeSymbol, typeSet);
       }
     }
   }
@@ -6120,8 +6148,12 @@ bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
 }
 
 // Check if this derived type can be in a COMMON block.
-void DeclarationVisitor::CheckCommonBlockDerivedType(
-    const SourceName &name, const Symbol &typeSymbol) {
+void DeclarationVisitor::CheckCommonBlockDerivedType(const SourceName &name,
+    const Symbol &typeSymbol, UnorderedSymbolSet &typeSet) {
+  if (auto iter{typeSet.find(SymbolRef{typeSymbol})}; iter != typeSet.end()) {
+    return;
+  }
+  typeSet.emplace(typeSymbol);
   if (const auto *scope{typeSymbol.scope()}) {
     for (const auto &pair : *scope) {
       const Symbol &component{*pair.second};
@@ -6144,13 +6176,7 @@ void DeclarationVisitor::CheckCommonBlockDerivedType(
         if (const auto *type{details->type()}) {
           if (const auto *derived{type->AsDerived()}) {
             const Symbol &derivedTypeSymbol{derived->typeSymbol()};
-            // Don't call this member function recursively if the derived type
-            // symbol is the same symbol that is already being processed.
-            // This can happen when a component is a pointer of the same type
-            // as its parent component, for instance.
-            if (derivedTypeSymbol != typeSymbol) {
-              CheckCommonBlockDerivedType(name, derivedTypeSymbol);
-            }
+            CheckCommonBlockDerivedType(name, derivedTypeSymbol, typeSet);
           }
         }
       }
@@ -6942,17 +6968,32 @@ void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {
 void ConstructVisitor::Post(const parser::SelectRankCaseStmt::Rank &x) {
   if (auto *symbol{MakeAssocEntity()}) {
     SetTypeFromAssociation(*symbol);
+    auto &details{symbol->get<AssocEntityDetails>()};
     // Don't call SetAttrsFromAssociation() for SELECT RANK.
-    symbol->attrs() |=
-        evaluate::GetAttrs(GetCurrentAssociation().selector.expr) &
-        Attrs{Attr::ALLOCATABLE, Attr::ASYNCHRONOUS, Attr::POINTER,
-            Attr::TARGET, Attr::VOLATILE};
-    if (const auto *init{std::get_if<parser::ScalarIntConstantExpr>(&x.u)}) {
-      if (auto val{EvaluateInt64(context(), *init)}) {
-        auto &details{symbol->get<AssocEntityDetails>()};
-        details.set_rank(*val);
+    Attrs selectorAttrs{
+        evaluate::GetAttrs(GetCurrentAssociation().selector.expr)};
+    Attrs attrsToKeep{Attr::ASYNCHRONOUS, Attr::TARGET, Attr::VOLATILE};
+    if (const auto *rankValue{
+            std::get_if<parser::ScalarIntConstantExpr>(&x.u)}) {
+      // RANK(n)
+      if (auto expr{EvaluateIntExpr(*rankValue)}) {
+        if (auto val{evaluate::ToInt64(*expr)}) {
+          details.set_rank(*val);
+          attrsToKeep |= Attrs{Attr::ALLOCATABLE, Attr::POINTER};
+        } else {
+          Say("RANK() expression must be constant"_err_en_US);
+        }
       }
+    } else if (std::holds_alternative<parser::Star>(x.u)) {
+      // RANK(*): assumed-size
+      details.set_IsAssumedSize();
+    } else {
+      CHECK(std::holds_alternative<parser::Default>(x.u));
+      // RANK DEFAULT: assumed-rank
+      details.set_IsAssumedRank();
+      attrsToKeep |= Attrs{Attr::ALLOCATABLE, Attr::POINTER};
     }
+    symbol->attrs() |= selectorAttrs & attrsToKeep;
   }
 }
 
@@ -8108,6 +8149,15 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
         return false;
       }
     }
+    if (IsProcedurePointer(parser::GetLastName(dataRef).symbol) &&
+        !FindSymbol(*name)) {
+      // Unknown target of procedure pointer must be an external procedure
+      Symbol &symbol{MakeSymbol(
+          context().globalScope(), name->source, Attrs{Attr::EXTERNAL})};
+      Resolve(*name, symbol);
+      ConvertToProcEntity(symbol);
+      return false;
+    }
   }
   Walk(expr);
   return false;
@@ -8699,11 +8749,14 @@ void ResolveNamesVisitor::ResolveExecutionParts(const ProgramTree &node) {
   }
 }
 
-void ResolveNamesVisitor::Post(const parser::Program &) {
+void ResolveNamesVisitor::Post(const parser::Program &x) {
   // ensure that all temps were deallocated
   CHECK(!attrs_);
   CHECK(!cudaDataAttr_);
   CHECK(!GetDeclTypeSpec());
+  // Top-level resolution to propagate information across program units after
+  // each of them has been resolved separately.
+  ResolveOmpTopLevelParts(context(), x);
 }
 
 // A singleton instance of the scope -> IMPLICIT rules mapping is

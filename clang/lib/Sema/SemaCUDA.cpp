@@ -105,19 +105,37 @@ Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
 }
 
 template <typename A>
-static bool hasAttr(const FunctionDecl *D, bool IgnoreImplicitAttr) {
+static bool hasAttr(const Decl *D, bool IgnoreImplicitAttr) {
   return D->hasAttrs() && llvm::any_of(D->getAttrs(), [&](Attr *Attribute) {
            return isa<A>(Attribute) &&
                   !(IgnoreImplicitAttr && Attribute->isImplicit());
          });
 }
 
+Sema::CUDATargetContextRAII::CUDATargetContextRAII(Sema &S_,
+                                                   CUDATargetContextKind K,
+                                                   Decl *D)
+    : S(S_) {
+  SavedCtx = S.CurCUDATargetCtx;
+  assert(K == CTCK_InitGlobalVar);
+  auto *VD = dyn_cast_or_null<VarDecl>(D);
+  if (VD && VD->hasGlobalStorage() && !VD->isStaticLocal()) {
+    auto Target = CFT_Host;
+    if ((hasAttr<CUDADeviceAttr>(VD, /*IgnoreImplicit=*/true) &&
+         !hasAttr<CUDAHostAttr>(VD, /*IgnoreImplicit=*/true)) ||
+        hasAttr<CUDASharedAttr>(VD, /*IgnoreImplicit=*/true) ||
+        hasAttr<CUDAConstantAttr>(VD, /*IgnoreImplicit=*/true))
+      Target = CFT_Device;
+    S.CurCUDATargetCtx = {Target, K, VD};
+  }
+}
+
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
 Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
                                                   bool IgnoreImplicitHDAttr) {
-  // Code that lives outside a function is run on the host.
+  // Code that lives outside a function gets the target from CurCUDATargetCtx.
   if (D == nullptr)
-    return CFT_Host;
+    return CurCUDATargetCtx.Target;
 
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CFT_InvalidTarget;
@@ -230,6 +248,15 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
       (CallerTarget == CFT_Host && CalleeTarget == CFT_Global) ||
       (CallerTarget == CFT_Global && CalleeTarget == CFT_Device))
     return CFP_Native;
+
+  // HipStdPar mode is special, in that assessing whether a device side call to
+  // a host target is deferred to a subsequent pass, and cannot unambiguously be
+  // adjudicated in the AST, hence we optimistically allow them to pass here.
+  if (getLangOpts().HIPStdPar &&
+      (CallerTarget == CFT_Global || CallerTarget == CFT_Device ||
+       CallerTarget == CFT_HostDevice) &&
+      CalleeTarget == CFT_Host)
+    return CFP_HostDevice;
 
   // (d) HostDevice behavior depends on compilation mode.
   if (CallerTarget == CFT_HostDevice) {
@@ -785,7 +812,7 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   assert(Callee && "Callee may not be null.");
 
-  auto &ExprEvalCtx = ExprEvalContexts.back();
+  const auto &ExprEvalCtx = currentEvaluationContext();
   if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
     return true;
 
@@ -877,7 +904,7 @@ void Sema::CUDACheckLambdaCapture(CXXMethodDecl *Callee,
   if (!ShouldCheck || !Capture.isReferenceCapture())
     return;
   auto DiagKind = SemaDiagnosticBuilder::K_Deferred;
-  if (Capture.isVariableCapture()) {
+  if (Capture.isVariableCapture() && !getLangOpts().HIPStdPar) {
     SemaDiagnosticBuilder(DiagKind, Capture.getLocation(),
                           diag::err_capture_bad_target, Callee, *this)
         << Capture.getVariable();

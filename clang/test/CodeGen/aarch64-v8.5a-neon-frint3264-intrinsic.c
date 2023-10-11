@@ -62,3 +62,59 @@ float32x2_t test_vrnd64z_f32(float32x2_t a) {
 float32x4_t test_vrnd64zq_f32(float32x4_t a) {
   return vrnd64zq_f32(a);
 }
+
+// CHECK-LABEL: test_vrnd32x_f64
+// CHECK:  [[RND:%.*]] =  call <1 x double> @llvm.aarch64.neon.frint32x.v1f64(<1 x double> %a)
+// CHECK:  ret <1 x double> [[RND]]
+float64x1_t test_vrnd32x_f64(float64x1_t a) {
+  return vrnd32x_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd32xq_f64
+// CHECK:  [[RND:%.*]] =  call <2 x double> @llvm.aarch64.neon.frint32x.v2f64(<2 x double> %a)
+// CHECK:  ret <2 x double> [[RND]]
+float64x2_t test_vrnd32xq_f64(float64x2_t a) {
+  return vrnd32xq_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd32z_f64
+// CHECK:  [[RND:%.*]] =  call <1 x double> @llvm.aarch64.neon.frint32z.v1f64(<1 x double> %a)
+// CHECK:  ret <1 x double> [[RND]]
+float64x1_t test_vrnd32z_f64(float64x1_t a) {
+  return vrnd32z_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd32zq_f64
+// CHECK:  [[RND:%.*]] =  call <2 x double> @llvm.aarch64.neon.frint32z.v2f64(<2 x double> %a)
+// CHECK:  ret <2 x double> [[RND]]
+float64x2_t test_vrnd32zq_f64(float64x2_t a) {
+  return vrnd32zq_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd64x_f64
+// CHECK:  [[RND:%.*]] =  call <1 x double> @llvm.aarch64.neon.frint64x.v1f64(<1 x double> %a)
+// CHECK:  ret <1 x double> [[RND]]
+float64x1_t test_vrnd64x_f64(float64x1_t a) {
+  return vrnd64x_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd64xq_f64
+// CHECK:  [[RND:%.*]] =  call <2 x double> @llvm.aarch64.neon.frint64x.v2f64(<2 x double> %a)
+// CHECK:  ret <2 x double> [[RND]]
+float64x2_t test_vrnd64xq_f64(float64x2_t a) {
+  return vrnd64xq_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd64z_f64
+// CHECK:  [[RND:%.*]] =  call <1 x double> @llvm.aarch64.neon.frint64z.v1f64(<1 x double> %a)
+// CHECK:  ret <1 x double> [[RND]]
+float64x1_t test_vrnd64z_f64(float64x1_t a) {
+  return vrnd64z_f64(a);
+}
+
+// CHECK-LABEL: test_vrnd64zq_f64
+// CHECK:  [[RND:%.*]] =  call <2 x double> @llvm.aarch64.neon.frint64z.v2f64(<2 x double> %a)
+// CHECK:  ret <2 x double> [[RND]]
+float64x2_t test_vrnd64zq_f64(float64x2_t a) {
+  return vrnd64zq_f64(a);
+}

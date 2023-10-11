@@ -457,6 +457,23 @@ public:
     if (attributes.set(name, value) != value)
       attrs = attributes.getDictionary(getContext());
   }
+  void setDiscardableAttr(StringRef name, Attribute value) {
+    setDiscardableAttr(StringAttr::get(getContext(), name), value);
+  }
+
+  /// Remove the discardable attribute with the specified name if it exists.
+  /// Return the attribute that was erased, or nullptr if there was no attribute
+  /// with such name.
+  Attribute removeDiscardableAttr(StringAttr name) {
+    NamedAttrList attributes(attrs);
+    Attribute removedAttr = attributes.erase(name);
+    if (removedAttr)
+      attrs = attributes.getDictionary(getContext());
+    return removedAttr;
+  }
+  Attribute removeDiscardableAttr(StringRef name) {
+    return removeDiscardableAttr(StringAttr::get(getContext(), name));
+  }
 
   /// Return all of the discardable attributes on this operation.
   ArrayRef<NamedAttribute> getDiscardableAttrs() { return attrs.getValue(); }
@@ -698,6 +715,13 @@ public:
   /// If folding was unsuccessful, this function returns "failure".
   LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
 
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return name.hasPromiseOrImplementsInterface<InterfaceT>();
+  }
+
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
   template <template <typename T> class Trait>
@@ -875,8 +899,9 @@ public:
   /// matching the expectations of the properties for this operation. This is
   /// mostly useful for unregistered operations or used when parsing the
   /// generic format. An optional diagnostic can be passed in for richer errors.
-  LogicalResult setPropertiesFromAttribute(Attribute attr,
-                                           InFlightDiagnostic *diagnostic);
+  LogicalResult
+  setPropertiesFromAttribute(Attribute attr,
+                             function_ref<InFlightDiagnostic()> emitError);
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.

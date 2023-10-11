@@ -8,7 +8,7 @@
 
 #include "time_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
 // This is expected to be initialized by the runtime if the default value is
@@ -16,7 +16,7 @@ namespace __llvm_libc {
 // TODO: Once we have another use-case for this we should put it in a common
 // device environment struct.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq = clock_freq;
+    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq = clock_freq;
 #endif
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

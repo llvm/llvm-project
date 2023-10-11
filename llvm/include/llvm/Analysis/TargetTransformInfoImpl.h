@@ -69,6 +69,10 @@ public:
   }
 
   unsigned getInliningThresholdMultiplier() const { return 1; }
+  unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const { return 8; }
+  unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const {
+    return 8;
+  }
   unsigned adjustInliningThreshold(const CallBase *CB) const { return 0; }
   unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
     return 0;
@@ -1020,8 +1024,8 @@ public:
         BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
       } else {
         // If this operand is a scalable type, bail out early.
-        // TODO: handle scalable vectors
-        if (isa<ScalableVectorType>(TargetType))
+        // TODO: Make isLegalAddressingMode TypeSize aware.
+        if (TargetType->isScalableTy())
           return TTI::TCC_Basic;
         int64_t ElementSize =
             DL.getTypeAllocSize(GTI.getIndexedType()).getFixedValue();

@@ -1,4 +1,4 @@
-# RUN: llvm-mc --disassemble -arch=mips -mcpu=mips32r3 -mattr=+fp64 %s | \
+# RUN: llvm-mc --disassemble -triple=mips -mcpu=mips32r3 -mattr=+fp64 %s | \
 # RUN: FileCheck %s
 
 0x46 0x00 0x60 0x04 # CHECK: sqrt.s  $f0, $f12

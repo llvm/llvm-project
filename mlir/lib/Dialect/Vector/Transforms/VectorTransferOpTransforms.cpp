@@ -206,6 +206,10 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
       users.append(subView->getUsers().begin(), subView->getUsers().end());
       continue;
     }
+    if (auto collapsed = dyn_cast<memref::CollapseShapeOp>(user)) {
+      users.append(collapsed->getUsers().begin(), collapsed->getUsers().end());
+      continue;
+    }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
       continue;
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {
@@ -703,10 +707,10 @@ class RewriteScalarExtractOfTransferRead
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
-    for (const auto &it : llvm::enumerate(extractOp.getPosition())) {
-      int64_t offset = it.value();
-      int64_t idx =
-          newIndices.size() - extractOp.getPosition().size() + it.index();
+    for (auto [i, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
+      assert(pos.is<Attribute>() && "Unexpected non-constant index");
+      int64_t offset = cast<IntegerAttr>(pos.get<Attribute>()).getInt();
+      int64_t idx = newIndices.size() - extractOp.getNumIndices() + i;
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, extractOp.getLoc(),
           rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});

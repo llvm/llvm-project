@@ -8,6 +8,7 @@
 #include "Boolean.h"
 #include "Interp.h"
 #include "PrimType.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
 
@@ -40,7 +41,8 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   APSInt R;
   INT_TYPE_SWITCH(T, {
     T Val = Stk.peek<T>(Offset);
-    R = APSInt(APInt(T::bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+    R = APSInt(
+        APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
   });
 
   return R;
@@ -397,6 +399,16 @@ static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *Func,
+                                     const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Val = peekToAPSInt(S.Stk, ArgT);
+  pushInt(S, Val.popcount());
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -512,11 +524,112 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return Ret<PT_Float>(S, OpPC, Dummy);
     break;
 
+  case Builtin::BI__builtin_popcount:
+  case Builtin::BI__builtin_popcountl:
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__popcnt16: // Microsoft variants of popcount
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
+    if (interp__builtin_popcount(S, OpPC, Frame, F, Call))
+      return retInt(S, OpPC, Dummy);
+    break;
+
   default:
     return false;
   }
 
   return false;
+}
+
+bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
+                       llvm::ArrayRef<int64_t> ArrayIndices,
+                       int64_t &IntResult) {
+  CharUnits Result;
+  unsigned N = E->getNumComponents();
+  assert(N > 0);
+
+  unsigned ArrayIndex = 0;
+  QualType CurrentType = E->getTypeSourceInfo()->getType();
+  for (unsigned I = 0; I != N; ++I) {
+    const OffsetOfNode &Node = E->getComponent(I);
+    switch (Node.getKind()) {
+    case OffsetOfNode::Field: {
+      const FieldDecl *MemberDecl = Node.getField();
+      const RecordType *RT = CurrentType->getAs<RecordType>();
+      if (!RT)
+        return false;
+      RecordDecl *RD = RT->getDecl();
+      if (RD->isInvalidDecl())
+        return false;
+      const ASTRecordLayout &RL = S.getCtx().getASTRecordLayout(RD);
+      unsigned FieldIndex = MemberDecl->getFieldIndex();
+      assert(FieldIndex < RL.getFieldCount() && "offsetof field in wrong type");
+      Result += S.getCtx().toCharUnitsFromBits(RL.getFieldOffset(FieldIndex));
+      CurrentType = MemberDecl->getType().getNonReferenceType();
+      break;
+    }
+    case OffsetOfNode::Array: {
+      // When generating bytecode, we put all the index expressions as Sint64 on
+      // the stack.
+      int64_t Index = ArrayIndices[ArrayIndex];
+      const ArrayType *AT = S.getCtx().getAsArrayType(CurrentType);
+      if (!AT)
+        return false;
+      CurrentType = AT->getElementType();
+      CharUnits ElementSize = S.getCtx().getTypeSizeInChars(CurrentType);
+      Result += Index * ElementSize;
+      ++ArrayIndex;
+      break;
+    }
+    case OffsetOfNode::Base: {
+      const CXXBaseSpecifier *BaseSpec = Node.getBase();
+      if (BaseSpec->isVirtual())
+        return false;
+
+      // Find the layout of the class whose base we are looking into.
+      const RecordType *RT = CurrentType->getAs<RecordType>();
+      if (!RT)
+        return false;
+      const RecordDecl *RD = RT->getDecl();
+      if (RD->isInvalidDecl())
+        return false;
+      const ASTRecordLayout &RL = S.getCtx().getASTRecordLayout(RD);
+
+      // Find the base class itself.
+      CurrentType = BaseSpec->getType();
+      const RecordType *BaseRT = CurrentType->getAs<RecordType>();
+      if (!BaseRT)
+        return false;
+
+      // Add the offset to the base.
+      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
+      break;
+    }
+    case OffsetOfNode::Identifier:
+      llvm_unreachable("Dependent OffsetOfExpr?");
+    }
+  }
+
+  IntResult = Result.getQuantity();
+
+  return true;
+}
+
+bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, const APSInt &IntValue) {
+
+  const Record *R = Ptr.getRecord();
+  assert(R);
+  assert(R->getNumFields() == 1);
+
+  unsigned FieldOffset = R->getField(0u)->Offset;
+  const Pointer &FieldPtr = Ptr.atField(FieldOffset);
+  PrimType FieldT = *S.getContext().classify(FieldPtr.getType());
+
+  INT_TYPE_SWITCH(FieldT,
+                  FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
+  FieldPtr.initialize();
+  return true;
 }
 
 } // namespace interp

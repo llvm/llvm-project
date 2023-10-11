@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -sparse-storage-specifier-to-llvm --cse --canonicalize | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 // CHECK-LABEL:   func.func @sparse_metadata_init() -> !llvm.struct<(array<2 x i64>, array<3 x i64>)> {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i64

@@ -212,7 +212,14 @@ public:
   void MapCommonBlockAndCheckConflicts(
       SemanticsContext &context, const Symbol &common) {
     const Symbol *isInitialized{CommonBlockIsInitialized(common)};
-    auto [it, firstAppearance] = commonBlocks_.insert({common.name(),
+    // Merge common according to the name they will have in the object files.
+    // This allows merging BIND(C) and non BIND(C) common block instead of
+    // later crashing. This "merge" matches what ifort/gfortran/nvfortran are
+    // doing and what a linker would do if the definition were in distinct
+    // files.
+    std::string commonName{
+        GetCommonBlockObjectName(common, context.underscoring())};
+    auto [it, firstAppearance] = commonBlocks_.insert({commonName,
         isInitialized ? CommonBlockInfo{common, common}
                       : CommonBlockInfo{common, std::nullopt}});
     if (!firstAppearance) {
@@ -291,7 +298,8 @@ private:
     }
     return nullptr;
   }
-  std::map<SourceName, CommonBlockInfo> commonBlocks_;
+
+  std::map<std::string, CommonBlockInfo> commonBlocks_;
 };
 
 SemanticsContext::SemanticsContext(

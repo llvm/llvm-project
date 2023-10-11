@@ -691,6 +691,19 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
+
+  if (Subtarget.isTargetzOS()) {
+    struct RTLibCallMapping {
+      RTLIB::Libcall Code;
+      const char *Name;
+    };
+    static RTLibCallMapping RTLibCallCommon[] = {
+#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
+#include "ZOSLibcallNames.def"
+    };
+    for (auto &E : RTLibCallCommon)
+      setLibcallName(E.Code, E.Name);
+  }
 }
 
 bool SystemZTargetLowering::useSoftFloat() const {
@@ -1289,12 +1302,11 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   report_fatal_error("Invalid register name global variable");
 }
 
-void SystemZTargetLowering::
-LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
-                             std::vector<SDValue> &Ops,
-                             SelectionDAG &DAG) const {
+void SystemZTargetLowering::LowerAsmOperandForConstraint(
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
+    SelectionDAG &DAG) const {
   // Only support length 1 constraints for now.
-  if (Constraint.length() == 1) {
+  if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'I': // Unsigned 8-bit constant
       if (auto *C = dyn_cast<ConstantSDNode>(Op))
@@ -1803,13 +1815,6 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getStackSize();
-
-  if (Subtarget.isTargetXPLINK64())
-    // Although the XPLINK specifications for AMODE64 state that minimum size
-    // of the param area is minimum 32 bytes and no rounding is otherwise
-    // specified, we round this area in 64 bytes increments to be compatible
-    // with existing compilers.
-    NumBytes = std::max(64U, (unsigned)alignTo(NumBytes, 64));
 
   // Mark the start of the call.
   if (!IsTailCall)

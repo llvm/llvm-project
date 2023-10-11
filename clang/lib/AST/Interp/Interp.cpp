@@ -139,7 +139,7 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (!S.checkingPotentialConstantExpression()) {
+  if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
     const auto *VD = Ptr.getDeclDesc()->asValueDecl();
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_constexpr, 1) << VD;
@@ -213,6 +213,16 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                    CheckSubobjectKind CSK) {
+  if (!Ptr.isOnePastEnd())
+    return true;
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  return false;
+}
+
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isConst())
@@ -251,9 +261,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_uninit)
-        << AK << /*uninitialized=*/true;
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
+        << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }
   return false;
 }
@@ -458,6 +467,12 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
   // Check Fields in all bases
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
+    if (!P.isInitialized()) {
+      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+               diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType();
+      return false;
+    }
     Result &= CheckFieldsInitialized(S, OpPC, P, B.R);
   }
 
@@ -486,13 +501,25 @@ bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  // [expr.pre]p4:
+  //   If during the evaluation of an expression, the result is not
+  //   mathematically defined [...], the behavior is undefined.
+  // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  if (Result.isNan()) {
+    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
+        << /*NaN=*/true << S.Current->getRange(OpPC);
+    return S.noteUndefinedBehavior();
+  }
+
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (S.inConstantContext())
     return true;
 
-  const SourceInfo &E = S.Current->getSource(OpPC);
   FPOptions FPO = E.asExpr()->getFPFeaturesInEffect(S.Ctx.getLangOpts());
 
   if ((Status & APFloat::opInexact) &&
@@ -519,6 +546,38 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
   }
 
   return true;
+}
+
+/// We aleady know the given DeclRefExpr is invalid for some reason,
+/// now figure out why and print appropriate diagnostics.
+bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
+  const ValueDecl *D = DR->getDecl();
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  if (isa<ParmVarDecl>(D)) {
+    S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+    S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getType().isConstQualified()) {
+      S.FFDiag(E,
+               VD->getType()->isIntegralOrEnumerationType()
+                   ? diag::note_constexpr_ltor_non_const_int
+                   : diag::note_constexpr_ltor_non_constexpr,
+               1)
+          << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+      return false;
+    }
+
+    // const, but no initializer.
+    if (!VD->getAnyInitializer()) {
+      S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+      return false;
+    }
+  }
+
+  return false;
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

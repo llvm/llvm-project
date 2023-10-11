@@ -100,13 +100,6 @@ OPTIONS
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
 
-.. option:: --papertrail
-
- When running dsymutil as part of your build system, it can be desirable for
- warnings to be part of the end product, rather than just being emitted to the
- output stream. When enabled warnings are embedded in the linked DWARF debug
- information.
-
 .. option:: --remarks-drop-without-debug
 
  Drop remarks without valid debug locations. Without this flags, all remarks are kept.

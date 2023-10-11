@@ -55,12 +55,12 @@ kDevNull = "/dev/null"
 #
 # COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
 # empty as a result of conditinal substitution.
-kPdbgRegex = "%dbg\\(([^)'\"]*)\\)(.*)"
+kPdbgRegex = "%dbg\\(([^)'\"]*)\\)((?:.|\\n)*)"
 
 
 def buildPdbgCommand(msg, cmd):
     res = f"%dbg({msg}) {cmd}"
-    assert re.match(
+    assert re.fullmatch(
         kPdbgRegex, res
     ), f"kPdbgRegex expected to match actual %dbg usage: {res}"
     return res
@@ -1001,10 +1001,13 @@ def formatOutput(title, data, limit=None):
     else:
         msg = ""
     ndashes = 30
+    # fmt: off
     out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
     out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
     out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
+    # fmt: on
     return out
+
 
 # Normally returns out, err, exitCode, timeoutInfo.
 #
@@ -1014,14 +1017,13 @@ def formatOutput(title, data, limit=None):
 # If debug is False (set by some custom lit test formats that call this
 # function), out contains only stdout from the script, err contains only stderr
 # from the script, and there is no execution trace.
-def executeScriptInternal(test, litConfig, tmpBase, commands, cwd,
-                          debug=True):
+def executeScriptInternal(test, litConfig, tmpBase, commands, cwd, debug=True):
     cmds = []
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
         # to maximize debuggability.  However, custom lit test formats might not
         # always add it, so add a generic debug message in that case.
-        match = re.match(kPdbgRegex, ln)
+        match = re.fullmatch(kPdbgRegex, ln)
         if match:
             dbg = match.group(1)
             command = match.group(2)
@@ -1114,9 +1116,7 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd,
         # Add the command output, if redirected.
         for (name, path, data) in result.outputFiles:
             data = to_string(data.decode("utf-8", errors="replace"))
-            out += formatOutput(
-                f"redirected output from '{name}'", data, limit=1024
-            )
+            out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
             out += formatOutput("command stdout", result.stdout)
         if result.stderr.strip():
@@ -1144,24 +1144,9 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd,
 def executeScript(test, litConfig, tmpBase, commands, cwd):
     bashPath = litConfig.getBashPath()
     isWin32CMDEXE = litConfig.isWindows and not bashPath
-    coverage_index = 0  # Counter for coverage file index
     script = tmpBase + ".script"
     if isWin32CMDEXE:
         script += ".bat"
-
-    # Set unique LLVM_PROFILE_FILE for each run command
-    for j, ln in enumerate(commands):
-        match = re.match(kPdbgRegex, ln)
-        if match:
-            command = match.group(2)
-            commands[j] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
-            if litConfig.per_test_coverage:
-                # Extract the test case name from the test object
-                test_case_name = test.path_in_suite[-1]
-                test_case_name = test_case_name.rsplit(".", 1)[0]  # Remove the file extension
-                llvm_profile_file = f"{test_case_name}{coverage_index}.profraw"
-                commands[j] = f"export LLVM_PROFILE_FILE={llvm_profile_file} && {commands[j]}"
-                coverage_index += 1
 
     # Write script file
     mode = "w"
@@ -1173,7 +1158,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
                 command = match.group(2)
                 commands[i] = match.expand(
@@ -1183,10 +1168,42 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
+                dbg = match.group(1)
                 command = match.group(2)
-                commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
+                # Echo the debugging diagnostic to stderr.
+                #
+                # For that echo command, use 'set' commands to suppress the
+                # shell's execution trace, which would just add noise.  Suppress
+                # the shell's execution trace for the 'set' commands by
+                # redirecting their stderr to /dev/null.
+                if command:
+                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                else:
+                    msg = f"'{dbg}' has no command after substitutions"
+                commands[i] = (
+                    f"{{ set +x; }} 2>/dev/null && "
+                    f"echo {msg} >&2 && "
+                    f"{{ set -x; }} 2>/dev/null"
+                )
+                # Execute the command, if any.
+                #
+                # 'command' might be something like:
+                #
+                #   subcmd & PID=$!
+                #
+                # In that case, we need something like:
+                #
+                #   echo_dbg && { subcmd & PID=$!; }
+                #
+                # Without the '{ ...; }' enclosing the original 'command', '&'
+                # would put all of 'echo_dbg && subcmd' in the background.  This
+                # would cause 'echo_dbg' to execute at the wrong time, and a
+                # later kill of $PID would target the wrong process. We have
+                # seen the latter manage to terminate the shell running lit.
+                if command:
+                    commands[i] += f" && {{ {command}; }}"
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
         f.write(b"set -x;" if mode == "wb" else "set -x;")
@@ -2115,10 +2132,36 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     def runOnce(execdir):
+        # script is modified below (for litConfig.per_test_coverage, and for
+        # %dbg expansions).  runOnce can be called multiple times, but applying
+        # the modifications multiple times can corrupt script, so always modify
+        # a copy.
+        scriptCopy = script[:]
+        # Set unique LLVM_PROFILE_FILE for each run command
+        if litConfig.per_test_coverage:
+            # Extract the test case name from the test object, and remove the
+            # file extension.
+            test_case_name = test.path_in_suite[-1]
+            test_case_name = test_case_name.rsplit(".", 1)[0]
+            coverage_index = 0  # Counter for coverage file index
+            for i, ln in enumerate(scriptCopy):
+                match = re.fullmatch(kPdbgRegex, ln)
+                if match:
+                    dbg = match.group(1)
+                    command = match.group(2)
+                else:
+                    command = ln
+                profile = f"{test_case_name}{coverage_index}.profraw"
+                coverage_index += 1
+                command = f"export LLVM_PROFILE_FILE={profile}; {command}"
+                if match:
+                    command = buildPdbgCommand(dbg, command)
+                scriptCopy[i] = command
+
         if useExternalSh:
-            res = executeScript(test, litConfig, tmpBase, script, execdir)
+            res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
         else:
-            res = executeScriptInternal(test, litConfig, tmpBase, script, execdir)
+            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
         if isinstance(res, lit.Test.Result):
             return res
 

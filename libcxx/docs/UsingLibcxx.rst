@@ -43,6 +43,15 @@ the Standard but whose implementation is not complete or stable yet in libc++. T
 are disabled by default because they are neither API nor ABI stable. However, the
 ``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
+
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
+* ``std::chrono::tzdb`` and related time zone functionality
+* ``std::ranges::join_view``
+
 .. warning::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
@@ -178,7 +187,7 @@ and ``operator delete``. For example:
   #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
 
   void std::__libcpp_verbose_abort(char const* format, ...) {
-    va_list list;
+    std::va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
     va_end(list);
@@ -215,10 +224,13 @@ safety annotations.
   disabled and must be manually enabled by the user.
 
 **_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
+
+**_LIBCPP_ENABLE_SAFE_MODE**:
+  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
 
 **_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
@@ -369,6 +381,13 @@ which no dialect declares as such (See the second form described above).
 * ``byteswap``
 * ``cbrt``
 * ``ceil``
+* ``chrono::tzdb_list::begin``
+* ``chrono::tzdb_list::cbegin``
+* ``chrono::tzdb_list::cend``
+* ``chrono::tzdb_list::end``
+* ``chrono::get_tzdb_list``
+* ``chrono::get_tzdb``
+* ``chrono::remote_version``
 * ``clamp``
 * ``copysign``
 * ``count_if``
@@ -519,6 +538,36 @@ in their code base.
 
 In C++26 formatting pointers gained a type ``P`` and allows to use
 zero-padding. These options have been retroactively applied to C++20.
+
+Extensions to the C++23 modules ``std`` and ``std.compat``
+----------------------------------------------------------
+
+Like other major implementations, libc++ provides C++23 modules ``std`` and
+``std.compat`` in C++20 as an extension"
+
+Constant-initialized std::string
+--------------------------------
+
+As an implementation-specific optimization, ``std::basic_string`` (``std::string``,
+``std::wstring``, etc.) may either store the string data directly in the object, or else store a
+pointer to heap-allocated memory, depending on the length of the string.
+
+As of C++20, the constructors are now declared ``constexpr``, which permits strings to be used
+during constant-evaluation time. In libc++, as in other common implementations, it is also possible
+to constant-initialize a string object (e.g. via declaring a variable with ``constinit`` or
+``constexpr``), but, only if the string is short enough to not require a heap allocation. Reliance
+upon this should be discouraged in portable code, as the allowed length differs based on the
+standard-library implementation and also based on whether the platform uses 32-bit or 64-bit
+pointers.
+
+.. code-block:: cpp
+
+  // Non-portable: 11-char string works on 64-bit libc++, but not on 32-bit.
+  constinit std::string x = "hello world";
+
+  // Prefer to use string_view, or remove constinit/constexpr from the variable definition:
+  constinit std::string_view x = "hello world";
+  std::string_view y = "hello world";
 
 .. _turning-off-asan:
 

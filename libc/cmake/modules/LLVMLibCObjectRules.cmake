@@ -68,6 +68,11 @@ function(_get_common_compile_options output_var flags)
   if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
     list(APPEND compile_options "-nogpulib")
     list(APPEND compile_options "-fvisibility=hidden")
+
+    # Manually disable all standard include paths and include the resource
+    # directory to prevent system headers from being included.
+    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+    list(APPEND compile_options "-nostdinc")
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
@@ -146,7 +151,6 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
-  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
   if(NOT ADD_GPU_OBJ_CXX_STANDARD)
     set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -163,6 +167,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
         set(gpu_target_triple "amdgcn-amd-amdhsa")
         list(APPEND compile_options "-mcpu=${gpu_arch}")
+        list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
       elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
         set(gpu_target_triple "nvptx64-nvidia-cuda")
         get_nvptx_compile_options(nvptx_options ${gpu_arch})
@@ -183,13 +188,10 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       )
 
       target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
-      target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
+      target_include_directories(${gpu_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+      target_include_directories(${gpu_target_name} PRIVATE ${LIBC_SOURCE_DIR})
       target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
-      set_target_properties(
-        ${gpu_target_name}
-        PROPERTIES
-          CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
-      )
+      set_target_properties(${gpu_target_name} PROPERTIES CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD})
       if(ADD_GPU_OBJ_DEPENDS)
         add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
       endif()
@@ -204,7 +206,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
         list(APPEND packager_images
              --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
        endif()
-      list(APPEND gpu_target_names ${gpu_target_name})
+      list(APPEND gpu_target_objects ${input_file})
     endforeach()
 
     # After building the target for the desired GPUs we must package the output
@@ -216,7 +218,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     add_custom_command(OUTPUT ${packaged_output_name}
                        COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
                                ${packager_images} -o ${packaged_output_name}
-                       DEPENDS ${gpu_target_names} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
+                       DEPENDS ${gpu_target_objects} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
                        COMMENT "Packaging LLVM offloading binary")
     add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
     list(APPEND packaged_gpu_names ${packaged_target_name})
@@ -236,7 +238,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
-    DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
+    DEPENDS ${gpu_target_objects} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
   )
   set(stub_target_name ${fq_target_name}.__stub__)
   add_custom_target(${stub_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename})
@@ -255,7 +257,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${fq_target_name} PRIVATE
                            "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
   endforeach()
-  target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name}
                    ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
 
@@ -272,12 +275,15 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE
                            ${common_compile_options} --target=${LIBC_GPU_TARGET_TRIPLE})
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
+      target_compile_options(${internal_target_name} PRIVATE
+                             "SHELL:-Xclang -mcode-object-version=none"
+                             -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
       get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
       target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
     endif()
-    target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     if(full_deps_list)
       add_dependencies(${internal_target_name} ${full_deps_list})
     endif()
@@ -361,12 +367,8 @@ function(create_object_library fq_target_name)
       ${ADD_OBJECT_SRCS}
       ${ADD_OBJECT_HDRS}
     )
-    target_include_directories(
-      ${fq_target_name}
-      PRIVATE
-        ${LIBC_SOURCE_DIR}
-        ${LIBC_INCLUDE_DIR}
-    )
+    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     target_compile_options(${fq_target_name} PRIVATE ${compile_options})
   endif()
 
@@ -381,6 +383,8 @@ function(create_object_library fq_target_name)
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
+    # Add deps as link libraries to inherit interface compile and link options.
+    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
   endif()
 
   if(NOT ADD_OBJECT_CXX_STANDARD)
@@ -551,6 +555,8 @@ function(create_entrypoint_object fq_target_name)
     return()
   endif()
 
+  set(internal_target_name ${fq_target_name}.__internal__)
+
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
     # One can use alias targets setup OS/machine independent entrypoint targets.
@@ -578,10 +584,22 @@ function(create_entrypoint_object fq_target_name)
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
-    add_custom_target(${fq_target_name})
-    add_dependencies(${fq_target_name} ${fq_dep_name})
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
+    add_library(
+      ${internal_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file_raw}
+    )
+    add_dependencies(${internal_target_name} ${fq_dep_name})
+    add_library(
+      ${fq_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file}
+    )
+    add_dependencies(${fq_target_name} ${fq_dep_name} ${internal_target_name})
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
@@ -611,8 +629,6 @@ function(create_entrypoint_object fq_target_name)
     "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
-  set(internal_target_name ${fq_target_name}.__internal__)
-  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
@@ -649,8 +665,10 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
     target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
-    target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     add_dependencies(${internal_target_name} ${full_deps_list})
+    target_link_libraries(${internal_target_name} ${full_deps_list})
 
     add_library(
       ${fq_target_name}
@@ -662,8 +680,10 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
     target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
-    target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     add_dependencies(${fq_target_name} ${full_deps_list})
+    target_link_libraries(${fq_target_name} ${full_deps_list})
   endif()
 
   set_target_properties(

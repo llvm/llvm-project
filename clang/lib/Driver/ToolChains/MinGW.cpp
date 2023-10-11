@@ -709,8 +709,13 @@ void toolchains::MinGW::addClangTargetOptions(
     }
   }
 
-  if (Arg *A = DriverArgs.getLastArgNoClaim(options::OPT_mthreads))
-    A->ignoreTargetSpecific();
+  CC1Args.push_back("-fno-use-init-array");
+
+  for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
+                   options::OPT_mconsole, options::OPT_mdll}) {
+    if (Arg *A = DriverArgs.getLastArgNoClaim(Opt))
+      A->ignoreTargetSpecific();
+  }
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(

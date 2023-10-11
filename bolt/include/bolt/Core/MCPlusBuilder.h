@@ -29,6 +29,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -159,6 +160,7 @@ protected:
   const MCInstrAnalysis *Analysis;
   const MCInstrInfo *Info;
   const MCRegisterInfo *RegInfo;
+  const MCSubtargetInfo *STI;
 
   /// Map annotation name into an annotation index.
   StringMap<uint64_t> AnnotationNameIndexMap;
@@ -166,10 +168,15 @@ protected:
   /// Names of non-standard annotations.
   SmallVector<std::string, 8> AnnotationNames;
 
+  /// A mutex that is used to control parallel accesses to
+  /// AnnotationNameIndexMap and AnnotationsNames.
+  mutable llvm::sys::RWMutex AnnotationNameMutex;
+
   /// Allocate the TailCall annotation value. Clients of the target-specific
   /// MCPlusBuilder classes must use convert/lower/create* interfaces instead.
   void setTailCall(MCInst &Inst);
 
+public:
   /// Transfer annotations from \p SrcInst to \p DstInst.
   void moveAnnotations(MCInst &&SrcInst, MCInst &DstInst) const {
     assert(!getAnnotationInst(DstInst) &&
@@ -182,7 +189,6 @@ protected:
     removeAnnotationInst(SrcInst);
   }
 
-public:
   /// Return iterator range covering def operands.
   iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
     return make_range(Inst.begin(),
@@ -326,8 +332,8 @@ public:
 
 public:
   MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                const MCRegisterInfo *RegInfo)
-      : Analysis(Analysis), Info(Info), RegInfo(RegInfo) {
+                const MCRegisterInfo *RegInfo, const MCSubtargetInfo *STI)
+      : Analysis(Analysis), Info(Info), RegInfo(RegInfo), STI(STI) {
     // Initialize the default annotation allocator with id 0
     AnnotationAllocators.emplace(0, AnnotationAllocator());
     MaxAllocatorId++;
@@ -437,7 +443,7 @@ public:
   virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
 
   /// Return true of the instruction is of pseudo kind.
-  bool isPseudo(const MCInst &Inst) const {
+  virtual bool isPseudo(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isPseudo();
   }
 
@@ -619,6 +625,11 @@ public:
 
   virtual bool mayStore(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).mayStore();
+  }
+
+  virtual bool isAArch64Exclusive(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual bool isCleanRegXOR(const MCInst &Inst) const {
@@ -1168,6 +1179,13 @@ public:
 
   /// Remove offset annotation.
   bool clearOffset(MCInst &Inst);
+
+  /// Return the label of \p Inst, if available.
+  std::optional<MCSymbol *> getLabel(const MCInst &Inst) const;
+
+  /// Set the label of \p Inst. This label will be emitted right before \p Inst
+  /// is emitted to MCStreamer.
+  bool setLabel(MCInst &Inst, MCSymbol *Label, AllocatorIdTy AllocatorId = 0);
 
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
@@ -1775,6 +1793,7 @@ public:
 
   /// Return annotation index matching the \p Name.
   std::optional<unsigned> getAnnotationIndex(StringRef Name) const {
+    std::shared_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     auto AI = AnnotationNameIndexMap.find(Name);
     if (AI != AnnotationNameIndexMap.end())
       return AI->second;
@@ -1784,10 +1803,10 @@ public:
   /// Return annotation index matching the \p Name. Create a new index if the
   /// \p Name wasn't registered previously.
   unsigned getOrCreateAnnotationIndex(StringRef Name) {
-    auto AI = AnnotationNameIndexMap.find(Name);
-    if (AI != AnnotationNameIndexMap.end())
-      return AI->second;
+    if (std::optional<unsigned> Index = getAnnotationIndex(Name))
+      return *Index;
 
+    std::unique_lock<llvm::sys::RWMutex> Lock(AnnotationNameMutex);
     const unsigned Index =
         AnnotationNameIndexMap.size() + MCPlus::MCAnnotation::kGeneric;
     AnnotationNameIndexMap.insert(std::make_pair(Name, Index));
@@ -2068,15 +2087,18 @@ public:
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
                                       const MCInstrInfo *,
-                                      const MCRegisterInfo *);
+                                      const MCRegisterInfo *,
+                                      const MCSubtargetInfo *);
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
                                           const MCInstrInfo *,
-                                          const MCRegisterInfo *);
+                                          const MCRegisterInfo *,
+                                          const MCSubtargetInfo *);
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
                                         const MCInstrInfo *,
-                                        const MCRegisterInfo *);
+                                        const MCRegisterInfo *,
+                                        const MCSubtargetInfo *);
 
 } // namespace bolt
 } // namespace llvm

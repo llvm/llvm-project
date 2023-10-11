@@ -8,6 +8,7 @@
 
 #include "Solaris.h"
 #include "CommonArgs.h"
+#include "Gnu.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
@@ -32,20 +33,8 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfoList &Inputs,
                                       const ArgList &Args,
                                       const char *LinkingOutput) const {
-  claimNoWarnArgs(Args);
-  ArgStringList CmdArgs;
-
-  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
-
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
-
-  for (const auto &II : Inputs)
-    CmdArgs.push_back(II.getFilename());
-
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs, Output));
+  // Just call the Gnu version, which enforces gas on Solaris.
+  gnutools::Assembler::ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
 }
 
 bool solaris::isLinkerGnuLd(const ToolChain &TC, const ArgList &Args) {
@@ -98,6 +87,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
+  const Driver &D = getToolChain().getDriver();
   const bool IsPIE = getPIE(Args, getToolChain());
   ArgStringList CmdArgs;
   bool LinkerIsGnuLd = isLinkerGnuLd(getToolChain(), Args);
@@ -171,11 +161,10 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_rdynamic);
   }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
@@ -220,7 +209,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_L, options::OPT_T_Group, options::OPT_r});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
@@ -228,8 +217,11 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    if (getToolChain().ShouldLinkCXXStdlib(Args))
-      getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (D.CCCIsCXX()) {
+      if (getToolChain().ShouldLinkCXXStdlib(Args))
+        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
     if (Args.hasArg(options::OPT_fstack_protector) ||
         Args.hasArg(options::OPT_fstack_protector_strong) ||
         Args.hasArg(options::OPT_fstack_protector_all)) {
@@ -244,11 +236,12 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-latomic");
       addAsNeededOption(getToolChain(), Args, CmdArgs, false);
     }
+    addAsNeededOption(getToolChain(), Args, CmdArgs, true);
     CmdArgs.push_back("-lgcc_s");
+    addAsNeededOption(getToolChain(), Args, CmdArgs, false);
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
-      CmdArgs.push_back("-lm");
     }
     const SanitizerArgs &SA = getToolChain().getSanitizerArgs(Args);
     if (NeedsSanitizerDeps) {

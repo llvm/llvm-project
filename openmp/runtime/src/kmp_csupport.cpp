@@ -343,7 +343,6 @@ Perform a fork only if the condition is true.
 void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
                          kmp_int32 cond, void *args) {
   int gtid = __kmp_entry_gtid();
-  int zero = 0;
   if (cond) {
     if (args)
       __kmpc_fork_call(loc, argc, microtask, args);
@@ -352,10 +351,29 @@ void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   } else {
     __kmpc_serialized_parallel(loc, gtid);
 
+#if OMPT_SUPPORT
+    void *exit_frame_ptr;
+#endif
+
     if (args)
-      microtask(&gtid, &zero, args);
+      __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
+                             /*npr=*/0,
+                             /*argc=*/1, &args
+#if OMPT_SUPPORT
+                             ,
+                             &exit_frame_ptr
+#endif
+      );
     else
-      microtask(&gtid, &zero);
+      __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
+                             /*npr=*/0,
+                             /*argc=*/0,
+                             /*args=*/nullptr
+#if OMPT_SUPPORT
+                             ,
+                             &exit_frame_ptr
+#endif
+      );
 
     __kmpc_end_serialized_parallel(loc, gtid);
   }

@@ -81,19 +81,18 @@ define void @func_large() !prof !0 {
 ; CHECK: b7
 ; CHECK: b9
 ;
-; An expected output with chain-split-threshold=1 (disabling splitting) -- the
-; increase of the layout score is smaller, ~7%:
+; An expected output with chain-split-threshold=1 (disabling split point enumeration)
 ;
 ; CHECK2-LABEL: Applying ext-tsp layout
 ; CHECK2:   original  layout score: 9171074274.27
-; CHECK2:   optimized layout score: 9810644873.57
+; CHECK2:   optimized layout score: 10844307310.87
 ; CHECK2: b0
 ; CHECK2: b2
 ; CHECK2: b3
 ; CHECK2: b4
 ; CHECK2: b5
-; CHECK2: b1
 ; CHECK2: b8
+; CHECK2: b1
 ; CHECK2: b6
 ; CHECK2: b7
 ; CHECK2: b9

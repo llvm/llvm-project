@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK: if r2 s> r1 goto
 ; CHECK: call 1

@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
-#ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
-#   define _LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS
-#endif
-
 #include <__assert>
+#include <__config>
 #include <__verbose_abort>
 #include <cerrno>
 #include <cstdio>
@@ -28,36 +24,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// class error_category
-
-#if defined(_LIBCPP_ERROR_CATEGORY_DEFINE_LEGACY_INLINE_FUNCTIONS)
-error_category::error_category() noexcept
-{
-}
-#endif
-
-error_category::~error_category() noexcept
-{
-}
-
-error_condition
-error_category::default_error_condition(int ev) const noexcept
-{
-    return error_condition(ev, *this);
-}
-
-bool
-error_category::equivalent(int code, const error_condition& condition) const noexcept
-{
-    return default_error_condition(code) == condition;
-}
-
-bool
-error_category::equivalent(const error_code& code, int condition) const noexcept
-{
-    return *this == code.category() && code.value() == condition;
-}
 
 namespace {
 #if !defined(_LIBCPP_HAS_NO_THREADS)
@@ -186,8 +152,13 @@ __generic_error_category::message(int ev) const
 const error_category&
 generic_category() noexcept
 {
-    static __generic_error_category s;
-    return s;
+    union AvoidDestroyingGenericCategory {
+        __generic_error_category generic_error_category;
+        constexpr explicit AvoidDestroyingGenericCategory() : generic_error_category() {}
+        ~AvoidDestroyingGenericCategory() {}
+    };
+    constinit static AvoidDestroyingGenericCategory helper;
+    return helper.generic_error_category;
 }
 
 class _LIBCPP_HIDDEN __system_error_category
@@ -228,8 +199,13 @@ __system_error_category::default_error_condition(int ev) const noexcept
 const error_category&
 system_category() noexcept
 {
-    static __system_error_category s;
-    return s;
+    union AvoidDestroyingSystemCategory {
+        __system_error_category system_error_category;
+        constexpr explicit AvoidDestroyingSystemCategory() : system_error_category() {}
+        ~AvoidDestroyingSystemCategory() {}
+    };
+    constinit static AvoidDestroyingSystemCategory helper;
+    return helper.system_error_category;
 }
 
 // error_condition
@@ -290,8 +266,15 @@ system_error::~system_error() noexcept
 {
 }
 
-void __throw_system_error(int ev, const char* what_arg) {
-  std::__throw_system_error(error_code(ev, system_category()), what_arg);
+void
+__throw_system_error(int ev, const char* what_arg)
+{
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+    std::__throw_system_error(error_code(ev, system_category()), what_arg);
+#else
+    // The above could also handle the no-exception case, but for size, avoid referencing system_category() unnecessarily.
+    _LIBCPP_VERBOSE_ABORT("system_error was thrown in -fno-exceptions mode with error %i and message \"%s\"", ev, what_arg);
+#endif
 }
 
 _LIBCPP_END_NAMESPACE_STD

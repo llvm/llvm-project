@@ -384,12 +384,19 @@ body:             |
   ; INDIRECT:        TBNZW
   ; INDIRECT-SAME:         %bb.2
   ; INDIRECT:      [[TRAMP2]]
-  ; INDIRECT-NEXT:   successors: %bb.3
+  ; INDIRECT-NEXT:   successors: %bb.6
   ; INDIRECT:      bb.2.end:
   ; INDIRECT:        TCRETURNdi
   ; INDIRECT:      [[TRAMP1]].entry:
-  ; INDIRECT:        successors: %bb.3
-  ; INDIRECT-NOT:  bbsections Cold
+  ; INDIRECT-NEXT:   successors: %[[TRAMP1_SPILL:bb.[0-9]+]]
+  ; INDIRECT:      [[TRAMP1_SPILL]].entry:
+  ; INDIRECT-NEXT:   successors: %[[TRAMP1_RESTORE:bb.[0-9]+]]
+  ; INDIRECT:        early-clobber $sp = STRXpre $[[SPILL_REGISTER:x[0-9]+]], $sp, -16
+  ; INDIRECT-NEXT:   B %[[TRAMP1_RESTORE:bb.[0-9]+]]
+  ; INDIRECT:      [[TRAMP1_RESTORE]].cold (bbsections Cold):
+  ; INDIRECT-NEXT:   successors: %bb.3
+  ; INDIRECT-NEXT:   {{ $}}
+  ; INDIRECT-NEXT:   early-clobber $sp, $[[SPILL_REGISTER]] = LDRXpost $sp, 16
   ; INDIRECT:      bb.3.cold (bbsections Cold):
   ; INDIRECT:        TCRETURNdi
 
@@ -433,26 +440,30 @@ machineFunctionInfo:
   hasRedZone:      false
 body:             |
   ; INDIRECT-LABEL: name: x16_used_cold_to_hot
-  ; COM: Pre-commit to record the behavior of relaxing a "cold-to-hot"
-  ; COM: unconditional branch across which x16 is taken but there is
-  ; COM: still a free register.
+  ; COM: Check that unconditional branches from the cold section to
+  ; COM: the hot section manually insert indirect branches if x16
+  ; COM: isn't available but there is still a free register.
   ; INDIRECT:       bb.0.entry:
   ; INDIRECT-NEXT:    successors: %bb.1
   ; INDIRECT-SAME:                     , %bb.3
   ; INDIRECT:         TBZW killed renamable $w8, 0, %bb.1
   ; INDIRECT-NEXT:    {{ $}}
   ; INDIRECT-NEXT:  bb.3.entry:
-  ; INDIRECT-NEXT:    successors: %bb.2
+  ; INDIRECT-NEXT:    successors: %bb.4
   ; INDIRECT-NEXT:    liveins: $x16
   ; INDIRECT-NEXT:    {{ $}}
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER3:x[0-9]+]] = ADRP target-flags(aarch64-page) <mcsymbol x16_used_cold_to_hot.cold>
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER3]] = ADDXri $[[SCAVENGED_REGISTER3]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol x16_used_cold_to_hot.cold>, 0
-  ; INDIRECT-NEXT:    BR $[[SCAVENGED_REGISTER3]]
+  ; INDIRECT-NEXT:    early-clobber $sp = STRXpre $[[SPILL_REGISTER]], $sp, -16
+  ; INDIRECT-NEXT:    B %bb.4
   ; INDIRECT:       bb.1.hot:
   ; INDIRECT-NEXT:    liveins: $x16
   ; INDIRECT:           killed $x16
   ; INDIRECT:         RET undef $lr
-  ; INDIRECT:       bb.2.cold (bbsections Cold):
+  ; INDIRECT:       bb.4.cold (bbsections Cold):
+  ; INDIRECT-NEXT:    successors: %bb.2
+  ; INDIRECT-NEXT:    {{ $}}
+  ; INDIRECT-NEXT:    early-clobber $sp, $[[SPILL_REGISTER]] = LDRXpost $sp, 16
+  ; INDIRECT-NEXT:    {{ $}}
+  ; INDIRECT-NEXT:  bb.2.cold (bbsections Cold):
   ; INDIRECT-NEXT:    successors: %bb.5
   ; INDIRECT-NEXT:    liveins: $x16
   ; INDIRECT-NEXT:    {{ $}}
@@ -462,9 +473,9 @@ body:             |
   ; INDIRECT-NEXT:    successors: %bb.1
   ; INDIRECT-NEXT:    liveins: $x16
   ; INDIRECT-NEXT:    {{ $}}
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER4:x[0-9]+]] = ADRP target-flags(aarch64-page) <mcsymbol .LBB5_1>
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER4]] = ADDXri $[[SCAVENGED_REGISTER4]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol .LBB5_1>, 0
-  ; INDIRECT-NEXT:    BR $[[SCAVENGED_REGISTER4]]
+  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER:x[0-9]+]] = ADRP target-flags(aarch64-page) <mcsymbol .LBB5_1>
+  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER]] = ADDXri $[[SCAVENGED_REGISTER]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol .LBB5_1>, 0
+  ; INDIRECT-NEXT:    BR $[[SCAVENGED_REGISTER]]
 
   bb.0.entry:
     successors: %bb.1, %bb.2
@@ -532,8 +543,10 @@ machineFunctionInfo:
   hasRedZone:      false
 body:             |
   ; INDIRECT-LABEL: name: all_used_cold_to_hot
-  ; COM: Pre-commit to record the behavior of relaxing a "cold-to-hot"
-  ; COM: unconditional branch across which there are no free registers.
+  ; COM: Check that unconditional branches from the cold section to
+  ; COM: the hot section spill x16 and defer indirect branch
+  ; COM: insertion to the linker if there are no free general-purpose
+  ; COM: registers.
   ; INDIRECT:      bb.0.entry:
   ; INDIRECT-NEXT:     successors: %bb.3
   ; INDIRECT-NEXT:     liveins: $fp, $x27, $x28, $x25, $x26, $x23, $x24, $x21, $x22, $x19, $x20
@@ -545,17 +558,7 @@ body:             |
   ; INDIRECT-SAME:              $x9,  $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19,
   ; INDIRECT-SAME:              $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28
   ; INDIRECT-NEXT:     {{ $}}
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER5:x[0-9]+]] = ADRP target-flags(aarch64-page) <mcsymbol all_used_cold_to_hot.cold>
-  ; INDIRECT-NEXT:    $[[SCAVENGED_REGISTER5]] = ADDXri $[[SCAVENGED_REGISTER5]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol all_used_cold_to_hot.cold>, 0
-  ; INDIRECT-NEXT:    BR $[[SCAVENGED_REGISTER5]]
-  ; INDIRECT-NEXT:     {{ $}}
-  ; INDIRECT-NEXT:    bb.6.exit:
-  ; INDIRECT-NEXT:    successors: %bb.1
-  ; INDIRECT-NEXT:    liveins: $x0,  $x1,  $x2,  $x3,  $x4,  $x5,  $x6,  $x7,  $x8,  $x9,
-  ; INDIRECT-SAME:             $x10, $x11, $x12, $x13, $x14, $x15, $x17, $x18, $x19, $x20,
-  ; INDIRECT-SAME:             $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28
-  ; INDIRECT-NEXT:     {{ $}}
-  ; INDIRECT-NEXT:    early-clobber $sp, $[[SPILL_REGISTER:x[0-9]+]] = LDRXpost $sp, 16
+  ; INDIRECT-NEXT:     B %bb.2
   ; INDIRECT-NEXT:     {{ $}}
   ; INDIRECT-NEXT:   bb.1.exit:
   ; INDIRECT-NEXT:     liveins: $x0,  $x1,  $x2,  $x3,  $x4,  $x5,  $x6,  $x7,  $x8,  $x9,
@@ -564,6 +567,16 @@ body:             |
   ; INDIRECT-NEXT:     {{ $}}
   ; INDIRECT-COUNT-30: INLINEASM &"# reg use $0", 1 /* sideeffect attdialect */, 9 /* reguse */, killed
   ; INDIRECT:          RET undef $lr
+  ; INDIRECT-NEXT:     {{ $}}
+  ; INDIRECT-NEXT:   bb.6.exit:
+  ; INDIRECT-NEXT:     successors: %bb.7(0x80000000)
+  ; INDIRECT-NEXT:     {{ $}}
+  ; INDIRECT-NEXT:     early-clobber $sp, $[[SPILL_REGISTER]] = LDRXpost $sp, 16
+  ; INDIRECT-NEXT:     {{ $}}
+  ; INDIRECT-NEXT:   bb.7.exit:
+  ; INDIRECT-NEXT:     successors: %bb.1(0x80000000)
+  ; INDIRECT-NEXT:     {{ $}}
+  ; INDIRECT-NEXT:     B %bb.1
   ; INDIRECT-NEXT:     {{ $}}
   ; INDIRECT-NEXT:   bb.2.cold (bbsections Cold):
   ; INDIRECT-NEXT:     successors: %bb.5
@@ -580,9 +593,7 @@ body:             |
   ; INDIRECT-SAME:              $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28
   ; INDIRECT-NEXT:     {{ $}}
   ; INDIRECT-NEXT:     early-clobber $sp = STRXpre $[[SPILL_REGISTER]], $sp, -16
-  ; INDIRECT-NEXT:     $[[SPILL_REGISTER]] = ADRP target-flags(aarch64-page) <mcsymbol .LBB6_6>
-  ; INDIRECT-NEXT:     $[[SPILL_REGISTER]] = ADDXri $[[SPILL_REGISTER]], target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol .LBB6_6>, 0
-  ; INDIRECT-NEXT:     BR $[[SPILL_REGISTER]]
+  ; INDIRECT-NEXT:     B %bb.6
 
   bb.0.entry:
     successors: %bb.2

@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_STDC_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
 
 #include <errno.h> // For error macros
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(0, "Success"),
@@ -22,6 +22,6 @@ LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
     MsgMapping(EILSEQ, "Invalid or incomplete multibyte or wide character"),
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_TABLES_LINUX_ERRORS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_ERRORS_H

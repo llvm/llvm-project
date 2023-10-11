@@ -223,14 +223,9 @@ def FeatureEnableSelectOptimize : SubtargetFeature<
     "enable-select-opt", "EnableSelectOptimize", "true",
     "Enable the select optimize pass for select loop heuristics">;
 
-def FeatureCustomCheapAsMoveHandling : SubtargetFeature<"custom-cheap-as-move",
-    "HasCustomCheapAsMoveHandling", "true",
-    "Use custom handling of cheap instructions">;
-
 def FeatureExynosCheapAsMoveHandling : SubtargetFeature<"exynos-cheap-as-move",
     "HasExynosCheapAsMoveHandling", "true",
-    "Use Exynos specific handling of cheap instructions",
-    [FeatureCustomCheapAsMoveHandling]>;
+    "Use Exynos specific handling of cheap instructions">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
@@ -299,6 +294,10 @@ def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic">;
+
+def FeatureStorePairSuppress : SubtargetFeature<
+    "store-pair-suppress", "EnableStorePairSuppress", "true",
+    "Enable Store Pair Suppression heuristics">;
 
 def FeatureForce32BitJumpTables
    : SubtargetFeature<"force-32bit-jump-tables", "Force32BitJumpTables", "true",
@@ -570,6 +569,18 @@ def FeatureD128 : SubtargetFeature<"d128", "HasD128",
     "and Instructions (FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128)",
     [FeatureLSE128]>;
 
+def FeatureDisableLdp : SubtargetFeature<"disable-ldp", "HasDisableLdp",
+    "true", "Do not emit ldp">;
+
+def FeatureDisableStp : SubtargetFeature<"disable-stp", "HasDisableStp",
+    "true", "Do not emit stp">;
+
+def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedOnly",
+    "true", "In order to emit ldp, first check if the load will be aligned to 2 * element_size">;
+
+def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
+    "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -782,7 +793,6 @@ def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
                                    FeatureBalanceFPOps,
-                                   FeatureCustomCheapAsMoveHandling,
                                    FeaturePostRAScheduler]>;
 
 def TuneA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
@@ -803,7 +813,6 @@ def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", [
                                    FeatureFuseAES,
                                    FeatureBalanceFPOps,
-                                   FeatureCustomCheapAsMoveHandling,
                                    FeatureFuseAdrpAdd,
                                    FeatureFuseLiterals,
                                    FeaturePostRAScheduler,
@@ -947,8 +956,8 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeaturePostRAScheduler,
                                  FeatureAggressiveFMA,
                                  FeatureArithmeticBccFusion,
-                                 FeaturePredictableSelectIsExpensive
-                                 ]>;
+                                 FeatureStorePairSuppress,
+                                 FeaturePredictableSelectIsExpensive]>;
 
 def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
                                   "Nvidia Carmel processors">;
@@ -962,10 +971,10 @@ def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     FeatureArithmeticCbzFusion,
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAES, FeatureFuseCryptoEOR,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
                                     FeatureZCZeroing,
-                                    FeatureZCZeroingFPWorkaround]
-                                    >;
+                                    FeatureZCZeroingFPWorkaround]>;
 
 def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
                                     "Apple A10", [
@@ -975,9 +984,9 @@ def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing]
-                                    >;
+                                    FeatureZCZeroing]>;
 
 def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
                                     "Apple A11", [
@@ -987,9 +996,9 @@ def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing]
-                                    >;
+                                    FeatureZCZeroing]>;
 
 def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
                                     "Apple A12", [
@@ -999,9 +1008,9 @@ def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing]
-                                    >;
+                                    FeatureZCZeroing]>;
 
 def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                     "Apple A13", [
@@ -1011,9 +1020,9 @@ def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing]
-                                    >;
+                                    FeatureZCZeroing]>;
 
 def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     "Apple A14", [
@@ -1029,6 +1038,7 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseAdrpAdd,
                                     FeatureFuseLiterals,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
                                     FeatureZCZeroing]>;
 
@@ -1044,9 +1054,9 @@ def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
                                     FeatureFuseCCSelect,
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing
-                                    ]>;
+                                    FeatureZCZeroing]>;
 
 def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     "Apple A16", [
@@ -1060,9 +1070,9 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureFuseCCSelect,
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
+                                    FeatureStorePairSuppress,
                                     FeatureZCRegMove,
-                                    FeatureZCZeroing
-                                    ]>;
+                                    FeatureZCZeroing]>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -1073,6 +1083,7 @@ def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeatureFuseCCSelect,
                                      FeatureFuseAdrpAdd,
                                      FeatureFuseLiterals,
+                                     FeatureStorePairSuppress,
                                      FeatureAddrLSLFast,
                                      FeatureALULSLFast,
                                      FeaturePostRAScheduler,
@@ -1091,6 +1102,7 @@ def TuneExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
                                      FeatureFuseCCSelect,
                                      FeatureFuseAdrpAdd,
                                      FeatureFuseLiterals,
+                                     FeatureStorePairSuppress,
                                      FeatureAddrLSLFast,
                                      FeatureALULSLFast,
                                      FeaturePostRAScheduler,
@@ -1098,24 +1110,22 @@ def TuneExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
 
 def TuneKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [
-                                   FeatureCustomCheapAsMoveHandling,
-                                   FeaturePostRAScheduler,
-                                   FeaturePredictableSelectIsExpensive,
-                                   FeatureZCZeroing,
-                                   FeatureAddrLSLFast,
-                                   FeatureALULSLFast]
-                                   >;
-
-def TuneFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
-                                   "Qualcomm Falkor processors", [
-                                   FeatureCustomCheapAsMoveHandling,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureZCZeroing,
                                    FeatureAddrLSLFast,
                                    FeatureALULSLFast,
-                                   FeatureSlowSTRQro
-                                   ]>;
+                                   FeatureStorePairSuppress]>;
+
+def TuneFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
+                                   "Qualcomm Falkor processors", [
+                                   FeaturePostRAScheduler,
+                                   FeaturePredictableSelectIsExpensive,
+                                   FeatureZCZeroing,
+                                   FeatureStorePairSuppress,
+                                   FeatureAddrLSLFast,
+                                   FeatureALULSLFast,
+                                   FeatureSlowSTRQro]>;
 
 def TuneNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily", "NeoverseE1",
                                       "Neoverse E1 ARM processors", [
@@ -1176,10 +1186,10 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
 
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
-                                   FeatureCustomCheapAsMoveHandling,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureZCZeroing,
+                                   FeatureStorePairSuppress,
                                    FeatureAddrLSLFast,
                                    FeatureALULSLFast]>;
 
@@ -1188,6 +1198,7 @@ def TuneThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily", "Thund
                                           FeatureAggressiveFMA,
                                           FeatureArithmeticBccFusion,
                                           FeaturePostRAScheduler,
+                                          FeatureStorePairSuppress,
                                           FeaturePredictableSelectIsExpensive]>;
 
 def TuneThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
@@ -1198,35 +1209,40 @@ def TuneThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
                                            FeaturePostRAScheduler,
                                            FeaturePredictableSelectIsExpensive,
                                            FeatureBalanceFPOps,
+                                           FeatureStorePairSuppress,
                                            FeatureStrictAlign]>;
 
 def TuneThunderX : SubtargetFeature<"thunderx", "ARMProcFamily", "ThunderX",
                                     "Cavium ThunderX processors", [
                                     FeaturePostRAScheduler,
+                                    FeatureStorePairSuppress,
                                     FeaturePredictableSelectIsExpensive]>;
 
 def TuneThunderXT88 : SubtargetFeature<"thunderxt88", "ARMProcFamily",
                                        "ThunderXT88",
                                        "Cavium ThunderX processors", [
                                        FeaturePostRAScheduler,
+                                       FeatureStorePairSuppress,
                                        FeaturePredictableSelectIsExpensive]>;
 
 def TuneThunderXT81 : SubtargetFeature<"thunderxt81", "ARMProcFamily",
                                        "ThunderXT81",
                                        "Cavium ThunderX processors", [
                                        FeaturePostRAScheduler,
+                                       FeatureStorePairSuppress,
                                        FeaturePredictableSelectIsExpensive]>;
 
 def TuneThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
                                        "ThunderXT83",
                                        "Cavium ThunderX processors", [
                                        FeaturePostRAScheduler,
+                                       FeatureStorePairSuppress,
                                        FeaturePredictableSelectIsExpensive]>;
 
 def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   "HiSilicon TS-V110 processors", [
-                                  FeatureCustomCheapAsMoveHandling,
                                   FeatureFuseAES,
+                                  FeatureStorePairSuppress,
                                   FeaturePostRAScheduler]>;
 
 def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
@@ -1239,7 +1255,10 @@ def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    FeatureArithmeticBccFusion,
                                    FeatureCmpBccFusion,
                                    FeatureFuseAddress,
-                                   FeatureFuseLiterals]>;
+                                   FeatureFuseLiterals,
+                                   FeatureStorePairSuppress,
+                                   FeatureLdpAlignedOnly,
+                                   FeatureStpAlignedOnly]>;
 
 def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     "Ampere Computing Ampere-1A processors", [
@@ -1252,7 +1271,10 @@ def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     FeatureCmpBccFusion,
                                     FeatureFuseAddress,
                                     FeatureFuseLiterals,
-                                    FeatureFuseLiterals]>;
+                                    FeatureFuseLiterals,
+                                    FeatureStorePairSuppress,
+                                    FeatureLdpAlignedOnly,
+                                    FeatureStpAlignedOnly]>;
 
 def ProcessorFeatures {
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,

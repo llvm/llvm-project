@@ -5,7 +5,9 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
@@ -375,6 +377,25 @@ endif()
 if(MSVC)
   # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+
+  # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
+  # Since we're using CMAKE_MSVC_RUNTIME_LIBRARY (CMP0091 set to NEW),
+  # these options shouldn't be included in these flags variables. However,
+  # package managers that don't know which mechanism is used for passing
+  # CRT choice flags might be passing them both ways - which leads to
+  # duplicate CRT choice options. Thus make sure to strip out these flags
+  # from these variables, when we're forcing a CRT choice other than what
+  # the user requested here.
+  foreach(flag_var
+    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+    CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+    CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REGEX REPLACE "[/-]M[DT]d" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]MD" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]D_DEBUG" "" ${flag_var} "${${flag_var}}")
+  endforeach()
+
   append_list_if(COMPILER_RT_HAS_Oy_FLAG /Oy- SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_GS_FLAG /GS- SANITIZER_COMMON_CFLAGS)
 
@@ -708,13 +729,15 @@ if(COMPILER_RT_USE_LIBCXX)
   endif()
 endif()
 
-set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
-if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
-  set(COMPILER_RT_HAS_LLD TRUE)
-else()
-  set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/../lld)
-  if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)
+if (LINKER_IS_LLD OR LLVM_TOOL_LLD_BUILD)
+  set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
+  if(EXISTS ${COMPILER_RT_LLD_PATH}/)
     set(COMPILER_RT_HAS_LLD TRUE)
+  else()
+    set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/../lld)
+    if(EXISTS ${COMPILER_RT_LLD_PATH}/)
+      set(COMPILER_RT_HAS_LLD TRUE)
+    endif()
   endif()
 endif()
 
@@ -726,6 +749,9 @@ if(ANDROID)
 endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)
+
+option(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER "Build Compiler RT linked with in LLVM symbolizer" OFF)
+mark_as_advanced(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
 
 add_subdirectory(lib)
 

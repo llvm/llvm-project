@@ -237,6 +237,11 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   }
 }
 
+void SlotIndexes::packIndexes() {
+  for (auto [Index, Entry] : enumerate(indexList))
+    Entry.setIndex(Index * SlotIndex::InstrDist);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SlotIndexes::dump() const {
   for (const IndexListEntry &ILE : indexList) {

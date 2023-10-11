@@ -177,10 +177,21 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &,
     std::set<const DerivedTypeSpec *> * = nullptr,
     bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
 const Symbol *HasImpureFinal(const Symbol &);
+// Is this type finalizable or does it contain any polymorphic allocatable
+// ultimate components?
+bool MayRequireFinalization(const DerivedTypeSpec &derived);
+// Does this type have an allocatable direct component?
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+
 bool IsInBlankCommon(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->IsAssumedSize();
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    return object->IsAssumedSize();
+  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
+    return assoc->IsAssumedSize();
+  } else {
+    return false;
+  }
 }
 bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
@@ -682,6 +693,9 @@ std::optional<R> GetConstExpr(
 
 // Returns "m" for a module, "m:sm" for a submodule.
 std::string GetModuleOrSubmoduleName(const Symbol &);
+
+// Return the assembly name emitted for a common block.
+std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

@@ -413,7 +413,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
   // This is on-by-default in windows to allow parsing SDK headers, but it
   // breaks many features. Disable it for the main-file (not preamble).
-  CI->getLangOpts()->DelayedTemplateParsing = false;
+  CI->getLangOpts().DelayedTemplateParsing = false;
 
   std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
   if (Inputs.FeatureModules) {
@@ -499,8 +499,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // (The rest of HeaderFileInfo is not relevant for our purposes).
   if (Preamble && Preamble->MainIsIncludeGuarded) {
     const SourceManager &SM = Clang->getSourceManager();
-    const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
-    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(MainFE);
+    OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
+    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(*MainFE);
   }
 
   // Set up ClangTidy. Must happen after BeginSourceFile() so ASTContext exists.

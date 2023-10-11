@@ -14,7 +14,7 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(double)
 
@@ -28,6 +28,6 @@ TEST(LlvmLibcSinTest, Range) {
     if (isnan(x) || isinf(x) || x > _2pi || x < -_2pi)
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, __llvm_libc::sin(x), 1.0);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sin(x), 1.0);
   }
 }

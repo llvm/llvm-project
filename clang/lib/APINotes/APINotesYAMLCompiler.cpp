@@ -28,8 +28,6 @@ using namespace api_notes;
 namespace {
 enum class APIAvailability {
   Available = 0,
-  OSX,
-  IOS,
   None,
   NonSwift,
 };
@@ -39,8 +37,6 @@ namespace llvm {
 namespace yaml {
 template <> struct ScalarEnumerationTraits<APIAvailability> {
   static void enumeration(IO &IO, APIAvailability &AA) {
-    IO.enumCase(AA, "OSX", APIAvailability::OSX);
-    IO.enumCase(AA, "iOS", APIAvailability::IOS);
     IO.enumCase(AA, "none", APIAvailability::None);
     IO.enumCase(AA, "nonswift", APIAvailability::NonSwift);
     IO.enumCase(AA, "available", APIAvailability::Available);
@@ -414,6 +410,9 @@ struct Tag {
   std::optional<bool> SwiftPrivate;
   std::optional<StringRef> SwiftBridge;
   std::optional<StringRef> NSErrorDomain;
+  std::optional<std::string> SwiftImportAs;
+  std::optional<std::string> SwiftRetainOp;
+  std::optional<std::string> SwiftReleaseOp;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
@@ -444,6 +443,9 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftName", T.SwiftName, StringRef(""));
     IO.mapOptional("SwiftBridge", T.SwiftBridge);
     IO.mapOptional("NSErrorDomain", T.NSErrorDomain);
+    IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
+    IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
+    IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);

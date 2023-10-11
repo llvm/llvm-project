@@ -316,7 +316,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBefore(ToBlock.getTerminator());
+      Current->moveBeforePreserving(ToBlock.getTerminator());
     }
   }
   return true;

@@ -12,6 +12,8 @@
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
+include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -209,23 +211,72 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 }
 
 //===----------------------------------------------------------------------===//
-// CopyTensorOp
+// MaterializeInDestinationOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
-    [BufferizableOpInterface, SameOperandsAndResultType,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+def Bufferization_MaterializeInDestinationOp
+    : Bufferization_Op<"materialize_in_destination",
+        [AllShapesMatch<["source", "dest"]>,
+         AllElementTypesMatch<["source", "dest"]>,
+         BufferizableOpInterface, DestinationStyleOpInterface,
+         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+         DeclareOpInterfaceMethods<SubsetInsertionOpInterface,
+            ["getSourceOperand", "getValuesNeededToBuildSubsetExtraction",
+             "buildSubsetExtraction", "isEquivalentSubset"]>,
+         DeclareOpInterfaceMethods<MemoryEffectsOpInterface, ["getEffects"]>]> {
   let summary = "copy a tensor";
 
   let description = [{
-    Copy the contents of the source tensor into the destination tensor. This
-    operation is guaranteed to bufferize to a memory copy.
+    This op indicates that the data of the `source` tensor is guaranteed to
+    materialize in `dest`, which can be a tensor or a memref. In case of a
+    tensor, `source` materializes in the future buffer of `dest` and a the
+    updated destination tensor is returned. If this is not possible, e.g.,
+    because the destination tensor is read-only or because its original
+    contents are still read later, the input IR fails to bufferize. In case of a
+    memref, `source` materializes in `dest`, which is already a buffer. The op
+    has no results in that case.
+
+    `source`, `dest` and `result` (if present) must have the same shape and
+    element type. If the op has a result, the types of `result` and `dest` must
+    match exactly (e.g., including any tensor encodings).
+
+    By default, this op bufferizes to a memcpy from the future buffer of the
+    `source` tensor to the future buffer of the `dest` tensor or to the `dest`
+    buffer. However, transformations such as "empty tensor elimination" may
+    rewrite IR such that a computation is performed directly in `dest` and no
+    memcpy is needed.
+
+    If `dest` is a buffer, the `writable` attribute must be specified and the
+    `restrict` keyword can be specified. These attributes have the same meaning
+    as the respective attributes of `bufferization.to_tensor`.
+
+    `writable` indicates that the `dest` buffer is considered writable. It does
+    not make sense to materialize a computation in a read-only buffer, so
+    `writable` is required.
+
+    `restrict` indicates that there is no `bufferization.to_tensor` op and no
+    other `bufferization.materialize_in_destination` op with `dest` (or an alias
+    thereof) and "restrict". Only ops with this attribute are considered for
+    "empty tensor elimination". As part of empty tensor elimination, a new
+    `to_tensor` op with `dest` may be inserted and the `restrict` attribute is
+    transferred from this op to the new `to_tensor` op. Having "restrict" on
+    this op guarantees that performing empty tensor elimination would not create
+    invalid IR (i.e., having multiple `to_tensor restrict` with aliasing
+    buffers).
+
+    Note: `writable` could be removed from this op because it must always be set
+    for memref destinations. This op has that attribute to make clear the
+    requirements on the `dest` operand in the op assembly format.
+
+    Note: If `dest` is a tensor, `tensor.insert_slice` could be used for the
+    same purpose, but since tensor dialect ops only indicate *what* should be
+    computed but not *where*, it could fold away, causing the computation to
+    materialize in a different buffer.
   }];
 
-  let arguments = (ins AnyTensor:$source,
-                       AnyTensor:$dest);
-
-  let results = (outs AnyTensor:$result);
+  let arguments = (ins AnyTensor:$source, AnyShaped:$dest,
+                       UnitAttr:$restrict, UnitAttr:$writable);
+  let results = (outs Optional<AnyTensor>:$result);
 
   let extraClassDeclaration = [{
     LogicalResult bufferize(RewriterBase &rewriter,
@@ -237,15 +288,36 @@ def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
+    bool bufferizesToElementwiseAccess(const AnalysisState &state,
+                                       ArrayRef<OpOperand *> opOperands);
+
+    bool mustBufferizeInPlace(OpOperand &opOperand,
+                              const AnalysisState &state);
+
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
+
+    MutableOperandRange getDpsInitsMutable();
+
+    bool isWritable(Value value, const AnalysisState &state);
   }];
 
-  let assemblyFormat = "$source `,` $dest attr-dict `:` type($source)";
+  let builders = [
+    // Builder that materializes a source tensor in a tensor destination.
+    // Asserts that `dest` has tensor type. Infers the result type of this op
+    // from the destination tensor.
+    OpBuilder<(ins "Value":$source, "Value":$dest)>
+  ];
+
+  let assemblyFormat = [{
+    $source `in` (`restrict` $restrict^)? (`writable` $writable^)? $dest
+        attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -339,10 +411,16 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     thereof) will bufferize out-of-place to prevent emitting any writes to
     `memref` during bufferization.
 
-    If the given memref does not alias with any other memref passed to another
-    `to_tensor` op, the `restrict` unit attribute can be set. Only such
-    operations are supported by One-Shot Bufferize. (Otherwise, potential memref
-    aliasing relationships would have to be captured in One-Shot Bufferize.)
+    The `restrict` unit attribute (similar to the C `restrict` keyword)
+    indicates that the produced tensor result is the only way for the tensor
+    IR to gain access to the `memref` operand (or an alias thereof). E.g.,
+    there must be no other `to_tensor` op with the same or with an aliasing
+    `memref` operand.
+
+    Note: Only `to_tensor` ops with the `restrict` unit attribute are supported
+    by One-Shot Bufferize. Other IR is rejected. (To support `to_tensor`
+    without `restrict`, One-Shot Bufferize would have to analyze memref IR.)
+    Ops that have incorrect usage of `restrict` may bufferize incorrectly.
 
     Example:
 
@@ -361,7 +439,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref,
+                           "the reference to load from",
+                           [MemReadAt<0, FullEffect>]>:$memref,
                        UnitAttr:$restrict, UnitAttr:$writable);
   let results = (outs AnyTensor:$result);
 
@@ -523,6 +602,13 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     `%r0`, `%r1`, or `%r2` are aliases of `%a0`. `%a1` will be deallocated when
     `%cond1` is set to 'true' and none of `%r0`, %r1`, `%r2`, and `%a0` are
     aliases.
+
+    Note that this can be an expensive operation if there are many operands that
+    cannot be optimized away. The runtime cost of this operation (assuming that
+    nothing is optimized away) is `O(|memrefs|^2+|memrefs|*|retained|)`. The
+    cost in terms of memory space is `O(|memrefs|+|retained|)`. As a result, it
+    is recommended to place it carefully in the IR such that most operands can
+    be optimized away by running the `buffer-deallocation-simplification` pass.
   }];
 
   let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,

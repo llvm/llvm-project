@@ -1348,9 +1348,10 @@ void AArch64InstPrinter::printPredicateAsCounter(const MCInst *MI,
                                                  const MCSubtargetInfo &STI,
                                                  raw_ostream &O) {
   unsigned Reg = MI->getOperand(OpNum).getReg();
+  if (Reg < AArch64::PN0 || Reg > AArch64::PN15)
+    llvm_unreachable("Unsupported predicate-as-counter register");
+  O << "pn" << Reg - AArch64::PN0;
 
-  assert(Reg <= AArch64::P15 && "Unsupported predicate register");
-  O << "pn" << (Reg - AArch64::P0);
   switch (EltSize) {
   case 0:
     break;

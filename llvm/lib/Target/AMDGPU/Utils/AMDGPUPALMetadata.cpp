@@ -723,7 +723,7 @@ void AMDGPUPALMetadata::toLegacyBlob(std::string &Blob) {
   if (Registers.getMap().empty())
     return;
   raw_string_ostream OS(Blob);
-  support::endian::Writer EW(OS, support::endianness::little);
+  support::endian::Writer EW(OS, llvm::endianness::little);
   for (auto I : Registers.getMap()) {
     EW.write(uint32_t(I.first.getUInt()));
     EW.write(uint32_t(I.second.getUInt()));
@@ -908,6 +908,7 @@ void AMDGPUPALMetadata::reset() {
   MsgPackDoc.clear();
   Registers = MsgPackDoc.getEmptyNode();
   HwStages = MsgPackDoc.getEmptyNode();
+  ShaderFunctions = MsgPackDoc.getEmptyNode();
 }
 
 unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {

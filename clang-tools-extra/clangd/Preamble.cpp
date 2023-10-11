@@ -122,10 +122,10 @@ public:
     CapturedCtx.emplace(CI);
 
     const SourceManager &SM = CI.getSourceManager();
-    const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+    OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
     IsMainFileIncludeGuarded =
         CI.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
-            MainFE);
+            *MainFE);
 
     if (Stats) {
       const ASTContext &AST = CI.getASTContext();
@@ -365,7 +365,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   // This means we're scanning (though not preprocessing) the preamble section
   // twice. However, it's important to precisely follow the preamble bounds used
   // elsewhere.
-  auto Bounds = ComputePreambleBounds(*CI->getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
   auto PreambleContents = llvm::MemoryBuffer::getMemBufferCopy(
       llvm::StringRef(PI.Contents).take_front(Bounds.Size));
   auto Clang = prepareCompilerInstance(
@@ -596,7 +596,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // without those.
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
 
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
@@ -622,7 +622,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
                                            const clang::Diagnostic &Info) {
     if (Cfg.Diagnostics.SuppressAll ||
         isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
-                                      *CI.getLangOpts()))
+                                      CI.getLangOpts()))
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
@@ -665,6 +665,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
       StoreInMemory, /*StoragePath=*/"", CapturedInfo);
   PreambleTimer.stopTimer();
+
+  // We have to setup DiagnosticConsumer that will be alife
+  // while preamble callback is executed
+  PreambleDiagsEngine->setClient(new IgnoringDiagConsumer, true);
   // Reset references to ref-counted-ptrs before executing the callbacks, to
   // prevent resetting them concurrently.
   PreambleDiagsEngine.reset();
@@ -706,6 +710,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       // While extending the life of FileMgr and VFS, StatCache should also be
       // extended.
       Ctx->setStatCache(Result->StatCache);
+
       PreambleCallback(std::move(*Ctx), Result->Pragmas);
     }
     return Result;
@@ -727,7 +732,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                           const CompilerInvocation &CI) {
   auto ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *ContentsBuffer, 0);
+  auto Bounds = ComputePreambleBounds(CI.getLangOpts(), *ContentsBuffer, 0);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
@@ -948,12 +953,10 @@ const MainFileMacros &PreamblePatch::mainFileMacros() const {
   return PatchedMacros;
 }
 
-const FileEntry *PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
-                                              const SourceManager &SM) {
+OptionalFileEntryRef PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
+                                                  const SourceManager &SM) {
   auto PatchFilePath = getPatchName(MainFilePath);
-  if (auto File = SM.getFileManager().getFile(PatchFilePath))
-    return *File;
-  return nullptr;
+  return SM.getFileManager().getOptionalFileRef(PatchFilePath);
 }
 } // namespace clangd
 } // namespace clang

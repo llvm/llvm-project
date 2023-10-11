@@ -13,6 +13,7 @@
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/RWMutex.h"
@@ -84,6 +85,24 @@ cl::opt<bool> InstrumentCalls("instrument-calls",
 
 namespace llvm {
 namespace bolt {
+
+static bool hasAArch64ExclusiveMemop(BinaryFunction &Function) {
+  // FIXME ARMv8-a architecture reference manual says that software must avoid
+  // having any explicit memory accesses between exclusive load and associated
+  // store instruction. So for now skip instrumentation for functions that have
+  // these instructions, since it might lead to runtime deadlock.
+  BinaryContext &BC = Function.getBinaryContext();
+  for (const BinaryBasicBlock &BB : Function)
+    for (const MCInst &Inst : BB)
+      if (BC.MIB->isAArch64Exclusive(Inst)) {
+        if (opts::Verbosity >= 1)
+          outs() << "BOLT-INSTRUMENTER: Function " << Function
+                 << " has exclusive instructions, skip instrumentation\n";
+        return true;
+      }
+
+  return false;
+}
 
 uint32_t Instrumentation::getFunctionNameIndex(const BinaryFunction &Function) {
   auto Iter = FuncToStringIdx.find(&Function);
@@ -286,6 +305,9 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
   BinaryContext &BC = Function.getBinaryContext();
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
+    return;
+
+  if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function))
     return;
 
   SplitWorklistTy SplitWorklist;

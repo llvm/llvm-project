@@ -18,6 +18,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2395,7 +2396,8 @@ void InitListChecker::CheckStructUnionTypes(
       if (HasDesignatedInit && InitializedFields.count(*it))
         continue;
 
-      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer()) {
+      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
+          !it->getType()->isIncompleteArrayType()) {
         SemaRef.Diag(IList->getSourceRange().getEnd(),
                      diag::warn_missing_field_initializers)
             << *it;
@@ -4527,6 +4529,17 @@ static void TryReferenceListInitialization(Sema &S,
   if (Sequence) {
     if (DestType->isRValueReferenceType() ||
         (T1Quals.hasConst() && !T1Quals.hasVolatile())) {
+      if (S.getLangOpts().CPlusPlus20 &&
+          isa<IncompleteArrayType>(T1->getUnqualifiedDesugaredType()) &&
+          DestType->isRValueReferenceType()) {
+        // C++20 [dcl.init.list]p3.10:
+        // List-initialization of an object or reference of type T is defined as
+        // follows:
+        // ..., unless T is “reference to array of unknown bound of U”, in which
+        // case the type of the prvalue is the type of x in the declaration U
+        // x[] H, where H is the initializer list.
+        Sequence.AddQualificationConversionStep(cv1T1, clang::VK_PRValue);
+      }
       Sequence.AddReferenceBindingStep(cv1T1IgnoreAS,
                                        /*BindingTemporary=*/true);
       if (T1Quals.hasAddressSpace())
@@ -7408,8 +7421,9 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
       return true;
   if (!isInStlNamespace(Callee->getParent()))
     return false;
-  if (!isRecordWithAttr<PointerAttr>(Callee->getThisObjectType()) &&
-      !isRecordWithAttr<OwnerAttr>(Callee->getThisObjectType()))
+  if (!isRecordWithAttr<PointerAttr>(
+          Callee->getFunctionObjectParameterType()) &&
+      !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
     return false;
   if (Callee->getReturnType()->isPointerType() ||
       isRecordWithAttr<PointerAttr>(Callee->getReturnType())) {
@@ -7544,7 +7558,7 @@ static bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
       QualType LHST;
       auto *MD = dyn_cast<CXXMethodDecl>(FD);
       if (MD && MD->isCXXInstanceMember())
-        LHST = Ctx.getLValueReferenceType(MD->getThisObjectType());
+        LHST = Ctx.getLValueReferenceType(MD->getFunctionObjectParameterType());
       else
         LHST = MD->getParamDecl(0)->getType();
       if (Ctx.hasSameType(RetT, LHST))

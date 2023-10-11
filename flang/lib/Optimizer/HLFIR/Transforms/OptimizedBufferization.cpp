@@ -188,7 +188,6 @@ static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
       des1.getComponentShape() != des2.getComponentShape() ||
       des1.getSubstring() != des2.getSubstring() ||
       des1.getComplexPart() != des2.getComplexPart() ||
-      des1.getShape() != des2.getShape() ||
       des1.getTypeparams() != des2.getTypeparams()) {
     LLVM_DEBUG(llvm::dbgs() << "Different designator specs for:\n"
                             << des1 << "and:\n"
@@ -211,12 +210,9 @@ static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
   // If all the triplets (section speficiers) are the same, then
   // we do not care if %0 is equal to %1 - the slices are either
   // identical or completely disjoint.
-  //
-  // TODO: if we can prove that all non-triplet subscripts are different
-  // (by value), then we may return true regardless of the triplet
-  // values - the sections must be completely disjoint.
   auto des1It = des1.getIndices().begin();
   auto des2It = des2.getIndices().begin();
+  bool identicalTriplets = true;
   for (bool isTriplet : des1.getIsTriplet()) {
     if (isTriplet) {
       for (int i = 0; i < 3; ++i)
@@ -224,14 +220,77 @@ static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
           LLVM_DEBUG(llvm::dbgs() << "Triplet mismatch for:\n"
                                   << des1 << "and:\n"
                                   << des2 << "\n");
-          return false;
+          identicalTriplets = false;
+          break;
         }
     } else {
       ++des1It;
       ++des2It;
     }
   }
-  return true;
+  if (identicalTriplets)
+    return true;
+
+  // See if we can prove that any of the triplets do not overlap.
+  // This is mostly a Polyhedron/nf performance hack that looks for
+  // particular relations between the lower and upper bounds
+  // of the array sections, e.g. for any positive constant C:
+  //   X:Y does not overlap with (Y+C):Z
+  //   X:Y does not overlap with Z:(X-C)
+  auto displacedByConstant = [](mlir::Value v1, mlir::Value v2) {
+    auto removeConvert = [](mlir::Value v) -> mlir::Operation * {
+      auto *op = v.getDefiningOp();
+      while (auto conv = mlir::dyn_cast_or_null<fir::ConvertOp>(op))
+        op = conv.getValue().getDefiningOp();
+      return op;
+    };
+
+    auto isPositiveConstant = [](mlir::Value v) -> bool {
+      if (auto conOp =
+              mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
+        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
+          return iattr.getInt() > 0;
+      return false;
+    };
+
+    auto *op1 = removeConvert(v1);
+    auto *op2 = removeConvert(v2);
+    if (!op1 || !op2)
+      return false;
+    if (auto addi = mlir::dyn_cast<mlir::arith::AddIOp>(op2))
+      if ((addi.getLhs().getDefiningOp() == op1 &&
+           isPositiveConstant(addi.getRhs())) ||
+          (addi.getRhs().getDefiningOp() == op1 &&
+           isPositiveConstant(addi.getLhs())))
+        return true;
+    if (auto subi = mlir::dyn_cast<mlir::arith::SubIOp>(op1))
+      if (subi.getLhs().getDefiningOp() == op2 &&
+          isPositiveConstant(subi.getRhs()))
+        return true;
+    return false;
+  };
+
+  des1It = des1.getIndices().begin();
+  des2It = des2.getIndices().begin();
+  for (bool isTriplet : des1.getIsTriplet()) {
+    if (isTriplet) {
+      mlir::Value des1Lb = *des1It++;
+      mlir::Value des1Ub = *des1It++;
+      mlir::Value des2Lb = *des2It++;
+      mlir::Value des2Ub = *des2It++;
+      // Ignore strides.
+      ++des1It;
+      ++des2It;
+      if (displacedByConstant(des1Ub, des2Lb) ||
+          displacedByConstant(des2Ub, des1Lb))
+        return true;
+    } else {
+      ++des1It;
+      ++des2It;
+    }
+  }
+
+  return false;
 }
 
 std::optional<ElementalAssignBufferization::MatchInfo>
@@ -240,6 +299,13 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // the only uses of the elemental should be the assignment and the destroy
   if (std::distance(users.begin(), users.end()) != 2) {
     LLVM_DEBUG(llvm::dbgs() << "Too many uses of the elemental\n");
+    return std::nullopt;
+  }
+
+  // If the ElementalOp must produce a temporary (e.g. for
+  // finalization purposes), then we cannot inline it.
+  if (hlfir::elementalOpMustProduceTemp(elemental)) {
+    LLVM_DEBUG(llvm::dbgs() << "ElementalOp must produce a temp\n");
     return std::nullopt;
   }
 
@@ -459,9 +525,10 @@ public:
 
 mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
-  if (assign.isAllocatableAssignment())
-    return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
-
+  // Since RHS is a scalar and LHS is an array, LHS must be allocated
+  // in a conforming Fortran program, and LHS cannot be reallocated
+  // as a result of the assignment. So we can ignore isAllocatableAssignment
+  // and do the transformation always.
   mlir::Value rhs = assign.getRhs();
   if (!fir::isa_trivial(rhs.getType()))
     return rewriter.notifyMatchFailure(

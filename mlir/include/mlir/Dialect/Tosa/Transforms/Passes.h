@@ -34,6 +34,8 @@ void populateTosaFoldConstantReciprocalPatterns(MLIRContext *ctx,
                                                 RewritePatternSet &patterns);
 void populateTosaFoldConstantTransposePatterns(MLIRContext *ctx,
                                                RewritePatternSet &patterns);
+void populateTosaConstantReduction(MLIRContext *ctx,
+                                   RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass();
 std::unique_ptr<Pass> createTosaInferShapesPass();

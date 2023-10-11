@@ -58,6 +58,8 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
 }
 
 bool Type::isScalableTy() const {
+  if (const auto *ATy = dyn_cast<ArrayType>(this))
+    return ATy->getElementType()->isScalableTy();
   if (const auto *STy = dyn_cast<StructType>(this)) {
     SmallPtrSet<Type *, 4> Visited;
     return STy->containsScalableVectorType(&Visited);
@@ -658,8 +660,7 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 bool ArrayType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy() &&
-         !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy();
 }
 
 //===----------------------------------------------------------------------===//

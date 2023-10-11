@@ -1173,6 +1173,13 @@ bool BinaryFunction::disassemble() {
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
 
+  // Map offsets in the function to a label that should always point to the
+  // corresponding instruction. This is used for labels that shouldn't point to
+  // the start of a basic block but always to a specific instruction. This is
+  // used, for example, on RISC-V where %pcrel_lo relocations point to the
+  // corresponding %pcrel_hi.
+  LabelsMapType InstructionLabels;
+
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
@@ -1329,9 +1336,23 @@ bool BinaryFunction::disassemble() {
                 ItrE = Relocations.lower_bound(Offset + Size);
            Itr != ItrE; ++Itr) {
         const Relocation &Relocation = Itr->second;
+        MCSymbol *Symbol = Relocation.Symbol;
+
+        if (Relocation::isInstructionReference(Relocation.Type)) {
+          uint64_t RefOffset = Relocation.Value - getAddress();
+          LabelsMapType::iterator LI = InstructionLabels.find(RefOffset);
+
+          if (LI == InstructionLabels.end()) {
+            Symbol = BC.Ctx->createNamedTempSymbol();
+            InstructionLabels.emplace(RefOffset, Symbol);
+          } else {
+            Symbol = LI->second;
+          }
+        }
+
         int64_t Value = Relocation.Value;
         const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Relocation.Symbol, Relocation.Addend, Ctx.get(), Value,
+            Instruction, Symbol, Relocation.Addend, Ctx.get(), Value,
             Relocation.Type);
         (void)Result;
         assert(Result && "cannot replace immediate with relocation");
@@ -1364,6 +1385,13 @@ add_instruction:
     }
 
     addInstruction(Offset, std::move(Instruction));
+  }
+
+  for (auto [Offset, Label] : InstructionLabels) {
+    InstrMapType::iterator II = Instructions.find(Offset);
+    assert(II != Instructions.end() && "reference to non-existing instruction");
+
+    BC.MIB->setLabel(II->second, Label);
   }
 
   // Reset symbolizer for the disassembler.
@@ -1761,7 +1789,8 @@ bool BinaryFunction::postProcessIndirectBranches(
   uint64_t LastJT = 0;
   uint16_t LastJTIndexReg = BC.MIB->getNoRegister();
   for (BinaryBasicBlock &BB : blocks()) {
-    for (MCInst &Instr : BB) {
+    for (BinaryBasicBlock::iterator II = BB.begin(); II != BB.end(); ++II) {
+      MCInst &Instr = *II;
       if (!BC.MIB->isIndirectBranch(Instr))
         continue;
 
@@ -1789,7 +1818,7 @@ bool BinaryFunction::postProcessIndirectBranches(
         const MCExpr *DispExpr;
         MCInst *PCRelBaseInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
-            Instr, BB.begin(), BB.end(), PtrSize, MemLocInstr, BaseRegNum,
+            Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
             IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
@@ -3156,6 +3185,10 @@ void BinaryFunction::dumpGraphToFile(std::string Filename) const {
 }
 
 bool BinaryFunction::validateCFG() const {
+  // Skip the validation of CFG after it is finalized
+  if (CurrentState == State::CFG_Finalized)
+    return true;
+
   bool Valid = true;
   for (BinaryBasicBlock *BB : BasicBlocks)
     Valid &= BB->validateSuccessorInvariants();
@@ -4484,7 +4517,7 @@ void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
   uint64_t Offset = Address - getAddress();
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: addRelocation in "
                     << formatv("{0}@{1:x} against {2}\n", *this, Offset,
-                               Symbol->getName()));
+                               (Symbol ? Symbol->getName() : "<undef>")));
   bool IsCI = BC.isAArch64() && isInConstantIsland(Address);
   std::map<uint64_t, Relocation> &Rels =
       IsCI ? Islands->Relocations : Relocations;

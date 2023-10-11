@@ -55,8 +55,12 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
   Value source = transferRead.getSource();
-  while (auto subView = source.getDefiningOp<memref::SubViewOp>())
-    source = subView.getSource();
+
+  // Skip view-like Ops and retrive the actual soruce Operation
+  while (auto srcOp =
+             dyn_cast_or_null<ViewLikeOpInterface>(source.getDefiningOp()))
+    source = srcOp.getViewSource();
+
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -65,8 +69,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
-      users.append(subView->getUsers().begin(), subView->getUsers().end());
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
+      users.append(viewLike->getUsers().begin(), viewLike->getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
@@ -137,12 +141,22 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
       // Approximate aliasing by checking that:
       //   1. indices, vector type and permutation map are the same (i.e., the
       //      transfer_read/transfer_write ops are matching),
-      //   2. no other operations in the loop access the same memref except
+      //   2. source operands for transfer.{read|write} do not originate from
+      //      Ops implementing ViewLikeOpInterface.
+      //   3. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
       if (transferRead.getIndices() != transferWrite.getIndices() ||
           transferRead.getVectorType() != transferWrite.getVectorType() ||
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
+        return WalkResult::advance();
+
+      auto *source = transferRead.getSource().getDefiningOp();
+      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
+        return WalkResult::advance();
+
+      source = transferWrite.getSource().getDefiningOp();
+      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
         return WalkResult::advance();
 
       // TODO: may want to memoize this information for performance but it
@@ -184,48 +198,24 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
       transferWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original loop.
-      OpBuilder b(transferRead);
-      NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
-                                    ArrayRef<BlockArgument> newBBArgs) {
+      IRRewriter rewriter(transferRead.getContext());
+      NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
+                                     ArrayRef<BlockArgument> newBBArgs) {
         return SmallVector<Value>{transferWrite.getVector()};
       };
 
-      // Transfer write has been hoisted, need to update the written vector by
-      // the value yielded by the newForOp.
-      return TypeSwitch<Operation *, WalkResult>(loop)
-          .Case<scf::ForOp>([&](scf::ForOp scfForOp) {
-            auto newForOp = replaceLoopWithNewYields(
-                b, scfForOp, transferRead.getVector(), yieldFn);
-            transferWrite.getVectorMutable().assign(
-                newForOp.getResults().back());
-            changed = true;
-            loop.erase();
-            // Need to interrupt and restart because erasing the loop messes up
-            // the walk.
-            return WalkResult::interrupt();
-          })
-          .Case<affine::AffineForOp>([&](affine::AffineForOp affineForOp) {
-            auto newForOp = replaceForOpWithNewYields(
-                b, affineForOp, transferRead.getVector(),
-                SmallVector<Value>{transferWrite.getVector()},
-                transferWrite.getVector());
-            // Replace all uses of the `transferRead` with the corresponding
-            // basic block argument.
-            transferRead.getVector().replaceUsesWithIf(
-                newForOp.getLoopBody().getArguments().back(),
-                [&](OpOperand &use) {
-                  Operation *user = use.getOwner();
-                  return newForOp->isProperAncestor(user);
-                });
-            transferWrite.getVectorMutable().assign(
-                newForOp.getResults().back());
-            changed = true;
-            loop.erase();
-            // Need to interrupt and restart because erasing the loop messes up
-            // the walk.
-            return WalkResult::interrupt();
-          })
-          .Default([](Operation *) { return WalkResult::interrupt(); });
+      auto maybeNewLoop = loop.replaceWithAdditionalYields(
+          rewriter, transferRead.getVector(),
+          /*replaceInitOperandUsesInLoop=*/true, yieldFn);
+      if (failed(maybeNewLoop))
+        return WalkResult::interrupt();
+
+      transferWrite.getVectorMutable().assign(
+          maybeNewLoop->getOperation()->getResults().back());
+      changed = true;
+      // Need to interrupt and restart because erasing the loop messes up
+      // the walk.
+      return WalkResult::interrupt();
     });
   }
 }

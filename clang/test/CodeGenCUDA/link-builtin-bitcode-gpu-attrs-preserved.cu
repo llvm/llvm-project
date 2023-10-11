@@ -31,7 +31,7 @@
 
 
 // CHECK: define {{.*}} i64 @do_intrin_stuff() #[[ATTR:[0-9]+]]
-// INTERNALIZE: attributes #[[ATTR]] = {{.*}} "target-cpu"="gfx{{.*}}" "target-features"="+gfx11-insts"
+// INTERNALIZE: attributes #[[ATTR]] = {{.*}} "target-cpu"="gfx{{.*}}" "target-features"="{{.*}}+gfx11-insts{{.*}}"
 // NOINTERNALIZE: attributes #[[ATTR]] = {{.*}} "target-features"="+gfx11-insts"
 
 #define __device__ __attribute__((device))

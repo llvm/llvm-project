@@ -252,17 +252,6 @@ else()
   set(LLVM_ENABLE_TERMINFO 0)
 endif()
 
-check_library_exists(xar xar_open "" LLVM_HAVE_LIBXAR)
-if(LLVM_HAVE_LIBXAR)
-  message(STATUS "The xar file format has been deprecated: LLVM_HAVE_LIBXAR might be removed in the future.")
-  # The xar file format has been deprecated since macOS 12.0.
-  if (CMAKE_OSX_DEPLOYMENT_TARGET VERSION_GREATER_EQUAL 12)
-    set(LLVM_HAVE_LIBXAR 0)
-  else()
-    set(XAR_LIB xar)
-  endif()
-endif()
-
 # function checks
 check_symbol_exists(arc4random "stdlib.h" HAVE_DECL_ARC4RANDOM)
 find_package(Backtrace)
@@ -461,6 +450,7 @@ get_host_triple(LLVM_INFERRED_HOST_TRIPLE)
 
 set(LLVM_HOST_TRIPLE "${LLVM_INFERRED_HOST_TRIPLE}" CACHE STRING
     "Host on which LLVM binaries will run")
+message(STATUS "LLVM host triple: ${LLVM_HOST_TRIPLE}")
 
 # Determine the native architecture.
 string(TOLOWER "${LLVM_TARGET_ARCH}" LLVM_NATIVE_ARCH)

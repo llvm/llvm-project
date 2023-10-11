@@ -6,7 +6,7 @@ struct S;
 namespace b {
 using a::S;
 // CHECK:      UsingDecl {{.*}} a::S
-// CHECK-NEXT: | `-NestedNameSpecifier NamespaceNamespace {{.*}} 'a'
+// CHECK-NEXT: | `-NestedNameSpecifier Namespace {{.*}} 'a'
 // CHECK-NEXT: UsingShadowDecl {{.*}} implicit CXXRecord {{.*}} 'S'
 // CHECK-NEXT: `-RecordType {{.*}} 'a::S'
 typedef S f; // to dump the introduced type

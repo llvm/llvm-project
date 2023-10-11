@@ -17,28 +17,28 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits_t = __llvm_libc::fputil::FPBits<float>;
+using FPBits_t = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcAsinhfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, __llvm_libc::asinhf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinhf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, __llvm_libc::asinhf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::asinhf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, __llvm_libc::asinhf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::asinhf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(inf, __llvm_libc::asinhf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::asinhf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(neg_inf, __llvm_libc::asinhf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::asinhf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
 
@@ -50,9 +50,9 @@ TEST(LlvmLibcAsinhfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
-                                   __llvm_libc::asinhf(x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(x), 0.5);
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, -x,
-                                   __llvm_libc::asinhf(-x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(-x), 0.5);
   }
 }
 
@@ -75,8 +75,8 @@ TEST(LlvmLibcAsinhfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits_t(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
-                                   __llvm_libc::asinhf(x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, -x,
-                                   __llvm_libc::asinhf(-x), 0.5);
+                                   LIBC_NAMESPACE::asinhf(-x), 0.5);
   }
 }
