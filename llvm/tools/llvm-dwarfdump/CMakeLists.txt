@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   AllTargetsDescs
   AllTargetsInfos
+  BinaryFormat
   MC
   Object
   Support
