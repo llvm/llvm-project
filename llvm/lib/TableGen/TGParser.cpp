@@ -4406,11 +4406,11 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  SMLoc ConditionLoc = Lex.getLoc();
+  SMLoc Loc = Lex.getLoc();
   if (CurRec)
-    CurRec->addDump(ConditionLoc, Message);
+    CurRec->addDump(Loc, Message);
   else
-    addEntry(std::make_unique<Record::DumpInfo>(ConditionLoc, Message));
+    addEntry(std::make_unique<Record::DumpInfo>(Loc, Message));
 
   return false;
 }
