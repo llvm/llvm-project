@@ -387,7 +387,7 @@ class raw_ostream;
     /// Returns the instruction for the given index, or null if the given
     /// index has no instruction associated with it.
     MachineInstr* getInstructionFromIndex(SlotIndex index) const {
-      return index.isValid() ? index.listEntry()->getInstr() : nullptr;
+      return index.listEntry()->getInstr();
     }
 
     /// Returns the next non-null index, if one exists.
