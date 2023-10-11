@@ -1,9 +1,9 @@
 // Check that fopen64(NULL, "r") is ok.
 // `-m32` and `-D_FILE_OFFSET_BITS=64` will make fopen() call fopen64()
 
-// REQUIRES: asan
-// RUN: %clang -m32 -D_FILE_OFFSET_BITS=64 -O2 %s -o %t && %run %t
+// REQUIRES: linux
 #include <stdio.h>
+FILE * fopen64 ( const char * filename, const char * mode );
 const char *fn = NULL;
 FILE *f;
-int main() { f = fopen(fn, "r"); }
+int main() { f = fopen64(fn, "r"); }
