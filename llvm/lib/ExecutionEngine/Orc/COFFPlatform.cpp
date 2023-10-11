@@ -54,7 +54,7 @@ public:
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
     unsigned PointerSize;
-    support::endianness Endianness;
+    llvm::endianness Endianness;
     const auto &TT = CP.getExecutionSession().getTargetTriple();
 
     switch (TT.getArch()) {

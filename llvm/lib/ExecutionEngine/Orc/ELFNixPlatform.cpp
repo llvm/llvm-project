@@ -40,7 +40,7 @@ public:
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
     unsigned PointerSize;
-    support::endianness Endianness;
+    llvm::endianness Endianness;
     jitlink::Edge::Kind EdgeKind;
     const auto &TT = ENP.getExecutionSession().getTargetTriple();
 

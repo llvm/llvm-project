@@ -148,7 +148,7 @@ private:
   std::string mangleName(const DICompileUnit *CU, GCovFileType FileType);
 
   GCOVOptions Options;
-  support::endianness Endian;
+  llvm::endianness Endian;
   raw_ostream *os;
 
   // Checksum, produced by hash of EdgeDestinations

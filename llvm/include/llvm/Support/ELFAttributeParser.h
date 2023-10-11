@@ -58,7 +58,7 @@ public:
   ELFAttributeParser(TagNameMap tagNameMap, StringRef vendor)
       : vendor(vendor), sw(nullptr), tagToStringMap(tagNameMap) {}
 
-  Error parse(ArrayRef<uint8_t> section, support::endianness endian);
+  Error parse(ArrayRef<uint8_t> section, llvm::endianness endian);
 
   std::optional<unsigned> getAttributeValue(unsigned tag) const {
     auto I = attributes.find(tag);
