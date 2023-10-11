@@ -828,8 +828,6 @@ void updateDomTree(MachineDominatorTree *DomTree, const SSAIfConv &IfConv,
 /// Update LoopInfo after if-conversion.
 void updateLoops(MachineLoopInfo *Loops,
                  ArrayRef<MachineBasicBlock *> Removed) {
-  if (!Loops)
-    return;
   // If-conversion doesn't change loop structure, and it doesn't mess with back
   // edges, so updating LoopInfo is simply removing the dead blocks.
   for (auto *B : Removed)
