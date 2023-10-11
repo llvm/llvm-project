@@ -258,18 +258,24 @@ TEST(MatrixTest, inverse) {
       2, 2,
       {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
 
-  FracMatrix inv = mat.inverse();
+  FracMatrix inv = *(mat.inverse());
 
   for (unsigned row = 0; row < 2; row++)
     for (unsigned col = 0; col < 2; col++)
       EXPECT_EQ(inv(row, col), inverse(row, col));
+  
+  mat = makeFracMatrix(
+      2, 2,
+      {{Fraction(0, 1), Fraction(1, 1)}, {Fraction(0, 1), Fraction(2, 1)}});
+  
+  EXPECT_FALSE(mat.inverse());
 }
 
 TEST(MatrixTest, intInverse) {
   IntMatrix mat = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
   IntMatrix inverse = makeIntMatrix(2, 2, {{0, -1}, {-7, 2}});
 
-  IntMatrix inv = mat.integerInverse();
+  IntMatrix inv = *(mat.integerInverse());
 
   for (unsigned i = 0; i < 2u; i++)
     for (unsigned j = 0; j < 2u; j++)
@@ -283,9 +289,14 @@ TEST(MatrixTest, intInverse) {
                            {210, 735, -855, 360},
                            {-715, -1409, 1401, 1482}});
 
-  inv = mat.integerInverse();
+  inv = *(mat.integerInverse());
 
   for (unsigned i = 0; i < 2u; i++)
     for (unsigned j = 0; j < 2u; j++)
       EXPECT_EQ(inv(i, j), inverse(i, j));
+
+  mat = makeIntMatrix(
+      2, 2, {{0, 0}, {1, 2}});
+  
+  EXPECT_FALSE(mat.integerInverse());
 }

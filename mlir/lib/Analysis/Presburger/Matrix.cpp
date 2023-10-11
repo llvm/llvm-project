@@ -465,19 +465,22 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-IntMatrix IntMatrix::integerInverse() {
+std::optional<IntMatrix> IntMatrix::integerInverse() {
   Fraction det = Fraction(determinant(), 1);
   FracMatrix newMat(getNumRows(), getNumColumns());
   for (unsigned i = 0; i < getNumRows(); i++)
     for (unsigned j = 0; j < getNumColumns(); j++)
       newMat(i, j) = Fraction(at(i, j), 1);
 
-  FracMatrix fracInverse = newMat.inverse();
+  std::optional<FracMatrix> fracInverse = newMat.inverse();
+
+  if (!fracInverse)
+    return {};
 
   IntMatrix intInverse(getNumRows(), getNumColumns());
   for (unsigned i = 0; i < getNumRows(); i++)
     for (unsigned j = 0; j < getNumColumns(); j++)
-      intInverse(i, j) = (fracInverse(i, j) * det).getAsInteger();
+      intInverse(i, j) = ((*fracInverse)(i, j) * det).getAsInteger();
 
   return intInverse;
 }
@@ -486,7 +489,7 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
   return Matrix::identity(dimension);
 }
 
-FracMatrix FracMatrix::inverse() {
+std::optional<FracMatrix> FracMatrix::inverse() {
   // We use Gaussian elimination on the rows of [M | I]
   // to find the integer inverse. We proceed left-to-right,
   // top-to-bottom. M is assumed to be a dim x dim matrix.
@@ -512,6 +515,8 @@ FracMatrix FracMatrix::inverse() {
         }
 
     b = augmented(i, i);
+    if (b == 0)
+      return {};
     for (unsigned j = 0; j < dim; j++) {
       if (i == j || augmented(j, i) == 0)
         continue;

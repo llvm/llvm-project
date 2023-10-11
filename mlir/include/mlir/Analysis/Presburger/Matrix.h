@@ -247,7 +247,7 @@ public:
 
   // Return the integer inverse of the matrix, leaving the calling object
   // unmodified.
-  IntMatrix integerInverse();
+  std::optional<IntMatrix> integerInverse();
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -270,7 +270,7 @@ public:
   static FracMatrix identity(unsigned dimension);
 
   // Return the inverse of the matrix, leaving the calling object unmodified.
-  FracMatrix inverse();
+  std::optional<FracMatrix> inverse();
 };
 
 } // namespace presburger
