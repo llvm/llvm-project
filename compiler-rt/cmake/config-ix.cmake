@@ -137,7 +137,7 @@ check_cxx_compiler_flag("-Werror -Wthread-safety-beta" COMPILER_RT_HAS_WTHREAD_S
 check_cxx_compiler_flag(-Wno-pedantic COMPILER_RT_HAS_WNO_PEDANTIC)
 check_cxx_compiler_flag(-Wno-format COMPILER_RT_HAS_WNO_FORMAT)
 check_cxx_compiler_flag(-Wno-format-pedantic COMPILER_RT_HAS_WNO_FORMAT_PEDANTIC)
-check_cxx_compiler_flag(-Wno-prio-ctor-dtor COMPILER_RT_HAS_WPRIO_CTOR_DTOR_FLAG)
+
 check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
 
 check_cxx_compiler_flag(/W4 COMPILER_RT_HAS_W4_FLAG)
