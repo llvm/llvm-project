@@ -500,20 +500,27 @@ class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
-class abs<int value> {
-  int ret = !if(!lt(value, 0), !sub(0, value), value);
+// Normalizes an index so it can be bounds checked.
+// Negative values are mapped to their absolute value.
+//  - These are used to index in reverse (i.e. index -1 would be the last element)
+// Positive values are mapped to their value + 1.
+//  - This results the same range of values as the negative indices
+// This allows bounds checking to be: len(list) >= NormalizeIndex<idx>.ret.
+class NormalizeIndex<int value> {
+  int ret = !if(!lt(value, 0), !sub(0, value), !add(value, 1));
 }
 
-// Whether the n-th (starting from 1) dim of the shape matches the given `size`.
+// Whether the n-th dim of the shape matches the given `size`.
 // Negative values index in reverse.
 class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
-  : And<[CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # abs<n>.ret>,
-        CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
-          # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
-          #   !if(!lt(n, 0),
-                "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
-                "" # !sub(n, 1))
-          # "))">]>;
+  : And<[
+      CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # NormalizeIndex<n>.ret>,
+      CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
+        # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
+        #   !if(!lt(n, 0),
+              "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
+              "" # n)
+        # "))">]>;
 
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>

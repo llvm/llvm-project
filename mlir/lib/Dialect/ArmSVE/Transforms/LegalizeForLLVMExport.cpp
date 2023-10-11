@@ -83,11 +83,11 @@ namespace {
 /// %1 = vector.extract %source[0] : vector<[4]xi1> from vector<2x[4]xi1>
 /// %2 = "arm_sve.intr.convert.to.svbool"(%1)
 ///                : (vector<[4]xi1>) -> vector<[16]xi1>
-/// %3 = vector.insert %2, %cst [0] : vector<[16]xi1> into vector<2x[16]xi1>
+/// %3 = vector.insert %2, %cst[0] : vector<[16]xi1> into vector<2x[16]xi1>
 /// %4 = vector.extract %source[1] : vector<[4]xi1> from vector<2x[4]xi1>
 /// %5 = "arm_sve.intr.convert.to.svbool"(%4)
 ///                : (vector<[4]xi1>) -> vector<[16]xi1>
-/// %result = vector.insert %5, %3 [1] : vector<[16]xi1> into vector<2x[16]xi1>
+/// %result = vector.insert %5, %3[1] : vector<[16]xi1> into vector<2x[16]xi1>
 /// ```
 template <typename Op, typename IntrOp>
 struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {

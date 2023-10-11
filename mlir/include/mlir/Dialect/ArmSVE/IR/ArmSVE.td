@@ -274,8 +274,8 @@ def ConvertFromSvboolOp : ArmSVE_Op<"convert_from_svbool",
     A `svbool` is the smallest SVE predicate type that has a in-memory
     representation (and maps to a full predicate register). In MLIR `svbool` is
     represented as `vector<[16]xi1>`. Smaller SVE predicate types
-    (`vector<[1|2|4|8]xi1>`) must be stored as `svbool` then converted back to
-    a predicate after loading.
+    (`vector<[1|2|4|8]xi1>`) must be stored as a `svbool` then converted back to
+    the original predicate type after loading.
   }];
   let arguments = (ins SVBoolMask:$source);
   let results = (outs SVEPredicateMask:$result);
