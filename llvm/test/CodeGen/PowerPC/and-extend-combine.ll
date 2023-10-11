@@ -23,11 +23,12 @@ bb:
   ret ptr %i8
 }
 
-; FIXME: This is a miscompile.
 define void @pr68783(i32 %x, ptr %p) {
 ; CHECK-LABEL: pr68783:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rlwinm r3, r3, 31, 24, 31
+; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    sth r5, 4(r4)
 ; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
   %lshr = lshr i32 %x, 1
