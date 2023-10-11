@@ -419,6 +419,9 @@ class ScalableVectorOf<list<Type> allowedTypes> :
 
 // Any vector with a single trailing scalable dimension, with an element type in
 // the `allowedTypes` list.
+//
+// Note: This Similar to ScalableVectorOf, with the extra requirement that only
+// the trailing dim is scalable.
 class VectorWithTrailingDimScalableOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypeWithOnlyTrailingDimScalablePred,
           "trailing scalable vector", "::mlir::VectorType">;
