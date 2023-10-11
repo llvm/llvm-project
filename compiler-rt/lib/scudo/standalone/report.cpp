@@ -24,9 +24,7 @@ public:
     Message.vappend(Format, Args);
     va_end(Args);
   }
-  NORETURN ~ScopedErrorReport() {
-    reportRawError(Message.data());
-  }
+  NORETURN ~ScopedErrorReport() { reportRawError(Message.data()); }
 
 private:
   ScopedString Message;
