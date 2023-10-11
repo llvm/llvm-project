@@ -158,15 +158,15 @@ public:
 
     std::optional<StringRef> FileName;
     if (!DebugLineSectionData.empty()) {
-      assert((G.getEndianness() == support::endianness::big ||
-              G.getEndianness() == support::endianness::little) &&
+      assert((G.getEndianness() == llvm::endianness::big ||
+              G.getEndianness() == llvm::endianness::little) &&
              "G.getEndianness() must be either big or little");
-      auto DWARFCtx = DWARFContext::create(DebugSectionMap, G.getPointerSize(),
-                                           G.getEndianness() ==
-                                               support::endianness::little);
+      auto DWARFCtx =
+          DWARFContext::create(DebugSectionMap, G.getPointerSize(),
+                               G.getEndianness() == llvm::endianness::little);
       DWARFDataExtractor DebugLineData(
-          DebugLineSectionData,
-          G.getEndianness() == support::endianness::little, G.getPointerSize());
+          DebugLineSectionData, G.getEndianness() == llvm::endianness::little,
+          G.getPointerSize());
       uint64_t Offset = 0;
       DWARFDebugLine::LineTable LineTable;
 

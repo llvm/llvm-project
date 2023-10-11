@@ -857,25 +857,23 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
       new BinaryCoverageReader(std::move(FuncRecords)));
   Reader->ProfileNames = std::move(ProfileNames);
   StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
-  if (BytesInAddress == 4 && Endian == support::endianness::little) {
-    if (Error E =
-            readCoverageMappingData<uint32_t, support::endianness::little>(
-                Reader->ProfileNames, Coverage, FuncRecordsRef,
-                Reader->MappingRecords, CompilationDir, Reader->Filenames))
-      return std::move(E);
-  } else if (BytesInAddress == 4 && Endian == support::endianness::big) {
-    if (Error E = readCoverageMappingData<uint32_t, support::endianness::big>(
+  if (BytesInAddress == 4 && Endian == llvm::endianness::little) {
+    if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::little>(
             Reader->ProfileNames, Coverage, FuncRecordsRef,
             Reader->MappingRecords, CompilationDir, Reader->Filenames))
       return std::move(E);
-  } else if (BytesInAddress == 8 && Endian == support::endianness::little) {
-    if (Error E =
-            readCoverageMappingData<uint64_t, support::endianness::little>(
-                Reader->ProfileNames, Coverage, FuncRecordsRef,
-                Reader->MappingRecords, CompilationDir, Reader->Filenames))
+  } else if (BytesInAddress == 4 && Endian == llvm::endianness::big) {
+    if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::big>(
+            Reader->ProfileNames, Coverage, FuncRecordsRef,
+            Reader->MappingRecords, CompilationDir, Reader->Filenames))
       return std::move(E);
-  } else if (BytesInAddress == 8 && Endian == support::endianness::big) {
-    if (Error E = readCoverageMappingData<uint64_t, support::endianness::big>(
+  } else if (BytesInAddress == 8 && Endian == llvm::endianness::little) {
+    if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::little>(
+            Reader->ProfileNames, Coverage, FuncRecordsRef,
+            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+      return std::move(E);
+  } else if (BytesInAddress == 8 && Endian == llvm::endianness::big) {
+    if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::big>(
             Reader->ProfileNames, Coverage, FuncRecordsRef,
             Reader->MappingRecords, CompilationDir, Reader->Filenames))
       return std::move(E);
@@ -889,7 +887,7 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   uint8_t BytesInAddress = 8;
-  support::endianness Endian = support::endianness::little;
+  support::endianness Endian = llvm::endianness::little;
 
   // Read the magic and version.
   Data = Data.substr(sizeof(TestingFormatMagic));
@@ -897,7 +895,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "the size of data is too small");
   auto TestingVersion =
-      support::endian::byte_swap<uint64_t, support::endianness::little>(
+      support::endian::byte_swap<uint64_t, llvm::endianness::little>(
           *reinterpret_cast<const uint64_t *>(Data.data()));
   Data = Data.substr(sizeof(uint64_t));
 
@@ -957,7 +955,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
       Data.substr(0, sizeof(CovMapHeader)).data());
   auto Version =
-      CovMapVersion(CovHeader->getVersion<support::endianness::little>());
+      CovMapVersion(CovHeader->getVersion<llvm::endianness::little>());
 
   // In Version1, the size of CoverageMapping is calculated.
   if (TestingVersion == uint64_t(TestingFormatVersion::Version1)) {
@@ -965,7 +963,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
       CoverageMappingSize = Data.size();
     } else {
       auto FilenamesSize =
-          CovHeader->getFilenamesSize<support::endianness::little>();
+          CovHeader->getFilenamesSize<llvm::endianness::little>();
       CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
     }
   }
@@ -1046,9 +1044,8 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   // The coverage uses native pointer sizes for the object it's written in.
   uint8_t BytesInAddress = OF->getBytesInAddress();
-  support::endianness Endian = OF->isLittleEndian()
-                                   ? support::endianness::little
-                                   : support::endianness::big;
+  support::endianness Endian =
+      OF->isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
 
   // Look for the sections that we are interested in.
   auto ObjFormat = OF->getTripleObjectFormat();
@@ -1156,7 +1153,7 @@ BinaryCoverageReader::create(
 
   if (ObjectBuffer.getBuffer().size() > sizeof(TestingFormatMagic)) {
     uint64_t Magic =
-        support::endian::byte_swap<uint64_t, support::endianness::little>(
+        support::endian::byte_swap<uint64_t, llvm::endianness::little>(
             *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()));
     if (Magic == TestingFormatMagic) {
       // This is a special format used for testing.

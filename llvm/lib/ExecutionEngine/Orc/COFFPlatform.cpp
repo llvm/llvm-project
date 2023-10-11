@@ -60,7 +60,7 @@ public:
     switch (TT.getArch()) {
     case Triple::x86_64:
       PointerSize = 8;
-      Endianness = support::endianness::little;
+      Endianness = llvm::endianness::little;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");

@@ -113,8 +113,7 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
   if (!Content)
     reportError(Content.takeError(), ObjF.getFileName());
 
-  DataExtractor DE(*Content,
-                   ELFT::TargetEndianness == support::endianness::little,
+  DataExtractor DE(*Content, ELFT::TargetEndianness == llvm::endianness::little,
                    ELFT::Is64Bits ? 8 : 4);
 
   DictScope D(W, "Header");
@@ -189,7 +188,7 @@ void PrinterContext<ELFT>::printEHFrame(const Elf_Shdr *EHFrameShdr) const {
       ObjF, DWARFContext::ProcessDebugRelocations::Process, nullptr);
   DWARFDataExtractor DE(DICtx->getDWARFObj(),
                         DICtx->getDWARFObj().getEHFrameSection(),
-                        ELFT::TargetEndianness == support::endianness::little,
+                        ELFT::TargetEndianness == llvm::endianness::little,
                         ELFT::Is64Bits ? 8 : 4);
   DWARFDebugFrame EHFrame(Triple::ArchType(ObjF.getArch()), /*IsEH=*/true,
                           /*EHFrameAddress=*/Address);
