@@ -642,18 +642,11 @@ get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
-
-# In order to remove just libc++ from the link step
-# we need to use -nostdlib++ whenever it is supported.
-# Unfortunately this cannot be used universally because for example g++ supports
-# only -nodefaultlibs in which case all libraries will be removed and
-# all libraries but c++ have to be added in manually.
-  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-    target_add_link_flags_if_supported(${target} PRIVATE "-nostdlib++")
+  if (MSVC)
+    target_add_compile_flags(${target} PRIVATE "/Zl")
+    target_link_libraries(${target} PRIVATE "/nodefaultlib")
   else()
-    target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-    target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-    target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+    target_link_libraries(${target} PRIVATE "-nostdlib++")
   endif()
 
   if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
@@ -661,24 +654,6 @@ function(cxx_link_system_libraries target)
     # in the same invocation, don't try to link in the toolchain's
     # default libunwind (which may be missing still).
     target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
-  endif()
-
-  if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
-    if (LIBCXX_HAS_PTHREAD_LIB)
-      target_link_libraries(${target} PRIVATE pthread)
-    endif()
-
-    if (LIBCXX_HAS_C_LIB)
-      target_link_libraries(${target} PRIVATE c)
-    endif()
-
-    if (LIBCXX_HAS_M_LIB)
-      target_link_libraries(${target} PRIVATE m)
-    endif()
-
-    if (LIBCXX_HAS_RT_LIB)
-      target_link_libraries(${target} PRIVATE rt)
-    endif()
   endif()
 
   if (LIBCXX_USE_COMPILER_RT)
