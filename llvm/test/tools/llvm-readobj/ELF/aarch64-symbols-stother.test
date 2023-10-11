@@ -4,6 +4,7 @@
 # RUN: llvm-readobj --symbols %t.o | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readobj --symbols %t.o --elf-output-style=JSON --pretty-print | FileCheck %s --check-prefix=JSON
 # RUN: llvm-readelf --symbols %t.o | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readelf --symbols --extra-sym-info %t.o | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=GNUX
 
 # LLVM:      Name: foo1
 # LLVM:      Other [ (0x80)
@@ -28,6 +29,14 @@
 # GNU-NEXT: 2: 0000000000000000 0 NOTYPE LOCAL DEFAULT   [VARIANT_PCS | 40] UND foo2
 # GNU-NEXT: 3: 0000000000000000 0 NOTYPE LOCAL PROTECTED [VARIANT_PCS]      UND foo3
 # GNU-NEXT: 4: 0000000000000000 0 NOTYPE LOCAL PROTECTED                    UND foo4
+
+#      GNUX:Symbol table '.symtab' contains 5 entries:
+# GNUX-NEXT:   Num:    Value          Size Type    Bind   Vis+Other              Ndx(SecName) Name [+ Version Info]
+# GNUX-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT                UND 
+# GNUX-NEXT:     1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT [VARIANT_PCS]  UND foo1
+# GNUX-NEXT:     2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT [VARIANT_PCS | 40] UND foo2
+# GNUX-NEXT:     3: 0000000000000000     0 NOTYPE  LOCAL  PROTECTED [VARIANT_PCS] UND foo3
+# GNUX-NEXT:     4: 0000000000000000     0 NOTYPE  LOCAL  PROTECTED              UND foo4
 
 # JSON:     "Name": "foo1",
 # JSON:     "Other": {

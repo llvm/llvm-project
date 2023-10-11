@@ -3204,7 +3204,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   Record *AsmParser = Target.getAsmParser();
   StringRef ClassName = AsmParser->getValueAsString("AsmParserClassName");
 
-  emitSourceFileHeader("Assembly Matcher Source Fragment", OS);
+  emitSourceFileHeader("Assembly Matcher Source Fragment", OS, Records);
 
   // Compute the information on the instructions to match.
   AsmMatcherInfo Info(AsmParser, Target, Records);

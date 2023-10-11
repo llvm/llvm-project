@@ -299,8 +299,8 @@ private:
 
     auto printInst = [this](StringRef Symbol, MCInst Inst,
                             raw_string_ostream &ErrMsgStream) {
-      auto TI = getTargetInfo(
-          Checker.getTripleFromTargetFlag(Checker.getTargetFlag(Symbol)));
+      auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
+      auto TI = getTargetInfo(TT, Checker.getCPU(), Checker.getFeatures());
       if (auto E = TI.takeError()) {
         errs() << "Error obtaining instruction printer: "
                << toString(std::move(E)) << "\n";
@@ -720,8 +720,8 @@ private:
 
   bool decodeInst(StringRef Symbol, MCInst &Inst, uint64_t &Size,
                   int64_t Offset) const {
-    auto TI = getTargetInfo(
-        Checker.getTripleFromTargetFlag(Checker.getTargetFlag(Symbol)));
+    auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
+    auto TI = getTargetInfo(TT, Checker.getCPU(), Checker.getFeatures());
 
     if (auto E = TI.takeError()) {
       errs() << "Error obtaining disassembler: " << toString(std::move(E))
@@ -739,9 +739,8 @@ private:
     return (S == MCDisassembler::Success);
   }
 
-  Expected<TargetInfo>
-  getTargetInfo(const Triple &TT,
-                const SubtargetFeatures &TF = SubtargetFeatures()) const {
+  Expected<TargetInfo> getTargetInfo(const Triple &TT, const StringRef &CPU,
+                                     const SubtargetFeatures &TF) const {
 
     auto TripleName = TT.str();
     std::string ErrorStr;
@@ -753,7 +752,7 @@ private:
                                      inconvertibleErrorCode());
 
     std::unique_ptr<MCSubtargetInfo> STI(
-        TheTarget->createMCSubtargetInfo(TripleName, "", TF.getString()));
+        TheTarget->createMCSubtargetInfo(TripleName, CPU, TF.getString()));
     if (!STI)
       return make_error<StringError>("Unable to create subtarget for " +
                                          TripleName,
@@ -807,14 +806,14 @@ private:
 RuntimeDyldCheckerImpl::RuntimeDyldCheckerImpl(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
     GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
-    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness, Triple TT,
-    SubtargetFeatures TF, raw_ostream &ErrStream)
+    GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
+    StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream)
     : IsSymbolValid(std::move(IsSymbolValid)),
       GetSymbolInfo(std::move(GetSymbolInfo)),
       GetSectionInfo(std::move(GetSectionInfo)),
       GetStubInfo(std::move(GetStubInfo)), GetGOTInfo(std::move(GetGOTInfo)),
-      Endianness(Endianness), TT(std::move(TT)), TF(std::move(TF)),
-      ErrStream(ErrStream) {}
+      Endianness(Endianness), TT(std::move(TT)), CPU(std::move(CPU)),
+      TF(std::move(TF)), ErrStream(ErrStream) {}
 
 bool RuntimeDyldCheckerImpl::check(StringRef CheckExpr) const {
   CheckExpr = CheckExpr.trim();
@@ -935,7 +934,7 @@ TargetFlagsType RuntimeDyldCheckerImpl::getTargetFlag(StringRef Symbol) const {
 }
 
 Triple
-RuntimeDyldCheckerImpl::getTripleFromTargetFlag(TargetFlagsType Flag) const {
+RuntimeDyldCheckerImpl::getTripleForSymbol(TargetFlagsType Flag) const {
   Triple TheTriple = TT;
 
   switch (TT.getArch()) {
@@ -1017,13 +1016,13 @@ std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getStubOrGOTAddrFor(
 RuntimeDyldChecker::RuntimeDyldChecker(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
     GetSectionInfoFunction GetSectionInfo, GetStubInfoFunction GetStubInfo,
-    GetGOTInfoFunction GetGOTInfo, support::endianness Endianness, Triple TT,
-    SubtargetFeatures TF, raw_ostream &ErrStream)
+    GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness, Triple TT,
+    StringRef CPU, SubtargetFeatures TF, raw_ostream &ErrStream)
     : Impl(::std::make_unique<RuntimeDyldCheckerImpl>(
           std::move(IsSymbolValid), std::move(GetSymbolInfo),
           std::move(GetSectionInfo), std::move(GetStubInfo),
-          std::move(GetGOTInfo), Endianness, std::move(TT), std::move(TF),
-          ErrStream)) {}
+          std::move(GetGOTInfo), Endianness, std::move(TT), std::move(CPU),
+          std::move(TF), ErrStream)) {}
 
 RuntimeDyldChecker::~RuntimeDyldChecker() = default;
 

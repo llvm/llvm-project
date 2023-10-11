@@ -219,6 +219,23 @@ public:
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                         const Instruction *CtxI) const;
 
+  Constant *getLosslessTrunc(Constant *C, Type *TruncTy, unsigned ExtOp) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
+    Constant *ExtTruncC =
+        ConstantFoldCastOperand(ExtOp, TruncC, C->getType(), DL);
+    if (ExtTruncC && ExtTruncC == C)
+      return TruncC;
+    return nullptr;
+  }
+
+  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::ZExt);
+  }
+
+  Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
+    return getLosslessTrunc(C, TruncTy, Instruction::SExt);
+  }
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
@@ -423,7 +440,7 @@ public:
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
                              PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
-    InsertNewInstBefore(SI, *InsertAt);
+    InsertNewInstBefore(SI, InsertAt->getIterator());
   }
 
   /// Combiner aware instruction erasure.
@@ -531,6 +548,15 @@ public:
                                     APInt &UndefElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
+  /// Attempts to replace V with a simpler value based on the demanded
+  /// floating-point classes
+  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
+                                    KnownFPClass &Known, unsigned Depth,
+                                    Instruction *CxtI);
+  bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
+                               FPClassTest DemandedMask, KnownFPClass &Known,
+                               unsigned Depth = 0);
+
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
@@ -611,6 +637,9 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
+  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
+                                      Value *Z, ICmpInst::Predicate Pred);
+  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -714,16 +743,13 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const DataLayout &DL;
-  AssumptionCache &AC;
-  const DominatorTree &DT;
+  const SimplifyQuery &SQ;
 
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, AssumptionCache &AC,
-          const DominatorTree &DT, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;
@@ -735,13 +761,13 @@ class Negator final {
 
   std::array<Value *, 2> getSortedOperandsOfBinOp(Instruction *I);
 
-  [[nodiscard]] Value *visitImpl(Value *V, unsigned Depth);
+  [[nodiscard]] Value *visitImpl(Value *V, bool IsNSW, unsigned Depth);
 
-  [[nodiscard]] Value *negate(Value *V, unsigned Depth);
+  [[nodiscard]] Value *negate(Value *V, bool IsNSW, unsigned Depth);
 
   /// Recurse depth-first and attempt to sink the negation.
   /// FIXME: use worklist?
-  [[nodiscard]] std::optional<Result> run(Value *Root);
+  [[nodiscard]] std::optional<Result> run(Value *Root, bool IsNSW);
 
   Negator(const Negator &) = delete;
   Negator(Negator &&) = delete;
@@ -751,7 +777,7 @@ class Negator final {
 public:
   /// Attempt to negate \p Root. Retuns nullptr if negation can't be performed,
   /// otherwise returns negated value.
-  [[nodiscard]] static Value *Negate(bool LHSIsZero, Value *Root,
+  [[nodiscard]] static Value *Negate(bool LHSIsZero, bool IsNSW, Value *Root,
                                      InstCombinerImpl &IC);
 };
 

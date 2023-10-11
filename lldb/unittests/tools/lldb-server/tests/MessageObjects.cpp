@@ -53,7 +53,7 @@ Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
 
 lldb::pid_t ProcessInfo::GetPid() const { return m_pid; }
 
-support::endianness ProcessInfo::GetEndian() const { return m_endian; }
+llvm::endianness ProcessInfo::GetEndian() const { return m_endian; }
 
 //====== ThreadInfo ============================================================
 ThreadInfo::ThreadInfo(StringRef name, StringRef reason, RegisterMap registers,
@@ -201,7 +201,7 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
 
 Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
                                            StringRef HexValue,
-                                           llvm::support::endianness Endian,
+                                           llvm::endianness Endian,
                                            bool ZeroPad) {
   SmallString<128> Storage;
   if (ZeroPad && HexValue.size() < Info.byte_size * 2) {
@@ -224,7 +224,7 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
 
 //====== StopReply =============================================================
 Expected<std::unique_ptr<StopReply>>
-StopReply::create(StringRef Response, llvm::support::endianness Endian,
+StopReply::create(StringRef Response, llvm::endianness Endian,
                   ArrayRef<RegisterInfo> RegInfos) {
   if (Response.size() < 3)
     return make_parsing_error("StopReply: Invalid packet");
@@ -237,7 +237,7 @@ StopReply::create(StringRef Response, llvm::support::endianness Endian,
 
 Expected<RegisterMap> StopReplyStop::parseRegisters(
     const StringMap<SmallVector<StringRef, 2>> &Elements,
-    support::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
+    llvm::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
 
   RegisterMap Result;
   for (const auto &E : Elements) {
@@ -263,7 +263,7 @@ Expected<RegisterMap> StopReplyStop::parseRegisters(
 }
 
 Expected<std::unique_ptr<StopReplyStop>>
-StopReplyStop::create(StringRef Response, support::endianness Endian,
+StopReplyStop::create(StringRef Response, llvm::endianness Endian,
                       ArrayRef<RegisterInfo> RegInfos) {
   unsigned int Signal;
   StringRef SignalStr = Response.take_front(2);

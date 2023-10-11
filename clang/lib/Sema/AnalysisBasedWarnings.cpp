@@ -2267,21 +2267,30 @@ public:
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,
                                  const VariableGroupsManager &VarGrpMgr,
-                                 FixItList &&Fixes) override {
+                                 FixItList &&Fixes, const Decl *D) override {
     assert(!SuggestSuggestions &&
            "Unsafe buffer usage fixits displayed without suggestions!");
     S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable)
         << Variable << (Variable->getType()->isPointerType() ? 0 : 1)
         << Variable->getSourceRange();
     if (!Fixes.empty()) {
-      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable);
+      assert(isa<NamedDecl>(D) &&
+             "Fix-its are generated only for `NamedDecl`s");
+      const NamedDecl *ND = cast<NamedDecl>(D);
+      bool BriefMsg = false;
+      // If the variable group involves parameters, the diagnostic message will
+      // NOT explain how the variables are grouped as the reason is non-trivial
+      // and irrelavant to users' experience:
+      const auto VarGroupForVD = VarGrpMgr.getGroupOfVar(Variable, &BriefMsg);
       unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
-      const auto &FD = S.Diag(Variable->getLocation(),
-                              diag::note_unsafe_buffer_variable_fixit_group);
+      const auto &FD =
+          S.Diag(Variable->getLocation(),
+                 BriefMsg ? diag::note_unsafe_buffer_variable_fixit_together
+                          : diag::note_unsafe_buffer_variable_fixit_group);
 
       FD << Variable << FixItStrategy;
       FD << listVariableGroupAsString(Variable, VarGroupForVD)
-         << (VarGroupForVD.size() > 1);
+         << (VarGroupForVD.size() > 1) << ND;
       for (const auto &F : Fixes) {
         FD << F;
       }

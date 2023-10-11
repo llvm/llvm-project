@@ -79,7 +79,11 @@ endif( MSVC OR MINGW )
 # Delay load shell32.dll if possible to speed up process startup.
 set (delayload_flags)
 if (MSVC)
-  set (delayload_flags delayimp -delayload:shell32.dll -delayload:ole32.dll)
+  # When linking with Swift, `swiftc.exe` is used as the linker drive rather
+  # than invoking `link.exe` directly.  In such a case, the flags should be
+  # marked as `-Xlinker` to pass them directly to the linker.  As a temporary
+  # workaround simply elide the delay loading.
+  set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp -delayload:shell32.dll -delayload:ole32.dll>)
 endif()
 
 # Link Z3 if the user wants to build it.
@@ -112,6 +116,15 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     endif()
     set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
   endif()
+endif()
+
+# FIXME: We are currently guarding AIX headers with _XOPEN_SOURCE=700.
+# See llvm/CMakeLists.txt. However, we need _SC_NPROCESSORS_ONLN in
+# unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
+# guard here. We should remove the guards all together once AIX cleans up
+# the system headers.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
 add_subdirectory(BLAKE3)

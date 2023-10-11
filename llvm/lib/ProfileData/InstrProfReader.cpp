@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-// Extracts the variant information from the top 8 bits in the version and
+// Extracts the variant information from the top 32 bits in the version and
 // returns an enum specifying the variants present.
 static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
@@ -92,7 +92,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
                       const uint64_t BinaryIdsSize,
                       const uint8_t *BinaryIdsStart,
                       std::vector<llvm::object::BuildID> &BinaryIds,
-                      const llvm::support::endianness Endian) {
+                      const llvm::endianness Endian) {
   using namespace support;
 
   if (BinaryIdsSize == 0)
@@ -145,7 +145,7 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
                                     const MemoryBuffer &DataBuffer,
                                     uint64_t BinaryIdsSize,
                                     const uint8_t *BinaryIdsStart,
-                                    llvm::support::endianness Endian) {
+                                    llvm::endianness Endian) {
   if (BinaryIdsSize == 0)
     return Error::success();
 
@@ -471,7 +471,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
   uint64_t Magic =
     *reinterpret_cast<const uint64_t *>(DataBuffer.getBufferStart());
   return RawInstrProf::getMagic<IntPtrT>() == Magic ||
-         sys::getSwappedBytes(RawInstrProf::getMagic<IntPtrT>()) == Magic;
+         llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
 template <class IntPtrT>
@@ -1337,12 +1337,12 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 Error IndexedInstrProfReader::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
   return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds, llvm::support::little);
+                               BinaryIds, llvm::endianness::little);
 }
 
 Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {
   return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                llvm::support::little);
+                                llvm::endianness::little);
 }
 
 void InstrProfReader::accumulateCounts(CountSumOrPercent &Sum, bool IsCS) {

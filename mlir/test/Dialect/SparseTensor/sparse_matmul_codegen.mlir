@@ -5,8 +5,7 @@
 // RUN:  --canonicalize --cse | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (i,j)>
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 //
@@ -117,7 +116,7 @@
 // CHECK:               } {"Emitted from" = "linalg.generic"}
 // CHECK:               scf.yield %[[VAL_64:.*]] : index
 // CHECK:             } {"Emitted from" = "linalg.generic"}
-// CHECK:             sparse_tensor.sort  hybrid_quick_sort %[[VAL_65:.*]], %[[VAL_33]] : memref<?xindex>
+// CHECK:             sparse_tensor.sort  hybrid_quick_sort %[[VAL_65:.*]], %[[VAL_33]]
 // CHECK:             %[[VAL_66:.*]]:4 = scf.for %[[VAL_67:.*]] = %[[VAL_10]] to %[[VAL_65]] step %[[VAL_11]] iter_args(%[[VAL_68:.*]] = %[[VAL_36]], %[[VAL_69:.*]] = %[[VAL_37]], %[[VAL_70:.*]] = %[[VAL_38]], %[[VAL_71:.*]] = %[[VAL_39]]) -> (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 // CHECK:               %[[VAL_72:.*]] = memref.load %[[VAL_32]]{{\[}}%[[VAL_67]]] : memref<4xindex>
 // CHECK:               %[[VAL_73:.*]] = memref.load %[[VAL_30]]{{\[}}%[[VAL_72]]] : memref<4xf64>
@@ -145,7 +144,7 @@
 // CHECK:           return %[[VAL_77]]#0, %[[VAL_77]]#1, %[[VAL_77]]#2, %[[VAL_77]]#3 : memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 func.func @matmul(%A: tensor<4x8xf64, #CSR>,
                   %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
-  %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+  %C = tensor.empty() : tensor<4x4xf64, #CSR>
   %D = linalg.matmul
     ins(%A, %B: tensor<4x8xf64, #CSR>, tensor<8x4xf64, #CSR>)
        outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>

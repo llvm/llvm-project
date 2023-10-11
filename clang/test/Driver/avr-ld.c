@@ -57,3 +57,31 @@
 // RUN: %clang -### --target=avr -mmcu=atmega328 -fuse-ld=lld -flto --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck -check-prefix LINKS %s
 // LINKS: {{".*ld.*"}} {{.*}} "--defsym=__DATA_REGION_ORIGIN__=0x800100" "-plugin-opt=mcpu=atmega328"
 // LINKS-NOT: "-plugin-opt=thinlto"
+
+// RUN: %clang -### -r --target=avr -mmcu=atmega328 --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck --check-prefix=LINKU %s
+// LINKU: {{".*ld.*"}} {{.*}} "-r" {{.*}} "-mavr5"
+// LINKU-NOT: "--gc-sections"
+// LINKU-NOT: "--defsym
+// LINKU-NOT: "-l
+
+// RUN: %clang -### -r --target=avr -mmcu=atmega328 -fuse-ld=lld --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck --check-prefix=LINKV %s
+// LINKV: {{".*ld.*"}} {{.*}} "-r"
+// LINKV-NOT: "--gc-sections"
+// LINKV-NOT: "--defsym
+// LINKV-NOT: "-l
+// LINKV-NOT: "-m
+
+// RUN: %clang -### -r --target=avr -mmcu=atmega328 -lm --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck --check-prefix=LINKW %s
+// LINKW: {{".*ld.*"}} {{.*}} "-r" "-lm" {{.*}} "-mavr5"
+// LINKW-NOT: "--gc-sections"
+// LINKW-NOT: "--defsym
+
+// RUN: %clang -### -r --target=avr --sysroot %S/Inputs/basic_avr_tree %s 2>&1 | FileCheck --check-prefix=LINKX %s
+// LINKX: warning: no target microcontroller specified
+// LINKX: {{".*ld.*"}} {{.*}} "-r" {{.*}}
+// LINKX-NOT: warning: {{.*}} standard library
+// LINKX-NOT: warning: {{.*}} data section address
+// LINKX-NOT: "--gc-sections"
+// LINKX-NOT: "--defsym
+// LINKX-NOT: "-l
+// LINKX-NOT: "-m

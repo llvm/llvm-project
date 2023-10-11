@@ -26,8 +26,8 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 1
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
 ; CHECK-NEXT:    [[CMP_NOT_I_I_I_I:%.*]] = icmp slt i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER:%.*]]
-; CHECK:       for.cond.preheader:
+; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER_SPLIT:%.*]]
+; CHECK:       for.cond.preheader.split:
 ; CHECK-NEXT:    [[CMP_I_NOT2:%.*]] = icmp eq i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT2]], label [[COMMON_RET:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       common.ret:
@@ -36,10 +36,7 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    tail call void @error()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[__BEGIN1_SROA_0_03:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[FOR_LATCH:%.*]] ], [ [[TMP0]], [[FOR_COND_PREHEADER]] ]
-; CHECK-NEXT:    [[CMP2_I_I:%.*]] = icmp ult ptr [[__BEGIN1_SROA_0_03]], [[ADD_PTR_I]]
-; CHECK-NEXT:    br i1 [[CMP2_I_I]], label [[FOR_LATCH]], label [[ERROR]]
-; CHECK:       for.latch:
+; CHECK-NEXT:    [[__BEGIN1_SROA_0_03:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_COND_PREHEADER_SPLIT]] ]
 ; CHECK-NEXT:    tail call void @use(ptr noundef nonnull align 4 dereferenceable(4) [[__BEGIN1_SROA_0_03]])
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i32, ptr [[__BEGIN1_SROA_0_03]], i64 1
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR_I]], [[ADD_PTR_I]]
@@ -148,13 +145,7 @@ define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], [[OPERATOR_ACC_EXIT:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt i64 [[SUB_PTR_DIV_I_I]], [[I_010]]
-; CHECK-NEXT:    br i1 [[CMP_NOT_I]], label [[OPERATOR_ACC_EXIT]], label [[IF_THEN_I:%.*]]
-; CHECK:       if.then.i:
-; CHECK-NEXT:    tail call void @abort() #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       operator_acc.exit:
+; CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 [[I_010]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ADD_PTR_I]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], 1.000000e+00
@@ -279,7 +270,7 @@ declare void @abort()
 
 define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-LABEL: define void @monkey
-; CHECK-SAME: (ptr nocapture noundef [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr {
+; CHECK-SAME: (ptr nocapture noundef [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt i32 [[LEN]], 1
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY4_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -293,13 +284,7 @@ define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY4_PREHEADER]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.body4:
-; CHECK-NEXT:    [[K_07:%.*]] = phi i32 [ [[DEC:%.*]], [[AT_EXIT:%.*]] ], [ [[I_09]], [[FOR_BODY4_PREHEADER]] ]
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i32 [[K_07]], [[LEN]]
-; CHECK-NEXT:    br i1 [[CMP_NOT_I]], label [[AT_EXIT]], label [[IF_THEN_I:%.*]]
-; CHECK:       if.then.i:
-; CHECK-NEXT:    tail call void @abort()
-; CHECK-NEXT:    unreachable
-; CHECK:       at.exit:
+; CHECK-NEXT:    [[K_07:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_BODY4]] ], [ [[I_09]], [[FOR_BODY4_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = zext i32 [[K_07]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[IDX_EXT_I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4

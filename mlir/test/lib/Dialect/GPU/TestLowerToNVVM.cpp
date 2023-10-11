@@ -20,9 +20,10 @@
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
+#include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -65,11 +66,19 @@ struct TestLowerToNVVMOptions
       llvm::cl::init("nvptx64-nvidia-cuda")};
   PassOptions::Option<std::string> cubinChip{
       *this, "cubin-chip", llvm::cl::desc("Chip to use to serialize to cubin."),
-      llvm::cl::init("sm_80")};
+      llvm::cl::init("sm_50")};
   PassOptions::Option<std::string> cubinFeatures{
       *this, "cubin-features",
       llvm::cl::desc("Features to use to serialize to cubin."),
-      llvm::cl::init("+ptx76")};
+      llvm::cl::init("+ptx60")};
+  PassOptions::Option<std::string> cubinFormat{
+      *this, "cubin-format",
+      llvm::cl::desc("Compilation format to use to serialize to cubin."),
+      llvm::cl::init("isa")};
+  PassOptions::Option<int> optLevel{
+      *this, "opt-level",
+      llvm::cl::desc("Optimization level for NVVM compilation"),
+      llvm::cl::init(2)};
 };
 
 //===----------------------------------------------------------------------===//
@@ -126,36 +135,16 @@ void buildGpuPassPipeline(OpPassManager &pm,
 
   // TODO: C++20 designated initializers.
   // The following pass is inconsistent.
-  // ConvertGpuOpsToNVVMOpsOptions convertGpuOpsToNVVMOpsOptions;
-  // convertGpuOpsToNVVMOpsOptions.indexBitwidth =
-  //   options.kernelIndexBitWidth;
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      // TODO: fix inconsistence.
-      createLowerGpuOpsToNVVMOpsPass(/*indexBitWidth=*/
-                                     options.kernelIndexBitWidth));
-
-  // TODO: C++20 designated initializers.
-  ConvertNVGPUToNVVMPassOptions convertNVGPUToNVVMPassOptions;
-  convertNVGPUToNVVMPassOptions.useOpaquePointers = true;
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      createConvertNVGPUToNVVMPass(convertNVGPUToNVVMPassOptions));
-  pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
-
-  // TODO: C++20 designated initializers.
-  GpuToLLVMConversionPassOptions gpuToLLVMConversionOptions;
-  // Note: hostBarePtrCallConv must be false for now otherwise
-  // gpu::HostRegister is ill-defined: it wants unranked memrefs but can't
-  // lower the to bare ptr.
-  gpuToLLVMConversionOptions.hostBarePtrCallConv =
-      options.hostUseBarePtrCallConv;
-  gpuToLLVMConversionOptions.kernelBarePtrCallConv =
+  // TODO: fix inconsistence.
+  ConvertGpuOpsToNVVMOpsOptions convertGpuOpsToNVVMOpsOptions;
+  convertGpuOpsToNVVMOpsOptions.useBarePtrCallConv =
       options.kernelUseBarePtrCallConv;
-  gpuToLLVMConversionOptions.useOpaquePointers = true;
-
-  // TODO: something useful here.
-  // gpuToLLVMConversionOptions.gpuBinaryAnnotation = "";
+  convertGpuOpsToNVVMOpsOptions.indexBitwidth = options.kernelIndexBitWidth;
+  convertGpuOpsToNVVMOpsOptions.useOpaquePointers = true;
   pm.addNestedPass<gpu::GPUModuleOp>(
-      createGpuToLLVMConversionPass(gpuToLLVMConversionOptions));
+      createConvertGpuOpsToNVVMOps(convertGpuOpsToNVVMOpsOptions));
+
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
 
   // Convert vector to LLVM (always needed).
   // TODO: C++20 designated initializers.
@@ -164,21 +153,33 @@ void buildGpuPassPipeline(OpPassManager &pm,
   pm.addNestedPass<gpu::GPUModuleOp>(
       createConvertVectorToLLVMPass(convertVectorToLLVMPassOptions));
 
+  // This pass is needed for PTX building
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertNVVMToLLVMPass());
+
   // Sprinkle some cleanups.
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
 
   // Finally we can reconcile unrealized casts.
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
-
-#if MLIR_GPU_TO_CUBIN_PASS_ENABLE
-  pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
-      options.cubinTriple, options.cubinChip, options.cubinFeatures));
-#endif // MLIR_GPU_TO_CUBIN_PASS_ENABLE
 }
 
 void buildLowerToNVVMPassPipeline(OpPassManager &pm,
                                   const TestLowerToNVVMOptions &options) {
+  // Start with a cleanup pass.
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+
+  //===----------------------------------------------------------------------===//
+  // NVGPU lowers device code as well as host code to the driver, so must run
+  // before outlining.
+  //===----------------------------------------------------------------------===//
+  // TODO: C++20 designated initializers.
+  ConvertNVGPUToNVVMPassOptions convertNVGPUToNVVMPassOptions;
+  convertNVGPUToNVVMPassOptions.useOpaquePointers = true;
+  pm.addNestedPass<func::FuncOp>(
+      createConvertNVGPUToNVVMPass(convertNVGPUToNVVMPassOptions));
+
   //===----------------------------------------------------------------------===//
   // Host-specific stuff.
   //===----------------------------------------------------------------------===//
@@ -251,6 +252,37 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
   //===----------------------------------------------------------------------===//
   // Host post-GPUModule-specific stuff.
   //===----------------------------------------------------------------------===//
+  // Attach an NVVM target to all the GPU modules with the provided target
+  // options.
+  // TODO: C++20 designated initializers.
+  GpuNVVMAttachTargetOptions nvvmTargetOptions;
+  nvvmTargetOptions.triple = options.cubinTriple;
+  nvvmTargetOptions.chip = options.cubinChip;
+  nvvmTargetOptions.features = options.cubinFeatures;
+  nvvmTargetOptions.optLevel = options.optLevel;
+  pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
+
+  // Convert GPU to LLVM.
+  // TODO: C++20 designated initializers.
+  GpuToLLVMConversionPassOptions gpuToLLVMConversionOptions;
+  // Note: hostBarePtrCallConv must be false for now otherwise
+  // gpu::HostRegister is ill-defined: it wants unranked memrefs but can't
+  // lower the to bare ptr.
+  gpuToLLVMConversionOptions.hostBarePtrCallConv =
+      options.hostUseBarePtrCallConv;
+  gpuToLLVMConversionOptions.kernelBarePtrCallConv =
+      options.kernelUseBarePtrCallConv;
+  gpuToLLVMConversionOptions.useOpaquePointers = true;
+
+  // TODO: something useful here.
+  // gpuToLLVMConversionOptions.gpuBinaryAnnotation = "";
+  pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMConversionOptions));
+
+  // Serialize all GPU modules to binaries.
+  GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+  gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;
+  pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
+
   // Convert vector to LLVM (always needed).
   // TODO: C++20 designated initializers.
   ConvertVectorToLLVMPassOptions convertVectorToLLVMPassOptions;
@@ -264,22 +296,6 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
   // TODO: fix GPU layering.
   convertIndexToLLVMPassOpt3.indexBitwidth = options.hostIndexBitWidth;
   pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt3));
-
-  // This must happen after cubin translation otherwise gpu.launch_func is
-  // illegal if no cubin annotation is present.
-  // TODO: C++20 designated initializers.
-  GpuToLLVMConversionPassOptions gpuToLLVMConversionOptions;
-  // Note: hostBarePtrCallConv must be false for now otherwise
-  // gpu::HostRegister is ill-defined: it wants unranked memrefs but can't
-  // lower the to bare ptr.
-  gpuToLLVMConversionOptions.hostBarePtrCallConv =
-      options.hostUseBarePtrCallConv;
-  gpuToLLVMConversionOptions.kernelBarePtrCallConv =
-      options.kernelUseBarePtrCallConv;
-  gpuToLLVMConversionOptions.useOpaquePointers = true;
-  // TODO: something useful here.
-  // gpuToLLVMConversionOptions.gpuBinaryAnnotation = "";
-  pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMConversionOptions));
 
   // Convert Func to LLVM (always needed).
   // TODO: C++20 designated initializers.

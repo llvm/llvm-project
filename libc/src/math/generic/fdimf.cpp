@@ -10,10 +10,10 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, fdimf, (float x, float y)) {
   return fputil::fdim(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

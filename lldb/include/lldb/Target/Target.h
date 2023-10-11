@@ -167,6 +167,8 @@ public:
 
   bool GetEnableSyntheticValue() const;
 
+  bool ShowHexVariableValuesWithLeadingZeroes() const;
+
   uint32_t GetMaxZeroPaddingInFloatFormat() const;
 
   uint32_t GetMaximumNumberOfChildrenToDisplay() const;
@@ -651,6 +653,8 @@ public:
   }
 
   lldb::BreakpointSP GetBreakpointByID(lldb::break_id_t break_id);
+
+  lldb::BreakpointSP CreateBreakpointAtUserEntry(Status &error);
 
   // Use this to create a file and line breakpoint to a given module or all
   // module it is nullptr

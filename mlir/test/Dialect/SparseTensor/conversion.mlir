@@ -1,33 +1,31 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseVector64 = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
+  map = (d0) -> (d0 : compressed),
   posWidth = 64,
   crdWidth = 64
 }>
 
 #SparseVector32 = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"],
+  map = (d0) -> (d0 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed"],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "compressed", "compressed"],
-  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
+  map = (d0, d1, d2) -> (d2 : dense, d0 : compressed, d1 : compressed)
 }>
 
 // CHECK-LABEL: func @sparse_nop(
@@ -116,15 +114,15 @@ func.func @sparse_new2d(%arg0: !llvm.ptr<i8>) -> tensor<?x?xf32, #CSR> {
 //   CHECK-DAG: %[[DimShape:.*]] = memref.cast %[[DimShape0]] : memref<3xindex> to memref<?xindex>
 //       CHECK: %[[Reader:.*]] = call @createCheckedSparseTensorReader(%[[A]], %[[DimShape]], %{{.*}})
 //       CHECK: %[[DimSizes:.*]] = call @getSparseTensorReaderDimSizes(%[[Reader]])
-//   CHECK-DAG: %[[LvlSizes0:.*]] = memref.alloca() : memref<3xindex>
-//   CHECK-DAG: %[[LvlSizes:.*]] = memref.cast %[[LvlSizes0]] : memref<3xindex> to memref<?xindex>
-//   CHECK-DAG: %[[Lvl2Dim0:.*]] = memref.alloca() : memref<3xindex>
-//   CHECK-DAG: %[[Lvl2Dim:.*]] = memref.cast %[[Lvl2Dim0]] : memref<3xindex> to memref<?xindex>
-//   CHECK-DAG: %[[Dim2Lvl0:.*]] = memref.alloca() : memref<3xindex>
-//   CHECK-DAG: %[[Dim2Lvl:.*]] = memref.cast %[[Dim2Lvl0]] : memref<3xindex> to memref<?xindex>
-//   CHECK-DAG: %[[LvlTypes0:.*]] = memref.alloca() : memref<3xi8>
-//   CHECK-DAG: %[[LvlTypes:.*]] = memref.cast %[[LvlTypes0]] : memref<3xi8> to memref<?xi8>
-//       CHECK: %[[T:.*]] = call @newSparseTensorFromReader(%[[Reader]], %[[LvlSizes]], %[[LvlTypes]], %[[Lvl2Dim]], %[[Dim2Lvl]], %{{.*}}, %{{.*}}, %{{.*}})
+//       CHECK: %[[Dim2Lvl0:.*]] = memref.alloca() : memref<3xindex>
+//       CHECK: %[[Dim2Lvl:.*]] = memref.cast %[[Dim2Lvl0]] : memref<3xindex> to memref<?xindex>
+//       CHECK: %[[Lvl2Dim0:.*]] = memref.alloca() : memref<3xindex>
+//       CHECK: %[[Lvl2Dim:.*]] = memref.cast %[[Lvl2Dim0]] : memref<3xindex> to memref<?xindex>
+//       CHECK: %[[LvlSizes0:.*]] = memref.alloca() : memref<3xindex>
+//       CHECK: %[[LvlSizes:.*]] = memref.cast %[[LvlSizes0]] : memref<3xindex> to memref<?xindex>
+//       CHECK: %[[LvlTypes0:.*]] = memref.alloca() : memref<3xi8>
+//       CHECK: %[[LvlTypes:.*]] = memref.cast %[[LvlTypes0]] : memref<3xi8> to memref<?xi8>
+//       CHECK: %[[T:.*]] = call @newSparseTensorFromReader(%[[Reader]], %[[LvlSizes]], %[[LvlTypes]], %[[Dim2Lvl]], %[[Lvl2Dim]], %{{.*}}, %{{.*}}, %{{.*}})
 //       CHECK: call @delSparseTensorReader(%[[Reader]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func.func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor> {
@@ -138,21 +136,19 @@ func.func @sparse_new3d(%arg0: !llvm.ptr<i8>) -> tensor<?x?x?xf32, #SparseTensor
 //   CHECK-DAG: %[[Empty:.*]] = arith.constant 0 : i32
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//   CHECK-DAG: %[[DimSizes0:.*]] = memref.alloca() : memref<2xindex>
-//   CHECK-DAG: %[[LvlSizes0:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[LvlTypes0:.*]] = memref.alloca() : memref<2xi8>
+//   CHECK-DAG: %[[Sizes0:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[Iota0:.*]] = memref.alloca() : memref<2xindex>
-//   CHECK-DAG: %[[DimSizes:.*]] = memref.cast %[[DimSizes0]] : memref<2xindex> to memref<?xindex>
-//   CHECK-DAG: %[[LvlSizes:.*]] = memref.cast %[[LvlSizes0]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[LvlTypes:.*]] = memref.cast %[[LvlTypes0]] : memref<2xi8> to memref<?xi8>
+//   CHECK-DAG: %[[Sizes:.*]] = memref.cast %[[Sizes0]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[Iota:.*]] = memref.cast %[[Iota0]] : memref<2xindex> to memref<?xindex>
-//   CHECK-DAG: memref.store %[[I]], %[[DimSizes0]][%[[C0]]] : memref<2xindex>
-//   CHECK-DAG: memref.store %[[J]], %[[DimSizes0]][%[[C1]]] : memref<2xindex>
-//       CHECK: %[[NP:.*]] = llvm.mlir.null : !llvm.ptr<i8>
-//       CHECK: %[[T:.*]] = call @newSparseTensor(%[[DimSizes]], %[[LvlSizes]], %[[LvlTypes]], %[[Iota]], %[[Iota]], %{{.*}}, %{{.*}}, %{{.*}}, %[[Empty]], %[[NP]])
+//   CHECK-DAG: memref.store %[[I]], %[[Sizes0]][%[[C0]]] : memref<2xindex>
+//   CHECK-DAG: memref.store %[[J]], %[[Sizes0]][%[[C1]]] : memref<2xindex>
+//       CHECK: %[[NP:.*]] = llvm.mlir.zero : !llvm.ptr<i8>
+//       CHECK: %[[T:.*]] = call @newSparseTensor(%[[Sizes]], %[[Sizes]], %[[LvlTypes]], %[[Iota]], %[[Iota]], %{{.*}}, %{{.*}}, %{{.*}}, %[[Empty]], %[[NP]])
 //       CHECK: return %[[T]] : !llvm.ptr<i8>
 func.func @sparse_init(%arg0: index, %arg1: index) -> tensor<?x?xf64, #CSR> {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSR>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSR>
   %1 = sparse_tensor.load %0 : tensor<?x?xf64, #CSR>
   return %1 : tensor<?x?xf64, #CSR>
 }
@@ -336,7 +332,7 @@ func.func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
 //   CHECK-DAG: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<8xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion1() -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSR>
+  %0 = tensor.empty() : tensor<4x8xf64, #CSR>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<4x8xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -352,7 +348,7 @@ func.func @sparse_expansion1() -> memref<?xindex> {
 //   CHECK-DAG: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<4xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion2() -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSC>
+  %0 = tensor.empty() : tensor<4x8xf64, #CSC>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<4x8xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -369,7 +365,7 @@ func.func @sparse_expansion2() -> memref<?xindex> {
 //   CHECK-DAG: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<?xi1>)
 //       CHECK: return %[[C]] : memref<?xindex>
 func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSC>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSC>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<?x?xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -432,12 +428,12 @@ func.func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr
 
 // CHECK-LABEL: func @sparse_and_dense_init(
 //       CHECK: %[[S:.*]] = call @newSparseTensor
-//       CHECK: %[[D:.*]] = bufferization.alloc_tensor
+//       CHECK: %[[D:.*]] = tensor.empty
 //       CHECK: return %[[S]], %[[D]] : !llvm.ptr<i8>, tensor<?x?xf64>
 func.func @sparse_and_dense_init(%arg0: index, %arg1: index)
            -> (tensor<?x?xf64, #CSR>, tensor<?x?xf64>) {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSR>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSR>
   %1 = sparse_tensor.load %0 : tensor<?x?xf64, #CSR>
-  %2 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64>
+  %2 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64>
   return %1, %2 : tensor<?x?xf64, #CSR>, tensor<?x?xf64>
 }

@@ -64,14 +64,14 @@ namespace {
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
   unsigned PointerSize;
-  support::endianness Endianness;
+  llvm::endianness Endianness;
   const auto &TT = MOP.getExecutionSession().getTargetTriple();
 
   switch (TT.getArch()) {
   case Triple::aarch64:
   case Triple::x86_64:
     PointerSize = 8;
-    Endianness = support::endianness::little;
+    Endianness = llvm::endianness::little;
     break;
   default:
     llvm_unreachable("Unrecognized architecture");
@@ -146,7 +146,7 @@ private:
     Hdr.flags = 0;
     Hdr.reserved = 0;
 
-    if (G.getEndianness() != support::endian::system_endianness())
+    if (G.getEndianness() != llvm::endianness::native)
       MachO::swapStruct(Hdr);
 
     auto HeaderContent = G.allocateContent(
@@ -1460,7 +1460,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
   auto SecContent = SecBlock.getAlreadyMutableContent();
   char *P = SecContent.data();
   auto WriteMachOStruct = [&](auto S) {
-    if (G.getEndianness() != support::endian::system_endianness())
+    if (G.getEndianness() != llvm::endianness::native)
       MachO::swapStruct(S);
     memcpy(P, &S, sizeof(S));
     P += sizeof(S);

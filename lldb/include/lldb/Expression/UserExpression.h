@@ -278,7 +278,8 @@ protected:
             lldb::ExpressionVariableSP &result) = 0;
 
   static lldb::addr_t GetObjectPointer(lldb::StackFrameSP frame_sp,
-                                       ConstString &object_name, Status &err);
+                                       llvm::StringRef object_name,
+                                       Status &err);
 
   /// Return ValueObject for a given variable name in the current stack frame
   ///
@@ -295,7 +296,7 @@ protected:
   ///          'nullptr' (and sets the error status parameter 'err').
   static lldb::ValueObjectSP
   GetObjectPointerValueObject(lldb::StackFrameSP frame,
-                              ConstString const &object_name, Status &err);
+                              llvm::StringRef object_name, Status &err);
 
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
   /// environment.

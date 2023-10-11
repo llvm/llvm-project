@@ -1317,6 +1317,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
+  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
@@ -1396,7 +1397,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     MachineOperand &MO = CopyMI->getOperand(I);
     if (MO.isReg()) {
       assert(MO.isImplicit() && "No explicit operands after implicit operands.");
-      assert(MO.getReg().isPhysical() && "unexpected implicit virtual register def");
+      assert((MO.getReg().isPhysical() ||
+              (MO.getSubReg() == 0 && MO.getReg() == DstOperand.getReg())) &&
+             "unexpected implicit virtual register def");
       ImplicitOps.push_back(MO);
     }
   }
@@ -1407,14 +1410,43 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // NewMI may have dead implicit defs (E.g. EFLAGS for MOV<bits>r0 on X86).
   // We need to remember these so we can add intervals once we insert
   // NewMI into SlotIndexes.
+  //
+  // We also expect to have tied implicit-defs of super registers originating
+  // from SUBREG_TO_REG, such as:
+  // $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+  // undef %0.sub_32bit = MOV32r0 implicit-def dead $eflags, implicit-def %0
+
+  bool NewMIDefinesFullReg = false;
+
   SmallVector<MCRegister, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
        i != e; ++i) {
     MachineOperand &MO = NewMI.getOperand(i);
     if (MO.isReg() && MO.isDef()) {
-      assert(MO.isImplicit() && MO.isDead() && MO.getReg().isPhysical());
-      NewMIImplDefs.push_back(MO.getReg().asMCReg());
+      assert(MO.isImplicit());
+      if (MO.getReg().isPhysical()) {
+        if (MO.getReg() == DstReg)
+          NewMIDefinesFullReg = true;
+
+        assert(MO.isImplicit() && MO.getReg().isPhysical() &&
+               (MO.isDead() ||
+                (DefSubIdx &&
+                 (TRI->getSubReg(MO.getReg(), DefSubIdx) ==
+                  MCRegister((unsigned)NewMI.getOperand(0).getReg())))));
+        NewMIImplDefs.push_back(MO.getReg().asMCReg());
+      } else {
+        assert(MO.getReg() == NewMI.getOperand(0).getReg() &&
+               MO.getSubReg() == 0);
+        // We're only expecting another def of the main output, so the range
+        // should get updated with the regular output range.
+        //
+        // FIXME: The range updating below probably needs updating to look at
+        // the super register if subranges are tracked.
+        assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
+               "subrange update for implicit-def of super register may not be "
+               "properly handled");
+      }
     }
   }
 
@@ -1526,8 +1558,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
     NewMI.getOperand(0).setIsDead(true);
-    NewMI.addOperand(MachineOperand::CreateReg(
-        CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+
+    if (!NewMIDefinesFullReg) {
+      NewMI.addOperand(MachineOperand::CreateReg(
+          CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+    }
+
     // Record small dead def live-ranges for all the subregisters
     // of the destination register.
     // Otherwise, variables that live through may miss some
@@ -2445,6 +2481,15 @@ class JoinVals {
     Val() = default;
 
     bool isAnalyzed() const { return WriteLanes.any(); }
+
+    /// Mark this value as an IMPLICIT_DEF which must be kept as if it were an
+    /// ordinary value.
+    void mustKeepImplicitDef(const TargetRegisterInfo &TRI,
+                             const MachineInstr &ImpDef) {
+      assert(ImpDef.isImplicitDef());
+      ErasableImplicitDef = false;
+      ValidLanes = TRI.getSubRegIndexLaneMask(ImpDef.getOperand(0).getSubReg());
+    }
   };
 
   /// One entry per value number in LI.
@@ -2786,13 +2831,20 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     //
     // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
     // to erase the IMPLICIT_DEF instruction.
-    MachineBasicBlock *OtherMBB = Indexes->getMBBFromIndex(V.OtherVNI->def);
-    if (DefMI && DefMI->getParent() != OtherMBB) {
+    //
+    // Additionally we must keep an IMPLICIT_DEF if we're redefining an incoming
+    // value.
+
+    MachineInstr *OtherImpDef =
+        Indexes->getInstructionFromIndex(V.OtherVNI->def);
+    MachineBasicBlock *OtherMBB = OtherImpDef->getParent();
+    if (DefMI &&
+        (DefMI->getParent() != OtherMBB || LIS->isLiveInToMBB(LR, OtherMBB))) {
       LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " extends into "
                  << printMBBReference(*DefMI->getParent())
                  << ", keeping it.\n");
-      OtherV.ErasableImplicitDef = false;
+      OtherV.mustKeepImplicitDef(*TRI, *OtherImpDef);
     } else if (OtherMBB->hasEHPadSuccessor()) {
       // If OtherV is defined in a basic block that has EH pad successors then
       // we get the same problem not just if OtherV is live beyond its basic
@@ -2801,7 +2853,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
       LLVM_DEBUG(
           dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " may be live into EH pad successors, keeping it.\n");
-      OtherV.ErasableImplicitDef = false;
+      OtherV.mustKeepImplicitDef(*TRI, *OtherImpDef);
     } else {
       // We deferred clearing these lanes in case we needed to save them
       OtherV.ValidLanes &= ~OtherV.WriteLanes;
@@ -2957,20 +3009,6 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     // The other value is going to be pruned if this join is successful.
     assert(V.OtherVNI && "OtherVNI not assigned, can't prune");
     Val &OtherV = Other.Vals[V.OtherVNI->id];
-    // We cannot erase an IMPLICIT_DEF if we don't have valid values for all
-    // its lanes.
-    if (OtherV.ErasableImplicitDef &&
-        TrackSubRegLiveness &&
-        (OtherV.ValidLanes & ~V.ValidLanes).any()) {
-      LLVM_DEBUG(dbgs() << "Cannot erase implicit_def with missing values\n");
-
-      OtherV.ErasableImplicitDef = false;
-      // The valid lanes written by the implicit_def were speculatively cleared
-      // before, so make this more conservative. It may be better to track this,
-      // I haven't found a testcase where it matters.
-      OtherV.ValidLanes = LaneBitmask::getAll();
-    }
-
     OtherV.Pruned = true;
     [[fallthrough]];
   }

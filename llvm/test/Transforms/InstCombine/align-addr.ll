@@ -18,9 +18,9 @@ define void @test0(ptr %b, i64 %n, i64 %u, i64 %y) nounwind  {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[BB]] ], [ 20, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[J:%.*]] = mul i64 [[I]], [[V]]
-; CHECK-NEXT:    [[H:%.*]] = add i64 [[J]], [[Z]]
-; CHECK-NEXT:    [[T8:%.*]] = getelementptr double, ptr [[E]], i64 [[H]]
-; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[T8]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[E]], i64 [[J]]
+; CHECK-NEXT:    [[T8:%.*]] = getelementptr double, ptr [[TMP0]], i64 [[Z]]
+; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[T8]], align 8
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[RETURN]], label [[BB]]
@@ -58,7 +58,7 @@ return:
 define <16 x i8> @test1(<2 x i64> %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr @GLOBAL, align 16
+; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr @GLOBAL, align 1
 ; CHECK-NEXT:    ret <16 x i8> [[TMP]]
 ;
 entry:
@@ -70,7 +70,7 @@ entry:
 
 define <16 x i8> @test1_as1(<2 x i64> %x) {
 ; CHECK-LABEL: @test1_as1(
-; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) @GLOBAL_as1, align 16
+; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) @GLOBAL_as1, align 1
 ; CHECK-NEXT:    ret <16 x i8> [[TMP]]
 ;
   %tmp = load <16 x i8>, ptr addrspace(1) @GLOBAL_as1, align 1
@@ -81,7 +81,7 @@ define <16 x i8> @test1_as1(<2 x i64> %x) {
 
 define <16 x i8> @test1_as1_gep(<2 x i64> %x) {
 ; CHECK-LABEL: @test1_as1_gep(
-; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) getelementptr inbounds ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i32 0, i32 4), align 16
+; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) getelementptr inbounds ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i32 0, i32 4), align 1
 ; CHECK-NEXT:    ret <16 x i8> [[TMP]]
 ;
   %tmp = load <16 x i8>, ptr addrspace(1) getelementptr ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i16 0, i16 4), align 1
@@ -138,7 +138,7 @@ define <16 x i8> @ptrmask_align_unknown_ptr_align1(ptr align 1 %ptr, i64 %mask) 
 define <16 x i8> @ptrmask_align_unknown_ptr_align8(ptr align 8 %ptr, i64 %mask) {
 ; CHECK-LABEL: @ptrmask_align_unknown_ptr_align8(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 %mask)
@@ -150,7 +150,7 @@ define <16 x i8> @ptrmask_align_unknown_ptr_align8(ptr align 8 %ptr, i64 %mask) 
 define <16 x i8> @ptrmask_align2_ptr_align1(ptr align 1 %ptr) {
 ; CHECK-LABEL: @ptrmask_align2_ptr_align1(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -2)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 2
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 -2)
@@ -162,7 +162,7 @@ define <16 x i8> @ptrmask_align2_ptr_align1(ptr align 1 %ptr) {
 define <16 x i8> @ptrmask_align4_ptr_align1(ptr align 1 %ptr) {
 ; CHECK-LABEL: @ptrmask_align4_ptr_align1(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 -4)
@@ -174,7 +174,7 @@ define <16 x i8> @ptrmask_align4_ptr_align1(ptr align 1 %ptr) {
 define <16 x i8> @ptrmask_align8_ptr_align1(ptr align 1 %ptr) {
 ; CHECK-LABEL: @ptrmask_align8_ptr_align1(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 -8)
@@ -187,7 +187,7 @@ define <16 x i8> @ptrmask_align8_ptr_align1(ptr align 1 %ptr) {
 define <16 x i8> @ptrmask_align8_ptr_align8(ptr align 8 %ptr) {
 ; CHECK-LABEL: @ptrmask_align8_ptr_align8(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 -8)
@@ -200,7 +200,7 @@ define <16 x i8> @ptrmask_align8_ptr_align8(ptr align 8 %ptr) {
 define <16 x i8> @ptrmask_align8_ptr_align16(ptr align 16 %ptr) {
 ; CHECK-LABEL: @ptrmask_align8_ptr_align16(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 -8)
@@ -213,7 +213,7 @@ define <16 x i8> @ptrmask_align8_ptr_align16(ptr align 16 %ptr) {
 define <16 x i8> @ptrmask_align8_ptr_align1_smallmask(ptr align 1 %ptr) {
 ; CHECK-LABEL: @ptrmask_align8_ptr_align1_smallmask(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[PTR:%.*]], i32 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i32(ptr %ptr, i32 -8)
@@ -226,7 +226,7 @@ define <16 x i8> @ptrmask_align8_ptr_align1_smallmask(ptr align 1 %ptr) {
 define <16 x i8> @ptrmask_align8_ptr_align1_bigmask(ptr align 1 %ptr) {
 ; CHECK-LABEL: @ptrmask_align8_ptr_align1_bigmask(
 ; CHECK-NEXT:    [[ALIGNED:%.*]] = call ptr @llvm.ptrmask.p0.i128(ptr [[PTR:%.*]], i128 -8)
-; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[ALIGNED]], align 1
 ; CHECK-NEXT:    ret <16 x i8> [[LOAD]]
 ;
   %aligned = call ptr @llvm.ptrmask.p0.i128(ptr %ptr, i128 -8)

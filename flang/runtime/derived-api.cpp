@@ -41,6 +41,18 @@ void RTNAME(Destroy)(const Descriptor &descriptor) {
   }
 }
 
+void RTNAME(Finalize)(
+    const Descriptor &descriptor, const char *sourceFile, int sourceLine) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noFinalizationNeeded()) {
+        Terminator terminator{sourceFile, sourceLine};
+        Finalize(descriptor, *derived, &terminator);
+      }
+    }
+  }
+}
+
 bool RTNAME(ClassIs)(
     const Descriptor &descriptor, const typeInfo::DerivedType &derivedType) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {

@@ -74,11 +74,11 @@ EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
 
 template <typename TargetAsyncInfoTy>
 static inline void
-targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
-                 void **ArgsBase, void **Args, int64_t *ArgSizes,
-                 int64_t *ArgTypes, map_var_info_t *ArgNames, void **ArgMappers,
-                 TargetDataFuncPtrTy TargetDataFunction,
-                 const char *RegionTypeMsg, const char *RegionName) {
+targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
+           void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
+           map_var_info_t *ArgNames, void **ArgMappers,
+           TargetDataFuncPtrTy TargetDataFunction, const char *RegionTypeMsg,
+           const char *RegionName) {
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
@@ -113,7 +113,7 @@ targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
                         TargetDataFunction == targetDataEnd ||
                         TargetDataFunction == targetDataUpdate) &&
                        "Encountered unexpected TargetDataFunction during "
-                       "execution of targetDataMapper");
+                       "execution of targetData");
                 auto CallbackFunctions =
                     (TargetDataFunction == targetDataBegin)
                         ? RegionInterface.getCallbacks<ompt_target_enter_data>()
@@ -144,9 +144,10 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *Loc, int64_t DeviceId,
                                            map_var_info_t *ArgNames,
                                            void **ArgMappers) {
 
-  targetDataMapper<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
-                                ArgTypes, ArgNames, ArgMappers, targetDataBegin,
-                                "Entering OpenMP data region with being_mapper", "begin");
+  targetData<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
+                          ArgTypes, ArgNames, ArgMappers, targetDataBegin,
+                          "Entering OpenMP data region with being_mapper",
+                          "begin");
 }
 
 EXTERN void __tgt_target_data_begin_nowait_mapper(
@@ -154,10 +155,11 @@ EXTERN void __tgt_target_data_begin_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-  
-  targetDataMapper<TaskAsyncInfoWrapperTy>(
+
+  targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
-      ArgMappers, targetDataBegin, "Entering OpenMP data region with being_nowait_mapper", "begin");
+      ArgMappers, targetDataBegin,
+      "Entering OpenMP data region with being_nowait_mapper", "begin");
 }
 
 /// passes data from the target, releases target memory and destroys
@@ -169,10 +171,10 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *Loc, int64_t DeviceId,
                                          int64_t *ArgTypes,
                                          map_var_info_t *ArgNames,
                                          void **ArgMappers) {
-  
-  targetDataMapper<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
-                                ArgTypes, ArgNames, ArgMappers, targetDataEnd,
-                                "Exiting OpenMP data region with end_mapper", "end");
+
+  targetData<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
+                          ArgTypes, ArgNames, ArgMappers, targetDataEnd,
+                          "Exiting OpenMP data region with end_mapper", "end");
 }
 
 EXTERN void __tgt_target_data_end_nowait_mapper(
@@ -180,10 +182,11 @@ EXTERN void __tgt_target_data_end_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-  
-  targetDataMapper<TaskAsyncInfoWrapperTy>(
+
+  targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
-      ArgMappers, targetDataEnd, "Exiting OpenMP data region with end_nowait_mapper", "end");
+      ArgMappers, targetDataEnd,
+      "Exiting OpenMP data region with end_nowait_mapper", "end");
 }
 
 EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
@@ -192,10 +195,12 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
                                             int64_t *ArgTypes,
                                             map_var_info_t *ArgNames,
                                             void **ArgMappers) {
-  
-  targetDataMapper<AsyncInfoTy>(
+
+  targetData<AsyncInfoTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
-      ArgMappers, targetDataUpdate, "Updating data within the OpenMP data region with update_mapper", "update");
+      ArgMappers, targetDataUpdate,
+      "Updating data within the OpenMP data region with update_mapper",
+      "update");
 }
 
 EXTERN void __tgt_target_data_update_nowait_mapper(
@@ -203,9 +208,11 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-  targetDataMapper<TaskAsyncInfoWrapperTy>(
+  targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
-      ArgMappers, targetDataUpdate, "Updating data within the OpenMP data region with update_nowait_mapper", "update");
+      ArgMappers, targetDataUpdate,
+      "Updating data within the OpenMP data region with update_nowait_mapper",
+      "update");
 }
 
 static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
@@ -351,7 +358,7 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;
-};
+}
 
 /// Implements a target kernel entry that replays a pre-recorded kernel.
 /// \param Loc Source location associated with this target region (unused).

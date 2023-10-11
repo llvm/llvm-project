@@ -156,12 +156,12 @@ structured_op: !LinalgStructuredOpConfig
   assignments:
   - !ScalarAssign
     arg: O
-    value: !Scalarlogression
+    value: !ScalarExpression
       scalar_fn:
         kind: unary
         fn_name: log
         operands:
-        - !Scalarlogression
+        - !ScalarExpression
           scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
@@ -191,7 +191,7 @@ structured_op: !LinalgStructuredOpConfig
   assignments:
   - !ScalarAssign
     arg: O
-    value: !Scalarabsression
+    value: !ScalarExpression
       scalar_fn:
         kind: unary
         fn_name: abs
@@ -226,12 +226,12 @@ structured_op: !LinalgStructuredOpConfig
   assignments:
   - !ScalarAssign
     arg: O
-    value: !Scalarceilression
+    value: !ScalarExpression
       scalar_fn:
         kind: unary
         fn_name: ceil
         operands:
-        - !Scalarceilression
+        - !ScalarExpression
           scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
@@ -261,17 +261,17 @@ structured_op: !LinalgStructuredOpConfig
   assignments:
   - !ScalarAssign
     arg: O
-    value: !Scalarfloorression
+    value: !ScalarExpression
       scalar_fn:
         kind: unary
         fn_name: floor
         operands:
-        - !Scalarfloorression
+        - !ScalarExpression
           scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: negf
-  cpp_class_name: NegFOp
+  cpp_class_name: NegfOp
   doc: |-
     Applies negf(x) elementwise.
 
@@ -296,7 +296,7 @@ structured_op: !LinalgStructuredOpConfig
   assignments:
   - !ScalarAssign
     arg: O
-    value: !Scalarnegfression
+    value: !ScalarExpression
       scalar_fn:
         kind: unary
         fn_name: negf
@@ -386,17 +386,17 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: lhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
     name: rhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
-    name: out
+    name: O
     kind: output_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -406,7 +406,7 @@ structured_op: !LinalgStructuredOpConfig
   iterator_types: []
   assignments:
   - !ScalarAssign
-    arg: out
+    arg: O
     value: !ScalarExpression
       scalar_fn:
         kind: binary
@@ -435,17 +435,17 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: lhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
     name: rhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
-    name: out
+    name: O
     kind: output_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -455,7 +455,7 @@ structured_op: !LinalgStructuredOpConfig
   iterator_types: []
   assignments:
   - !ScalarAssign
-    arg: out
+    arg: O
     value: !ScalarExpression
       scalar_fn:
         kind: binary
@@ -470,7 +470,7 @@ metadata: !LinalgOpMetadata
   name: mul
   cpp_class_name: MulOp
   doc: |-
-    Multiply two tensors elementwise.
+    Multiplies two tensors elementwise.
 
     The shapes and element types must be identical. The appropriate casts,
     broadcasts and reductions should be done previously to calling this op.
@@ -484,17 +484,17 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: lhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
     name: rhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
-    name: out
+    name: O
     kind: output_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -504,7 +504,7 @@ structured_op: !LinalgStructuredOpConfig
   iterator_types: []
   assignments:
   - !ScalarAssign
-    arg: out
+    arg: O
     value: !ScalarExpression
       scalar_fn:
         kind: binary
@@ -519,8 +519,7 @@ metadata: !LinalgOpMetadata
   name: div
   cpp_class_name: DivOp
   doc: |-
-    Divides the first tensor by the second tensor, elementwise. For integer
-    types, performs a signed division.
+    Divides the first tensor by the second tensor, elementwise.
 
     The shapes and element types must be identical. The appropriate casts,
     broadcasts and reductions should be done previously to calling this op.
@@ -534,17 +533,17 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: lhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
     name: rhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
-    name: out
+    name: O
     kind: output_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -554,7 +553,7 @@ structured_op: !LinalgStructuredOpConfig
   iterator_types: []
   assignments:
   - !ScalarAssign
-    arg: out
+    arg: O
     value: !ScalarExpression
       scalar_fn:
         kind: binary
@@ -567,7 +566,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: div_unsigned
-  cpp_class_name: DivUOp
+  cpp_class_name: DivUnsignedOp
   doc: |-
     Divides the first tensor by the second tensor, elementwise. For integer
     types, performs an unsigned division.
@@ -584,17 +583,17 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: lhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
     name: rhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
-    name: out
+    name: O
     kind: output_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -604,7 +603,7 @@ structured_op: !LinalgStructuredOpConfig
   iterator_types: []
   assignments:
   - !ScalarAssign
-    arg: out
+    arg: O
     value: !ScalarExpression
       scalar_fn:
         kind: binary
@@ -619,7 +618,7 @@ metadata: !LinalgOpMetadata
   name: max
   cpp_class_name: MaxOp
   doc: |-
-    Takes the max (signed) between the input and a constant.
+    Takes the max (signed) between two inputs, elementwise.
 
     The shapes and element types must be identical. The appropriate casts,
     broadcasts and reductions should be done previously to calling this op.
@@ -633,17 +632,17 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: lhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
     name: rhs
     kind: input_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   - !LinalgOperandDefConfig
-    name: out
+    name: O
     kind: output_tensor
-    type_var: T
+    type_var: T1
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -653,7 +652,7 @@ structured_op: !LinalgStructuredOpConfig
   iterator_types: []
   assignments:
   - !ScalarAssign
-    arg: out
+    arg: O
     value: !ScalarExpression
       scalar_fn:
         kind: binary
@@ -668,14 +667,10 @@ metadata: !LinalgOpMetadata
   name: matmul
   cpp_class_name: MatmulOp
   doc: |-
-    Performs an accumulative (C += A*B) matrix multiplication of two 2D inputs.
+    Performs a matrix multiplication of two 2D inputs.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
-
-    Note this operation represents an accumulative matrix multiplication, `C +=
-    A*B` (as opposed to `C = A*B`). The appropriate initialisation of the output
-    matrix should be done prior to calling this Op.
   implements:
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
@@ -1141,8 +1136,8 @@ metadata: !LinalgOpMetadata
   name: batch_mmt4d
   cpp_class_name: BatchMmt4DOp
   doc: |-
-    Performs a batched matrix-matrix-transpose multiplication of two batched-4D
-    (5D) inputs.
+    Performs a batched matrix-matrix-transpose multiplication of two
+    batched-4D (5D) inputs.
 
     Besides the outermost batch dimension has the same semantic as
     linalg.batch_matmul, the differences from linalg.batch_matmul in the
@@ -2508,6 +2503,143 @@ structured_op: !LinalgStructuredOpConfig
       s9, s10] -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d6)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
       s9, s10] -> (d4, d5, d6, d3)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10] -> ()>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10] -> ()>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10] -> (d0, d1, d2, d3)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  - reduction
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: O
+        - !ScalarExpression
+          scalar_fn:
+            kind: binary
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              scalar_fn:
+                kind: binary
+                fn_name: sub
+                operands:
+                - !ScalarExpression
+                  scalar_fn:
+                    kind: type
+                    fn_name: cast_signed
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: I
+                - !ScalarExpression
+                  scalar_fn:
+                    kind: type
+                    fn_name: cast_signed
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: IZp
+            - !ScalarExpression
+              scalar_fn:
+                kind: binary
+                fn_name: sub
+                operands:
+                - !ScalarExpression
+                  scalar_fn:
+                    kind: type
+                    fn_name: cast_signed
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: K
+                - !ScalarExpression
+                  scalar_fn:
+                    kind: type
+                    fn_name: cast_signed
+                    type_var: U
+                    operands:
+                    - !ScalarExpression
+                      scalar_arg: KZp
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: conv_2d_nhwc_fhwc_q
+  cpp_class_name: Conv2DNhwcFhwcQOp
+  doc: |-
+    Performs 2-D convolution with zero point offsets.
+
+    Layout:
+      * Input: NHWC.
+      * Kernel: FHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+  implements:
+  - LinalgConvolutionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
+      s1 * s2 + s3 * s4, s5 * s6 + s7 * s8, s9)>
+  - !LinalgOperandDefConfig
+    name: K
+    kind: input_tensor
+    type_var: T2
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s10,
+      s3, s7, s9)>
+  - !LinalgOperandDefConfig
+    name: IZp
+    kind: scalar
+    type_var: I32
+  - !LinalgOperandDefConfig
+    name: KZp
+    kind: scalar
+    type_var: I32
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: U
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s0,
+      s1, s5, s10)>
+  - !LinalgOperandDefConfig
+    name: strides
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
+      (s2, s6)>
+    default_indices:
+    - 1
+    - 1
+  - !LinalgOperandDefConfig
+    name: dilations
+    kind: index_attr
+    index_attr_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] ->
+      (s4, s8)>
+    default_indices:
+    - 1
+    - 1
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10] -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d6)>
+    - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
+      s9, s10] -> (d3, d4, d5, d6)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,
       s9, s10] -> ()>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6)[s0, s1, s2, s3, s4, s5, s6, s7, s8,

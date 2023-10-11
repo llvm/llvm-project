@@ -71,7 +71,7 @@ define amdgpu_kernel void @kernel_call() {
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
 ; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
@@ -139,7 +139,7 @@ define amdgpu_kernel void @kernel_tailcall() {
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
 ; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
@@ -260,7 +260,7 @@ define protected amdgpu_kernel void @kernel() {
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    ; implicit-def: $vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
 ; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill

@@ -74,7 +74,6 @@ namespace llvm {
 cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
-}
 
 /// Indicate we are linking with an allocator that supports hot/cold operator
 /// new interfaces.
@@ -82,6 +81,7 @@ extern cl::opt<bool> SupportsHotColdNew;
 
 /// Enable MemProf context disambiguation for thin link.
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
+} // namespace llvm
 
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
@@ -142,8 +142,8 @@ void llvm::computeLTOCacheKey(
     AddUnsigned(-1);
   for (const auto &S : Conf.MllvmArgs)
     AddString(S);
-  AddUnsigned(Conf.CGOptLevel);
-  AddUnsigned(Conf.CGFileType);
+  AddUnsigned(static_cast<int>(Conf.CGOptLevel));
+  AddUnsigned(static_cast<int>(Conf.CGFileType));
   AddUnsigned(Conf.OptLevel);
   AddUnsigned(Conf.Freestanding);
   AddString(Conf.OptPipeline);
@@ -1270,13 +1270,27 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   updateMemProfAttributes(*RegularLTO.CombinedModule, ThinLTO.CombinedIndex);
 
+  bool WholeProgramVisibilityEnabledInLTO =
+      Conf.HasWholeProgramVisibility &&
+      // If validation is enabled, upgrade visibility only when all vtables
+      // have typeinfos.
+      (!Conf.ValidateAllVtablesHaveTypeInfos || Conf.AllVtablesHaveTypeInfos);
+
+  // This returns true when the name is local or not defined. Locals are
+  // expected to be handled separately.
+  auto IsVisibleToRegularObj = [&](StringRef name) {
+    auto It = GlobalResolutions.find(name);
+    return (It == GlobalResolutions.end() || It->second.VisibleOutsideSummary);
+  };
+
   // If allowed, upgrade public vcall visibility metadata to linkage unit
   // visibility before whole program devirtualization in the optimizer.
-  updateVCallVisibilityInModule(*RegularLTO.CombinedModule,
-                                Conf.HasWholeProgramVisibility,
-                                DynamicExportSymbols);
+  updateVCallVisibilityInModule(
+      *RegularLTO.CombinedModule, WholeProgramVisibilityEnabledInLTO,
+      DynamicExportSymbols, Conf.ValidateAllVtablesHaveTypeInfos,
+      IsVisibleToRegularObj);
   updatePublicTypeTestCalls(*RegularLTO.CombinedModule,
-                            Conf.HasWholeProgramVisibility);
+                            WholeProgramVisibilityEnabledInLTO);
 
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
@@ -1683,13 +1697,38 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   std::set<GlobalValue::GUID> ExportedGUIDs;
 
-  if (hasWholeProgramVisibility(Conf.HasWholeProgramVisibility))
+  bool WholeProgramVisibilityEnabledInLTO =
+      Conf.HasWholeProgramVisibility &&
+      // If validation is enabled, upgrade visibility only when all vtables
+      // have typeinfos.
+      (!Conf.ValidateAllVtablesHaveTypeInfos || Conf.AllVtablesHaveTypeInfos);
+  if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     ThinLTO.CombinedIndex.setWithWholeProgramVisibility();
+
+  // If we're validating, get the vtable symbols that should not be
+  // upgraded because they correspond to typeIDs outside of index-based
+  // WPD info.
+  DenseSet<GlobalValue::GUID> VisibleToRegularObjSymbols;
+  if (WholeProgramVisibilityEnabledInLTO &&
+      Conf.ValidateAllVtablesHaveTypeInfos) {
+    // This returns true when the name is local or not defined. Locals are
+    // expected to be handled separately.
+    auto IsVisibleToRegularObj = [&](StringRef name) {
+      auto It = GlobalResolutions.find(name);
+      return (It == GlobalResolutions.end() ||
+              It->second.VisibleOutsideSummary);
+    };
+
+    getVisibleToRegularObjVtableGUIDs(ThinLTO.CombinedIndex,
+                                      VisibleToRegularObjSymbols,
+                                      IsVisibleToRegularObj);
+  }
+
   // If allowed, upgrade public vcall visibility to linkage unit visibility in
   // the summaries before whole program devirtualization below.
-  updateVCallVisibilityInIndex(ThinLTO.CombinedIndex,
-                               Conf.HasWholeProgramVisibility,
-                               DynamicExportSymbols);
+  updateVCallVisibilityInIndex(
+      ThinLTO.CombinedIndex, WholeProgramVisibilityEnabledInLTO,
+      DynamicExportSymbols, VisibleToRegularObjSymbols);
 
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead

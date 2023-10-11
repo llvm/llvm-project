@@ -521,7 +521,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   // FIXME: Embed in fragments instead?
   uint64_t FragmentSize = Asm.computeFragmentSize(Layout, F);
 
-  support::endianness Endian = Asm.getBackend().Endian;
+  llvm::endianness Endian = Asm.getBackend().Endian;
 
   if (const MCEncodedFragment *EF = dyn_cast<MCEncodedFragment>(&F))
     Asm.writeFragmentPadding(OS, *EF, FragmentSize);

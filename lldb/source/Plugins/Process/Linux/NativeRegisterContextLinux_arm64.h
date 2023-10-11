@@ -85,6 +85,8 @@ private:
   bool m_mte_ctrl_is_valid;
 
   bool m_sve_header_is_valid;
+  bool m_za_buffer_is_valid;
+  bool m_za_header_is_valid;
   bool m_pac_mask_is_valid;
   bool m_tls_is_valid;
   size_t m_tls_size;
@@ -94,9 +96,12 @@ private:
   RegisterInfoPOSIX_arm64::FPU
       m_fpr; // floating-point registers including extended register sets.
 
-  SVEState m_sve_state;
+  SVEState m_sve_state = SVEState::Unknown;
   struct sve::user_sve_header m_sve_header;
   std::vector<uint8_t> m_sve_ptrace_payload;
+
+  sve::user_za_header m_za_header;
+  std::vector<uint8_t> m_za_ptrace_payload;
 
   bool m_refresh_hwdebug_info;
 
@@ -108,6 +113,13 @@ private:
   struct user_pac_mask m_pac_mask;
 
   uint64_t m_mte_ctrl_reg;
+
+  struct sme_pseudo_regs {
+    uint64_t ctrl_reg;
+    uint64_t svg_reg;
+  };
+
+  struct sme_pseudo_regs m_sme_pseudo_regs;
 
   struct tls_regs {
     uint64_t tpidr_reg;
@@ -139,7 +151,23 @@ private:
 
   Status WriteTLS();
 
+  Status ReadSMESVG();
+
+  Status ReadZAHeader();
+
+  Status ReadZA();
+
+  Status WriteZA();
+
+  // No WriteZAHeader because writing only the header will disable ZA.
+  // Instead use WriteZA and ensure you have the correct ZA buffer size set
+  // beforehand if you wish to disable it.
+
+  // SVCR is a pseudo register and we do not allow writes to it.
+  Status ReadSMEControl();
+
   bool IsSVE(unsigned reg) const;
+  bool IsSME(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
   bool IsTLS(unsigned reg) const;
@@ -150,11 +178,17 @@ private:
 
   void *GetSVEHeader() { return &m_sve_header; }
 
+  void *GetZAHeader() { return &m_za_header; }
+
+  size_t GetZAHeaderSize() { return sizeof(m_za_header); }
+
   void *GetPACMask() { return &m_pac_mask; }
 
   void *GetMTEControl() { return &m_mte_ctrl_reg; }
 
   void *GetTLSBuffer() { return &m_tls_regs; }
+
+  void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
   void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
 
@@ -166,9 +200,15 @@ private:
 
   unsigned GetSVERegSet();
 
+  void *GetZABuffer() { return m_za_ptrace_payload.data(); };
+
+  size_t GetZABufferSize() { return m_za_ptrace_payload.size(); }
+
   size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
 
   size_t GetTLSBufferSize() { return m_tls_size; }
+
+  size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;
 
@@ -181,6 +221,8 @@ private:
   void ConfigureRegisterContext();
 
   uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
+
+  Status CacheAllRegisters(uint32_t &cached_size);
 };
 
 } // namespace process_linux

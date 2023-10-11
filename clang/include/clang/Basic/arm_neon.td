@@ -1232,6 +1232,11 @@ def FRINT32X_S32 : SInst<"vrnd32x", "..", "fQf">;
 def FRINT32Z_S32 : SInst<"vrnd32z", "..", "fQf">;
 def FRINT64X_S32 : SInst<"vrnd64x", "..", "fQf">;
 def FRINT64Z_S32 : SInst<"vrnd64z", "..", "fQf">;
+
+def FRINT32X_S64 : SInst<"vrnd32x", "..", "dQd">;
+def FRINT32Z_S64 : SInst<"vrnd32z", "..", "dQd">;
+def FRINT64X_S64 : SInst<"vrnd64x", "..", "dQd">;
+def FRINT64Z_S64 : SInst<"vrnd64z", "..", "dQd">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -67,6 +67,15 @@ OpAsmParser::~OpAsmParser() = default;
 
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
+/// Parse a type list.
+/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
+    return parseCommaSeparatedList(
+        [&]() { return parseType(result.emplace_back()); });
+  }
+
+
+
 //===----------------------------------------------------------------------===//
 // DialectAsmPrinter
 //===----------------------------------------------------------------------===//
@@ -779,6 +788,7 @@ private:
     os << "%";
   }
   void printKeywordOrString(StringRef) override {}
+  void printString(StringRef) override {}
   void printResourceHandle(const AsmDialectResourceHandle &) override {}
   void printSymbolName(StringRef) override {}
   void printSuccessor(Block *) override {}
@@ -919,6 +929,7 @@ private:
   /// determining potential aliases.
   void printFloat(const APFloat &) override {}
   void printKeywordOrString(StringRef) override {}
+  void printString(StringRef) override {}
   void printSymbolName(StringRef) override {}
   void printResourceHandle(const AsmDialectResourceHandle &) override {}
 
@@ -2402,8 +2413,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
   if (!attr.isSplat() && allowHex &&
       shouldPrintElementsAttrWithHex(numElements)) {
     ArrayRef<char> rawData = attr.getRawData();
-    if (llvm::support::endian::system_endianness() ==
-        llvm::support::endianness::big) {
+    if (llvm::endianness::native == llvm::endianness::big) {
       // Convert endianess in big-endian(BE) machines. `rawData` is BE in BE
       // machines. It is converted here to print in LE format.
       SmallVector<char, 64> outDataVec(rawData.size());
@@ -2765,6 +2775,13 @@ void AsmPrinter::printAttributeWithoutType(Attribute attr) {
 void AsmPrinter::printKeywordOrString(StringRef keyword) {
   assert(impl && "expected AsmPrinter::printKeywordOrString to be overriden");
   ::printKeywordOrString(keyword, impl->getStream());
+}
+
+void AsmPrinter::printString(StringRef keyword) {
+  assert(impl && "expected AsmPrinter::printString to be overriden");
+  *this << '"';
+  printEscapedString(keyword, getStream());
+  *this << '"';
 }
 
 void AsmPrinter::printSymbolName(StringRef symbolRef) {

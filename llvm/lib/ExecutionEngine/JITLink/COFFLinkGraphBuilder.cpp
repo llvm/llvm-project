@@ -43,7 +43,7 @@ COFFLinkGraphBuilder::getPointerSize(const object::COFFObjectFile &Obj) {
   return Obj.getBytesInAddress();
 }
 
-support::endianness
+llvm::endianness
 COFFLinkGraphBuilder::getEndianness(const object::COFFObjectFile &Obj) {
   return Obj.isLittleEndian() ? support::little : support::big;
 }
@@ -161,7 +161,7 @@ Error COFFLinkGraphBuilder::graphifySections() {
     if (!GraphSec) {
       GraphSec = &G->createSection(SectionName, Prot);
       if ((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_REMOVE)
-        GraphSec->setMemLifetimePolicy(orc::MemLifetimePolicy::NoAlloc);
+        GraphSec->setMemLifetime(orc::MemLifetime::NoAlloc);
     }
     if (GraphSec->getMemProt() != Prot)
       return make_error<JITLinkError>("MemProt should match");

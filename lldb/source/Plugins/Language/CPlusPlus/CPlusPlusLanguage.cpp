@@ -332,14 +332,12 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   // If we can't parse the incoming name, then just check that it contains path.
   if (m_parse_error)
     return m_full.GetStringRef().contains(path);
-    
+
   llvm::StringRef identifier;
   llvm::StringRef context;
   std::string path_str = path.str();
-  bool success 
-      = CPlusPlusLanguage::ExtractContextAndIdentifier(path_str.c_str(),
-                                                       context,
-                                                       identifier);
+  bool success = CPlusPlusLanguage::ExtractContextAndIdentifier(
+      path_str.c_str(), context, identifier);
   if (!success)
     return m_full.GetStringRef().contains(path);
 
@@ -372,7 +370,7 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
     return false;
   if (haystack.empty() || !isalnum(haystack.back()))
     return true;
-    
+
   return false;
 }
 
@@ -388,7 +386,7 @@ bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
   return true;
 }
 
-bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path, 
+bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
   MethodName demangled_name(demangled);
   return demangled_name.ContainsPath(path);
@@ -1009,7 +1007,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   cpp_category_sp->AddTypeSummary("std::string", eFormatterMatchExact,
                                   std_string_summary_sp);
   cpp_category_sp->AddTypeSummary("std::basic_string<char>",
-                                  eFormatterMatchRegex, std_string_summary_sp);
+                                  eFormatterMatchExact, std_string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::basic_string<char,std::char_traits<char>,std::allocator<char> >",
       eFormatterMatchExact, std_string_summary_sp);
@@ -1104,6 +1102,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
+  cpp_category_sp->AddTypeSynthetic(
+      "^std::variant<.+>$", eFormatterMatchRegex,
+      SyntheticChildrenSP(new ScriptedSyntheticChildren(
+          stl_synth_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.VariantSynthProvider")));
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
@@ -1148,6 +1151,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new ScriptSummaryFormat(
           stl_summary_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::variant<.+>$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new ScriptSummaryFormat(
+          stl_summary_flags,
+          "lldb.formatters.cpp.gnu_libstdcpp.VariantSummaryProvider")));
 
   AddCXXSynthetic(
       cpp_category_sp,

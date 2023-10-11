@@ -33,7 +33,7 @@ public:
                          GetSectionInfoFunction GetSectionInfo,
                          GetStubInfoFunction GetStubInfo,
                          GetGOTInfoFunction GetGOTInfo,
-                         support::endianness Endianness, Triple TT,
+                         llvm::endianness Endianness, Triple TT, StringRef CPU,
                          SubtargetFeatures TF, llvm::raw_ostream &ErrStream);
 
   bool check(StringRef CheckExpr) const;
@@ -54,7 +54,9 @@ private:
   StringRef getSymbolContent(StringRef Symbol) const;
 
   TargetFlagsType getTargetFlag(StringRef Symbol) const;
-  Triple getTripleFromTargetFlag(TargetFlagsType Flag) const;
+  Triple getTripleForSymbol(TargetFlagsType Flag) const;
+  StringRef getCPU() const { return CPU; }
+  SubtargetFeatures getFeatures() const { return TF; }
 
   std::pair<uint64_t, std::string> getSectionAddr(StringRef FileName,
                                                   StringRef SectionName,
@@ -71,8 +73,9 @@ private:
   GetSectionInfoFunction GetSectionInfo;
   GetStubInfoFunction GetStubInfo;
   GetGOTInfoFunction GetGOTInfo;
-  support::endianness Endianness;
+  llvm::endianness Endianness;
   Triple TT;
+  std::string CPU;
   SubtargetFeatures TF;
   llvm::raw_ostream &ErrStream;
 };

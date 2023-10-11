@@ -9,7 +9,9 @@
 #include "DWARFLinkerCompileUnit.h"
 #include "DIEAttributeCloner.h"
 #include "DIEGenerator.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -30,8 +32,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   // with marking from "LivenessAnalysisDone" stage partially
   // done. That marking should be cleared.
 
-  for (DIEInfo &DieInfo : DieInfoArray)
-    DieInfo.unsetFlagsWhichSetDuringLiveAnalysis();
+  for (DIEInfo &Info : DieInfoArray)
+    Info.unsetFlagsWhichSetDuringLiveAnalysis();
 
   LowPc = std::nullopt;
   HighPc = 0;
@@ -43,6 +45,7 @@ void CompileUnit::maybeResetToLoadedStage() {
     return;
   }
 
+  AcceleratorRecords.erase();
   AbbreviationsSet.clear();
   Abbreviations.clear();
   OutUnitDIE = nullptr;
@@ -211,10 +214,11 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
 
 void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
   if (std::optional<SectionDescriptor *> DebugInfoSection =
-          getSectionDescriptor(DebugSectionKind::DebugInfo)) {
+          tryGetSectionDescriptor(DebugSectionKind::DebugInfo)) {
 
     (*DebugInfoSection)
         ->ListDebugDieRefPatch.forEach([](DebugDieRefPatch &Patch) {
+          /// Replace stored DIE indexes with DIE output offsets.
           Patch.RefDieIdxOrClonedOffset =
               Patch.RefCU.getPointer()->getDieOutOffset(
                   Patch.RefDieIdxOrClonedOffset);
@@ -223,6 +227,7 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
     (*DebugInfoSection)
         ->ListDebugULEB128DieRefPatch.forEach(
             [](DebugULEB128DieRefPatch &Patch) {
+              /// Replace stored DIE indexes with DIE output offsets.
               Patch.RefDieIdxOrClonedOffset =
                   Patch.RefCU.getPointer()->getDieOutOffset(
                       Patch.RefDieIdxOrClonedOffset);
@@ -230,10 +235,11 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
   }
 
   if (std::optional<SectionDescriptor *> DebugLocSection =
-          getSectionDescriptor(DebugSectionKind::DebugLoc)) {
+          tryGetSectionDescriptor(DebugSectionKind::DebugLoc)) {
     (*DebugLocSection)
         ->ListDebugULEB128DieRefPatch.forEach(
             [](DebugULEB128DieRefPatch &Patch) {
+              /// Replace stored DIE indexes with DIE output offsets.
               Patch.RefDieIdxOrClonedOffset =
                   Patch.RefCU.getPointer()->getDieOutOffset(
                       Patch.RefDieIdxOrClonedOffset);
@@ -241,10 +247,11 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
   }
 
   if (std::optional<SectionDescriptor *> DebugLocListsSection =
-          getSectionDescriptor(DebugSectionKind::DebugLocLists)) {
+          tryGetSectionDescriptor(DebugSectionKind::DebugLocLists)) {
     (*DebugLocListsSection)
         ->ListDebugULEB128DieRefPatch.forEach(
             [](DebugULEB128DieRefPatch &Patch) {
+              /// Replace stored DIE indexes with DIE output offsets.
               Patch.RefDieIdxOrClonedOffset =
                   Patch.RefCU.getPointer()->getDieOutOffset(
                       Patch.RefDieIdxOrClonedOffset);
@@ -253,7 +260,9 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
 }
 
 std::optional<std::pair<CompileUnit *, uint32_t>>
-CompileUnit::resolveDIEReference(const DWARFFormValue &RefValue) {
+CompileUnit::resolveDIEReference(
+    const DWARFFormValue &RefValue,
+    ResolveInterCUReferencesMode CanResolveInterCUReferences) {
   if (std::optional<DWARFFormValue::UnitOffset> Ref =
           *RefValue.getAsRelativeReference()) {
     if (Ref->Unit != nullptr) {
@@ -262,17 +271,27 @@ CompileUnit::resolveDIEReference(const DWARFFormValue &RefValue) {
       if (std::optional<uint32_t> RefDieIdx =
               getDIEIndexForOffset(Ref->Unit->getOffset() + Ref->Offset))
         return std::make_pair(this, *RefDieIdx);
-    } else if (CompileUnit *RefCU = getUnitFromOffset(Ref->Offset)) {
-      // Referenced DIE is in other compile unit.
+    }
 
-      // Check whether DIEs are loaded for that compile unit.
-      enum Stage ReferredCUStage = RefCU->getStage();
-      if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+    if (CompileUnit *RefCU = getUnitFromOffset(Ref->Offset)) {
+      if (RefCU->getUniqueID() == getUniqueID()) {
+        // Referenced DIE is in current compile unit.
+        if (std::optional<uint32_t> RefDieIdx =
+                getDIEIndexForOffset(Ref->Offset))
+          return std::make_pair(this, *RefDieIdx);
+      } else if (CanResolveInterCUReferences) {
+        // Referenced DIE is in other compile unit.
+
+        // Check whether DIEs are loaded for that compile unit.
+        enum Stage ReferredCUStage = RefCU->getStage();
+        if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+          return std::make_pair(RefCU, 0);
+
+        if (std::optional<uint32_t> RefDieIdx =
+                RefCU->getDIEIndexForOffset(Ref->Offset))
+          return std::make_pair(RefCU, *RefDieIdx);
+      } else
         return std::make_pair(RefCU, 0);
-
-      if (std::optional<uint32_t> RefDieIdx =
-              RefCU->getDIEIndexForOffset(Ref->Offset))
-        return std::make_pair(RefCU, *RefDieIdx);
     }
   }
 
@@ -1071,8 +1090,7 @@ void CompileUnit::cloneDieAttrExpression(
         OutputExpression.push_back(dwarf::DW_OP_addr);
         uint64_t LinkedAddress =
             SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
-        if ((getEndianness() == support::endianness::little) !=
-            sys::IsLittleEndianHost)
+        if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
@@ -1109,8 +1127,7 @@ void CompileUnit::cloneDieAttrExpression(
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
               SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
-          if ((getEndianness() == support::endianness::little) !=
-              sys::IsLittleEndianHost)
+          if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
@@ -1135,10 +1152,6 @@ Error CompileUnit::cloneAndEmit(std::optional<Triple> TargetTriple) {
   DWARFDie OrigUnitDIE = getOrigUnit().getUnitDIE();
   if (!OrigUnitDIE.isValid())
     return Error::success();
-
-  CanStripTemplateName =
-      llvm::is_contained(getGlobalData().getOptions().AccelTables,
-                         DWARFLinker::AccelTableKind::Apple);
 
   // Clone input DIE entry recursively.
   DIE *OutCUDie =
@@ -1171,6 +1184,11 @@ Error CompileUnit::cloneAndEmit(std::optional<Triple> TargetTriple) {
 
   if (Error Err = emitDebugAddrSection())
     return Err;
+
+  // Generate Pub accelerator tables.
+  if (llvm::is_contained(GlobalData.getOptions().AccelTables,
+                         DWARFLinker::AccelTableKind::Pub))
+    emitPubAccelerators();
 
   if (Error Err = emitDebugStringOffsetSection())
     return Err;
@@ -1220,6 +1238,10 @@ DIE *CompileUnit::cloneDIE(const DWARFDebugInfoEntry *InputDieEntry,
       ClonedDIE, *this, InputDieEntry, DIEGenerator, FuncAddressAdjustment,
       VarAddressAdjustment, HasLocationExpressionAddress);
   AttributesCloner.clone();
+
+  // Remember accelerator info.
+  rememberAcceleratorEntries(InputDieEntry, OutOffset,
+                             AttributesCloner.AttrInfo);
 
   bool HasChildrenToClone = Info.getKeepChildren();
   OutOffset = AttributesCloner.finalizeAbbreviations(HasChildrenToClone);
@@ -1400,3 +1422,202 @@ LLVM_DUMP_METHOD void CompileUnit::DIEInfo::dump() {
   llvm::errs() << "}\n";
 }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+static uint32_t hashFullyQualifiedName(CompileUnit *InputCU, DWARFDie &InputDIE,
+                                       int ChildRecurseDepth = 0) {
+  const char *Name = nullptr;
+  CompileUnit *CU = InputCU;
+  std::optional<DWARFFormValue> RefVal;
+
+  // Usually name`s depth does not exceed 3. Set maximal depth
+  // to 1000 here, to avoid infinite loop in case incorrect input
+  // DWARF.
+  size_t MaxNameDepth = 1000;
+  size_t CurNameDepth = 0;
+
+  while (CurNameDepth++ < MaxNameDepth) {
+    if (const char *CurrentName = InputDIE.getName(DINameKind::ShortName))
+      Name = CurrentName;
+
+    if (!(RefVal = InputDIE.find(dwarf::DW_AT_specification)) &&
+        !(RefVal = InputDIE.find(dwarf::DW_AT_abstract_origin)))
+      break;
+
+    if (!RefVal->isFormClass(DWARFFormValue::FC_Reference))
+      break;
+
+    std::optional<std::pair<CompileUnit *, uint32_t>> RefDie =
+        CU->resolveDIEReference(*RefVal, ResolveInterCUReferencesMode::Resolve);
+    if (!RefDie)
+      break;
+
+    assert(RefDie->second != 0);
+
+    CU = RefDie->first;
+    InputDIE = RefDie->first->getDIEAtIndex(RefDie->second);
+  }
+
+  if (!Name && InputDIE.getTag() == dwarf::DW_TAG_namespace)
+    Name = "(anonymous namespace)";
+
+  DWARFDie ParentDie = InputDIE.getParent();
+  if (!ParentDie.isValid() || ParentDie.getTag() == dwarf::DW_TAG_compile_unit)
+    return djbHash(Name ? Name : "", djbHash(ChildRecurseDepth ? "" : "::"));
+
+  return djbHash(
+      (Name ? Name : ""),
+      djbHash((Name ? "::" : ""),
+              hashFullyQualifiedName(CU, ParentDie, ++ChildRecurseDepth)));
+}
+
+void CompileUnit::rememberAcceleratorEntries(
+    const DWARFDebugInfoEntry *InputDieEntry, uint64_t OutOffset,
+    AttributesInfo &AttrInfo) {
+  if (GlobalData.getOptions().AccelTables.empty())
+    return;
+
+  DWARFDie InputDIE = getDIE(InputDieEntry);
+
+  // Look for short name recursively if short name is not known yet.
+  if (AttrInfo.Name == nullptr)
+    if (const char *ShortName = InputDIE.getShortName())
+      AttrInfo.Name = getGlobalData().getStringPool().insert(ShortName).first;
+
+  switch (InputDieEntry->getTag()) {
+  case dwarf::DW_TAG_array_type:
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_enumeration_type:
+  case dwarf::DW_TAG_pointer_type:
+  case dwarf::DW_TAG_reference_type:
+  case dwarf::DW_TAG_string_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_typedef:
+  case dwarf::DW_TAG_union_type:
+  case dwarf::DW_TAG_ptr_to_member_type:
+  case dwarf::DW_TAG_set_type:
+  case dwarf::DW_TAG_subrange_type:
+  case dwarf::DW_TAG_base_type:
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_constant:
+  case dwarf::DW_TAG_file_type:
+  case dwarf::DW_TAG_namelist:
+  case dwarf::DW_TAG_packed_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_atomic_type:
+  case dwarf::DW_TAG_interface_type:
+  case dwarf::DW_TAG_unspecified_type:
+  case dwarf::DW_TAG_shared_type:
+  case dwarf::DW_TAG_immutable_type:
+  case dwarf::DW_TAG_rvalue_reference_type: {
+    if (!AttrInfo.IsDeclaration && AttrInfo.Name != nullptr &&
+        !AttrInfo.Name->getKey().empty()) {
+      uint32_t Hash = hashFullyQualifiedName(this, InputDIE);
+
+      uint64_t RuntimeLang =
+          dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
+              .value_or(0);
+
+      bool ObjCClassIsImplementation =
+          (RuntimeLang == dwarf::DW_LANG_ObjC ||
+           RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
+          dwarf::toUnsigned(
+              InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
+              .value_or(0);
+
+      rememberTypeForAccelerators(AttrInfo.Name, OutOffset,
+                                  InputDieEntry->getTag(), Hash,
+                                  ObjCClassIsImplementation);
+    }
+  } break;
+  case dwarf::DW_TAG_namespace: {
+    if (AttrInfo.Name == nullptr)
+      AttrInfo.Name =
+          getGlobalData().getStringPool().insert("(anonymous namespace)").first;
+
+    rememberNamespaceForAccelerators(AttrInfo.Name, OutOffset,
+                                     InputDieEntry->getTag());
+  } break;
+  case dwarf::DW_TAG_imported_declaration: {
+    if (AttrInfo.Name != nullptr)
+      rememberNamespaceForAccelerators(AttrInfo.Name, OutOffset,
+                                       InputDieEntry->getTag());
+  } break;
+  case dwarf::DW_TAG_compile_unit:
+  case dwarf::DW_TAG_lexical_block: {
+    // Nothing to do.
+  } break;
+  default:
+    if (AttrInfo.HasLiveAddress || AttrInfo.HasRanges) {
+      if (AttrInfo.Name != nullptr)
+        rememberNameForAccelerators(
+            AttrInfo.Name, OutOffset, InputDieEntry->getTag(),
+            InputDieEntry->getTag() == dwarf::DW_TAG_inlined_subroutine);
+
+      // Look for mangled name recursively if mangled name is not known yet.
+      if (AttrInfo.MangledName == nullptr)
+        if (const char *LinkageName = InputDIE.getLinkageName())
+          AttrInfo.MangledName =
+              getGlobalData().getStringPool().insert(LinkageName).first;
+
+      if (AttrInfo.MangledName != nullptr &&
+          AttrInfo.MangledName != AttrInfo.Name)
+        rememberNameForAccelerators(
+            AttrInfo.MangledName, OutOffset, InputDieEntry->getTag(),
+            InputDieEntry->getTag() == dwarf::DW_TAG_inlined_subroutine);
+
+      // Strip template parameters from the short name.
+      if (AttrInfo.Name != nullptr && AttrInfo.MangledName != AttrInfo.Name &&
+          (InputDieEntry->getTag() != dwarf::DW_TAG_inlined_subroutine)) {
+        if (std::optional<StringRef> Name =
+                StripTemplateParameters(AttrInfo.Name->getKey())) {
+          StringEntry *NameWithoutTemplateParams =
+              getGlobalData().getStringPool().insert(*Name).first;
+
+          rememberNameForAccelerators(NameWithoutTemplateParams, OutOffset,
+                                      InputDieEntry->getTag(), true);
+        }
+      }
+
+      if (AttrInfo.Name)
+        rememberObjCAccelerator(InputDieEntry, OutOffset, AttrInfo);
+    }
+    break;
+  }
+}
+
+void CompileUnit::rememberObjCAccelerator(
+    const DWARFDebugInfoEntry *InputDieEntry, uint64_t OutOffset,
+    AttributesInfo &AttrInfo) {
+  std::optional<ObjCSelectorNames> Names =
+      getObjCNamesIfSelector(AttrInfo.Name->getKey());
+  if (!Names)
+    return;
+
+  StringEntry *Selector =
+      getGlobalData().getStringPool().insert(Names->Selector).first;
+  rememberNameForAccelerators(Selector, OutOffset, InputDieEntry->getTag(),
+                              true);
+  StringEntry *ClassName =
+      getGlobalData().getStringPool().insert(Names->ClassName).first;
+  rememberObjCNameForAccelerators(ClassName, OutOffset,
+                                  InputDieEntry->getTag());
+  if (Names->ClassNameNoCategory) {
+    StringEntry *ClassNameNoCategory = getGlobalData()
+                                           .getStringPool()
+                                           .insert(*Names->ClassNameNoCategory)
+                                           .first;
+    rememberObjCNameForAccelerators(ClassNameNoCategory, OutOffset,
+                                    InputDieEntry->getTag());
+  }
+  if (Names->MethodNameNoCategory) {
+    StringEntry *MethodNameNoCategory =
+        getGlobalData()
+            .getStringPool()
+            .insert(*Names->MethodNameNoCategory)
+            .first;
+    rememberNameForAccelerators(MethodNameNoCategory, OutOffset,
+                                InputDieEntry->getTag(), true);
+  }
+}

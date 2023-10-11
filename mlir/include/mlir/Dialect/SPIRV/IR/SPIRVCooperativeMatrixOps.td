@@ -55,12 +55,14 @@ def SPIRV_KHRCooperativeMatrixLengthOp :
   ];
 
   let arguments = (ins
-    TypeAttr:$cooperative_matrix_type
+    TypeAttrOf<SPIRV_AnyCooperativeMatrix>:$cooperative_matrix_type
   );
 
   let results = (outs
     SPIRV_Int32:$result
   );
+
+  let hasVerifier = false;
 }
 
 // -----
@@ -101,18 +103,30 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     ``` {.ebnf}
     cooperative-matrix-load-op ::= ssa-id `=` `spirv.KHR.CooperativeMatrixLoad`
                               ssa-use `,` ssa-use `,`
-                              cooperative-matrix-layout `,`
-                              (`[` memory-operand `]`)? ` : `
-                                pointer-type `as` cooperative-matrix-type
+                              `<` cooperative-matrix-layout `>`
+                              (`,` `<` memory-operand `>`)? `:`
+                                pointer-type `,` stride-type `->` cooperative-matrix-type
     ```
+
+    TODO: In the SPIR-V spec, `stride` is an optional argument. We should also
+    support this optionality in the SPIR-V dialect.
 
     #### Example:
 
     ```
-    %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, RowMajor
-         : !spirv.ptr<i32, StorageBuffer>
-             as !spirv.KHR.coopmatrix<16x8xi32, Workgroup, MatrixA>
+    %0 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <RowMajor>
+         : !spirv.ptr<i32, StorageBuffer>, i32
+             -> !spirv.KHR.coopmatrix<16x8xi32, Workgroup, MatrixA>
+
+    %1 = spirv.KHR.CooperativeMatrixLoad %ptr, %stride, <ColumnMajor>, <Volatile>
+         : !spirv.ptr<f32, StorageBuffer>, i64
+             -> !spirv.KHR.coopmatrix<8x8xf32, Subgroup, MatrixAcc>
     ```
+  }];
+
+  let assemblyFormat = [{
+    $pointer `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
+      type(operands) `->` type($result)
   }];
 
   let availability = [
@@ -124,14 +138,23 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
 
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
-    SPIRV_Integer:$stride,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
+    SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand
   );
 
   let results = (outs
     SPIRV_AnyCooperativeMatrix:$result
   );
+
+  let builders = [
+    OpBuilder<(ins "Type":$result, "Value":$pointer,
+                   "spirv::ConstantOp":$stride,
+                   "spirv::CooperativeMatrixLayoutKHR":$layout), [{
+      build($_builder, $_state, result, pointer, layout, stride,
+            spirv::MemoryAccessAttr{});
+    }]>
+  ];
 }
 
 // -----
@@ -170,19 +193,30 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     inactive.
 
     ``` {.ebnf}
-     coop-matrix-store-op ::= `spirv.KHR.CooperativeMatrixStore `
-                              ssa-use `, ` ssa-use `, `
-                              ssa-use `, ` cooperative-matrix-layout `, `
-                              (`[` memory-operand `]`)? `:`
-                              pointer-type `,` coop-matrix-type
+     coop-matrix-store-op ::= `spirv.KHR.CooperativeMatrixStore`
+                              ssa-use `,` ssa-use `,`
+                              ssa-use `,` `<` cooperative-matrix-layout `>`
+                              (`,` `<` memory-operand `>`)? `:`
+                              pointer-type `,` coop-matrix-type `,` stride-type
     ```
+
+    TODO: In the SPIR-V spec, `stride` is an optional argument. We should also
+    support this optionality in the SPIR-V dialect.
 
     #### Example:
 
     ```
-      spirv.KHR.CooperativeMatrixStore %ptr, %obj, %stride :
-        !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>
+      spirv.KHR.CooperativeMatrixStore %ptr, %obj, %stride, <RowMajor> :
+        !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>, i32
+
+      spirv.KHR.CooperativeMatrixStore %ptr, %obj, %stride, <ColumnMajor>, <Volatile> :
+        !spirv.ptr<f32, StorageBuffer>, !spirv.coopmatrix<8x8xf32, Subgroup, MatrixAcc>, i64
     ```
+  }];
+
+  let assemblyFormat = [{
+    $pointer `,` $object `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
+      type(operands)
   }];
 
   let availability = [
@@ -195,12 +229,21 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
     SPIRV_AnyCooperativeMatrix:$object,
-    SPIRV_Integer:$stride,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
+    SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand
   );
 
   let results = (outs);
+
+  let builders = [
+    OpBuilder<(ins "Value":$pointer, "Value":$object,
+                   "spirv::ConstantOp":$stride,
+                   "spirv::CooperativeMatrixLayoutKHR":$layout), [{
+      build($_builder, $_state, pointer, object, layout, stride,
+            spirv::MemoryAccessAttr{});
+    }]>
+  ];
 }
 
 // -----
@@ -307,6 +350,13 @@ def SPIRV_KHRCooperativeMatrixMulAddOp : SPIRV_KhrVendorOp<"CooperativeMatrixMul
   let results = (outs
     SPIRV_AnyCooperativeMatrix:$result
   );
+
+  let builders = [
+    OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c), [{
+      build($_builder, $_state, a, b, c,
+            spirv::CooperativeMatrixOperandsKHRAttr{});
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

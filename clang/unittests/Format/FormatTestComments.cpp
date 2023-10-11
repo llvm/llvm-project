@@ -3053,6 +3053,12 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                "}",
                Style);
 
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyNoChange("#define FOO    \\\n"
+                 "  /* foo(); */ \\\n"
+                 "  bar();",
+                 Style);
+
   // Allow to keep 2 empty lines
   Style.MaxEmptyLinesToKeep = 2;
   EXPECT_EQ("// do not touch\n"

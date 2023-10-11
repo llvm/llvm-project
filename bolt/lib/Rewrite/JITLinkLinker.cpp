@@ -8,6 +8,7 @@
 #include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
@@ -31,7 +32,7 @@ bool hasSymbols(const jitlink::Block &B) {
 Error markSectionsLive(jitlink::LinkGraph &G) {
   for (auto &Section : G.sections()) {
     // We only need allocatable sections.
-    if (Section.getMemLifetimePolicy() == orc::MemLifetimePolicy::NoAlloc)
+    if (Section.getMemLifetime() == orc::MemLifetime::NoAlloc)
       continue;
 
     // Skip empty sections.
@@ -93,6 +94,18 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   Error modifyPassConfig(jitlink::LinkGraph &G,
                          jitlink::PassConfiguration &Config) override {
     Config.PrePrunePasses.push_back(markSectionsLive);
+    Config.PostAllocationPasses.push_back([this](auto &G) {
+      MapSections([&G](const BinarySection &Section, uint64_t Address) {
+        reassignSectionAddress(G, Section, Address);
+      });
+      return Error::success();
+    });
+
+    if (G.getTargetTriple().isRISCV()) {
+      Config.PostAllocationPasses.push_back(
+          jitlink::createRelaxationPass_ELF_riscv());
+    }
+
     return Error::success();
   }
 
@@ -128,6 +141,19 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
             orc::ExecutorAddr(Address), JITSymbolFlags());
         continue;
       }
+
+      if (Linker.BC.isGOTSymbol(SymName)) {
+        if (const BinaryData *I = Linker.BC.getGOTSymbol()) {
+          uint64_t Address =
+              I->isMoved() ? I->getOutputAddress() : I->getAddress();
+          LLVM_DEBUG(dbgs() << "Resolved to address 0x"
+                            << Twine::utohexstr(Address) << "\n");
+          AllResults[Symbol.first] = orc::ExecutorSymbolDef(
+              orc::ExecutorAddr(Address), JITSymbolFlags());
+          continue;
+        }
+      }
+
       LLVM_DEBUG(dbgs() << "Resolved to address 0x0\n");
       AllResults[Symbol.first] =
           orc::ExecutorSymbolDef(orc::ExecutorAddr(0), JITSymbolFlags());
@@ -137,10 +163,6 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   }
 
   Error notifyResolved(jitlink::LinkGraph &G) override {
-    MapSections([&G](const BinarySection &Section, uint64_t Address) {
-      reassignSectionAddress(G, Section, Address);
-    });
-
     for (auto *Symbol : G.defined_symbols()) {
       SymbolInfo Info{Symbol->getAddress().getValue(), Symbol->getSize()};
       Linker.Symtab.insert({Symbol->getName().str(), Info});
@@ -167,6 +189,13 @@ void JITLinkLinker::loadObject(MemoryBufferRef Obj,
   auto LG = jitlink::createLinkGraphFromObject(Obj);
   if (auto E = LG.takeError()) {
     errs() << "BOLT-ERROR: JITLink failed: " << E << '\n';
+    exit(1);
+  }
+
+  if ((*LG)->getTargetTriple().getArch() != BC.TheTriple->getArch()) {
+    errs() << "BOLT-ERROR: linking object with arch "
+           << (*LG)->getTargetTriple().getArchName()
+           << " into context with arch " << BC.TheTriple->getArchName() << "\n";
     exit(1);
   }
 

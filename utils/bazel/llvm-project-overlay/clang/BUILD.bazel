@@ -416,14 +416,6 @@ gentbl(
             "include/clang/Basic/AttrList.inc",
         ),
         (
-            "-gen-clang-attr-can-print-left-list",
-            "include/clang/Basic/AttrLeftSideCanPrintList.inc",
-        ),
-        (
-            "-gen-clang-attr-must-print-left-list",
-            "include/clang/Basic/AttrLeftSideMustPrintList.inc",
-        ),
-        (
             "-gen-clang-attr-subject-match-rule-list",
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
@@ -655,6 +647,14 @@ gentbl(
         (
             "-gen-clang-attr-impl",
             "include/clang/AST/AttrImpl.inc",
+        ),
+        (
+            "-gen-clang-attr-can-print-left-list",
+            "include/clang/Basic/AttrLeftSideCanPrintList.inc",
+        ),
+        (
+            "-gen-clang-attr-must-print-left-list",
+            "include/clang/Basic/AttrLeftSideMustPrintList.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
@@ -1804,6 +1804,7 @@ cc_library(
         "//llvm:ExecutionEngine",
         "//llvm:MC",
         "//llvm:Option",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",

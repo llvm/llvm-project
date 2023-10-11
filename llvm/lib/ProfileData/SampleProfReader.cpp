@@ -465,17 +465,14 @@ bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
 
 template <typename T> ErrorOr<T> SampleProfileReaderBinary::readNumber() {
   unsigned NumBytesRead = 0;
-  std::error_code EC;
   uint64_t Val = decodeULEB128(Data, &NumBytesRead);
 
-  if (Val > std::numeric_limits<T>::max())
-    EC = sampleprof_error::malformed;
-  else if (Data + NumBytesRead > End)
-    EC = sampleprof_error::truncated;
-  else
-    EC = sampleprof_error::success;
-
-  if (EC) {
+  if (Val > std::numeric_limits<T>::max()) {
+    std::error_code EC = sampleprof_error::malformed;
+    reportError(0, EC.message());
+    return EC;
+  } else if (Data + NumBytesRead > End) {
+    std::error_code EC = sampleprof_error::truncated;
     reportError(0, EC.message());
     return EC;
   }
@@ -485,10 +482,9 @@ template <typename T> ErrorOr<T> SampleProfileReaderBinary::readNumber() {
 }
 
 ErrorOr<StringRef> SampleProfileReaderBinary::readString() {
-  std::error_code EC;
   StringRef Str(reinterpret_cast<const char *>(Data));
   if (Data + Str.size() + 1 > End) {
-    EC = sampleprof_error::truncated;
+    std::error_code EC = sampleprof_error::truncated;
     reportError(0, EC.message());
     return EC;
   }
@@ -499,10 +495,8 @@ ErrorOr<StringRef> SampleProfileReaderBinary::readString() {
 
 template <typename T>
 ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
-  std::error_code EC;
-
   if (Data + sizeof(T) > End) {
-    EC = sampleprof_error::truncated;
+    std::error_code EC = sampleprof_error::truncated;
     reportError(0, EC.message());
     return EC;
   }
@@ -514,7 +508,6 @@ ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
 
 template <typename T>
 inline ErrorOr<size_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
-  std::error_code EC;
   auto Idx = readNumber<size_t>();
   if (std::error_code EC = Idx.getError())
     return EC;
@@ -538,8 +531,8 @@ SampleProfileReaderBinary::readStringFromTable(size_t *RetIdx) {
   if (!SR.data()) {
     assert(MD5NameMemStart);
     using namespace support;
-    uint64_t FID = endian::read<uint64_t, little, unaligned>(
-       MD5NameMemStart + (*Idx) * sizeof(uint64_t));
+    uint64_t FID = endian::read<uint64_t, little>(MD5NameMemStart +
+                                                  (*Idx) * sizeof(uint64_t));
     SR = MD5StringBuf.emplace_back(std::to_string(FID));
   }
   if (RetIdx)

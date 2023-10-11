@@ -221,6 +221,15 @@ ExprResult Parser::ParseConstantExpression() {
   return ParseConstantExpressionInExprEvalContext(NotTypeCast);
 }
 
+ExprResult Parser::ParseArrayBoundExpression() {
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+  // If we parse the bound of a VLA... we parse a non-constant
+  // constant-expression!
+  Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
+  return ParseConstantExpressionInExprEvalContext(NotTypeCast);
+}
+
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
@@ -1128,6 +1137,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_unsigned);
           REVERTIBLE_TYPE_TRAIT(__is_void);
           REVERTIBLE_TYPE_TRAIT(__is_volatile);
+          REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
+          REVERTIBLE_TYPE_TRAIT(__reference_constructs_from_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
 #include "clang/Basic/TransformTypeTraits.def"
@@ -1562,6 +1573,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw_typename:
   case tok::kw_typeof:
   case tok::kw___vector:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
   {

@@ -372,7 +372,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
   auto AM = TII->getAddrModeFromMemoryOp(MI, TRI);
-  if (!AM)
+  if (!AM || AM->Form != ExtAddrMode::Formula::Basic)
     return SR_Unsuitable;
   auto AddrMode = *AM;
   const Register BaseReg = AddrMode.BaseReg, ScaledReg = AddrMode.ScaledReg;

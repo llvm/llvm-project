@@ -203,6 +203,15 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/NVGPUTransformOps.td
+  SOURCES
+    dialects/transform/nvgpu.py
+  DIALECT_NAME transform
+  EXTENSION_NAME nvgpu_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/LinalgStructuredTransformOps.td
   SOURCES
     dialects/_structured_transform_ops_ext.py
@@ -212,6 +221,15 @@ declare_mlir_dialect_extension_python_bindings(
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Linalg/TransformOps/LinalgTransformEnums.td"
 )
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SparseTensorTransformOps.td
+  SOURCES
+    dialects/transform/sparse_tensor.py
+  DIALECT_NAME transform
+  EXTENSION_NAME sparse_tensor_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -372,7 +390,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/VectorOps.td
   SOURCES dialects/vector.py
   DIALECT_NAME vector
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS_TD_FILE
+    "dialects/VectorAttributes.td")
 
 ################################################################################
 # Python extensions.

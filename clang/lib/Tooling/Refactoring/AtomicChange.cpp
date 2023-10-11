@@ -198,7 +198,7 @@ AtomicChange::AtomicChange(const SourceManager &SM,
   const FullSourceLoc FullKeyPosition(KeyPosition, SM);
   std::pair<FileID, unsigned> FileIDAndOffset =
       FullKeyPosition.getSpellingLoc().getDecomposedLoc();
-  const FileEntry *FE = SM.getFileEntryForID(FileIDAndOffset.first);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(FileIDAndOffset.first);
   assert(FE && "Cannot create AtomicChange with invalid location.");
   FilePath = std::string(FE->getName());
   Key = FilePath + ":" + std::to_string(FileIDAndOffset.second);

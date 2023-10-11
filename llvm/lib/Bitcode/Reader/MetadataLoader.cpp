@@ -1213,6 +1213,26 @@ void MetadataLoader::MetadataLoaderImpl::resolveForwardRefsAndPlaceholders(
   Placeholders.flush(MetadataList);
 }
 
+static Value *getValueFwdRef(BitcodeReaderValueList &ValueList, unsigned Idx,
+                             Type *Ty, unsigned TyID) {
+  Value *V = ValueList.getValueFwdRef(Idx, Ty, TyID,
+                                      /*ConstExprInsertBB*/ nullptr);
+  if (V)
+    return V;
+
+  // This is a reference to a no longer supported constant expression.
+  // Pretend that the constant was deleted, which will replace metadata
+  // references with undef.
+  // TODO: This is a rather indirect check. It would be more elegant to use
+  // a separate ErrorInfo for constant materialization failure and thread
+  // the error reporting through getValueFwdRef().
+  if (Idx < ValueList.size() && ValueList[Idx] &&
+      ValueList[Idx]->getType() == Ty)
+    return UndefValue::get(Ty);
+
+  return nullptr;
+}
+
 Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVectorImpl<uint64_t> &Record, unsigned Code,
     PlaceholderQueue &Placeholders, StringRef Blob, unsigned &NextMetadataNo) {
@@ -1315,7 +1335,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     unsigned TyID = Record[0];
     Type *Ty = Callbacks.GetTypeByID(TyID);
-    if (Ty->isMetadataTy() || Ty->isVoidTy()) {
+    if (!Ty || Ty->isMetadataTy() || Ty->isVoidTy()) {
       dropRecord();
       break;
     }
@@ -1344,8 +1364,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Ty->isMetadataTy())
         Elts.push_back(getMD(Record[i + 1]));
       else if (!Ty->isVoidTy()) {
-        Value *V = ValueList.getValueFwdRef(Record[i + 1], Ty, TyID,
-                                            /*ConstExprInsertBB*/ nullptr);
+        Value *V = getValueFwdRef(ValueList, Record[i + 1], Ty, TyID);
         if (!V)
           return error("Invalid value reference from old metadata");
         Metadata *MD = ValueAsMetadata::get(V);
@@ -1366,11 +1385,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     unsigned TyID = Record[0];
     Type *Ty = Callbacks.GetTypeByID(TyID);
-    if (Ty->isMetadataTy() || Ty->isVoidTy())
+    if (!Ty || Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
-    Value *V = ValueList.getValueFwdRef(Record[1], Ty, TyID,
-                                        /*ConstExprInsertBB*/ nullptr);
+    Value *V = getValueFwdRef(ValueList, Record[1], Ty, TyID);
     if (!V)
       return error("Invalid value reference from metadata");
 

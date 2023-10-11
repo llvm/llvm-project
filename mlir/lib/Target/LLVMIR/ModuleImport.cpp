@@ -987,7 +987,12 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert null pointer constants.
   if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant)) {
     Type type = convertType(nullPtr->getType());
-    return builder.create<NullOp>(loc, type).getResult();
+    return builder.create<ZeroOp>(loc, type).getResult();
+  }
+
+  // Convert none token constants.
+  if (auto *noneToken = dyn_cast<llvm::ConstantTokenNone>(constant)) {
+    return builder.create<NoneTokenOp>(loc).getResult();
   }
 
   // Convert poison.
@@ -1077,16 +1082,9 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
         cast<LLVMTargetExtType>(convertType(constTargetNone->getType()));
     assert(targetExtType.hasProperty(LLVMTargetExtType::HasZeroInit) &&
            "target extension type does not support zero-initialization");
-    // As the number of values needed for initialization is target-specific and
-    // opaque to the compiler, use a single i64 zero-valued attribute to
-    // represent the 'zeroinitializer', which is the only constant value allowed
-    // for target extension types (besides poison and undef).
-    // TODO: Replace with 'zeroinitializer' once there is a dedicated
-    // zeroinitializer operation in the LLVM dialect.
-    return builder
-        .create<LLVM::ConstantOp>(loc, targetExtType,
-                                  builder.getI64IntegerAttr(0))
-        .getRes();
+    // Create llvm.mlir.zero operation to represent zero-initialization of
+    // target extension type.
+    return builder.create<LLVM::ZeroOp>(loc, targetExtType).getRes();
   }
 
   StringRef error = "";
@@ -1349,12 +1347,19 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertCallTypeAndOperands(callInst, types, operands)))
       return failure();
 
+    auto funcTy =
+        dyn_cast<LLVMFunctionType>(convertType(callInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
+
     CallOp callOp;
+
     if (llvm::Function *callee = callInst->getCalledFunction()) {
       callOp = builder.create<CallOp>(
-          loc, types, SymbolRefAttr::get(context, callee->getName()), operands);
+          loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
+          operands);
     } else {
-      callOp = builder.create<CallOp>(loc, types, operands);
+      callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
@@ -1413,20 +1418,25 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                  unwindArgs)))
       return failure();
 
+    auto funcTy =
+        dyn_cast<LLVMFunctionType>(convertType(invokeInst->getFunctionType()));
+    if (!funcTy)
+      return failure();
+
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
     InvokeOp invokeOp;
     if (llvm::Function *callee = invokeInst->getCalledFunction()) {
       invokeOp = builder.create<InvokeOp>(
-          loc, types,
+          loc, funcTy,
           SymbolRefAttr::get(builder.getContext(), callee->getName()), operands,
           directNormalDest, ValueRange(),
           lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     } else {
       invokeOp = builder.create<InvokeOp>(
-          loc, types, operands, directNormalDest, ValueRange(),
-          lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+          loc, funcTy, /*callee=*/nullptr, operands, directNormalDest,
+          ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
@@ -1571,8 +1581,9 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
 
     // Skip the aarch64_pstate_sm_<body|enabled> since the LLVMFuncOp has an
     // explicit attribute.
+    // Also skip the vscale_range, it is also an explicit attribute.
     if (attrName == "aarch64_pstate_sm_enabled" ||
-        attrName == "aarch64_pstate_sm_body")
+        attrName == "aarch64_pstate_sm_body" || attrName == "vscale_range")
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1612,6 +1623,14 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmStreaming(true);
   else if (func->hasFnAttribute("aarch64_pstate_sm_body"))
     funcOp.setArmLocallyStreaming(true);
+  llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
+  if (attr.isValid()) {
+    MLIRContext *context = funcOp.getContext();
+    auto intTy = IntegerType::get(context, 32);
+    funcOp.setVscaleRangeAttr(LLVM::VScaleRangeAttr::get(
+        context, IntegerAttr::get(intTy, attr.getVScaleRangeMin()),
+        IntegerAttr::get(intTy, attr.getVScaleRangeMax().value_or(0))));
+  }
 }
 
 DictionaryAttr

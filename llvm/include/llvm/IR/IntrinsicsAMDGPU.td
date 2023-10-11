@@ -362,12 +362,6 @@ def int_amdgcn_rsq_legacy :  ClangBuiltin<"__builtin_amdgcn_rsq_legacy">,
 def int_amdgcn_rsq_clamp : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]>;
 
-// For int_amdgcn_ldexp_f16, only the low 16 bits of the i32 src1 operand will used.
-def int_amdgcn_ldexp : DefaultAttrsIntrinsic<
-  [llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i32_ty],
-  [IntrNoMem, IntrSpeculatable]
->;
-
 def int_amdgcn_frexp_mant : DefaultAttrsIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
 >;
@@ -1005,7 +999,7 @@ def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
    llvm_i32_ty,    // NumRecords / extent
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
-  [IntrNoMem, NoCapture<ArgIndex<0>>, ReadNone<ArgIndex<0>>,
+  [IntrNoMem, ReadNone<ArgIndex<0>>,
    IntrSpeculatable, IntrWillReturn]>;
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
@@ -1677,6 +1671,11 @@ def int_amdgcn_s_sleep :
                                 IntrHasSideEffects]> {
 }
 
+def int_amdgcn_s_nop :
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects]> {
+}
+
 def int_amdgcn_s_incperflevel :
   ClangBuiltin<"__builtin_amdgcn_s_incperflevel">,
   DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
@@ -1929,7 +1928,7 @@ def int_amdgcn_inverse_ballot :
             [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
-    [data_ty], 
+    [data_ty],
     [
       LLVMMatchType<0>,   // llvm value to reduce (SGPR/VGPR)
       llvm_i32_ty         // Reduction Strategy Switch for lowering ( 0: Default,

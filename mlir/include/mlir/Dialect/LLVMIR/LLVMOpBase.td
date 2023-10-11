@@ -55,16 +55,33 @@ def LLVM_AnyFloat : Type<
 def LLVM_AnyPointer : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMPointerType>($_self)">,
                           "LLVM pointer type", "::mlir::LLVM::LLVMPointerType">;
 
+def LLVM_OpaquePointer : Type<
+  And<[LLVM_AnyPointer.predicate,
+       CPred<"::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).isOpaque()">]>,
+  "LLVM opaque pointer", "::mlir::LLVM::LLVMPointerType">;
+
 // Type constraint accepting LLVM pointer type with an additional constraint
 // on the element type.
 class LLVM_PointerTo<Type pointee> : Type<
   And<[LLVM_AnyPointer.predicate,
-       Or<[CPred<"::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).isOpaque()">,
+       Or<[LLVM_OpaquePointer.predicate,
            SubstLeaves<
              "$_self",
              "::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getElementType()",
              pointee.predicate>]>]>,
   "LLVM pointer to " # pointee.summary, "::mlir::LLVM::LLVMPointerType">;
+
+// Opaque pointer in a given address space.
+class LLVM_OpaquePointerInAddressSpace<int addressSpace> : Type<
+  And<[LLVM_OpaquePointer.predicate,
+        CPred<
+          "::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getAddressSpace() == "
+          # addressSpace>]>,
+  "Opaque LLVM pointer in address space " # addressSpace,
+  "::mlir::LLVM::LLVMPointerType"> {
+  let builderCall = "$_builder.getType<::mlir::LLVM::LLVMPointerType>("
+    # addressSpace # ")";
+}
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.
 class LLVM_IntPtrBase<int width, int addressSpace = 0> : Type<

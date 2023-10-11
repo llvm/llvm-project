@@ -30,7 +30,7 @@ add_header_library(
     x86_64/inline_memcpy.h
     x86_64/inline_memmove.h
     x86_64/inline_memset.h
-  DEPS
+  DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
@@ -44,7 +44,7 @@ add_header_library(
   inline_memcpy
   HDRS
     inline_memcpy.h
-  DEPS
+  DEPENDS
     .memory_utils
 )
 
@@ -52,7 +52,7 @@ add_header_library(
   inline_memmove
   HDRS
     inline_memmove.h
-  DEPS
+  DEPENDS
     .memory_utils
 )
 
@@ -60,7 +60,7 @@ add_header_library(
   inline_memcmp
   HDRS
     inline_memcmp.h
-  DEPS
+  DEPENDS
     .memory_utils
 )
 
@@ -68,7 +68,7 @@ add_header_library(
   inline_memset
   HDRS
     inline_memset.h
-  DEPS
+  DEPENDS
     .memory_utils
 )
 
@@ -76,7 +76,7 @@ add_header_library(
   inline_bzero
   HDRS
     inline_bzero.h
-  DEPS
+  DEPENDS
     .inline_memset
 )
 

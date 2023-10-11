@@ -59,6 +59,9 @@ enum class BsymbolicKind { None, NonWeakFunctions, Functions, NonWeak, All };
 // For --build-id.
 enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
+// For --call-graph-profile-sort={none,hfsort,cdsort}.
+enum class CGProfileSortKind { None, Hfsort, Cdsort };
+
 // For --discard-{all,locals,none}.
 enum class DiscardPolicy { Default, All, Locals, None };
 
@@ -215,7 +218,7 @@ struct Config {
   bool asNeeded = false;
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
-  bool callGraphProfileSort;
+  CGProfileSortKind callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
   llvm::DebugCompressionType compressDebugSections;
@@ -247,6 +250,7 @@ struct Config {
   bool ltoDebugPassManager;
   bool ltoEmitAsm;
   bool ltoUniqueBasicBlockSectionNames;
+  bool ltoValidateAllVtablesHaveTypeInfos;
   bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
@@ -341,7 +345,7 @@ struct Config {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
-  llvm::CodeGenOpt::Level ltoCgo;
+  llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
@@ -362,7 +366,7 @@ struct Config {
   bool isLE;
 
   // endianness::little if isLE is true. endianness::big otherwise.
-  llvm::support::endianness endianness;
+  llvm::endianness endianness;
 
   // True if the target is the little-endian MIPS64.
   //
@@ -475,6 +479,15 @@ struct Ctx {
   std::atomic<bool> hasTlsIe{false};
   // True if we need to reserve two .got entries for local-dynamic TLS model.
   std::atomic<bool> needsTlsLd{false};
+  // True if all native vtable symbols have corresponding type info symbols
+  // during LTO.
+  bool ltoAllVtablesHaveTypeInfos;
+
+  // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
+  // order. Each DEFINED(sym) evaluation checks whether the reference happens
+  // before a possible `sym = expr;`.
+  unsigned scriptSymOrderCounter = 1;
+  llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
 
   void reset();
 

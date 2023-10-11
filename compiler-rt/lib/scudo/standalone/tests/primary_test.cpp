@@ -8,6 +8,7 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include "allocator_config.h"
 #include "primary32.h"
 #include "primary64.h"
 #include "size_class_map.h"
@@ -206,7 +207,7 @@ struct SmallRegionsConfig {
 // For the 32-bit one, it requires actually exhausting memory, so we skip it.
 TEST(ScudoPrimaryTest, Primary64OOM) {
   using Primary = scudo::SizeClassAllocator64<SmallRegionsConfig>;
-  using TransferBatch = Primary::CacheT::TransferBatch;
+  using TransferBatch = Primary::TransferBatchT;
   Primary Allocator;
   Allocator.init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
@@ -232,8 +233,9 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   while (!Batches.empty()) {
     TransferBatch *B = Batches.back();
     Batches.pop_back();
-    B->copyToArray(Blocks);
-    Allocator.pushBlocks(&Cache, ClassId, Blocks, B->getCount());
+    const scudo::u16 Count = B->getCount();
+    B->moveToArray(Blocks);
+    Allocator.pushBlocks(&Cache, ClassId, Blocks, Count);
     Cache.deallocate(Primary::SizeClassMap::BatchClassId, B);
   }
   Cache.destroy(nullptr);
@@ -283,7 +285,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
-  using Primary = TestAllocator<TypeParam, scudo::SvelteSizeClassMap>;
+  using Primary = TestAllocator<TypeParam, scudo::Config::Primary::SizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   std::mutex Mutex;

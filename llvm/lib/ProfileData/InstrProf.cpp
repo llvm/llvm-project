@@ -498,7 +498,7 @@ Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");
 
-  uint8_t Header[16], *P = Header;
+  uint8_t Header[20], *P = Header;
   std::string UncompressedNameStrings =
       join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
 
@@ -982,14 +982,13 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
 // For writing/serializing,  Old is the host endianness, and  New is
 // byte order intended on disk. For Reading/deserialization, Old
 // is the on-disk source endianness, and New is the host endianness.
-void ValueProfRecord::swapBytes(support::endianness Old,
-                                support::endianness New) {
+void ValueProfRecord::swapBytes(llvm::endianness Old, llvm::endianness New) {
   using namespace support;
 
   if (Old == New)
     return;
 
-  if (getHostEndianness() != Old) {
+  if (llvm::endianness::native != Old) {
     sys::swapByteOrder<uint32_t>(NumValueSites);
     sys::swapByteOrder<uint32_t>(Kind);
   }
@@ -1001,7 +1000,7 @@ void ValueProfRecord::swapBytes(support::endianness Old,
     sys::swapByteOrder<uint64_t>(VD[I].Value);
     sys::swapByteOrder<uint64_t>(VD[I].Count);
   }
-  if (getHostEndianness() == Old) {
+  if (llvm::endianness::native == Old) {
     sys::swapByteOrder<uint32_t>(NumValueSites);
     sys::swapByteOrder<uint32_t>(Kind);
   }
@@ -1020,7 +1019,7 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
 }
 
 template <class T>
-static T swapToHostOrder(const unsigned char *&D, support::endianness Orig) {
+static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
   if (Orig == little)
@@ -1060,7 +1059,7 @@ Error ValueProfData::checkIntegrity() {
 Expected<std::unique_ptr<ValueProfData>>
 ValueProfData::getValueProfData(const unsigned char *D,
                                 const unsigned char *const BufferEnd,
-                                support::endianness Endianness) {
+                                llvm::endianness Endianness) {
   using namespace support;
 
   if (D + sizeof(ValueProfData) > BufferEnd)
@@ -1083,10 +1082,10 @@ ValueProfData::getValueProfData(const unsigned char *D,
   return std::move(VPD);
 }
 
-void ValueProfData::swapBytesToHost(support::endianness Endianness) {
+void ValueProfData::swapBytesToHost(llvm::endianness Endianness) {
   using namespace support;
 
-  if (Endianness == getHostEndianness())
+  if (Endianness == llvm::endianness::native)
     return;
 
   sys::swapByteOrder<uint32_t>(TotalSize);
@@ -1094,21 +1093,21 @@ void ValueProfData::swapBytesToHost(support::endianness Endianness) {
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
-    VR->swapBytes(Endianness, getHostEndianness());
+    VR->swapBytes(Endianness, llvm::endianness::native);
     VR = getValueProfRecordNext(VR);
   }
 }
 
-void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
+void ValueProfData::swapBytesFromHost(llvm::endianness Endianness) {
   using namespace support;
 
-  if (Endianness == getHostEndianness())
+  if (Endianness == llvm::endianness::native)
     return;
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
     ValueProfRecord *NVR = getValueProfRecordNext(VR);
-    VR->swapBytes(getHostEndianness(), Endianness);
+    VR->swapBytes(llvm::endianness::native, Endianness);
     VR = NVR;
   }
   sys::swapByteOrder<uint32_t>(TotalSize);

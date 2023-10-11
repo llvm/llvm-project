@@ -20,14 +20,14 @@
 #include <unistd.h>
 #endif // __linux__
 
-// This needs to be updated anytime a test is added or removed from the test
-// suite.
-static constexpr const size_t TestCount = 4;
-
 namespace llvm {
 namespace exegesis {
 
 #if defined(__linux__) && !defined(__ANDROID__)
+
+// This needs to be updated anytime a test is added or removed from the test
+// suite.
+static constexpr const size_t TestCount = 4;
 
 class SubprocessMemoryTest : public X86TestBase {
 protected:

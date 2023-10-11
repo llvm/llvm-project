@@ -47,6 +47,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -190,7 +191,8 @@ public:
         auto *OrigBiasInst = dyn_cast<BinaryOperator>(AddrInst->getOperand(0));
         assert(OrigBiasInst->getOpcode() == Instruction::BinaryOps::Add);
         Value *BiasInst = Builder.Insert(OrigBiasInst->clone());
-        Addr = Builder.CreateIntToPtr(BiasInst, Ty->getPointerTo());
+        Addr = Builder.CreateIntToPtr(BiasInst,
+                                      PointerType::getUnqual(Ty->getContext()));
       }
       if (AtomicCounterUpdatePromoted)
         // automic update currently can only be promoted across the current

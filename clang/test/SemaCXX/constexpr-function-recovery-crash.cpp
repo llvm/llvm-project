@@ -106,3 +106,4 @@ TEST_EVALUATE(ForCond, for (; !!;){};);// expected-error + {{}}
 TEST_EVALUATE(ForInc, for (;; !!){};);// expected-error + {{}}
                                       // expected-note@-1 + {{infinite loop}}
                                       // expected-note@-2 {{in call}}
+TEST_EVALUATE(ForCondUnDef, for (;some_cond;){};);        // expected-error + {{}}

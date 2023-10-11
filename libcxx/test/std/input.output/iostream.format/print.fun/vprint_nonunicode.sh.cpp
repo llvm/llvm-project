@@ -7,7 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: executor-has-no-bash
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // XFAIL: availability-fp_to_chars-missing
@@ -27,12 +26,9 @@
 //
 // The testing is based on the testing for std::cout.
 
-// TODO PRINT Use lit builtin echo
-
-// FILE_DEPENDENCIES: echo.sh
 // RUN: %{build}
-// RUN: %{exec} bash echo.sh -n "1234 一二三四 true 0x0" > %t.expected
-// RUN: %{exec} "%t.exe" > %t.actual
+// RUN: echo -n "1234 一二三四 true 0x0" > %t.expected
+// RUN: %{exec} %t.exe > %t.actual
 // RUN: diff -u %t.actual %t.expected
 
 #include <print>

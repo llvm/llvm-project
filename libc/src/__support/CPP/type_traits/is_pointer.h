@@ -5,14 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_POINTER_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_POINTER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_POINTER_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_POINTER_H
 
 #include "src/__support/CPP/type_traits/false_type.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_pointer
 template <typename T> struct is_pointer : cpp::false_type {};
@@ -23,6 +23,6 @@ template <typename T> struct is_pointer<T *const volatile> : cpp::true_type {};
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_pointer_v = is_pointer<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_POINTER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_POINTER_H

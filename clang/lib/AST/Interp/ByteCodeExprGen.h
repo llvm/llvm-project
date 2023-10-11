@@ -105,6 +105,8 @@ public:
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
+  bool VisitOffsetOfExpr(const OffsetOfExpr *E);
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -277,8 +279,6 @@ private:
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   bool emitRecordDestruction(const Descriptor *Desc);
-  bool emitDerivedToBaseCasts(const RecordType *DerivedType,
-                              const RecordType *BaseType, const Expr *E);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);
 

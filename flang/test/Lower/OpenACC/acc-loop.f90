@@ -1,6 +1,7 @@
 ! This test checks lowering of OpenACC loop directive.
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
@@ -304,5 +305,20 @@ program acc_loop
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
+
+  !$acc loop
+  DO i = 1, n
+    !$acc cache(b)
+    a(i) = b(i)
+  END DO
+
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK: acc.loop cache(%[[CACHE]] : !fir.ref<!fir.array<10xf32>>)
+
+  !$acc loop
+  do 100 i=0, n
+  100 continue
+! CHECK: acc.loop
+! CHECK: fir.do_loop
 
 end program

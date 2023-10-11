@@ -3289,8 +3289,6 @@ public:
 class DependentSizedArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
 
-  const ASTContext &Context;
-
   /// An assignment expression that will instantiate to the
   /// size of the array.
   ///
@@ -3301,8 +3299,8 @@ class DependentSizedArrayType : public ArrayType {
   /// The range spanned by the left and right array brackets.
   SourceRange Brackets;
 
-  DependentSizedArrayType(const ASTContext &Context, QualType et, QualType can,
-                          Expr *e, ArraySizeModifier sm, unsigned tq,
+  DependentSizedArrayType(QualType et, QualType can, Expr *e,
+                          ArraySizeModifier sm, unsigned tq,
                           SourceRange brackets);
 
 public:
@@ -3325,7 +3323,7 @@ public:
     return T->getTypeClass() == DependentSizedArray;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getElementType(),
             getSizeModifier(), getIndexTypeCVRQualifiers(), getSizeExpr());
   }
@@ -3349,14 +3347,12 @@ public:
 class DependentAddressSpaceType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
 
-  const ASTContext &Context;
   Expr *AddrSpaceExpr;
   QualType PointeeType;
   SourceLocation loc;
 
-  DependentAddressSpaceType(const ASTContext &Context, QualType PointeeType,
-                            QualType can, Expr *AddrSpaceExpr,
-                            SourceLocation loc);
+  DependentAddressSpaceType(QualType PointeeType, QualType can,
+                            Expr *AddrSpaceExpr, SourceLocation loc);
 
 public:
   Expr *getAddrSpaceExpr() const { return AddrSpaceExpr; }
@@ -3370,7 +3366,7 @@ public:
     return T->getTypeClass() == DependentAddressSpace;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getPointeeType(), getAddrSpaceExpr());
   }
 
@@ -3391,7 +3387,6 @@ public:
 class DependentSizedExtVectorType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
 
-  const ASTContext &Context;
   Expr *SizeExpr;
 
   /// The element type of the array.
@@ -3399,8 +3394,8 @@ class DependentSizedExtVectorType : public Type, public llvm::FoldingSetNode {
 
   SourceLocation loc;
 
-  DependentSizedExtVectorType(const ASTContext &Context, QualType ElementType,
-                              QualType can, Expr *SizeExpr, SourceLocation loc);
+  DependentSizedExtVectorType(QualType ElementType, QualType can,
+                              Expr *SizeExpr, SourceLocation loc);
 
 public:
   Expr *getSizeExpr() const { return SizeExpr; }
@@ -3414,7 +3409,7 @@ public:
     return T->getTypeClass() == DependentSizedExtVector;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getElementType(), getSizeExpr());
   }
 
@@ -3513,14 +3508,12 @@ public:
 class DependentVectorType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
 
-  const ASTContext &Context;
   QualType ElementType;
   Expr *SizeExpr;
   SourceLocation Loc;
 
-  DependentVectorType(const ASTContext &Context, QualType ElementType,
-                           QualType CanonType, Expr *SizeExpr,
-                           SourceLocation Loc, VectorType::VectorKind vecKind);
+  DependentVectorType(QualType ElementType, QualType CanonType, Expr *SizeExpr,
+                      SourceLocation Loc, VectorType::VectorKind vecKind);
 
 public:
   Expr *getSizeExpr() const { return SizeExpr; }
@@ -3537,7 +3530,7 @@ public:
     return T->getTypeClass() == DependentVector;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getElementType(), getSizeExpr(), getVectorKind());
   }
 
@@ -3719,15 +3712,13 @@ public:
 class DependentSizedMatrixType final : public MatrixType {
   friend class ASTContext;
 
-  const ASTContext &Context;
   Expr *RowExpr;
   Expr *ColumnExpr;
 
   SourceLocation loc;
 
-  DependentSizedMatrixType(const ASTContext &Context, QualType ElementType,
-                           QualType CanonicalType, Expr *RowExpr,
-                           Expr *ColumnExpr, SourceLocation loc);
+  DependentSizedMatrixType(QualType ElementType, QualType CanonicalType,
+                           Expr *RowExpr, Expr *ColumnExpr, SourceLocation loc);
 
 public:
   Expr *getRowExpr() const { return RowExpr; }
@@ -3738,7 +3729,7 @@ public:
     return T->getTypeClass() == DependentSizedMatrix;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getElementType(), getRowExpr(), getColumnExpr());
   }
 
@@ -4749,15 +4740,12 @@ public:
 /// This class is used internally by the ASTContext to manage
 /// canonical, dependent types, only. Clients will only see instances
 /// of this class via TypeOfExprType nodes.
-class DependentTypeOfExprType
-  : public TypeOfExprType, public llvm::FoldingSetNode {
-  const ASTContext &Context;
-
+class DependentTypeOfExprType : public TypeOfExprType,
+                                public llvm::FoldingSetNode {
 public:
-  DependentTypeOfExprType(const ASTContext &Context, Expr *E, TypeOfKind Kind)
-      : TypeOfExprType(E, Kind), Context(Context) {}
+  DependentTypeOfExprType(Expr *E, TypeOfKind Kind) : TypeOfExprType(E, Kind) {}
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getUnderlyingExpr(),
             getKind() == TypeOfKind::Unqualified);
   }
@@ -4833,12 +4821,10 @@ public:
 /// canonical, dependent types, only. Clients will only see instances
 /// of this class via DecltypeType nodes.
 class DependentDecltypeType : public DecltypeType, public llvm::FoldingSetNode {
-  const ASTContext &Context;
-
 public:
-  DependentDecltypeType(const ASTContext &Context, Expr *E);
+  DependentDecltypeType(Expr *E, QualType UnderlyingTpe);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getUnderlyingExpr());
   }
 
@@ -6642,7 +6628,7 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, isUnsigned(), getNumBits());
   }
 
@@ -6657,12 +6643,10 @@ public:
 
 class DependentBitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
-  const ASTContext &Context;
   llvm::PointerIntPair<Expr*, 1, bool> ExprAndUnsigned;
 
 protected:
-  DependentBitIntType(const ASTContext &Context, bool IsUnsigned,
-                      Expr *NumBits);
+  DependentBitIntType(bool IsUnsigned, Expr *NumBits);
 
 public:
   bool isUnsigned() const;
@@ -6672,7 +6656,7 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, isUnsigned(), getNumBitsExpr());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,

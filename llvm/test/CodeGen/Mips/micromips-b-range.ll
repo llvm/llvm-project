@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -relocation-model=pic -mattr=+micromips \
+; RUN: llc -mtriple=mips -relocation-model=pic -mattr=+micromips \
 ; RUN:     -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK-LABEL: <foo>:

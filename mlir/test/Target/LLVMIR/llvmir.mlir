@@ -1238,7 +1238,14 @@ llvm.func @varargs(...)
 // CHECK-LABEL: define void @varargs_call
 llvm.func @varargs_call(%arg0 : i32) {
 // CHECK:  call void (...) @varargs(i32 %{{.*}})
-  llvm.call @varargs(%arg0) : (i32) -> ()
+  llvm.call @varargs(%arg0) vararg(!llvm.func<void (...)>) : (i32) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: define void @indirect_varargs_call(ptr %0, i32 %1)
+llvm.func @indirect_varargs_call(%arg0 : !llvm.ptr, %arg1 : i32) {
+// CHECK:  call void (...) %0(i32 %1)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
   llvm.return
 }
 
@@ -1438,7 +1445,7 @@ llvm.func @integer_extension_and_truncation(%a : i32) {
 // Check that the auxiliary `null` operation is converted into a `null` value.
 // CHECK-LABEL: @null
 llvm.func @null() -> !llvm.ptr<i32> {
-  %0 = llvm.mlir.null : !llvm.ptr<i32>
+  %0 = llvm.mlir.zero : !llvm.ptr<i32>
   // CHECK: ret ptr null
   llvm.return %0 : !llvm.ptr<i32>
 }
@@ -1526,6 +1533,7 @@ llvm.func @cmpxchg(%ptr : !llvm.ptr<i32>, %cmp : i32, %val: i32) {
 
 llvm.mlir.global external constant @_ZTIi() : !llvm.ptr<i8>
 llvm.func @foo(!llvm.ptr<i8>)
+llvm.func @vararg_foo(!llvm.ptr<i8>, ...)
 llvm.func @bar(!llvm.ptr<i8>) -> !llvm.ptr<i8>
 llvm.func @__gxx_personality_v0(...) -> i32
 
@@ -1536,7 +1544,7 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %1 = llvm.mlir.constant(dense<0> : vector<1xi8>) : !llvm.array<1 x i8>
   %2 = llvm.mlir.addressof @_ZTIi : !llvm.ptr<ptr<i8>>
   %3 = llvm.bitcast %2 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
-  %4 = llvm.mlir.null : !llvm.ptr<ptr<i8>>
+  %4 = llvm.mlir.zero : !llvm.ptr<ptr<i8>>
   %5 = llvm.mlir.constant(1 : i32) : i32
   %6 = llvm.alloca %5 x i8 : (i32) -> !llvm.ptr<i8>
 // CHECK: invoke void @foo(ptr %[[a1]])
@@ -1563,6 +1571,17 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 // CHECK-NEXT:          to label %[[normal]] unwind label %[[unwind]]
 ^bb3:	// pred: ^bb1
   %8 = llvm.invoke @bar(%6) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
+
+// CHECK: [[BB4:.*]]:
+// CHECK: invoke void (ptr, ...) @vararg_foo(ptr %[[a1]], i32 0)
+^bb4:
+  llvm.invoke @vararg_foo(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr<i8>, ...)>) : (!llvm.ptr<i8>, i32) -> ()
+
+// CHECK: [[BB5:.*]]:
+// CHECK: invoke void (ptr, ...) undef(ptr %[[a1]], i32 0)
+^bb5:
+  %9 = llvm.mlir.undef : !llvm.ptr
+  llvm.invoke %9(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr<i8>, ...)>) : !llvm.ptr, (!llvm.ptr<i8>, i32) -> ()
 }
 
 // -----
@@ -2292,3 +2311,29 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 }
 
 // CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
+
+// -----
+
+//
+// Zero-initialize operation.
+//
+
+// CHECK: @partially_zeroinit_aggregate = linkonce global { i32, i64, [3 x i8] } { i32 0, i64 1, [3 x i8] zeroinitializer }
+llvm.mlir.global linkonce @partially_zeroinit_aggregate() : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)> {
+  %0 = llvm.mlir.zero : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)>
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.insertvalue %1, %0[1] : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)>
+  llvm.return %2 : !llvm.struct<(i32, i64, !llvm.array<3 x i8>)>
+}
+
+llvm.func @zeroinit_complex_local_aggregate() {
+  // CHECK: %[[#VAR:]] = alloca [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }], i64 1, align 32
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
+
+  // CHECK: store [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }] zeroinitializer, ptr %[[#VAR]], align 32
+  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
+  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
+
+  llvm.return
+}

@@ -25,12 +25,12 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v10
 ; GFX9-NEXT:    v_sub_co_u32_e32 v7, vcc, 0, v11
 ; GFX9-NEXT:    v_subb_co_u32_e32 v8, vcc, 0, v10, vcc
-; GFX9-NEXT:    v_mac_f32_e32 v2, 0x4f800000, v3
+; GFX9-NEXT:    v_madmk_f32 v2, v3, 0x4f800000, v2
 ; GFX9-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; GFX9-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v6, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v12, v3
 ; GFX9-NEXT:    v_mul_lo_u32 v4, v8, v6
@@ -171,12 +171,12 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, v3
 ; GFX9-NEXT:    v_sub_co_u32_e32 v10, vcc, 0, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v11, vcc, 0, v3, vcc
-; GFX9-NEXT:    v_mac_f32_e32 v4, 0x4f800000, v5
+; GFX9-NEXT:    v_madmk_f32 v4, v5, 0x4f800000, v4
 ; GFX9-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v4, 0x5f7ffffc, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v5, v5
-; GFX9-NEXT:    v_mac_f32_e32 v4, 0xcf800000, v5
+; GFX9-NEXT:    v_madmk_f32 v4, v5, 0xcf800000, v4
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v8, v5
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v9, v4
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v10, v8
@@ -312,12 +312,12 @@ define i64 @srem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v9
 ; GFX9-NEXT:    v_sub_co_u32_e32 v7, vcc, 0, v10
 ; GFX9-NEXT:    v_subb_co_u32_e32 v8, vcc, 0, v9, vcc
-; GFX9-NEXT:    v_mac_f32_e32 v2, 0x4f800000, v3
+; GFX9-NEXT:    v_madmk_f32 v2, v3, 0x4f800000, v2
 ; GFX9-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; GFX9-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v6, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v11, v3
 ; GFX9-NEXT:    v_mul_lo_u32 v4, v8, v6
@@ -454,12 +454,12 @@ define i64 @urem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, v3
 ; GFX9-NEXT:    v_sub_co_u32_e32 v10, vcc, 0, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v11, vcc, 0, v3, vcc
-; GFX9-NEXT:    v_mac_f32_e32 v4, 0x4f800000, v5
+; GFX9-NEXT:    v_madmk_f32 v4, v5, 0x4f800000, v4
 ; GFX9-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v4, 0x5f7ffffc, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v5, v5
-; GFX9-NEXT:    v_mac_f32_e32 v4, 0xcf800000, v5
+; GFX9-NEXT:    v_madmk_f32 v4, v5, 0xcf800000, v4
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v8, v5
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v9, v4
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v10, v8
@@ -718,12 +718,12 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v10
 ; GFX9-NEXT:    v_sub_co_u32_e32 v7, vcc, 0, v11
 ; GFX9-NEXT:    v_subb_co_u32_e32 v8, vcc, 0, v10, vcc
-; GFX9-NEXT:    v_mac_f32_e32 v2, 0x4f800000, v3
+; GFX9-NEXT:    v_madmk_f32 v2, v3, 0x4f800000, v2
 ; GFX9-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v2, 0x5f7ffffc, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v3, 0x2f800000, v2
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_mac_f32_e32 v2, 0xcf800000, v3
+; GFX9-NEXT:    v_madmk_f32 v2, v3, 0xcf800000, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v6, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v12, v3
 ; GFX9-NEXT:    v_mul_lo_u32 v4, v8, v6
@@ -884,12 +884,12 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, v3
 ; GFX9-NEXT:    v_sub_co_u32_e32 v10, vcc, 0, v2
 ; GFX9-NEXT:    v_subb_co_u32_e32 v11, vcc, 0, v3, vcc
-; GFX9-NEXT:    v_mac_f32_e32 v4, 0x4f800000, v5
+; GFX9-NEXT:    v_madmk_f32 v4, v5, 0x4f800000, v4
 ; GFX9-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v4, 0x5f7ffffc, v4
 ; GFX9-NEXT:    v_mul_f32_e32 v5, 0x2f800000, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v5, v5
-; GFX9-NEXT:    v_mac_f32_e32 v4, 0xcf800000, v5
+; GFX9-NEXT:    v_madmk_f32 v4, v5, 0xcf800000, v4
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v8, v5
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v9, v4
 ; GFX9-NEXT:    v_mul_lo_u32 v6, v10, v8

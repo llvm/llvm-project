@@ -111,7 +111,6 @@
 #include <iterator>
 #include <limits>
 #include <optional>
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -1335,7 +1334,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // On v8, we have particularly efficient implementations of atomic fences
     // if they can be combined with nearby atomic loads and stores.
     if (!Subtarget->hasAcquireRelease() ||
-        getTargetMachine().getOptLevel() == 0) {
+        getTargetMachine().getOptLevel() == CodeGenOptLevel::None) {
       // Automatically insert fences (dmb ish) around ATOMIC_SWAP etc.
       InsertFencesForAtomic = true;
     }
@@ -1349,19 +1348,19 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_FENCE,   MVT::Other,
                        Subtarget->hasAnyDataBarrier() ? Custom : Expand);
 
-    // Set them all for expansion, which will force libcalls.
-    setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_SWAP,      MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_ADD,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_AND,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_OR,   MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Expand);
+    // Set them all for libcall, which will force libcalls.
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
     // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
     // Unordered/Monotonic case.
     if (!InsertFencesForAtomic) {
@@ -8376,7 +8375,7 @@ bool ARMTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   unsigned EltSize = VT.getScalarSizeInBits();
   if (EltSize >= 32 ||
       ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
-      ShuffleVectorInst::isIdentityMask(M) ||
+      ShuffleVectorInst::isIdentityMask(M, M.size()) ||
       isVREVMask(M, VT, 64) ||
       isVREVMask(M, VT, 32) ||
       isVREVMask(M, VT, 16))
@@ -9876,7 +9875,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
 
     ArgListEntry Entry;
     Entry.Node = SRet;
-    Entry.Ty = RetTy->getPointerTo();
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
     Entry.IsSExt = false;
     Entry.IsZExt = false;
     Entry.IsSRet = true;
@@ -20244,14 +20243,14 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
     return false;
 
   InlineAsm *IA = cast<InlineAsm>(CI->getCalledOperand());
-  std::string AsmStr = IA->getAsmString();
+  StringRef AsmStr = IA->getAsmString();
   SmallVector<StringRef, 4> AsmPieces;
   SplitString(AsmStr, AsmPieces, ";\n");
 
   switch (AsmPieces.size()) {
   default: return false;
   case 1:
-    AsmStr = std::string(AsmPieces[0]);
+    AsmStr = AsmPieces[0];
     AsmPieces.clear();
     SplitString(AsmStr, AsmPieces, " \t,");
 
@@ -20431,13 +20430,14 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
 /// vector.  If it is invalid, don't add anything to Ops.
 void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                     std::string &Constraint,
-                                                     std::vector<SDValue>&Ops,
+                                                     StringRef Constraint,
+                                                     std::vector<SDValue> &Ops,
                                                      SelectionDAG &DAG) const {
   SDValue Result;
 
   // Currently only support length 1 constraints.
-  if (Constraint.length() != 1) return;
+  if (Constraint.size() != 1)
+    return;
 
   char ConstraintLetter = Constraint[0];
   switch (ConstraintLetter) {
@@ -21316,7 +21316,7 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     // the stack and close enough to the spill slot, this can lead to a
     // situation where the monitor always gets cleared and the atomic operation
     // can never succeed. So at -O0 lower this operation to a CAS loop.
-    if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+    if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
       return AtomicExpansionKind::CmpXChg;
     return AtomicExpansionKind::LLSC;
   }
@@ -21340,8 +21340,8 @@ ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
     HasAtomicCmpXchg = Subtarget->hasV7Ops();
   else
     HasAtomicCmpXchg = Subtarget->hasV6Ops();
-  if (getTargetMachine().getOptLevel() != 0 && HasAtomicCmpXchg &&
-      Size <= (Subtarget->isMClass() ? 32U : 64U))
+  if (getTargetMachine().getOptLevel() != CodeGenOptLevel::None &&
+      HasAtomicCmpXchg && Size <= (Subtarget->isMClass() ? 32U : 64U))
     return AtomicExpansionKind::LLSC;
   return AtomicExpansionKind::None;
 }
@@ -21632,13 +21632,6 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     // to something legal.
     VecTy = FixedVectorType::get(VecTy->getElementType(),
                                  VecTy->getNumElements() / NumLoads);
-
-    // We will compute the pointer operand of each load from the original base
-    // address using GEPs. Cast the base address to a pointer to the scalar
-    // element type.
-    BaseAddr = Builder.CreateBitCast(
-        BaseAddr,
-        VecTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
   }
 
   assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");

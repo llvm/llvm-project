@@ -91,9 +91,78 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   // Verify that the struct and the field (`R`) with first appearance of the
   // type is created successfully.
   Environment Env(DAContext, *Fun);
-  RecordValue *SVal = cast<RecordValue>(Env.createValue(Ty));
-  PointerValue *PV = cast_or_null<PointerValue>(getFieldValue(SVal, *R, Env));
+  auto &SLoc = cast<RecordStorageLocation>(Env.createObject(Ty));
+  PointerValue *PV = cast_or_null<PointerValue>(getFieldValue(&SLoc, *R, Env));
   EXPECT_THAT(PV, NotNull());
+}
+
+TEST_F(EnvironmentTest, JoinRecords) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+    struct S {};
+    // Need to use the type somewhere so that the `QualType` gets created;
+    S s;
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(qualType(hasDeclaration(recordDecl(hasName("S")))).bind("SType"),
+            Context);
+  const QualType *TyPtr = selectFirst<QualType>("SType", Results);
+  ASSERT_THAT(TyPtr, NotNull());
+  QualType Ty = *TyPtr;
+  ASSERT_FALSE(Ty.isNull());
+
+  auto *ConstructExpr = CXXConstructExpr::CreateEmpty(Context, 0);
+  ConstructExpr->setType(Ty);
+  ConstructExpr->setValueKind(VK_PRValue);
+
+  // Two different `RecordValue`s with the same location are joined into a
+  // third `RecordValue` with that same location.
+  {
+    Environment Env1(DAContext);
+    auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
+    RecordStorageLocation &Loc = Val1.getLoc();
+    Env1.setValue(*ConstructExpr, Val1);
+
+    Environment Env2(DAContext);
+    auto &Val2 = Env2.create<RecordValue>(Loc);
+    Env2.setValue(Loc, Val2);
+    Env2.setValue(*ConstructExpr, Val2);
+
+    Environment::ValueModel Model;
+    Environment EnvJoined = Environment::join(Env1, Env2, Model);
+    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(*ConstructExpr));
+    EXPECT_NE(JoinedVal, &Val1);
+    EXPECT_NE(JoinedVal, &Val2);
+    EXPECT_EQ(&JoinedVal->getLoc(), &Loc);
+  }
+
+  // Two different `RecordValue`s with different locations are joined into a
+  // third `RecordValue` with a location different from the other two.
+  {
+    Environment Env1(DAContext);
+    auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
+    Env1.setValue(*ConstructExpr, Val1);
+
+    Environment Env2(DAContext);
+    auto &Val2 = *cast<RecordValue>(Env2.createValue(Ty));
+    Env2.setValue(*ConstructExpr, Val2);
+
+    Environment::ValueModel Model;
+    Environment EnvJoined = Environment::join(Env1, Env2, Model);
+    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(*ConstructExpr));
+    EXPECT_NE(JoinedVal, &Val1);
+    EXPECT_NE(JoinedVal, &Val2);
+    EXPECT_NE(&JoinedVal->getLoc(), &Val1.getLoc());
+    EXPECT_NE(&JoinedVal->getLoc(), &Val2.getLoc());
+  }
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFun) {
@@ -171,8 +240,8 @@ TEST_F(EnvironmentTest, IncludeFieldsFromDefaultInitializers) {
   // Verify that the `X` field of `S` is populated when analyzing the
   // constructor, even though it is not referenced directly in the constructor.
   Environment Env(DAContext, *Constructor);
-  auto *Val = cast<RecordValue>(Env.createValue(QTy));
-  EXPECT_THAT(getFieldValue(Val, *XDecl, Env), NotNull());
+  auto &Loc = cast<RecordStorageLocation>(Env.createObject(QTy));
+  EXPECT_THAT(getFieldValue(&Loc, *XDecl, Env), NotNull());
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
@@ -216,8 +285,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
   Environment Env(DAContext, *Fun);
   const auto *GlobalLoc =
       cast<RecordStorageLocation>(Env.getStorageLocation(*GlobalDecl));
-  const auto *GlobalVal = cast<RecordValue>(Env.getValue(*GlobalLoc));
-  auto *BarVal = getFieldValue(GlobalVal, *BarDecl, Env);
+  auto *BarVal = getFieldValue(GlobalLoc, *BarDecl, Env);
   EXPECT_TRUE(isa<IntegerValue>(BarVal));
 }
 

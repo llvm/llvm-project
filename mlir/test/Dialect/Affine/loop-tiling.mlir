@@ -110,7 +110,7 @@ func.func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<25
 
 // CHECK-DAG: [[$UBMAP:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + 32, s0)>
 
-func.func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+func.func @tile_using_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %cst = arith.constant 0.000000e+00 : f32
   %c0 = arith.constant 0 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
@@ -156,7 +156,7 @@ func.func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: m
 // CHECK-DAG: [[MAP1:#map[0-9]*]] = affine_map<()[s0, s1] -> (s0 + s1)>
 // CHECK-DAG: [[$UBMAP:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> (d0 + 32, s0 + s1)>
 
-func.func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: index) {
+func.func @tile_using_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: index) {
   %c0 = arith.constant 0 : index
   %dim0 = memref.dim %arg0, %c0 : memref<?xf32>
   affine.for %i0 = 0 to affine_map<()[s0, s1] -> (s0 + s1)> ()[%dim0, %limit] {

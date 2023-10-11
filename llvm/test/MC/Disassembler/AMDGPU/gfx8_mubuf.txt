@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: buffer_load_format_x v5, off, s[8:11], s3 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe0,0x00,0x05,0x02,0x03]
 0xff,0x0f,0x00,0xe0,0x00,0x05,0x02,0x03

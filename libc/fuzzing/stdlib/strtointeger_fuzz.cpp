@@ -48,20 +48,22 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   char *out_ptr = nullptr;
 
-  auto volatile atoi_output = __llvm_libc::atoi(str_ptr);
-  auto volatile atol_output = __llvm_libc::atol(str_ptr);
-  auto volatile atoll_output = __llvm_libc::atoll(str_ptr);
-  auto volatile strtol_output = __llvm_libc::strtol(str_ptr, &out_ptr, base);
+  auto volatile atoi_output = LIBC_NAMESPACE::atoi(str_ptr);
+  auto volatile atol_output = LIBC_NAMESPACE::atol(str_ptr);
+  auto volatile atoll_output = LIBC_NAMESPACE::atoll(str_ptr);
+  auto volatile strtol_output = LIBC_NAMESPACE::strtol(str_ptr, &out_ptr, base);
   if (str_ptr + container_size - 1 < out_ptr)
     __builtin_trap();
-  auto volatile strtoll_output = __llvm_libc::strtoll(str_ptr, &out_ptr, base);
+  auto volatile strtoll_output =
+      LIBC_NAMESPACE::strtoll(str_ptr, &out_ptr, base);
   if (str_ptr + container_size - 1 < out_ptr)
     __builtin_trap();
-  auto volatile strtoul_output = __llvm_libc::strtoul(str_ptr, &out_ptr, base);
+  auto volatile strtoul_output =
+      LIBC_NAMESPACE::strtoul(str_ptr, &out_ptr, base);
   if (str_ptr + container_size - 1 < out_ptr)
     __builtin_trap();
   auto volatile strtoull_output =
-      __llvm_libc::strtoull(str_ptr, &out_ptr, base);
+      LIBC_NAMESPACE::strtoull(str_ptr, &out_ptr, base);
   if (str_ptr + container_size - 1 < out_ptr)
     __builtin_trap();
 

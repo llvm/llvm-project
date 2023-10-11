@@ -35,18 +35,20 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
       TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
       MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
-      O0WantsFastISel(false), DefaultOptions(Options), Options(Options) {}
+      O0WantsFastISel(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
 
-bool TargetMachine::isLargeData() const {
-  if (getTargetTriple().getArch() != Triple::x86_64)
+bool TargetMachine::isLargeData(const GlobalVariable *GV) const {
+  if (getTargetTriple().getArch() != Triple::x86_64 || GV->isThreadLocal())
     return false;
   // Large data under the large code model still needs to be thought about, so
   // restrict this to medium.
   if (getCodeModel() != CodeModel::Medium)
     return false;
-  return true;
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+  return Size == 0 || Size > LargeDataThreshold;
 }
 
 bool TargetMachine::isPositionIndependent() const {
@@ -198,9 +200,9 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
 }
 
 /// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOpt::Level TargetMachine::getOptLevel() const { return OptLevel; }
+CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
 
-void TargetMachine::setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
+void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {

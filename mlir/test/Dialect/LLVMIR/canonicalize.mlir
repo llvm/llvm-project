@@ -19,7 +19,7 @@ llvm.func @fold_icmp_ne(%arg0 : vector<2xi32>) -> vector<2xi1> {
 // CHECK-LABEL: @fold_icmp_alloca
 llvm.func @fold_icmp_alloca() -> i1 {
   // CHECK: %[[C0:.*]] = llvm.mlir.constant(true) : i1
-  %c0 = llvm.mlir.null : !llvm.ptr
+  %c0 = llvm.mlir.zero : !llvm.ptr
   %c1 = arith.constant 1 : i64
   %0 = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
   %1 = llvm.icmp "ne" %c0, %0 : !llvm.ptr
@@ -189,5 +189,22 @@ llvm.func @addr_dce(%x : !llvm.ptr) {
 llvm.func @alloca_dce() {
   %c1_i64 = arith.constant 1 : i64
   %0 = llvm.alloca %c1_i64 x i32 : (i64) -> !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: func @volatile_load
+llvm.func @volatile_load(%x : !llvm.ptr) {
+  // A volatile load may have side-effects such as a write operation to arbitrary memory.
+  // Make sure it is not removed.
+  // CHECK: llvm.load volatile
+  %0 = llvm.load volatile %x : !llvm.ptr -> i8
+  // Same with monotonic atomics and any stricter modes.
+  // CHECK: llvm.load %{{.*}} atomic monotonic
+  %2 = llvm.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
+  // But not unordered!
+  // CHECK-NOT: llvm.load %{{.*}} atomic unordered
+  %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
   llvm.return
 }

@@ -14,7 +14,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libcpp-hardening-mode=debug
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
 // XFAIL: availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 

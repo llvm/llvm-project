@@ -33,6 +33,8 @@
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.h.inc"
 
+#include "mlir/Dialect/OpenACC/OpenACCInterfaces.h"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.h.inc"
 
@@ -42,7 +44,8 @@
       mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
       mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
       mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
-      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp
+      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
+      mlir::acc::CacheOp
 #define ACC_COMPUTE_CONSTRUCT_OPS                                              \
   mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp
 #define ACC_DATA_CONSTRUCT_OPS                                                 \

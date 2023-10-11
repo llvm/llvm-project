@@ -18,8 +18,10 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -58,6 +60,7 @@ CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
 CGOPT(ThreadModel::Model, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
+CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
@@ -162,6 +165,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                  clEnumValN(CodeModel::Large, "large", "Large code model")));
   CGBINDOPT(CodeModel);
 
+  static cl::opt<uint64_t> LargeDataThreshold(
+      "large-data-threshold",
+      cl::desc("Choose large data threshold for x86_64 medium code model"),
+      cl::init(0));
+  CGBINDOPT(LargeDataThreshold);
+
   static cl::opt<ExceptionHandling> ExceptionModel(
       "exception-model", cl::desc("exception model"),
       cl::init(ExceptionHandling::None),
@@ -180,15 +189,15 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(ExceptionModel);
 
   static cl::opt<CodeGenFileType> FileType(
-      "filetype", cl::init(CGFT_AssemblyFile),
+      "filetype", cl::init(CodeGenFileType::AssemblyFile),
       cl::desc(
           "Choose a file type (not all types are supported by all targets):"),
-      cl::values(
-          clEnumValN(CGFT_AssemblyFile, "asm", "Emit an assembly ('.s') file"),
-          clEnumValN(CGFT_ObjectFile, "obj",
-                     "Emit a native object ('.o') file"),
-          clEnumValN(CGFT_Null, "null",
-                     "Emit nothing, for performance testing")));
+      cl::values(clEnumValN(CodeGenFileType::AssemblyFile, "asm",
+                            "Emit an assembly ('.s') file"),
+                 clEnumValN(CodeGenFileType::ObjectFile, "obj",
+                            "Emit a native object ('.o') file"),
+                 clEnumValN(CodeGenFileType::Null, "null",
+                            "Emit nothing, for performance testing")));
   CGBINDOPT(FileType);
 
   static cl::opt<FramePointerKind> FramePointerUsage(
@@ -724,4 +733,25 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
                                     Module &M) {
   for (Function &F : M)
     setFunctionAttributes(CPU, Features, F);
+}
+
+Expected<std::unique_ptr<TargetMachine>>
+codegen::createTargetMachineForTriple(StringRef TargetTriple,
+                                      CodeGenOptLevel OptLevel) {
+  Triple TheTriple(TargetTriple);
+  std::string Error;
+  const auto *TheTarget =
+      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+  if (!TheTarget)
+    return createStringError(inconvertibleErrorCode(), Error);
+  auto *Target = TheTarget->createTargetMachine(
+      TheTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
+      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
+      codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+      OptLevel);
+  if (!Target)
+    return createStringError(inconvertibleErrorCode(),
+                             Twine("could not allocate target machine for ") +
+                                 TargetTriple);
+  return std::unique_ptr<TargetMachine>(Target);
 }

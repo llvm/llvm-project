@@ -34,7 +34,6 @@ struct begin_args_t {
   int argc;
   void *argv;
   void *envp;
-  void *rpc_shared_buffer;
 };
 
 /// The arguments to the '_start' kernel.

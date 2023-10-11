@@ -46,6 +46,7 @@
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBProcessInfo.h"
+#include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBQueue.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBReproducer.h"
@@ -77,4 +78,5 @@
 #include "lldb/API/SBValueList.h"
 #include "lldb/API/SBVariablesOptions.h"
 #include "lldb/API/SBWatchpoint.h"
+#include "lldb/API/SBWatchpointOptions.h"
 %}

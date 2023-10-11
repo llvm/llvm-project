@@ -48,7 +48,7 @@ static bool canBeHoisted(Operation *op,
 }
 
 size_t mlir::moveLoopInvariantCode(
-    RegionRange regions,
+    ArrayRef<Region *> regions,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
     function_ref<void(Operation *, Region *)> moveOutOfRegion) {
@@ -96,7 +96,7 @@ size_t mlir::moveLoopInvariantCode(
 
 size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
   return moveLoopInvariantCode(
-      &loopLike.getLoopBody(),
+      loopLike.getLoopRegions(),
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },

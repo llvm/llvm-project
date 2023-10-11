@@ -7,6 +7,7 @@
   target triple = "aarch64--linux-gnu"
 
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_pnr() #1 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2strided() #0 { entry: unreachable }
@@ -15,6 +16,7 @@
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4strided() #0 { entry: unreachable }
 
   attributes #0 = { nounwind "target-features"="+sve" }
+  attributes #1 = { nounwind "target-features"="+sve2p1" }
 
 ...
 ---
@@ -58,6 +60,49 @@ body:             |
     $p15 = IMPLICIT_DEF
 
     $p0 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_pnr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: pnr }
+stack:
+liveins:
+  - { reg: '$pn0', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $pn0
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_pnr
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
+    ; EXPAND: STR_PXI $p0, $sp, 7
+    ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
+
+    %0:pnr = COPY $pn0
+
+    $pn0 = IMPLICIT_DEF
+    $pn1 = IMPLICIT_DEF
+    $pn2 = IMPLICIT_DEF
+    $pn3 = IMPLICIT_DEF
+    $pn4 = IMPLICIT_DEF
+    $pn5 = IMPLICIT_DEF
+    $pn6 = IMPLICIT_DEF
+    $pn7 = IMPLICIT_DEF
+    $pn8 = IMPLICIT_DEF
+    $pn9 = IMPLICIT_DEF
+    $pn10 = IMPLICIT_DEF
+    $pn11 = IMPLICIT_DEF
+    $pn12 = IMPLICIT_DEF
+    $pn13 = IMPLICIT_DEF
+    $pn14 = IMPLICIT_DEF
+    $pn15 = IMPLICIT_DEF
+
+    $pn0 = COPY %0
     RET_ReallyLR
 ...
 ---

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_STRING_STRING_UTILS_H
-#define LIBC_SRC_STRING_STRING_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_STRING_UTILS_H
+#define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -20,7 +20,7 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 #include <stddef.h> // For size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
@@ -88,7 +88,7 @@ LIBC_INLINE size_t string_length_byte_read(const char *src) {
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
 LIBC_INLINE size_t string_length(const char *src) {
-#ifdef LIBC_COPT_UNSAFE_STRING_WIDE_READ
+#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   // Unsigned int is the default size for most processors, and on x86-64 it
   // performs better than larger sizes when the src pointer can't be assumed to
   // be aligned to a word boundary, so it's the size we use for reading the
@@ -143,7 +143,7 @@ LIBC_INLINE void *find_first_character_byte_read(const unsigned char *src,
 // 'src'. If 'ch' is not found, returns nullptr.
 LIBC_INLINE void *find_first_character(const unsigned char *src,
                                        unsigned char ch, size_t max_strlen) {
-#ifdef LIBC_COPT_UNSAFE_STRING_WIDE_READ
+#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   // If the maximum size of the string is small, the overhead of aligning to a
   // word boundary and generating a bitmask of the appropriate size may be
   // greater than the gains from reading larger chunks. Based on some testing,
@@ -246,6 +246,6 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif //  LIBC_SRC_STRING_STRING_UTILS_H
+#endif //  LLVM_LIBC_SRC_STRING_STRING_UTILS_H

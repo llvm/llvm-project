@@ -446,7 +446,7 @@ static bool InitializeMemoryProfiler() {
     ctx->memprof_fd = 2;
   } else {
     InternalScopedString filename;
-    filename.append("%s.%d", fname, (int)internal_getpid());
+    filename.AppendF("%s.%d", fname, (int)internal_getpid());
     ctx->memprof_fd = OpenFile(filename.data(), WrOnly);
     if (ctx->memprof_fd == kInvalidFd) {
       Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",

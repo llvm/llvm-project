@@ -8,9 +8,10 @@
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 This note attempts to group the intrinsic procedures of Fortran into categories

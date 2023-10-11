@@ -185,6 +185,7 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
   ConstraintExpr = ConstraintExpr->IgnoreParenImpCasts();
 
   if (LogicalBinOp BO = ConstraintExpr) {
+    size_t EffectiveDetailEndIndex = Satisfaction.Details.size();
     ExprResult LHSRes = calculateConstraintSatisfaction(
         S, BO.getLHS(), Satisfaction, Evaluator);
 
@@ -217,6 +218,22 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
         S, BO.getRHS(), Satisfaction, std::forward<AtomicEvaluator>(Evaluator));
     if (RHSRes.isInvalid())
       return ExprError();
+
+    bool IsRHSSatisfied = Satisfaction.IsSatisfied;
+    // Current implementation adds diagnostic information about the falsity
+    // of each false atomic constraint expression when it evaluates them.
+    // When the evaluation results to `false || true`, the information
+    // generated during the evaluation of left-hand side is meaningless
+    // because the whole expression evaluates to true.
+    // The following code removes the irrelevant diagnostic information.
+    // FIXME: We should probably delay the addition of diagnostic information
+    // until we know the entire expression is false.
+    if (BO.isOr() && IsRHSSatisfied) {
+      auto EffectiveDetailEnd = Satisfaction.Details.begin();
+      std::advance(EffectiveDetailEnd, EffectiveDetailEndIndex);
+      Satisfaction.Details.erase(EffectiveDetailEnd,
+                                 Satisfaction.Details.end());
+    }
 
     return BO.recreateBinOp(S, LHSRes, RHSRes);
   }
@@ -600,11 +617,6 @@ bool Sema::SetupConstraintScope(
       if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
                                            Scope, MLTAL))
         return true;
-      // Make sure the captures are also added to the instantiation scope.
-      if (isLambdaCallOperator(FD) &&
-          addInstantiatedCapturesToScope(FD, FromMemTempl->getTemplatedDecl(),
-                                         Scope, MLTAL))
-        return true;
     }
 
     return false;
@@ -628,11 +640,6 @@ bool Sema::SetupConstraintScope(
     // Case where this was not a template, but instantiated as a
     // child-function.
     if (addInstantiatedParametersToScope(FD, InstantiatedFrom, Scope, MLTAL))
-      return true;
-
-    // Make sure the captures are also added to the instantiation scope.
-    if (isLambdaCallOperator(FD) &&
-        addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL))
       return true;
   }
 
@@ -695,8 +702,7 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   }
 
   ContextRAII SavedContext{*this, CtxToSave};
-  LocalInstantiationScope Scope(*this, !ForOverloadResolution ||
-                                           isLambdaCallOperator(FD));
+  LocalInstantiationScope Scope(*this, !ForOverloadResolution);
   std::optional<MultiLevelTemplateArgumentList> MLTAL =
       SetupConstraintCheckingTemplateArgumentsAndScope(
           const_cast<FunctionDecl *>(FD), {}, Scope);
@@ -712,20 +718,9 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   }
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
 
-  // When checking the constraints of a lambda, we need to restore a
-  // LambdaScopeInfo populated with correct capture information so that the type
-  // of a variable referring to a capture is correctly const-adjusted.
-  FunctionScopeRAII FuncScope(*this);
-  if (isLambdaCallOperator(FD)) {
-    LambdaScopeInfo *LSI = RebuildLambdaScopeInfo(
-        const_cast<CXXMethodDecl *>(cast<CXXMethodDecl>(FD)));
-    // Constraints are checked from the parent context of the lambda, so we set
-    // AfterParameterList to false, so that `tryCaptureVariable` finds
-    // explicit captures in the appropriate context.
-    LSI->AfterParameterList = false;
-  } else {
-    FuncScope.disable();
-  }
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
+      *this, const_cast<FunctionDecl *>(FD), *MLTAL, Scope,
+      ForOverloadResolution);
 
   return CheckConstraintSatisfaction(
       FD, {FD->getTrailingRequiresClause()}, *MLTAL,
@@ -913,15 +908,10 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
     ThisQuals = Method->getMethodQualifiers();
     Record = Method->getParent();
   }
-  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-  FunctionScopeRAII FuncScope(*this);
 
-  if (isLambdaCallOperator(Decl)) {
-    LambdaScopeInfo *LSI = RebuildLambdaScopeInfo(cast<CXXMethodDecl>(Decl));
-    LSI->AfterParameterList = false;
-  } else {
-    FuncScope.disable();
-  }
+  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
+      *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,

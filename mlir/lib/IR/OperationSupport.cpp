@@ -198,12 +198,11 @@ OperationState::~OperationState() {
     propertiesDeleter(properties);
 }
 
-LogicalResult
-OperationState::setProperties(Operation *op,
-                              InFlightDiagnostic *diagnostic) const {
+LogicalResult OperationState::setProperties(
+    Operation *op, function_ref<InFlightDiagnostic()> emitError) const {
   if (LLVM_UNLIKELY(propertiesAttr)) {
     assert(!properties);
-    return op->setPropertiesFromAttribute(propertiesAttr, diagnostic);
+    return op->setPropertiesFromAttribute(propertiesAttr, emitError);
   }
   if (properties)
     propertiesSetter(op->getPropertiesStorage(), properties);
@@ -438,6 +437,12 @@ MutableOperandRange::MutableOperandRange(
 MutableOperandRange::MutableOperandRange(Operation *owner)
     : MutableOperandRange(owner, /*start=*/0, owner->getNumOperands()) {}
 
+/// Construct a new mutable range for the given OpOperand.
+MutableOperandRange::MutableOperandRange(OpOperand &opOperand)
+    : MutableOperandRange(opOperand.getOwner(),
+                          /*start=*/opOperand.getOperandNumber(),
+                          /*length=*/1) {}
+
 /// Slice this range into a sub range, with the additional operand segment.
 MutableOperandRange
 MutableOperandRange::slice(unsigned subStart, unsigned subLen,
@@ -516,6 +521,19 @@ void MutableOperandRange::updateLength(unsigned newLength) {
         DenseI32ArrayAttr::get(attr.getContext(), segments));
     owner->setAttr(segment.second.getName(), segment.second.getValue());
   }
+}
+
+OpOperand &MutableOperandRange::operator[](unsigned index) const {
+  assert(index < length && "index is out of bounds");
+  return owner->getOpOperand(start + index);
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::begin() const {
+  return owner->getOpOperands().slice(start, length).begin();
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
+  return owner->getOpOperands().slice(start, length).end();
 }
 
 //===----------------------------------------------------------------------===//
@@ -769,7 +787,8 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
       lhs->getNumResults() != rhs->getNumResults() ||
-      lhs->hashProperties() != rhs->hashProperties())
+      !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                        rhs->getPropertiesStorage()))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;

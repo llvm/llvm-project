@@ -12,7 +12,6 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
 ; LA32-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    addi.w $a5, $a1, 0
 ; LA32-NEXT:    xor $a5, $a4, $a5
@@ -35,7 +34,6 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    addi.w $a5, $a1, 0
 ; LA64-NEXT:    xor $a5, $a4, $a5
@@ -50,6 +48,66 @@ define i8 @atomicrmw_xchg_i8_acquire(ptr %a, i8 %b) nounwind {
   ret i8 %1
 }
 
+define i8 @atomicrmw_xchg_0_i8_acquire(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_0_i8_acquire:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 3
+; LA32-NEXT:    ori $a2, $zero, 255
+; LA32-NEXT:    sll.w $a2, $a2, $a1
+; LA32-NEXT:    nor $a2, $a2, $zero
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    and $a4, $a3, $a2
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB1_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_0_i8_acquire:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 3
+; LA64-NEXT:    ori $a2, $zero, 255
+; LA64-NEXT:    sll.w $a2, $a2, $a1
+; LA64-NEXT:    nor $a2, $a2, $zero
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amand_db.w $a3, $a2, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a1
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i8 0 acquire
+  ret i8 %1
+}
+
+define i8 @atomicrmw_xchg_minus_1_i8_acquire(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 3
+; LA32-NEXT:    ori $a2, $zero, 255
+; LA32-NEXT:    sll.w $a2, $a2, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    or $a4, $a3, $a2
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB2_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_minus_1_i8_acquire:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 3
+; LA64-NEXT:    ori $a2, $zero, 255
+; LA64-NEXT:    sll.w $a2, $a2, $a1
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amor_db.w $a3, $a2, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a1
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i8 -1 acquire
+  ret i8 %1
+}
+
 define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-LABEL: atomicrmw_xchg_i16_acquire:
 ; LA32:       # %bb.0:
@@ -60,15 +118,14 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    addi.w $a5, $a1, 0
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB1_1
+; LA32-NEXT:    beqz $a5, .LBB3_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -84,15 +141,14 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    addi.w $a5, $a1, 0
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB1_1
+; LA64-NEXT:    beqz $a5, .LBB3_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -100,15 +156,78 @@ define i16 @atomicrmw_xchg_i16_acquire(ptr %a, i16 %b) nounwind {
   ret i16 %1
 }
 
+define i16 @atomicrmw_xchg_0_i16_acquire(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_0_i16_acquire:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a1, 15
+; LA32-NEXT:    ori $a1, $a1, 4095
+; LA32-NEXT:    slli.w $a2, $a0, 3
+; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    nor $a1, $a1, $zero
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    and $a4, $a3, $a1
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB4_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_0_i16_acquire:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a1, 15
+; LA64-NEXT:    ori $a1, $a1, 4095
+; LA64-NEXT:    slli.d $a2, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a2
+; LA64-NEXT:    nor $a1, $a1, $zero
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amand_db.w $a3, $a1, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a2
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i16 0 acquire
+  ret i16 %1
+}
+
+define i16 @atomicrmw_xchg_minus_1_i16_acquire(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a1, 15
+; LA32-NEXT:    ori $a1, $a1, 4095
+; LA32-NEXT:    slli.w $a2, $a0, 3
+; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    or $a4, $a3, $a1
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB5_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_minus_1_i16_acquire:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a1, 15
+; LA64-NEXT:    ori $a1, $a1, 4095
+; LA64-NEXT:    slli.d $a2, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a2
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amor_db.w $a3, $a1, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a2
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i16 -1 acquire
+  ret i16 %1
+}
+
 define i32 @atomicrmw_xchg_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_xchg_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB2_1
+; LA32-NEXT:    beqz $a3, .LBB6_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -151,15 +270,14 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    add.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB4_1
+; LA32-NEXT:    beqz $a5, .LBB8_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -174,15 +292,14 @@ define i8 @atomicrmw_add_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    add.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB4_1
+; LA64-NEXT:    beqz $a5, .LBB8_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
@@ -200,15 +317,14 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    add.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB5_1
+; LA32-NEXT:    beqz $a5, .LBB9_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -224,15 +340,14 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB5_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    add.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB5_1
+; LA64-NEXT:    beqz $a5, .LBB9_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -243,12 +358,11 @@ define i16 @atomicrmw_add_i16_acquire(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_add_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_add_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB6_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    add.w $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB6_1
+; LA32-NEXT:    beqz $a3, .LBB10_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -291,15 +405,14 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    sub.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB8_1
+; LA32-NEXT:    beqz $a5, .LBB12_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -314,15 +427,14 @@ define i8 @atomicrmw_sub_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    sub.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB8_1
+; LA64-NEXT:    beqz $a5, .LBB12_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
@@ -340,15 +452,14 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB13_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    sub.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB9_1
+; LA32-NEXT:    beqz $a5, .LBB13_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -364,15 +475,14 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB13_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    sub.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB9_1
+; LA64-NEXT:    beqz $a5, .LBB13_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -383,12 +493,11 @@ define i16 @atomicrmw_sub_i16_acquire(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_sub_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_sub_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    sub.w $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB10_1
+; LA32-NEXT:    beqz $a3, .LBB14_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -433,8 +542,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    and $a5, $a4, $a1
 ; LA32-NEXT:    nor $a5, $a5, $zero
@@ -442,7 +550,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB12_1
+; LA32-NEXT:    beqz $a5, .LBB16_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -457,8 +565,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a5, $a4, $a1
 ; LA64-NEXT:    nor $a5, $a5, $zero
@@ -466,7 +573,7 @@ define i8 @atomicrmw_nand_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB12_1
+; LA64-NEXT:    beqz $a5, .LBB16_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
@@ -484,8 +591,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB13_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    and $a5, $a4, $a1
 ; LA32-NEXT:    nor $a5, $a5, $zero
@@ -493,7 +599,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB13_1
+; LA32-NEXT:    beqz $a5, .LBB17_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -509,8 +615,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB13_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a5, $a4, $a1
 ; LA64-NEXT:    nor $a5, $a5, $zero
@@ -518,7 +623,7 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB13_1
+; LA64-NEXT:    beqz $a5, .LBB17_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -529,26 +634,24 @@ define i16 @atomicrmw_nand_i16_acquire(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_nand_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_nand_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    and $a3, $a2, $a1
 ; LA32-NEXT:    nor $a3, $a3, $zero
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB14_1
+; LA32-NEXT:    beqz $a3, .LBB18_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: atomicrmw_nand_i32_acquire:
 ; LA64:       # %bb.0:
-; LA64-NEXT:  .LBB14_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a2, $a0, 0
 ; LA64-NEXT:    and $a3, $a2, $a1
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    sc.w $a3, $a0, 0
-; LA64-NEXT:    beqz $a3, .LBB14_1
+; LA64-NEXT:    beqz $a3, .LBB18_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
@@ -569,13 +672,12 @@ define i64 @atomicrmw_nand_i64_acquire(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_nand_i64_acquire:
 ; LA64:       # %bb.0:
-; LA64-NEXT:  .LBB15_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:  .LBB19_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.d $a2, $a0, 0
 ; LA64-NEXT:    and $a3, $a2, $a1
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    sc.d $a3, $a0, 0
-; LA64-NEXT:    beqz $a3, .LBB15_1
+; LA64-NEXT:    beqz $a3, .LBB19_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
@@ -593,12 +695,11 @@ define i8 @atomicrmw_and_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    orn $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    and $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB16_1
+; LA32-NEXT:    beqz $a4, .LBB20_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -630,12 +731,11 @@ define i16 @atomicrmw_and_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    orn $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    and $a4, $a2, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB17_1
+; LA32-NEXT:    beqz $a4, .LBB21_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a2, $a3
 ; LA32-NEXT:    ret
@@ -660,12 +760,11 @@ define i16 @atomicrmw_and_i16_acquire(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_and_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_and_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB18_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    and $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB18_1
+; LA32-NEXT:    beqz $a3, .LBB22_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -706,12 +805,11 @@ define i8 @atomicrmw_or_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB20_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    or $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB20_1
+; LA32-NEXT:    beqz $a4, .LBB24_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -736,12 +834,11 @@ define i16 @atomicrmw_or_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB21_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB25_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    or $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB21_1
+; LA32-NEXT:    beqz $a4, .LBB25_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -762,12 +859,11 @@ define i16 @atomicrmw_or_i16_acquire(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_or_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_or_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB22_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB26_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    or $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB22_1
+; LA32-NEXT:    beqz $a3, .LBB26_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -808,12 +904,11 @@ define i8 @atomicrmw_xor_i8_acquire(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB28_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    xor $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB24_1
+; LA32-NEXT:    beqz $a4, .LBB28_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -838,12 +933,11 @@ define i16 @atomicrmw_xor_i16_acquire(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB25_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    xor $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB25_1
+; LA32-NEXT:    beqz $a4, .LBB29_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -864,12 +958,11 @@ define i16 @atomicrmw_xor_i16_acquire(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_xor_i32_acquire(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_xor_i32_acquire:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB26_1: # =>This Inner Loop Header: Depth=1
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:  .LBB30_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    xor $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB26_1
+; LA32-NEXT:    beqz $a3, .LBB30_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -912,14 +1005,14 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB28_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB32_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    addi.w $a5, $a1, 0
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB28_1
+; LA32-NEXT:    beqz $a5, .LBB32_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -934,18 +1027,78 @@ define i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB28_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB32_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    addi.w $a5, $a1, 0
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB28_1
+; LA64-NEXT:    beqz $a5, .LBB32_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 %b monotonic
+  ret i8 %1
+}
+
+define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_0_i8_monotonic:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 3
+; LA32-NEXT:    ori $a2, $zero, 255
+; LA32-NEXT:    sll.w $a2, $a2, $a1
+; LA32-NEXT:    nor $a2, $a2, $zero
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB33_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    and $a4, $a3, $a2
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB33_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_0_i8_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 3
+; LA64-NEXT:    ori $a2, $zero, 255
+; LA64-NEXT:    sll.w $a2, $a2, $a1
+; LA64-NEXT:    nor $a2, $a2, $zero
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amand_db.w $a3, $a2, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a1
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i8 0 monotonic
+  ret i8 %1
+}
+
+define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_minus_1_i8_monotonic:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a0, 3
+; LA32-NEXT:    ori $a2, $zero, 255
+; LA32-NEXT:    sll.w $a2, $a2, $a1
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB34_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    or $a4, $a3, $a2
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB34_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a1
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_minus_1_i8_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a0, 3
+; LA64-NEXT:    ori $a2, $zero, 255
+; LA64-NEXT:    sll.w $a2, $a2, $a1
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amor_db.w $a3, $a2, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a1
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i8 -1 monotonic
   ret i8 %1
 }
 
@@ -959,14 +1112,14 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB35_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    addi.w $a5, $a1, 0
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB29_1
+; LA32-NEXT:    beqz $a5, .LBB35_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -982,14 +1135,14 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB29_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB35_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    addi.w $a5, $a1, 0
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB29_1
+; LA64-NEXT:    beqz $a5, .LBB35_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -997,14 +1150,78 @@ define i16 @atomicrmw_xchg_i16_monotonic(ptr %a, i16 %b) nounwind {
   ret i16 %1
 }
 
+define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_0_i16_monotonic:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a1, 15
+; LA32-NEXT:    ori $a1, $a1, 4095
+; LA32-NEXT:    slli.w $a2, $a0, 3
+; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    nor $a1, $a1, $zero
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB36_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    and $a4, $a3, $a1
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB36_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_0_i16_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a1, 15
+; LA64-NEXT:    ori $a1, $a1, 4095
+; LA64-NEXT:    slli.d $a2, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a2
+; LA64-NEXT:    nor $a1, $a1, $zero
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amand_db.w $a3, $a1, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a2
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i16 0 monotonic
+  ret i16 %1
+}
+
+define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
+; LA32-LABEL: atomicrmw_xchg_minus_1_i16_monotonic:
+; LA32:       # %bb.0:
+; LA32-NEXT:    lu12i.w $a1, 15
+; LA32-NEXT:    ori $a1, $a1, 4095
+; LA32-NEXT:    slli.w $a2, $a0, 3
+; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
+; LA32-NEXT:  .LBB37_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:    ll.w $a3, $a0, 0
+; LA32-NEXT:    or $a4, $a3, $a1
+; LA32-NEXT:    sc.w $a4, $a0, 0
+; LA32-NEXT:    beqz $a4, .LBB37_1
+; LA32-NEXT:  # %bb.2:
+; LA32-NEXT:    srl.w $a0, $a3, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: atomicrmw_xchg_minus_1_i16_monotonic:
+; LA64:       # %bb.0:
+; LA64-NEXT:    lu12i.w $a1, 15
+; LA64-NEXT:    ori $a1, $a1, 4095
+; LA64-NEXT:    slli.d $a2, $a0, 3
+; LA64-NEXT:    sll.w $a1, $a1, $a2
+; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    amor_db.w $a3, $a1, $a0
+; LA64-NEXT:    srl.w $a0, $a3, $a2
+; LA64-NEXT:    ret
+  %1 = atomicrmw xchg ptr %a, i16 -1 monotonic
+  ret i16 %1
+}
+
 define i32 @atomicrmw_xchg_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_xchg_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB30_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB38_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    move $a3, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB30_1
+; LA32-NEXT:    beqz $a3, .LBB38_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -1047,14 +1264,14 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB32_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB40_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    add.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB32_1
+; LA32-NEXT:    beqz $a5, .LBB40_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -1069,14 +1286,14 @@ define i8 @atomicrmw_add_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB32_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB40_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    add.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB32_1
+; LA64-NEXT:    beqz $a5, .LBB40_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
@@ -1094,14 +1311,14 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB33_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB41_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    add.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB33_1
+; LA32-NEXT:    beqz $a5, .LBB41_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -1117,14 +1334,14 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB33_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB41_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    add.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB33_1
+; LA64-NEXT:    beqz $a5, .LBB41_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -1135,11 +1352,11 @@ define i16 @atomicrmw_add_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_add_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_add_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB34_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB42_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    add.w $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB34_1
+; LA32-NEXT:    beqz $a3, .LBB42_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -1182,14 +1399,14 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB36_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB44_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    sub.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB36_1
+; LA32-NEXT:    beqz $a5, .LBB44_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -1204,14 +1421,14 @@ define i8 @atomicrmw_sub_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB36_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB44_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    sub.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB36_1
+; LA64-NEXT:    beqz $a5, .LBB44_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
@@ -1229,14 +1446,14 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB37_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB45_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    sub.w $a5, $a4, $a1
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB37_1
+; LA32-NEXT:    beqz $a5, .LBB45_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -1252,14 +1469,14 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB37_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB45_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    sub.w $a5, $a4, $a1
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB37_1
+; LA64-NEXT:    beqz $a5, .LBB45_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -1270,11 +1487,11 @@ define i16 @atomicrmw_sub_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_sub_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_sub_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB38_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB46_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    sub.w $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB38_1
+; LA32-NEXT:    beqz $a3, .LBB46_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -1319,7 +1536,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    andi $a1, $a1, 255
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB40_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    and $a5, $a4, $a1
 ; LA32-NEXT:    nor $a5, $a5, $zero
@@ -1327,7 +1544,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    and $a5, $a5, $a3
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB40_1
+; LA32-NEXT:    beqz $a5, .LBB48_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a2
 ; LA32-NEXT:    ret
@@ -1342,7 +1559,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB40_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a5, $a4, $a1
 ; LA64-NEXT:    nor $a5, $a5, $zero
@@ -1350,7 +1567,7 @@ define i8 @atomicrmw_nand_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    and $a5, $a5, $a3
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB40_1
+; LA64-NEXT:    beqz $a5, .LBB48_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a2
 ; LA64-NEXT:    ret
@@ -1368,7 +1585,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 0
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB41_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a4, $a0, 0
 ; LA32-NEXT:    and $a5, $a4, $a1
 ; LA32-NEXT:    nor $a5, $a5, $zero
@@ -1376,7 +1593,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    and $a5, $a5, $a2
 ; LA32-NEXT:    xor $a5, $a4, $a5
 ; LA32-NEXT:    sc.w $a5, $a0, 0
-; LA32-NEXT:    beqz $a5, .LBB41_1
+; LA32-NEXT:    beqz $a5, .LBB49_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a4, $a3
 ; LA32-NEXT:    ret
@@ -1392,7 +1609,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a1, $a3
 ; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:  .LBB41_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a4, $a0, 0
 ; LA64-NEXT:    and $a5, $a4, $a1
 ; LA64-NEXT:    nor $a5, $a5, $zero
@@ -1400,7 +1617,7 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    and $a5, $a5, $a2
 ; LA64-NEXT:    xor $a5, $a4, $a5
 ; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB41_1
+; LA64-NEXT:    beqz $a5, .LBB49_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    srl.w $a0, $a4, $a3
 ; LA64-NEXT:    ret
@@ -1411,24 +1628,24 @@ define i16 @atomicrmw_nand_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_nand_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_nand_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB42_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    and $a3, $a2, $a1
 ; LA32-NEXT:    nor $a3, $a3, $zero
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB42_1
+; LA32-NEXT:    beqz $a3, .LBB50_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: atomicrmw_nand_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:  .LBB42_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.w $a2, $a0, 0
 ; LA64-NEXT:    and $a3, $a2, $a1
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    sc.w $a3, $a0, 0
-; LA64-NEXT:    beqz $a3, .LBB42_1
+; LA64-NEXT:    beqz $a3, .LBB50_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
@@ -1449,12 +1666,12 @@ define i64 @atomicrmw_nand_i64_monotonic(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_nand_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:  .LBB43_1: # =>This Inner Loop Header: Depth=1
+; LA64-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
 ; LA64-NEXT:    ll.d $a2, $a0, 0
 ; LA64-NEXT:    and $a3, $a2, $a1
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    sc.d $a3, $a0, 0
-; LA64-NEXT:    beqz $a3, .LBB43_1
+; LA64-NEXT:    beqz $a3, .LBB51_1
 ; LA64-NEXT:  # %bb.2:
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
@@ -1472,11 +1689,11 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    orn $a1, $a1, $a3
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB44_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    and $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB44_1
+; LA32-NEXT:    beqz $a4, .LBB52_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -1508,11 +1725,11 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    sll.w $a1, $a1, $a3
 ; LA32-NEXT:    orn $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB45_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB53_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    and $a4, $a2, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB45_1
+; LA32-NEXT:    beqz $a4, .LBB53_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a2, $a3
 ; LA32-NEXT:    ret
@@ -1537,11 +1754,11 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_and_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_and_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB46_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB54_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    and $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB46_1
+; LA32-NEXT:    beqz $a3, .LBB54_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -1582,11 +1799,11 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB48_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB56_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    or $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB48_1
+; LA32-NEXT:    beqz $a4, .LBB56_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -1611,11 +1828,11 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB49_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB57_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    or $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB49_1
+; LA32-NEXT:    beqz $a4, .LBB57_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -1636,11 +1853,11 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_or_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_or_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB50_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB58_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    or $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB50_1
+; LA32-NEXT:    beqz $a3, .LBB58_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
@@ -1681,11 +1898,11 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB60_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    xor $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB52_1
+; LA32-NEXT:    beqz $a4, .LBB60_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -1710,11 +1927,11 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA32-NEXT:    slli.w $a2, $a0, 3
 ; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    bstrins.w $a0, $zero, 1, 0
-; LA32-NEXT:  .LBB53_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB61_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a3, $a0, 0
 ; LA32-NEXT:    xor $a4, $a3, $a1
 ; LA32-NEXT:    sc.w $a4, $a0, 0
-; LA32-NEXT:    beqz $a4, .LBB53_1
+; LA32-NEXT:    beqz $a4, .LBB61_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    srl.w $a0, $a3, $a2
 ; LA32-NEXT:    ret
@@ -1735,11 +1952,11 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 define i32 @atomicrmw_xor_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA32-LABEL: atomicrmw_xor_i32_monotonic:
 ; LA32:       # %bb.0:
-; LA32-NEXT:  .LBB54_1: # =>This Inner Loop Header: Depth=1
+; LA32-NEXT:  .LBB62_1: # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    ll.w $a2, $a0, 0
 ; LA32-NEXT:    xor $a3, $a2, $a1
 ; LA32-NEXT:    sc.w $a3, $a0, 0
-; LA32-NEXT:    beqz $a3, .LBB54_1
+; LA32-NEXT:    beqz $a3, .LBB62_1
 ; LA32-NEXT:  # %bb.2:
 ; LA32-NEXT:    move $a0, $a2
 ; LA32-NEXT:    ret
