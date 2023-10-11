@@ -43,6 +43,7 @@ enum class align_val_t : size_t {};
     ReportOutOfMemory(size, &stack);                                           \
   return res;
 
+#if !SANITIZER_APPLE
 CXX_OPERATOR_ATTRIBUTE
 void *operator new(size_t size) {
   OPERATOR_NEW_BODY(FROM_NEW, false /*nothrow*/);
@@ -77,6 +78,7 @@ void *operator new[](size_t size, std::align_val_t align,
                      std::nothrow_t const &) {
   OPERATOR_NEW_BODY_ALIGN(FROM_NEW_BR, true /*nothrow*/);
 }
+#endif
 
 #define OPERATOR_DELETE_BODY(type)                                             \
   GET_STACK_TRACE_FREE;                                                        \
@@ -94,6 +96,7 @@ void *operator new[](size_t size, std::align_val_t align,
   GET_STACK_TRACE_FREE;                                                        \
   memprof_delete(ptr, size, static_cast<uptr>(align), &stack, type);
 
+#if !SANITIZER_APPLE
 CXX_OPERATOR_ATTRIBUTE
 void operator delete(void *ptr)NOEXCEPT { OPERATOR_DELETE_BODY(FROM_NEW); }
 CXX_OPERATOR_ATTRIBUTE
@@ -143,3 +146,4 @@ void operator delete[](void *ptr, size_t size,
                        std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ALIGN(FROM_NEW_BR);
 }
+#endif

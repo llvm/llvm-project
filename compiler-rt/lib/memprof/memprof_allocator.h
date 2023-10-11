@@ -20,13 +20,6 @@
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_list.h"
 
-#if !defined(__x86_64__)
-#error Unsupported platform
-#endif
-#if !SANITIZER_CAN_USE_ALLOCATOR64
-#error Only 64-bit allocator supported
-#endif
-
 namespace __memprof {
 
 enum AllocType {
@@ -46,6 +39,7 @@ struct MemprofMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const;
 };
 
+#if SANITIZER_CAN_USE_ALLOCATOR64
 constexpr uptr kAllocatorSpace = 0x600000000000ULL;
 constexpr uptr kAllocatorSize = 0x40000000000ULL; // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
@@ -63,6 +57,23 @@ struct AP64 { // Allocator64 parameters. Deliberately using a short name.
 template <typename AddressSpaceView>
 using PrimaryAllocatorASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
 using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
+#endif
+#if !SANITIZER_CAN_USE_ALLOCATOR64
+typedef CompactSizeClassMap SizeClassMap;
+template <typename AddressSpaceViewTy> struct AP32 {
+  static const uptr kSpaceBeg = 0;
+  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+  static const uptr kMetadataSize = 0;
+  typedef __memprof::SizeClassMap SizeClassMap;
+  static const uptr kRegionSizeLog = 20;
+  using AddressSpaceView = AddressSpaceViewTy;
+  typedef MemprofMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
+template <typename AddressSpaceView>
+using PrimaryAllocatorASVT = SizeClassAllocator32<AP32<AddressSpaceView>>;
+using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
+#endif
 
 static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;
 

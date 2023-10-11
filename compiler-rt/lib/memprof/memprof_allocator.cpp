@@ -78,7 +78,11 @@ static int GetCpuId(void) {
   // will seg fault as the address of __vdso_getcpu will be null.
   if (!memprof_inited)
     return -1;
+#if SANITIZER_APPLE
+  return 0;
+#else
   return sched_getcpu();
+#endif
 }
 
 // Compute the timestamp in ms.

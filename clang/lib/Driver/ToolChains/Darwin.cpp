@@ -1505,6 +1505,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
              "Static sanitizer runtimes not supported");
       AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
     }
+    if (Sanitize.needsMemProfRt()) {
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "memprof");
+    }
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 

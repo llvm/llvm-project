@@ -131,6 +131,7 @@ static thread_return_t THREAD_CALLING_CONV memprof_thread_start(void *arg) {
   return t->ThreadStart(GetTid(), &param->is_registered);
 }
 
+#if !defined(SANITIZER_APPLE)
 INTERCEPTOR(int, pthread_create, void *thread, void *attr,
             void *(*start_routine)(void *), void *arg) {
   EnsureMainThreadIDIsCorrect();
@@ -305,6 +306,7 @@ INTERCEPTOR(long long, atoll, const char *nptr) {
   MEMPROF_READ_STRING(nptr, (real_endptr - nptr) + 1);
   return result;
 }
+#endif
 
 // ---------------------- InitializeMemprofInterceptors ---------------- {{{1
 namespace __memprof {
@@ -314,6 +316,7 @@ void InitializeMemprofInterceptors() {
   was_called_once = true;
   InitializeCommonInterceptors();
 
+#if !defined(SANITIZER_APPLE)
   // Intercept str* functions.
   MEMPROF_INTERCEPT_FUNC(strcat);
   MEMPROF_INTERCEPT_FUNC(strcpy);
@@ -322,7 +325,6 @@ void InitializeMemprofInterceptors() {
   MEMPROF_INTERCEPT_FUNC(strdup);
   MEMPROF_INTERCEPT_FUNC(__strdup);
   MEMPROF_INTERCEPT_FUNC(index);
-
   MEMPROF_INTERCEPT_FUNC(atoi);
   MEMPROF_INTERCEPT_FUNC(atol);
   MEMPROF_INTERCEPT_FUNC(strtol);
@@ -332,6 +334,7 @@ void InitializeMemprofInterceptors() {
   // Intercept threading-related functions
   MEMPROF_INTERCEPT_FUNC(pthread_create);
   MEMPROF_INTERCEPT_FUNC(pthread_join);
+#endif
 
   InitializePlatformInterceptors();
 

@@ -40,6 +40,7 @@ DECLARE_REAL(char *, strncpy, char *to, const char *from, uptr size)
 DECLARE_REAL(uptr, strnlen, const char *s, uptr maxlen)
 DECLARE_REAL(char *, strstr, const char *s1, const char *s2)
 
+#if !SANITIZER_APPLE
 #define MEMPROF_INTERCEPT_FUNC(name)                                           \
   do {                                                                         \
     if (!INTERCEPT_FUNCTION(name))                                             \
@@ -56,6 +57,11 @@ DECLARE_REAL(char *, strstr, const char *s1, const char *s2)
       VReport(1, "MemProfiler: failed to intercept '%s@@%s' or '%s'\n", #name, \
               ver, #name);                                                     \
   } while (0)
+#endif
+#if SANITIZER_APPLE
+// OS X interceptors don't need to be initialized with INTERCEPT_FUNCTION.
+#define MEMPROF_INTERCEPT_FUNC(name)
+#endif // SANITIZER_APPLE
 
 #define MEMPROF_INTERCEPTOR_ENTER(ctx, func)                                   \
   ctx = 0;                                                                     \

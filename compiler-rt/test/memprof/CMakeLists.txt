@@ -4,7 +4,7 @@ set(MEMPROF_TESTSUITES)
 set(MEMPROF_DYNAMIC_TESTSUITES)
 
 macro(get_bits_for_arch arch bits)
-  if (${arch} MATCHES "x86_64")
+  if (${arch} MATCHES "x86_64|arm64")
     set(${bits} 64)
   else()
     message(FATAL_ERROR "Unexpected target architecture: ${arch}")

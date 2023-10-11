@@ -1,4 +1,4 @@
-//===-- memprof_linux.cpp ------------------------------------------------===//
+//===-- memprof_mac.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,11 +8,11 @@
 //
 // This file is a part of MemProfiler, a memory profiler.
 //
-// Linux-specific details.
+// Mac-specific details.
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_LINUX
+#if SANITIZER_APPLE
 
 #include "memprof_interceptors.h"
 #include "memprof_internal.h"
@@ -25,7 +25,6 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <link.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -37,28 +36,14 @@
 #include <unistd.h>
 #include <unwind.h>
 
-extern ElfW(Dyn) _DYNAMIC[];
-
-typedef enum {
-  MEMPROF_RT_VERSION_UNDEFINED = 0,
-  MEMPROF_RT_VERSION_DYNAMIC,
-  MEMPROF_RT_VERSION_STATIC,
-} memprof_rt_version_t;
-
-// FIXME: perhaps also store abi version here?
-extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE
-memprof_rt_version_t __memprof_rt_version;
-}
-
 namespace __memprof {
 
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 
+// No-op. Mac does not support static linkage anyway.
 void *MemprofDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
+  return 0;
 }
 
 uptr FindDynamicShadowStart() {
