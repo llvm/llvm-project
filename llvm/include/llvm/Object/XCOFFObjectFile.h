@@ -780,27 +780,35 @@ public:
            "Symbol table entry pointer cannot be nullptr!");
   }
 
-#define Entry32                                                                \
-  reinterpret_cast<const XCOFFSymbolEntry32 *>(getRawDataRefImpl().p)
-#define Entry64                                                                \
-  reinterpret_cast<const XCOFFSymbolEntry64 *>(getRawDataRefImpl().p)
-
-  const XCOFFSymbolEntry32 *getSymbol32() const { return Entry32; }
-  const XCOFFSymbolEntry64 *getSymbol64() const { return Entry64; }
+  const XCOFFSymbolEntry32 *getSymbol32() const {
+    return reinterpret_cast<const XCOFFSymbolEntry32 *>(getRawDataRefImpl().p);
+  }
+  const XCOFFSymbolEntry64 *getSymbol64() const {
+    return reinterpret_cast<const XCOFFSymbolEntry64 *>(getRawDataRefImpl().p);
+  }
 
   uint64_t getValue() const {
     return getObject()->is64Bit() ? getValue64() : getValue32();
   }
 
-  uint32_t getValue32() const { return Entry32->Value; }
+  uint32_t getValue32() const {
+    return reinterpret_cast<const XCOFFSymbolEntry32 *>(getRawDataRefImpl().p)
+        ->Value;
+  }
 
-  uint64_t getValue64() const { return Entry64->Value; }
+  uint64_t getValue64() const {
+    return reinterpret_cast<const XCOFFSymbolEntry64 *>(getRawDataRefImpl().p)
+        ->Value;
+  }
 
   uint64_t getSize() const {
     return getObject()->getSymbolSize(getRawDataRefImpl());
   }
 
-#define GETVALUE(X)  getObject()->is64Bit() ? Entry64->X : Entry32->X
+#define GETVALUE(X)                                                            \
+  getObject()->is64Bit()                                                       \
+      ? reinterpret_cast<const XCOFFSymbolEntry64 *>(getRawDataRefImpl().p)->X \
+      : reinterpret_cast<const XCOFFSymbolEntry32 *>(getRawDataRefImpl().p)->X
 
   int16_t getSectionNumber() const { return GETVALUE(SectionNumber); }
 
@@ -825,11 +833,8 @@ public:
 #undef GETVALUE
 
   uintptr_t getEntryAddress() const {
-    return getObject()->is64Bit() ? reinterpret_cast<uintptr_t>(Entry64)
-                                  : reinterpret_cast<uintptr_t>(Entry32);
+    return getRawDataRefImpl().p;
   }
-#undef Entry32
-#undef Entry64
 
   Expected<StringRef> getName() const;
   bool isFunction() const;
