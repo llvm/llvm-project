@@ -125,8 +125,7 @@ class raw_ostream;
 
     // Construct a new slot index from the given one, and set the slot.
     SlotIndex(const SlotIndex &li, Slot s) : lie(li.listEntry(), unsigned(s)) {
-      assert(lie.getPointer() != nullptr &&
-             "Attempt to construct index with 0 pointer.");
+      assert(isValid() && "Attempt to construct index with 0 pointer.");
     }
 
     /// Returns true if this is a valid index. Invalid indices do
@@ -178,7 +177,7 @@ class raw_ostream;
 
     /// isSameInstr - Return true if A and B refer to the same instruction.
     static bool isSameInstr(SlotIndex A, SlotIndex B) {
-      return A.lie.getPointer() == B.lie.getPointer();
+      return A.listEntry() == B.listEntry();
     }
 
     /// isEarlierInstr - Return true if A refers to an instruction earlier than
