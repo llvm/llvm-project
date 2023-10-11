@@ -722,6 +722,27 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       // No reason to keep local undefined symbol in symtab.
       if (!dr)
         continue;
+
+      // Demote locals which did not end up in any partition. This is similar
+      // to what we do in Driver.cpp, but that only works on globals.
+      if (script->seenDiscard && dr->section && !dr->section->isLive()) {
+        uint32_t secIdx = 0;
+        if (dr->file) {
+          uint32_t idx = 0;
+          for (SectionBase *s : dr->file->getSections()) {
+            if (s == dr->section) {
+              secIdx = idx;
+              break;
+            }
+            idx++;
+          }
+        }
+        Undefined(dr->file, b->getName(), b->binding, b->stOther, b->type,
+                  secIdx)
+            .overwrite(*b);
+        continue;
+      }
+
       if (includeInSymtab(*b) && shouldKeepInSymtab(*dr))
         in.symTab->addSymbol(b);
     }

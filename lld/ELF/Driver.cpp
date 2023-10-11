@@ -3061,6 +3061,37 @@ void LinkerDriver::link(opt::InputArgList &args) {
     script->addOrphanSections();
   }
 
+  // Demote symbols defined relative to input sections that are discarded by
+  // /DISCARD/ so that relocations referencing them will get reported.
+  if (script->seenDiscard) {
+    llvm::TimeTraceScope timeScope("Demote symbols in discarded sections");
+    parallelForEach(symtab.getSymbols(), [](Symbol *sym) {
+      Defined *d = dyn_cast<Defined>(sym);
+      if (!d)
+        return;
+      if (d->section && !d->section->isLive()) {
+        uint32_t secIdx = 0;
+        if (d->file) {
+          uint32_t idx = 0;
+          for (SectionBase *s : d->file->getSections()) {
+            if (s == d->section) {
+              secIdx = idx;
+              break;
+            }
+            idx++;
+          }
+        }
+        // If we don't change the binding from WEAK to GLOBAL here, the
+        // undefined symbol reporting will think this is undefined weak and
+        // not give a warning.
+        Undefined(d->file, sym->getName(),
+                  sym->isWeak() ? (uint8_t)STB_GLOBAL : sym->binding,
+                  sym->stOther, sym->type, secIdx)
+            .overwrite(*sym);
+      }
+    });
+  }
+
   {
     llvm::TimeTraceScope timeScope("Merge/finalize input sections");
 
