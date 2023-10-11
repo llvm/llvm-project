@@ -62,7 +62,10 @@ struct RegisterInfo {
   /// rax ax, ah, and al.
   uint32_t *invalidate_regs;
   /// If not nullptr, a type defined by XML descriptions.
-  const RegisterFlags *flags_type;
+  /// This is mutable so that it may be updated after the register info tables
+  /// have been constructed. For example a specific target OS may have a
+  /// different layout.
+  mutable const RegisterFlags *flags_type;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);

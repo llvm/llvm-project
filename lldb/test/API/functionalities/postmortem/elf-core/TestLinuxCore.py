@@ -574,6 +574,10 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+        # Register field information should work with core files as it does a live process.
+        # The N/Z/C/V bits are always present so just check for those.
+        self.expect("register read cpsr", substrs=["= (N = 0, Z = 0, C = 0, V = 0"])
+
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_pac_regs(self):
         # Test AArch64/Linux Pointer Authentication register read
