@@ -203,7 +203,7 @@ public:
     MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim);
     auto *coo = readCOO<V>(map, lvlSizes);
     auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
-        dimRank, getDimSizes(), lvlRank, lvlTypes, lvl2dim, *coo);
+        dimRank, getDimSizes(), lvlRank, lvlTypes, dim2lvl, lvl2dim, *coo);
     delete coo;
     return tensor;
   }
