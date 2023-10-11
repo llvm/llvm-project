@@ -275,6 +275,11 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                     Register DestReg, unsigned SubIdx,
+                     const MachineInstr &Orig,
+                     const TargetRegisterInfo &TRI) const override;
+
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
   // Can split either post-RA with physical registers or pre-RA with

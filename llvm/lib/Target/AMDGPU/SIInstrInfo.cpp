@@ -108,7 +108,18 @@ static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
 
 bool SIInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
+
+  bool CanRemat = false;
   if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isSDWA(MI) || isSALU(MI)) {
+    CanRemat = true;
+  } else if (isSMRD(MI)) {
+    CanRemat = !MI.memoperands_empty() &&
+               llvm::all_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+                 return MMO->isLoad() && MMO->isInvariant();
+               });
+  }
+
+  if (CanRemat) {
     // Normally VALU use of exec would block the rematerialization, but that
     // is OK in this case to have an implicit exec read as all VALU do.
     // We really want all of the generic logic for this except for this.
@@ -2432,6 +2443,105 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
   }
   return true;
+}
+
+void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator I, Register DestReg,
+                                unsigned SubIdx, const MachineInstr &Orig,
+                                const TargetRegisterInfo &RI) const {
+
+  // Try shrinking the instruction to remat only the part needed for current
+  // context.
+  // TODO: Handle more cases.
+  unsigned Opcode = Orig.getOpcode();
+  switch (Opcode) {
+  case AMDGPU::S_LOAD_DWORDX16_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM: {
+    if (SubIdx != 0)
+      break;
+
+    if (I == MBB.end())
+      break;
+
+    if (I->isBundled())
+      break;
+
+    // Look for a single use of the register that is also a subreg.
+    Register RegToFind = Orig.getOperand(0).getReg();
+    int SingleUseIdx = -1;
+    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
+      const MachineOperand &CandMO = I->getOperand(i);
+      if (!CandMO.isReg())
+        continue;
+      Register CandReg = CandMO.getReg();
+      if (!CandReg)
+        continue;
+
+      if (CandReg == RegToFind || RI.regsOverlap(CandReg, RegToFind)) {
+        if (SingleUseIdx == -1 && CandMO.isUse()) {
+          SingleUseIdx = i;
+        } else {
+          SingleUseIdx = -1;
+          break;
+        }
+      }
+    }
+    if (SingleUseIdx == -1)
+      break;
+    MachineOperand *UseMO = &I->getOperand(SingleUseIdx);
+    if (UseMO->getSubReg() == AMDGPU::NoSubRegister)
+      break;
+
+    unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
+    unsigned SubregSize = RI.getSubRegIdxSize(UseMO->getSubReg());
+
+    MachineFunction *MF = MBB.getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    assert(MRI.hasAtMostUserInstrs(DestReg, 0) &&
+           "DestReg should have no users yet.");
+
+    unsigned NewOpcode = -1;
+    if (SubregSize == 256)
+      NewOpcode = AMDGPU::S_LOAD_DWORDX8_IMM;
+    else if (SubregSize == 128)
+      NewOpcode = AMDGPU::S_LOAD_DWORDX4_IMM;
+    else
+      break;
+
+    const MCInstrDesc &TID = get(NewOpcode);
+    const TargetRegisterClass *NewRC =
+        RI.getAllocatableClass(getRegClass(TID, 0, &RI, *MF));
+    MRI.setRegClass(DestReg, NewRC);
+
+    UseMO->setReg(DestReg);
+    UseMO->setSubReg(AMDGPU::NoSubRegister);
+
+    // Use a smaller load with the desired size, possibly with updated offset.
+    MachineInstr *MI = MF->CloneMachineInstr(&Orig);
+    MI->setDesc(TID);
+    MI->getOperand(0).setReg(DestReg);
+    MI->getOperand(0).setSubReg(AMDGPU::NoSubRegister);
+    if (Offset) {
+      MachineOperand *OffsetMO = getNamedOperand(*MI, AMDGPU::OpName::offset);
+      int64_t FinalOffset = OffsetMO->getImm() + Offset / 8;
+      OffsetMO->setImm(FinalOffset);
+    }
+    SmallVector<MachineMemOperand *> NewMMOs;
+    for (const MachineMemOperand *MemOp : Orig.memoperands())
+      NewMMOs.push_back(MF->getMachineMemOperand(MemOp, MemOp->getPointerInfo(),
+                                                 SubregSize / 8));
+    MI->setMemRefs(*MF, NewMMOs);
+
+    MBB.insert(I, MI);
+    return;
+  }
+
+  default:
+    break;
+  }
+  MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
+  MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, RI);
+  MBB.insert(I, MI);
 }
 
 std::pair<MachineInstr*, MachineInstr*>
