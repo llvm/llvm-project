@@ -60,9 +60,9 @@ ArrayRef<Operation *>
 transform::TransformState::getPayloadOpsView(Value value) const {
   const TransformOpMapping &operationMapping = getMapping(value).direct;
   auto iter = operationMapping.find(value);
-  assert(
-      iter != operationMapping.end() &&
-      "cannot find mapping for payload handle (param/value handle provided?)");
+  assert(iter != operationMapping.end() &&
+         "cannot find mapping for payload handle (param/value handle "
+         "provided?)");
   return iter->getSecond();
 }
 
