@@ -115,8 +115,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
   }
 
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
