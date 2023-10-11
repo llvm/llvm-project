@@ -3086,7 +3086,10 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(
           loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
           inputBoxStorage);
-      attachTBAATag(boxValue, boxTy, boxTy, nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        boxValue.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
           genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
       auto storeOp =
@@ -3097,7 +3100,10 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       mlir::Type loadTy = convertType(load.getType());
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
           load.getLoc(), loadTy, adaptor.getOperands(), load->getAttrs());
-      attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        loadOp.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
       rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
@@ -3341,7 +3347,10 @@ struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
       newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
           loc, adaptor.getOperands()[0], adaptor.getOperands()[1]);
     }
-    attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
+    if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
+      newStoreOp.setTBAATags(*optionalTag);
+    else
+      attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
     rewriter.eraseOp(store);
     return mlir::success();
   }
