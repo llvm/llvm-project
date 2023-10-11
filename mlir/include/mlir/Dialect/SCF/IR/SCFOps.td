@@ -1101,7 +1101,7 @@ def WhileOp : SCF_Op<"while",
 // IndexSwitchOp
 //===----------------------------------------------------------------------===//
 
-def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
+def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects, AffineScope,
     SingleBlockImplicitTerminator<"scf::YieldOp">,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
                               ["getRegionInvocationBounds",

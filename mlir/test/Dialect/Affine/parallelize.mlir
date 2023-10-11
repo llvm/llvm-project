@@ -323,3 +323,22 @@ func.func @iter_arg_memrefs(%in: memref<10xf32>) {
   }
   return
 }
+
+// CHECK-LABEL: @scf_affine_scope
+func.func @scf_affine_scope() {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.empty(%c0) : tensor<?xi1>
+  %1 = bufferization.to_memref %0 : memref<?xi1>
+  %alloc = memref.alloc(%c0) : memref<?xi1>
+  %2 = scf.index_switch %c0 -> tensor<?x31x6xf16>
+  default {
+    %dim = memref.dim %1, %c0 : memref<?xi1>
+    affine.for %arg0 = 0 to %dim {
+      %3 = affine.load %1[%arg0] : memref<?xi1>
+      affine.store %3, %alloc[%arg0] : memref<?xi1>
+    }
+    %3 = tensor.empty(%c0) : tensor<?x31x6xf16>
+    scf.yield %3 : tensor<?x31x6xf16>
+  } 
+  return
+}
