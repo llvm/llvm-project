@@ -804,8 +804,8 @@ define i128 @half_to_s128(half %x) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    vmovsh 12(%ebp), %xmm0
@@ -814,8 +814,8 @@ define i128 @half_to_s128(half %x) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __fixhfti
 ; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    vmovups %xmm0, (%esi)
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    leal -4(%ebp), %esp
 ; X86-NEXT:    popl %esi
@@ -907,8 +907,8 @@ define i128 @half_to_u128(half %x) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    vmovsh 12(%ebp), %xmm0
@@ -917,8 +917,8 @@ define i128 @half_to_u128(half %x) {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __fixunshfti
 ; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    vmovups %xmm0, (%esi)
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovaps %xmm0, (%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    leal -4(%ebp), %esp
 ; X86-NEXT:    popl %esi
@@ -987,8 +987,8 @@ define fp128 @half_to_f128(half %x) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movl 8(%ebp), %esi
 ; X86-NEXT:    vmovsh 12(%ebp), %xmm0
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
@@ -997,7 +997,7 @@ define fp128 @half_to_f128(half %x) nounwind {
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendsftf2
 ; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    leal -4(%ebp), %esp

@@ -169,7 +169,7 @@ define void @fetch_and_nand(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -237,7 +237,7 @@ define void @fetch_and_or(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -305,7 +305,7 @@ define void @fetch_and_add(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -373,7 +373,7 @@ define void @fetch_and_sub(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -444,7 +444,7 @@ define void @fetch_and_min(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -515,7 +515,7 @@ define void @fetch_and_max(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -586,7 +586,7 @@ define void @fetch_and_umin(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -657,7 +657,7 @@ define void @fetch_and_umax(ptr %p, i128 %bits) {
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK32-NEXT:    addl $28, %esp
 ; CHECK32-NEXT:    .cfi_adjust_cfa_offset -28
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl (%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi

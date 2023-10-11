@@ -70,8 +70,8 @@ public:
   void SetUp() {
     // Boilerplate that creates a MachineFunction and associated blocks.
 
-    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
-                       "n8:16:32:64-S128");
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                       "f80:128-n8:16:32:64-S128");
     Triple TargetTriple("x86_64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -475,8 +475,8 @@ body:  |
     auto MIRParse = createMIRParser(std::move(MemBuf), Ctx);
     Mod = MIRParse->parseIRModule();
     assert(Mod);
-    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
-                       "n8:16:32:64-S128");
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                       "f80:128-n8:16:32:64-S128");
 
     bool Result = MIRParse->parseMachineFunctions(*Mod, *MMI);
     assert(!Result && "Failed to parse unit test machine function?");
