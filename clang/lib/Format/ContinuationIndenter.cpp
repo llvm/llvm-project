@@ -1336,7 +1336,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
         PreviousNonComment->isOneOf(
-            TT_AttributeParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
+            TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
             TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
@@ -1955,7 +1955,8 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
 
 void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
-      State.NextToken->is(TT_LambdaLBrace)) {
+      State.NextToken->is(TT_LambdaLBrace) &&
+      !State.Line->MightBeFunctionDecl) {
     State.Stack.back().NestedBlockIndent = State.FirstIndent;
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;

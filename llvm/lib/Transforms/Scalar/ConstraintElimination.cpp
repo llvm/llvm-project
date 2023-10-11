@@ -18,7 +18,10 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -90,6 +93,8 @@ struct ConditionTy {
   Value *Op0;
   Value *Op1;
 
+  ConditionTy()
+      : Pred(CmpInst::BAD_ICMP_PREDICATE), Op0(nullptr), Op1(nullptr) {}
   ConditionTy(CmpInst::Predicate Pred, Value *Op0, Value *Op1)
       : Pred(Pred), Op0(Op0), Op1(Op1) {}
 };
@@ -115,6 +120,10 @@ struct FactOrCheck {
     ConditionTy Cond;
   };
 
+  /// A pre-condition that must hold for the current fact to be added to the
+  /// system.
+  ConditionTy DoesHold;
+
   unsigned NumIn;
   unsigned NumOut;
   EntryTy Ty;
@@ -124,25 +133,23 @@ struct FactOrCheck {
         Ty(Ty) {}
 
   FactOrCheck(DomTreeNode *DTN, Use *U)
-      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
+      : U(U), DoesHold(CmpInst::BAD_ICMP_PREDICATE, nullptr, nullptr),
+        NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
         Ty(EntryTy::UseCheck) {}
 
-  FactOrCheck(DomTreeNode *DTN, CmpInst::Predicate Pred, Value *Op0, Value *Op1)
-      : Cond(Pred, Op0, Op1), NumIn(DTN->getDFSNumIn()),
+  FactOrCheck(DomTreeNode *DTN, CmpInst::Predicate Pred, Value *Op0, Value *Op1,
+              ConditionTy Precond = ConditionTy())
+      : Cond(Pred, Op0, Op1), DoesHold(Precond), NumIn(DTN->getDFSNumIn()),
         NumOut(DTN->getDFSNumOut()), Ty(EntryTy::ConditionFact) {}
 
   static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpInst::Predicate Pred,
-                                      Value *Op0, Value *Op1) {
-    return FactOrCheck(DTN, Pred, Op0, Op1);
+                                      Value *Op0, Value *Op1,
+                                      ConditionTy Precond = ConditionTy()) {
+    return FactOrCheck(DTN, Pred, Op0, Op1, Precond);
   }
 
   static FactOrCheck getInstFact(DomTreeNode *DTN, Instruction *Inst) {
     return FactOrCheck(EntryTy::InstFact, DTN, Inst);
-  }
-
-  static FactOrCheck getFact(DomTreeNode *DTN, CmpInst::Predicate Pred,
-                             Value *Op0, Value *Op1) {
-    return FactOrCheck(DTN, Pred, Op0, Op1);
   }
 
   static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
@@ -177,12 +184,19 @@ struct FactOrCheck {
 /// Keep state required to build worklist.
 struct State {
   DominatorTree &DT;
+  LoopInfo &LI;
+  ScalarEvolution &SE;
   SmallVector<FactOrCheck, 64> WorkList;
 
-  State(DominatorTree &DT) : DT(DT) {}
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE)
+      : DT(DT), LI(LI), SE(SE) {}
 
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
+
+  /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
+  /// controlling the loop header.
+  void addInfoForInductions(BasicBlock &BB);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -662,6 +676,17 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
                                                      Value *Op0,
                                                      Value *Op1) const {
+  Constant *NullC = Constant::getNullValue(Op0->getType());
+  // Handle trivially true compares directly to avoid adding V UGE 0 constraints
+  // for all variables in the unsigned system.
+  if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
+      (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
+    auto &Value2Index = getValue2Index(false);
+    // Return constraint that's trivially true.
+    return ConstraintTy(SmallVector<int64_t, 8>(Value2Index.size(), 0), false,
+                        false, false);
+  }
+
   // If both operands are known to be non-negative, change signed predicates to
   // unsigned ones. This increases the reasoning effectiveness in combination
   // with the signed <-> unsigned transfer logic.
@@ -799,7 +824,134 @@ static void dumpConstraint(ArrayRef<int64_t> C,
 }
 #endif
 
+void State::addInfoForInductions(BasicBlock &BB) {
+  auto *L = LI.getLoopFor(&BB);
+  if (!L || L->getHeader() != &BB)
+    return;
+
+  Value *A;
+  Value *B;
+  CmpInst::Predicate Pred;
+
+  if (!match(BB.getTerminator(),
+             m_Br(m_ICmp(Pred, m_Value(A), m_Value(B)), m_Value(), m_Value())))
+    return;
+  PHINode *PN = dyn_cast<PHINode>(A);
+  if (!PN) {
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    std::swap(A, B);
+    PN = dyn_cast<PHINode>(A);
+  }
+
+  if (!PN || PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
+      !SE.isSCEVable(PN->getType()))
+    return;
+
+  BasicBlock *InLoopSucc = nullptr;
+  if (Pred == CmpInst::ICMP_NE)
+    InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
+  else if (Pred == CmpInst::ICMP_EQ)
+    InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(1);
+  else
+    return;
+
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+    return;
+
+  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!AR || !LoopPred)
+    return;
+
+  const SCEV *StartSCEV = AR->getStart();
+  Value *StartValue = nullptr;
+  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
+    StartValue = C->getValue();
+  } else {
+    StartValue = PN->getIncomingValueForBlock(LoopPred);
+    assert(SE.getSCEV(StartValue) == StartSCEV && "inconsistent start value");
+  }
+
+  DomTreeNode *DTN = DT.getNode(InLoopSucc);
+  auto Inc = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
+  bool MonotonicallyIncreasing =
+      Inc && *Inc == ScalarEvolution::MonotonicallyIncreasing;
+  if (MonotonicallyIncreasing) {
+    // SCEV guarantees that AR does not wrap, so PN >= StartValue can be added
+    // unconditionally.
+    WorkList.push_back(
+        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, PN, StartValue));
+  }
+
+  APInt StepOffset;
+  if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
+    StepOffset = C->getAPInt();
+  else
+    return;
+
+  // Handle negative steps.
+  if (StepOffset.isNegative()) {
+    // TODO: Extend to allow steps > -1.
+    if (!(-StepOffset).isOne())
+      return;
+
+    // AR may wrap.
+    // Add StartValue >= PN conditional on B <= StartValue which guarantees that
+    // the loop exits before wrapping with a step of -1.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, StartValue, PN,
+        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    // Add PN > B conditional on B <= StartValue which guarantees that the loop
+    // exits when reaching B with a step of -1.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGT, PN, B,
+        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    return;
+  }
+
+  // Make sure AR either steps by 1 or that the value we compare against is a
+  // GEP based on the same start value and all offsets are a multiple of the
+  // step size, to guarantee that the induction will reach the value.
+  if (StepOffset.isZero() || StepOffset.isNegative())
+    return;
+
+  if (!StepOffset.isOne()) {
+    auto *UpperGEP = dyn_cast<GetElementPtrInst>(B);
+    if (!UpperGEP || UpperGEP->getPointerOperand() != StartValue ||
+        !UpperGEP->isInBounds())
+      return;
+
+    MapVector<Value *, APInt> UpperVariableOffsets;
+    APInt UpperConstantOffset(StepOffset.getBitWidth(), 0);
+    const DataLayout &DL = BB.getModule()->getDataLayout();
+    if (!UpperGEP->collectOffset(DL, StepOffset.getBitWidth(),
+                                 UpperVariableOffsets, UpperConstantOffset))
+      return;
+    // All variable offsets and the constant offset have to be a multiple of the
+    // step.
+    if (!UpperConstantOffset.urem(StepOffset).isZero() ||
+        any_of(UpperVariableOffsets, [&StepOffset](const auto &P) {
+          return !P.second.urem(StepOffset).isZero();
+        }))
+      return;
+  }
+
+  // AR may wrap. Add PN >= StartValue conditional on StartValue <= B which
+  // guarantees that the loop exits before wrapping in combination with the
+  // restrictions on B and the step above.
+  if (!MonotonicallyIncreasing) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, PN, StartValue,
+        ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
+  }
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, PN, B,
+      ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
+}
+
 void State::addInfoFor(BasicBlock &BB) {
+  addInfoForInductions(BB);
+
   // True as long as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
@@ -1179,6 +1331,7 @@ static bool checkAndSecondOpImpliedByFirst(
     FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
     SmallVectorImpl<StackEntry> &DFSInStack) {
+
   CmpInst::Predicate Pred;
   Value *A, *B;
   Instruction *And = CB.getContextInst();
@@ -1322,7 +1475,8 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   return Changed;
 }
 
-static bool eliminateConstraints(Function &F, DominatorTree &DT,
+static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
+                                 ScalarEvolution &SE,
                                  OptimizationRemarkEmitter &ORE) {
   bool Changed = false;
   DT.updateDFSNumbers();
@@ -1330,7 +1484,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
   for (Value &Arg : F.args())
     FunctionArgs.push_back(&Arg);
   ConstraintInfo Info(F.getParent()->getDataLayout(), FunctionArgs);
-  State S(DT);
+  State S(DT, LI, SE);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
@@ -1428,6 +1582,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
     }
 
     auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B) {
+      LLVM_DEBUG(dbgs() << "fact to add to the system: "
+                        << CmpInst::getPredicateName(Pred) << " ";
+                 A->printAsOperand(dbgs()); dbgs() << ", ";
+                 B->printAsOperand(dbgs()); dbgs() << "\n");
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
         LLVM_DEBUG(
             dbgs()
@@ -1475,6 +1633,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
       Pred = CB.Cond.Pred;
       A = CB.Cond.Op0;
       B = CB.Cond.Op1;
+      if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
+          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1))
+        continue;
     } else {
       bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
                                         m_ICmp(Pred, m_Value(A), m_Value(B))));
@@ -1511,12 +1672,16 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
 PreservedAnalyses ConstraintEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  if (!eliminateConstraints(F, DT, ORE))
+  if (!eliminateConstraints(F, DT, LI, SE, ORE))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

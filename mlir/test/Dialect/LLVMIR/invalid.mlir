@@ -1411,3 +1411,23 @@ func.func @invalid_zext_target_type_two(%arg: vector<1xi32>)  {
   // expected-error@+1 {{input type is a vector but output type is an integer}}
   %0 = llvm.zext %arg : vector<1xi32> to i64
 }
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @variadic(...)
+
+llvm.func @invalid_variadic_call(%arg: i32)  {
+  // expected-error@+1 {{missing callee type attribute for vararg call}}
+  "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}

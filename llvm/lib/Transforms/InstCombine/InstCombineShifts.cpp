@@ -136,9 +136,14 @@ Value *InstCombinerImpl::reassociateShiftAmtsOfTwoSameDirectionShifts(
 
   assert(IdenticalShOpcodes && "Should not get here with different shifts.");
 
-  // All good, we can do this fold.
-  NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, X->getType());
+  if (NewShAmt->getType() != X->getType()) {
+    NewShAmt = ConstantFoldCastOperand(Instruction::ZExt, NewShAmt,
+                                       X->getType(), SQ.DL);
+    if (!NewShAmt)
+      return nullptr;
+  }
 
+  // All good, we can do this fold.
   BinaryOperator *NewShift = BinaryOperator::Create(ShiftOpcode, X, NewShAmt);
 
   // The flags can only be propagated if there wasn't a trunc.
@@ -245,7 +250,11 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     SumOfShAmts = Constant::replaceUndefsWith(
         SumOfShAmts, ConstantInt::get(SumOfShAmts->getType()->getScalarType(),
                                       ExtendedTy->getScalarSizeInBits()));
-    auto *ExtendedSumOfShAmts = ConstantExpr::getZExt(SumOfShAmts, ExtendedTy);
+    auto *ExtendedSumOfShAmts = ConstantFoldCastOperand(
+        Instruction::ZExt, SumOfShAmts, ExtendedTy, Q.DL);
+    if (!ExtendedSumOfShAmts)
+      return nullptr;
+
     // And compute the mask as usual: ~(-1 << (SumOfShAmts))
     auto *ExtendedAllOnes = ConstantExpr::getAllOnesValue(ExtendedTy);
     auto *ExtendedInvertedMask =
@@ -278,12 +287,16 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     ShAmtsDiff = Constant::replaceUndefsWith(
         ShAmtsDiff, ConstantInt::get(ShAmtsDiff->getType()->getScalarType(),
                                      -WidestTyBitWidth));
-    auto *ExtendedNumHighBitsToClear = ConstantExpr::getZExt(
+    auto *ExtendedNumHighBitsToClear = ConstantFoldCastOperand(
+        Instruction::ZExt,
         ConstantExpr::getSub(ConstantInt::get(ShAmtsDiff->getType(),
                                               WidestTyBitWidth,
                                               /*isSigned=*/false),
                              ShAmtsDiff),
-        ExtendedTy);
+        ExtendedTy, Q.DL);
+    if (!ExtendedNumHighBitsToClear)
+      return nullptr;
+
     // And compute the mask as usual: (-1 l>> (NumHighBitsToClear))
     auto *ExtendedAllOnes = ConstantExpr::getAllOnesValue(ExtendedTy);
     NewMask =

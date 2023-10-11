@@ -561,11 +561,11 @@ static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
 //
 // This transforms IR like:
 //   %0 = vector.bitcast %src : vector<4xf32> to vector<8xf16>
-//   %1 = vector.extract %0[3] : vector<8xf16>
+//   %1 = vector.extract %0[3] : f16 from vector<8xf16>
 // Into:
-//   %0 = vector.extract %src[1] : vector<4xf32>
+//   %0 = vector.extract %src[1] : f32 from vector<4xf32>
 //   %1 = vector.bitcast %0: vector<1xf32> to vector<2xf16>
-//   %2 = vector.extract %1[1] : vector<2xf16>
+//   %2 = vector.extract %1[1] : f16 from vector<2xf16>
 struct BubbleDownVectorBitCastForExtract
     : public OpRewritePattern<vector::ExtractOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -912,6 +912,15 @@ struct ReorderElementwiseOpsOnBroadcast final
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return failure();
+    if (op->getNumOperands() == 0 ||
+        op->getResults()[0].getType() != op->getOperand(0).getType()) {
+      return failure();
+    }
+    // Avoid operations that only accept vector types, since broadcast
+    // source might be scalar types.
+    if (isa<vector::FMAOp>(op)) {
+      return failure();
+    }
 
     // Get the type of the lhs operand
     auto *lhsBcastOrSplat = op->getOperand(0).getDefiningOp();
@@ -1447,8 +1456,8 @@ void mlir::vector::
 
 void mlir::vector::populateSinkVectorBroadcastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
-                                                 benefit);
+  patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
+      patterns.getContext(), benefit);
 }
 
 //===----------------------------------------------------------------------===//

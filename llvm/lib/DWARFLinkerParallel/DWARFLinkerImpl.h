@@ -227,8 +227,8 @@ protected:
         // Set context format&endianness based on the input file.
         Format.Version = File.Dwarf->getMaxVersion();
         Format.AddrSize = File.Dwarf->getCUAddrSize();
-        Endianness = File.Dwarf->isLittleEndian() ? support::endianness::little
-                                                  : support::endianness::big;
+        Endianness = File.Dwarf->isLittleEndian() ? llvm::endianness::little
+                                                  : llvm::endianness::big;
       }
     }
 
@@ -316,37 +316,47 @@ protected:
   /// Enumerate all compile units and assign offsets to their strings.
   void assignOffsetsToStrings();
 
-  /// Enumerates specified string patches, assigns offset and index.
-  template <typename PatchTy>
-  void assignOffsetsToStringsImpl(
-      ArrayList<PatchTy> &Section, size_t &IndexAccumulator,
-      uint64_t &OffsetAccumulator,
-      StringEntryToDwarfStringPoolEntryMap &StringsForEmission);
-
   /// Print statistic for processed Debug Info.
   void printStatistic();
+
+  enum StringDestinationKind : uint8_t { DebugStr, DebugLineStr };
+
+  /// Enumerates all strings.
+  void forEachOutputString(
+      function_ref<void(StringDestinationKind, const StringEntry *)>
+          StringHandler);
 
   /// Enumerates sections for modules, invariant for object files, compile
   /// units.
   void forEachObjectSectionsSet(
       function_ref<void(OutputSections &SectionsSet)> SectionsSetHandler);
 
+  /// Enumerates all comple units.
+  void forEachCompileUnit(function_ref<void(CompileUnit *CU)> UnitHandler);
+
   /// Enumerates all patches and update them with the correct values.
   void patchOffsetsAndSizes();
 
   /// Emit debug sections common for all input files.
-  void emitCommonSections();
+  void emitCommonSectionsAndWriteCompileUnitsToTheOutput();
+
+  /// Emit apple accelerator sections.
+  void emitAppleAcceleratorSections(const Triple &TargetTriple);
+
+  /// Emit .debug_names section.
+  void emitDWARFv5DebugNamesSection(const Triple &TargetTriple);
+
+  /// Emit string sections.
+  void emitStringSections();
 
   /// Cleanup data(string pools) after output sections are generated.
-  void cleanupDataAfterOutputSectionsAreGenerated();
+  void cleanupDataAfterDWARFOutputIsWritten();
 
   /// Enumerate all compile units and put their data into the output stream.
-  void writeDWARFToTheOutput();
+  void writeCompileUnitsToTheOutput();
 
-  template <typename PatchTy>
-  void emitStringsImpl(ArrayList<PatchTy> &StringPatches,
-                       const StringEntryToDwarfStringPoolEntryMap &Strings,
-                       uint64_t &NextOffset, SectionDescriptor &OutSection);
+  /// Enumerate common sections and put their data into the output stream.
+  void writeCommonSectionsToTheOutput();
 
   /// \defgroup Data members accessed asinchroniously.
   ///

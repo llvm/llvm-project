@@ -141,6 +141,31 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         return ::mlir::Block::BlockArgListType();
       }]
     >,
+    InterfaceMethod<[{
+        Append the specified additional "init" operands: replace this loop with
+        a new loop that has the additional init operands. The loop body of
+        this loop is moved over to the new loop.
+
+        `newInitOperands` specifies the additional "init" operands.
+        `newYieldValuesFn` is a function that returns the yielded values (which
+        can be computed based on the additional region iter_args). If
+        `replaceInitOperandUsesInLoop` is set, all uses of the additional init
+        operands inside of this loop are replaced with the corresponding, newly
+        added region iter_args.
+
+        Note: Loops that do not support init/iter_args should return "failure".
+      }],
+      /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
+      /*methodName=*/"replaceWithAdditionalYields",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                    "::mlir::ValueRange":$newInitOperands,
+                    "bool":$replaceInitOperandUsesInLoop,
+                    "const ::mlir::NewYieldValuesFn &":$newYieldValuesFn),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
   ];
 
   let extraClassDeclaration = [{
@@ -148,6 +173,24 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// can either be because the block is nested inside a LoopLikeInterface, or
     /// because the control flow graph is cyclic
     static bool blockIsInLoop(Block *block);
+  }];
+
+  let extraSharedClassDeclaration = [{
+    /// Append the specified additional "init" operands: replace this loop with
+    /// a new loop that has the additional init operands. The loop body of this
+    /// loop is moved over to the new loop.
+    ///
+    /// The newly added region iter_args are yielded from the loop.
+    ::mlir::FailureOr<::mlir::LoopLikeOpInterface>
+        replaceWithAdditionalIterOperands(::mlir::RewriterBase &rewriter,
+                                          ::mlir::ValueRange newInitOperands,
+                                          bool replaceInitOperandUsesInLoop) {
+      return $_op.replaceWithAdditionalYields(
+          rewriter, newInitOperands, replaceInitOperandUsesInLoop,
+          [](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+            return SmallVector<Value>(newBBArgs);
+          });
+    }
   }];
 }
 

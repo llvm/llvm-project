@@ -20,10 +20,10 @@ using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
-// defined by CGOpenMPRuntimeGPU
-extern uint32_t __omp_rtl_debug_kind;
-extern uint32_t __omp_rtl_assume_no_thread_state;
-extern uint32_t __omp_rtl_assume_no_nested_parallelism;
+// Weak definitions will be overridden by CGOpenmpRuntimeGPU if enabled.
+[[gnu::weak]] extern const uint32_t __omp_rtl_debug_kind = 0;
+[[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_thread_state = 0;
+[[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_nested_parallelism = 0;
 
 // This variable should be visibile to the plugin so we override the default
 // hidden visibility.

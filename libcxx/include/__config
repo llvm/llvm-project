@@ -193,11 +193,6 @@
 #  endif
 
 #  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
-// Enable additional explicit instantiations of iostreams components. This
-// reduces the number of weak definitions generated in programs that use
-// iostreams by providing a single strong definition in the shared library.
-#    define _LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
-
 // Define a key function for `bad_function_call` in the library, to centralize
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
@@ -219,11 +214,10 @@
 
 // HARDENING {
 
-// TODO(hardening): remove this in LLVM 19.
+// TODO(hardening): deprecate this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
 // equivalent to setting the safe mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
-#    warning "_LIBCPP_ENABLE_ASSERTIONS is deprecated, please use _LIBCPP_ENABLE_SAFE_MODE instead."
 #    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
 #      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
 #    endif

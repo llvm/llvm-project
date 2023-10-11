@@ -58,10 +58,19 @@ inline StringRef toStringRef(bool B) { return StringRef(B ? "true" : "false"); }
 inline StringRef toStringRef(ArrayRef<uint8_t> Input) {
   return StringRef(reinterpret_cast<const char *>(Input.begin()), Input.size());
 }
+inline StringRef toStringRef(ArrayRef<char> Input) {
+  return StringRef(Input.begin(), Input.size());
+}
 
 /// Construct a string ref from an array ref of unsigned chars.
-inline ArrayRef<uint8_t> arrayRefFromStringRef(StringRef Input) {
-  return {Input.bytes_begin(), Input.bytes_end()};
+template <class CharT = uint8_t>
+inline ArrayRef<CharT> arrayRefFromStringRef(StringRef Input) {
+  static_assert(std::is_same<CharT, char>::value ||
+                    std::is_same<CharT, unsigned char>::value ||
+                    std::is_same<CharT, signed char>::value,
+                "Expected byte type");
+  return ArrayRef<CharT>(reinterpret_cast<const CharT *>(Input.data()),
+                         Input.size());
 }
 
 /// Interpret the given character \p C as a hexadecimal digit and return its
@@ -418,7 +427,7 @@ inline std::string join_impl(IteratorT Begin, IteratorT End,
 
   size_t Len = (std::distance(Begin, End) - 1) * Separator.size();
   for (IteratorT I = Begin; I != End; ++I)
-    Len += (*I).size();
+    Len += StringRef(*I).size();
   S.reserve(Len);
   size_t PrevCapacity = S.capacity();
   (void)PrevCapacity;

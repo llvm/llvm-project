@@ -1741,8 +1741,8 @@ public:
   template <typename PropertiesTy>
   static LogicalResult
   setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
-                        function_ref<InFlightDiagnostic &()> getDiag) {
-    return setPropertiesFromAttribute(prop, attr, getDiag);
+                        function_ref<InFlightDiagnostic()> emitError) {
+    return setPropertiesFromAttribute(prop, attr, emitError);
   }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that

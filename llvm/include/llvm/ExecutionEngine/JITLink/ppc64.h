@@ -88,9 +88,9 @@ struct PLTCallStubInfo {
   SmallVector<PLTCallStubReloc, 2> Relocs;
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   switch (StubKind) {
   case LongBranch: {
     ArrayRef<char> Content =
@@ -139,7 +139,7 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
   return G.addAnonymousSymbol(B, 0, G.getPointerSize(), false, false);
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
                                               Section &StubSection,
                                               Symbol &PointerSymbol,
@@ -152,7 +152,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
   return G.addAnonymousSymbol(B, 0, StubInfo.Content.size(), true, false);
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class TOCTableManager : public TableManager<TOCTableManager<Endianness>> {
 public:
   // FIXME: `llvm-jitlink -check` relies this name to be $__GOT.
@@ -190,7 +190,7 @@ private:
   Section *TOCSection = nullptr;
 };
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 class PLTTableManager : public TableManager<PLTTableManager<Endianness>> {
 public:
   PLTTableManager(TOCTableManager<Endianness> &TOC) : TOC(TOC) {}
@@ -271,21 +271,21 @@ inline static uint16_t highesta(uint64_t x) { return (x + 0x8000) >> 48; }
 // the most significant 32 bits belong to the prefix word. The prefix word is at
 // low address for both big/little endian. Byte order in each word still follows
 // its endian.
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline static uint64_t readPrefixedInstruction(const char *Loc) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   uint64_t Inst = support::endian::read64<Endianness>(Loc);
   return isLE ? (Inst << 32) | (Inst >> 32) : Inst;
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline static void writePrefixedInstruction(char *Loc, uint64_t Inst) {
-  constexpr bool isLE = Endianness == support::endianness::little;
+  constexpr bool isLE = Endianness == llvm::endianness::little;
   Inst = isLE ? (Inst << 32) | (Inst >> 32) : Inst;
   support::endian::write64<Endianness>(Loc, Inst);
 }
 
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline Error relocateHalf16(char *FixupPtr, int64_t Value, Edge::Kind K) {
   switch (K) {
   case Delta16:
@@ -343,7 +343,7 @@ inline Error relocateHalf16(char *FixupPtr, int64_t Value, Edge::Kind K) {
 }
 
 /// Apply fixup expression for edge to block content.
-template <support::endianness Endianness>
+template <llvm::endianness Endianness>
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *TOCSymbol) {
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();

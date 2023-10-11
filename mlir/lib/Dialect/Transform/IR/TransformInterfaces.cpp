@@ -305,8 +305,9 @@ void dropMappingEntry(Mapping &mapping, Key key, Mapped mapped) {
 }
 
 void transform::TransformState::forgetMapping(Value opHandle,
-                                              ValueRange origOpFlatResults) {
-  Mappings &mappings = getMapping(opHandle);
+                                              ValueRange origOpFlatResults,
+                                              bool allowOutOfScope) {
+  Mappings &mappings = getMapping(opHandle, allowOutOfScope);
   for (Operation *op : mappings.direct[opHandle])
     dropMappingEntry(mappings.reverse, op, opHandle);
   mappings.direct.erase(opHandle);
@@ -1021,9 +1022,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
       // pre-generated error messages, so we do not need the association to
       // still be there when the invalidated handle is accessed.
       SmallVector<Value> handles;
-      (void)getHandlesForPayloadOp(op, handles);
+      (void)getHandlesForPayloadOp(op, handles, /*includeOutOfScope=*/true);
       for (Value handle : handles)
-        forgetMapping(handle, /*origOpFlatResults=*/ValueRange());
+        forgetMapping(handle, /*origOpFlatResults=*/ValueRange(),
+                      /*allowOutOfScope=*/true);
       cachedNames.erase(op);
     }
 
@@ -2077,20 +2079,20 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 // Entry point.
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-transform::applyTransforms(Operation *payloadRoot,
-                           TransformOpInterface transform,
-                           const RaggedArray<MappedValue> &extraMapping,
-                           const TransformOptions &options) {
-#ifndef NDEBUG
-  if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
-      transform->getNumOperands() != 0) {
-    transform->emitError()
-        << "expected transform to start at the top-level transform op";
-    llvm::report_fatal_error("could not run transforms",
-                             /*gen_crash_diag=*/false);
+LogicalResult transform::applyTransforms(
+    Operation *payloadRoot, TransformOpInterface transform,
+    const RaggedArray<MappedValue> &extraMapping,
+    const TransformOptions &options, bool enforceToplevelTransformOp) {
+  if (enforceToplevelTransformOp) {
+    if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
+        transform->getNumOperands() != 0) {
+      return transform->emitError()
+             << "expected transform to start at the top-level transform op";
+    }
+  } else if (failed(
+                 detail::verifyPossibleTopLevelTransformOpTrait(transform))) {
+    return failure();
   }
-#endif // NDEBUG
 
   TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
                        options);

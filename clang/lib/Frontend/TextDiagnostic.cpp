@@ -24,8 +24,7 @@
 
 using namespace clang;
 
-static const enum raw_ostream::Colors noteColor =
-  raw_ostream::BLACK;
+static const enum raw_ostream::Colors noteColor = raw_ostream::CYAN;
 static const enum raw_ostream::Colors remarkColor =
   raw_ostream::BLUE;
 static const enum raw_ostream::Colors fixitColor =

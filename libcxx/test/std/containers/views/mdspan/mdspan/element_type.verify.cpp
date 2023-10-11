@@ -24,16 +24,16 @@ public:
 };
 
 void not_abstract_class() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: ElementType template parameter may not be an abstract class}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter may not be an abstract class}}
   [[maybe_unused]] std::mdspan<AbstractClass, std::extents<int>> m;
 }
 
 void not_array_type() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: ElementType template parameter may not be an array type}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter may not be an array type}}
   [[maybe_unused]] std::mdspan<int[5], std::extents<int>> m;
 }
 
 void element_type_mismatch() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: ElementType template parameter must match AccessorPolicy::element_type}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: ElementType template parameter must match AccessorPolicy::element_type}}
   [[maybe_unused]] std::mdspan<int, std::extents<int>, std::layout_right, std::default_accessor<const int>> m;
 }

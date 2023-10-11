@@ -649,16 +649,8 @@ constexpr bool test_in_func() {
   static_assert(is_equal(b.a.f, "test_func_passed.cpp"));
   static_assert(is_equal(b.a.f2, "test_func_passed.cpp"));
   static_assert(is_equal(b.a.info.file(), "test_func_passed.cpp"));
-#ifdef MS
-  static_assert(is_equal(b.a.func, "test_out_of_line_init::test_in_func"));
-#else
   static_assert(is_equal(b.a.func, "test_in_func"));
-#endif
-#ifdef MS
-  static_assert(is_equal(b.a.func, "test_out_of_line_init::test_in_func"));
-#else
   static_assert(is_equal(b.a.func2, "test_in_func"));
-#endif
   static_assert(is_equal(b.a.info.function(), "bool test_out_of_line_init::test_in_func()"));
   return true;
 }
@@ -685,11 +677,7 @@ constexpr InInit II;
 
 static_assert(II.l == 5200, "");
 static_assert(is_equal(II.f, "in_init.cpp"));
-#ifdef MS
-static_assert(is_equal(II.func, "test_global_scope::InInit::InInit"));
-#else
 static_assert(is_equal(II.func, "InInit"));
-#endif
 
 #line 5400
 struct AggInit {

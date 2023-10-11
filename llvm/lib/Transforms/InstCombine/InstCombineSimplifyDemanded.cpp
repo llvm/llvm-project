@@ -461,7 +461,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (InputKnown.isNonNegative() ||
         DemandedMask.getActiveBits() <= SrcBitWidth) {
       // Convert to ZExt cast.
-      CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy, I->getName());
+      CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy);
+      NewCast->takeName(I);
       return InsertNewInstWith(NewCast, I->getIterator());
      }
 
@@ -770,6 +771,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         BinaryOperator *LShr = BinaryOperator::CreateLShr(I->getOperand(0),
                                                           I->getOperand(1));
         LShr->setIsExact(cast<BinaryOperator>(I)->isExact());
+        LShr->takeName(I);
         return InsertNewInstWith(LShr, I->getIterator());
       } else if (Known.One[BitWidth-ShiftAmt-1]) { // New bits are known one.
         Known.One |= HighBits;
@@ -1780,4 +1782,140 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     return UndefValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
+}
+
+/// For floating-point classes that resolve to a single bit pattern, return that
+/// value.
+static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
+  switch (Mask) {
+  case fcPosZero:
+    return ConstantFP::getZero(Ty);
+  case fcNegZero:
+    return ConstantFP::getZero(Ty, true);
+  case fcPosInf:
+    return ConstantFP::getInfinity(Ty);
+  case fcNegInf:
+    return ConstantFP::getInfinity(Ty, true);
+  case fcNone:
+    return PoisonValue::get(Ty);
+  default:
+    return nullptr;
+  }
+}
+
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
+    Value *V, const FPClassTest DemandedMask, KnownFPClass &Known,
+    unsigned Depth, Instruction *CxtI) {
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+  Type *VTy = V->getType();
+
+  assert(Known == KnownFPClass() && "expected uninitialized state");
+
+  if (DemandedMask == fcNone)
+    return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return nullptr;
+
+  Instruction *I = dyn_cast<Instruction>(V);
+  if (!I) {
+    // Handle constants and arguments
+    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
+    Value *FoldedToConst =
+        getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+    return FoldedToConst == V ? nullptr : FoldedToConst;
+  }
+
+  if (!I->hasOneUse())
+    return nullptr;
+
+  // TODO: Should account for nofpclass/FastMathFlags on current instruction
+  switch (I->getOpcode()) {
+  case Instruction::FNeg: {
+    if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
+                                Depth + 1))
+      return I;
+    Known.fneg();
+    break;
+  }
+  case Instruction::Call: {
+    CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::fabs:
+      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
+                                  Depth + 1))
+        return I;
+      Known.fabs();
+      break;
+    case Intrinsic::arithmetic_fence:
+      if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
+        return I;
+      break;
+    case Intrinsic::copysign: {
+      // Flip on more potentially demanded classes
+      const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
+      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
+        return I;
+
+      if ((DemandedMask & fcPositive) == fcNone) {
+        // Roundabout way of replacing with fneg(fabs)
+        I->setOperand(1, ConstantFP::get(VTy, -1.0));
+        return I;
+      }
+
+      if ((DemandedMask & fcNegative) == fcNone) {
+        // Roundabout way of replacing with fabs
+        I->setOperand(1, ConstantFP::getZero(VTy));
+        return I;
+      }
+
+      KnownFPClass KnownSign =
+          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
+      Known.copysign(KnownSign);
+      break;
+    }
+    default:
+      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      break;
+    }
+
+    break;
+  }
+  case Instruction::Select: {
+    KnownFPClass KnownLHS, KnownRHS;
+    if (SimplifyDemandedFPClass(I, 2, DemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    if (KnownLHS.isKnownNever(DemandedMask))
+      return I->getOperand(2);
+    if (KnownRHS.isKnownNever(DemandedMask))
+      return I->getOperand(1);
+
+    // TODO: Recognize clamping patterns
+    Known = KnownLHS | KnownRHS;
+    break;
+  }
+  default:
+    Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+    break;
+  }
+
+  return getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+}
+
+bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
+                                               FPClassTest DemandedMask,
+                                               KnownFPClass &Known,
+                                               unsigned Depth) {
+  Use &U = I->getOperandUse(OpNo);
+  Value *NewVal =
+      SimplifyDemandedUseFPClass(U.get(), DemandedMask, Known, Depth, I);
+  if (!NewVal)
+    return false;
+  if (Instruction *OpInst = dyn_cast<Instruction>(U))
+    salvageDebugInfo(*OpInst);
+
+  replaceUse(U, NewVal);
+  return true;
 }

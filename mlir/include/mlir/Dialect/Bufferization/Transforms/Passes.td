@@ -89,7 +89,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
 }
 
 def OwnershipBasedBufferDeallocation : Pass<
-    "ownership-based-buffer-deallocation", "func::FuncOp"> {
+    "ownership-based-buffer-deallocation"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -233,7 +233,7 @@ def OwnershipBasedBufferDeallocation : Pass<
 }
 
 def BufferDeallocationSimplification :
-    Pass<"buffer-deallocation-simplification", "func::FuncOp"> {
+    Pass<"buffer-deallocation-simplification"> {
   let summary = "Optimizes `bufferization.dealloc` operation for more "
                 "efficient codegen";
   let description = [{

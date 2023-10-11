@@ -55,6 +55,30 @@ fillInterchangeVector(ArrayRef<int64_t> interchangeVector,
   return filledVector;
 }
 
+/// Convert a list of ops of type `SrcOpTy` to list of `Operation *`.
+template <typename SrcOpTy>
+static SmallVector<Operation *> getAsOperations(ArrayRef<SrcOpTy> ops) {
+  return llvm::to_vector(
+      llvm::map_range(ops, [](auto op) -> Operation * { return op; }));
+}
+template <typename SrcOpTy>
+static SmallVector<Operation *>
+getAsOperations(const SmallVector<SrcOpTy> &ops) {
+  return getAsOperations(ArrayRef<SrcOpTy>(ops));
+}
+
+/// Convert a list of `Operation *` to a list of `DstOpTy.
+template <typename DstOpTy>
+static SmallVector<DstOpTy> castToTypedOperations(ArrayRef<Operation *> ops) {
+  return llvm::to_vector(
+      llvm::map_range(ops, [](Operation *op) { return cast<DstOpTy>(op); }));
+}
+template <typename DstOpTy>
+static SmallVector<DstOpTy>
+castToTypedOperations(const SmallVector<Operation *> &ops) {
+  return castToTypedOperations<DstOpTy>(ArrayRef<Operation *>(ops));
+}
+
 //===----------------------------------------------------------------------===//
 // tileUsingSCFForOp implementation.
 //===----------------------------------------------------------------------===//
@@ -174,7 +198,7 @@ yieldTiledValues(RewriterBase &rewriter, ValueRange initValues,
                  ArrayRef<SmallVector<OpFoldResult>> tileOffsetsList,
                  ArrayRef<SmallVector<OpFoldResult>> tileSizesList,
                  MutableArrayRef<scf::ForOp> loops) {
-  NewYieldValueFn yieldValueFn =
+  NewYieldValuesFn yieldValueFn =
       [&](OpBuilder &b, Location loc,
           ArrayRef<BlockArgument> newBBArgs) -> SmallVector<Value> {
     SmallVector<Value> inserts;
@@ -196,7 +220,6 @@ yieldTiledValues(RewriterBase &rewriter, ValueRange initValues,
       replaceLoopNestWithNewYields(rewriter, loops, initValues, yieldValueFn,
                                    /*replaceIterOperandsUsesInLoop =*/false);
   for (const auto &loop : llvm::enumerate(loops)) {
-    rewriter.eraseOp(loop.value());
     loops[loop.index()] = newLoops[loop.index()];
   }
   return llvm::to_vector(llvm::map_range(
@@ -296,8 +319,8 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
     tileSizeVector.append(numLoops - tileSizeVector.size(), zero);
   }
 
-  scf::SCFTilingResult tilingResult;
   SmallVector<OpFoldResult> offsets, sizes;
+  SmallVector<scf::ForOp> forLoops;
   {
     // If there is an interchange specified, permute the iteration domain and
     // the tile sizes.
@@ -320,8 +343,8 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
     // 3. Materialize an empty loop nest that iterates over the tiles. These
     // loops for now do not return any values even if the original operation has
     // results.
-    tilingResult.loops = generateTileLoopNest(
-        rewriter, op.getLoc(), iterationDomain, tileSizeVector, offsets, sizes);
+    forLoops = generateTileLoopNest(rewriter, op.getLoc(), iterationDomain,
+                                    tileSizeVector, offsets, sizes);
 
     if (!interchangeVector.empty()) {
       auto inversePermutation = invertPermutationVector(interchangeVector);
@@ -331,30 +354,30 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   }
 
   LLVM_DEBUG({
-    if (!tilingResult.loops.empty()) {
+    if (!forLoops.empty()) {
       llvm::dbgs() << "LoopNest shell :\n";
-      tilingResult.loops.front().dump();
+      forLoops.front().dump();
       llvm::dbgs() << "\n";
     }
   });
 
   // 4. Generate the tiled implementation within the inner most loop.
-  if (!tilingResult.loops.empty())
-    rewriter.setInsertionPoint(
-        tilingResult.loops.back().getBody()->getTerminator());
+  if (!forLoops.empty())
+    rewriter.setInsertionPoint(forLoops.back().getBody()->getTerminator());
   FailureOr<TilingResult> tiledImplementation =
       op.getTiledImplementation(rewriter, offsets, sizes);
-  tilingResult.tiledOps.append(tiledImplementation->tiledOps);
+
   if (op->getNumResults() == 0) {
-    // nothing more to do.
-    return tilingResult;
+    return scf::SCFTilingResult{
+        tiledImplementation->tiledOps, getAsOperations(forLoops), {}};
   }
 
   // If loops are empty, the tiled op is used as the replacement for the untiled
   // op.
-  if (tilingResult.loops.empty()) {
-    tilingResult.replacements = tiledImplementation->tiledValues;
-    return tilingResult;
+  if (forLoops.empty()) {
+    return scf::SCFTilingResult{tiledImplementation->tiledOps,
+                                getAsOperations(forLoops),
+                                tiledImplementation->tiledValues};
   }
 
   // 5. Yield all the results of the tiled operation. The surrounding loop
@@ -378,18 +401,18 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
                                              destinationTensors)))
     return rewriter.notifyMatchFailure(op, "failed to get destinations");
 
-  tilingResult.replacements = yieldTiledValues(
+  SmallVector<Value> replacements = yieldTiledValues(
       rewriter, destinationTensors, tiledImplementation.value(),
-      resultOffsetsList, resultSizesList, tilingResult.loops);
-
+      resultOffsetsList, resultSizesList, forLoops);
   LLVM_DEBUG({
-    if (!tilingResult.loops.empty()) {
+    if (!forLoops.empty()) {
       llvm::dbgs() << "After tiled implementation :\n";
-      tilingResult.loops.front().dump();
+      forLoops.front().dump();
       llvm::dbgs() << "\n";
     }
   });
-  return tilingResult;
+  return scf::SCFTilingResult{tiledImplementation->tiledOps,
+                              getAsOperations(forLoops), replacements};
 }
 
 FailureOr<scf::SCFReductionTilingResult>
@@ -467,6 +490,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   results.mergeOp = mergeOp;
   return results;
 }
+
 //===----------------------------------------------------------------------===//
 // tileConsumerAndFuseProducerGreedilyUsingSCFForOp implementation.
 //===----------------------------------------------------------------------===//
@@ -502,7 +526,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   // 1. Get the producer of the source (potentially walking through
   // `iter_args` of nested `scf.for`)
   auto [fusableProducer, destinationInitArg] =
-      getUntiledProducerFromSliceSource(&candidateSliceOp.getSourceMutable()[0],
+      getUntiledProducerFromSliceSource(&candidateSliceOp.getSourceMutable(),
                                         loops);
   if (!fusableProducer)
     return std::nullopt;
@@ -637,7 +661,9 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
   }
 
   // 1. First tile the consumer.
-  scf::SCFTileAndFuseResult tileAndFuseResult;
+  SmallVector<scf::ForOp> forLoops;
+  SetVector<Operation *> fusedProducers, tiledAndFusedOps;
+  DenseMap<Value, Value> replacements;
   llvm::SmallDenseMap<Value, int64_t> yieldedValueToResultNumber;
   {
     FailureOr<scf::SCFTilingResult> tilingResult =
@@ -645,20 +671,21 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     if (failed(tilingResult))
       return rewriter.notifyMatchFailure(consumer, "failed to tile consumer");
     for (auto *tiledOp : tilingResult->tiledOps)
-      tileAndFuseResult.tiledAndFusedOps.insert(tiledOp);
-    tileAndFuseResult.loops = std::move(tilingResult->loops);
-    for (const auto &result : llvm::enumerate(
-             llvm::zip(consumer->getResults(), tilingResult->replacements))) {
-      tileAndFuseResult.replacements[std::get<0>(result.value())] =
-          std::get<1>(result.value());
+      tiledAndFusedOps.insert(tiledOp);
+    forLoops = castToTypedOperations<scf::ForOp>(tilingResult->loops);
+    for (auto [index, origValue, replacement] :
+         llvm::enumerate(consumer->getResults(), tilingResult->replacements)) {
+      replacements[origValue] = replacement;
       yieldedValueToResultNumber[tilingResult->tiledOps.back()->getResult(
-          result.index())] = result.index();
+          index)] = index;
     }
   }
 
   // If there are no loops generated, fusion is immaterial.
-  if (tileAndFuseResult.loops.empty())
-    return tileAndFuseResult;
+  if (forLoops.empty()) {
+    return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps,
+                                     getAsOperations(forLoops), replacements};
+  }
 
   // 2. Typically, the operands of the tiled operation are slices of the
   //    operands of the untiled operation. These are expressed in IR using
@@ -675,7 +702,7 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
   };
 
   std::deque<tensor::ExtractSliceOp> candidates;
-  addCandidateSlices(tileAndFuseResult.tiledAndFusedOps.back(), candidates);
+  addCandidateSlices(tiledAndFusedOps.back(), candidates);
   OpBuilder::InsertionGuard g(rewriter);
   while (!candidates.empty()) {
     // Traverse the slices in BFS fashion.
@@ -685,19 +712,20 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     // The operands of the fused producer might themselved be slices of
     // values produced by operations that implement the `TilingInterface`.
     // Add these operations to the worklist.
-    std::optional<scf::SCFFuseProducerOfSliceResult> fusedProducer =
-        tileAndFuseProducerOfSlice(rewriter, candidateSliceOp,
-                                   tileAndFuseResult.loops);
-    if (!fusedProducer)
+    std::optional<scf::SCFFuseProducerOfSliceResult> fusedResult =
+        tileAndFuseProducerOfSlice(rewriter, candidateSliceOp, forLoops);
+    if (!fusedResult)
       continue;
 
     if (Operation *tiledAndFusedOp =
-            fusedProducer->tiledAndFusedProducer.getDefiningOp()) {
-      tileAndFuseResult.tiledAndFusedOps.insert(tiledAndFusedOp);
+            fusedResult->tiledAndFusedProducer.getDefiningOp()) {
+      fusedProducers.insert(fusedResult->origProducer.getDefiningOp());
+      tiledAndFusedOps.insert(tiledAndFusedOp);
       addCandidateSlices(tiledAndFusedOp, candidates);
     }
   }
-  return tileAndFuseResult;
+  return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps,
+                                   getAsOperations(forLoops), replacements};
 }
 
 //===----------------------------------------------------------------------===//

@@ -804,7 +804,7 @@ ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-// PPC ELFABIv2 DWARF Definitoin "Table 2.26. Mappings of Common Registers".
+// PPC ELFABIv2 DWARF Definition "Table 2.26. Mappings of Common Registers".
 // vs0 ~ vs31 is mapping to 32 - 63,
 // vs32 ~ vs63 is mapping to 77 - 108.
 const TargetInfo::AddlRegName GCCAddlRegNames[] = {

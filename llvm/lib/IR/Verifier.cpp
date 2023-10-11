@@ -5947,6 +5947,25 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   case Intrinsic::experimental_convergence_loop:
     break;
+  case Intrinsic::ptrmask: {
+    Type *Ty0 = Call.getArgOperand(0)->getType();
+    Type *Ty1 = Call.getArgOperand(1)->getType();
+    Check(Ty0->isPtrOrPtrVectorTy(),
+          "llvm.ptrmask intrinsic first argument must be pointer or vector "
+          "of pointers",
+          &Call);
+    Check(
+        Ty0->isVectorTy() == Ty1->isVectorTy(),
+        "llvm.ptrmask intrinsic arguments must be both scalars or both vectors",
+        &Call);
+    if (Ty0->isVectorTy())
+      Check(cast<VectorType>(Ty0)->getElementCount() ==
+                cast<VectorType>(Ty1)->getElementCount(),
+            "llvm.ptrmask intrinsic arguments must have the same number of "
+            "elements",
+            &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
@@ -6299,6 +6318,20 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
   verifyFnArgs(DII);
+
+  if (auto *Declare = dyn_cast<DbgDeclareInst>(&DII)) {
+    if (auto *Alloca = dyn_cast_or_null<AllocaInst>(Declare->getAddress())) {
+      DIExpression *Expr = Declare->getExpression();
+      std::optional<uint64_t> FragSize = Declare->getFragmentSizeInBits();
+      std::optional<TypeSize> AllocSize = Alloca->getAllocationSizeInBits(DL);
+      if (FragSize && AllocSize && !AllocSize->isScalable() &&
+          !Expr->isComplex()) {
+        CheckDI(*FragSize <= AllocSize->getFixedValue(),
+                "llvm.dbg.declare has larger fragment size than alloca size ",
+                &DII);
+      }
+    }
+  }
 }
 
 void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {

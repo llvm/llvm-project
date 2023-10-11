@@ -154,7 +154,9 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     // If the attribute has no arguments, then assume the argument is "this".
     if (!AttrExp)
       return CapabilityExpr(
-          Self, ClassifyDiagnostic(cast<CXXMethodDecl>(D)->getThisObjectType()),
+          Self,
+          ClassifyDiagnostic(
+              cast<CXXMethodDecl>(D)->getFunctionObjectParameterType()),
           false);
     else  // For most attributes.
       return translateAttrExpr(AttrExp, &Ctx);

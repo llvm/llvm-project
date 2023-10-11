@@ -390,7 +390,7 @@ let Command = "expression" in {
     Arg<"Boolean">,
     Desc<"Persist expression result in a variable for subsequent use. "
     "Expression results will be labeled with $-prefixed variables, e.g. $0, "
-    "$1, etc. Defaults to true.">;
+    "$1, etc.">;
 }
 
 let Command = "frame diag" in {
@@ -675,6 +675,10 @@ let Command = "platform shell" in {
 let Command = "process launch" in {
   def process_launch_stop_at_entry : Option<"stop-at-entry", "s">,
     Desc<"Stop at the entry point of the program when launching a process.">;
+  def process_launch_stop_at_user_entry : Option<"stop-at-user-entry", "m">,
+    Desc<"Stop at the user entry point when launching a process. For C based "
+    "languages this will be the 'main' function, but this might differ for "
+    "other languages.">;
   def process_launch_disable_aslr : Option<"disable-aslr", "A">, Arg<"Boolean">,
     Desc<"Set whether to disable address space layout randomization when launching a process.">;
   def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,

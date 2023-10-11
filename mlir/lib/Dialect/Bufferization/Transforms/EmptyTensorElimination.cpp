@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
@@ -110,6 +111,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
     // be replaced, but the transformation may not be beneficial.
     if (!state.isInPlace(source))
       return WalkResult::skip();
+
     // All values that are needed to create the replacement op.
     SmallVector<Value> neededValues =
         op.getValuesNeededToBuildSubsetExtraction();
@@ -148,6 +150,8 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
           op.buildSubsetExtraction(rewriter, emptyTensorOp->getLoc());
       if (!replacement)
         continue;
+      if (emptyTensorOp == replacement.getDefiningOp())
+        continue;
       if (replacement.getType() != v.getType()) {
         rewriter.setInsertionPointAfterValue(replacement);
         replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
@@ -179,18 +183,31 @@ struct EmptyTensorElimination
 };
 } // namespace
 
-void EmptyTensorElimination::runOnOperation() {
-  Operation *op = getOperation();
+LogicalResult mlir::bufferization::eliminateEmptyTensors(RewriterBase &rewriter,
+                                                         Operation *op) {
+  auto moduleOp = dyn_cast<ModuleOp>(op);
   OneShotBufferizationOptions options;
   options.allowReturnAllocsFromLoops = true;
+  if (moduleOp)
+    options.bufferizeFunctionBoundaries = true;
   OneShotAnalysisState state(op, options);
-  if (failed(analyzeOp(op, state))) {
-    signalPassFailure();
-    return;
+  if (moduleOp) {
+    // Module analysis takes into account function boundaries.
+    if (failed(analyzeModuleOp(moduleOp, state)))
+      return failure();
+  } else {
+    // Regular One-Shot Bufferize ignores func.func block arguments, func.call,
+    // func.return.
+    if (failed(analyzeOp(op, state)))
+      return failure();
   }
 
-  IRRewriter rewriter(op->getContext());
-  if (failed(bufferization::eliminateEmptyTensors(rewriter, op, state)))
+  return bufferization::eliminateEmptyTensors(rewriter, op, state);
+}
+
+void EmptyTensorElimination::runOnOperation() {
+  IRRewriter rewriter(getOperation()->getContext());
+  if (failed(bufferization::eliminateEmptyTensors(rewriter, getOperation())))
     signalPassFailure();
 }
 

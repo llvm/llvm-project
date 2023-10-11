@@ -574,6 +574,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   llvm::Triple::ArchType Arch = T.getArch();
 
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
+  CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
   if (LangOpts.getExceptionHandling() !=
           LangOptions::ExceptionHandlingKind::None &&
@@ -4629,7 +4630,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
 
 std::string CompilerInvocation::getModuleHash() const {
   // FIXME: Consider using SHA1 instead of MD5.
-  llvm::HashBuilder<llvm::MD5, llvm::support::endianness::native> HBuilder;
+  llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 
   // Note: For QoI reasons, the things we use as a hash here should all be
   // dumped via the -module-info flag.

@@ -51,4 +51,25 @@ entry:
   ; CHECK-LABEL:      __divdf3
 }
 
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local zeroext i32 @func(double noundef %0, double noundef %1) #0 {
+  %3 = alloca double, align 8
+  %4 = alloca double, align 8
+  store double %0, ptr %3, align 8
+  store double %1, ptr %4, align 8
+  %5 = load double, ptr %3, align 8
+  %6 = load double, ptr %4, align 8
+  %7 = fneg double %6
+  %8 = call double @llvm.fmuladd.f64(double %7, double 0x41F0000000000000, double %5)
+  %9 = fptoui double %8 to i32
+  ret i32 %9
+
+  ; CHECK-LABEL:      __muldf3
+  ; CHECK-LABEL:      __adddf3
+}
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.fmuladd.f64(double, double, double) #1
+
 attributes #0 = {"use-soft-float"="true" }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

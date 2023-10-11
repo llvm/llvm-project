@@ -52,7 +52,7 @@ static const char *const builderOpState = "odsState";
 static const char *const propertyStorage = "propStorage";
 static const char *const propertyValue = "propValue";
 static const char *const propertyAttr = "propAttr";
-static const char *const propertyDiag = "getDiag";
+static const char *const propertyDiag = "emitError";
 
 /// The names of the implicit attributes that contain variadic operand and
 /// result segment sizes.
@@ -1213,8 +1213,8 @@ void OpEmitter::genPropertiesSupport() {
               MethodParameter("Properties &", "prop"),
               MethodParameter("::mlir::Attribute", "attr"),
               MethodParameter(
-                  "::llvm::function_ref<::mlir::InFlightDiagnostic &()>",
-                  "getDiag"))
+                  "::llvm::function_ref<::mlir::InFlightDiagnostic()>",
+                  "emitError"))
           ->body();
   auto &getPropMethod =
       opClass
@@ -1256,7 +1256,7 @@ void OpEmitter::genPropertiesSupport() {
               MethodParameter("::mlir::NamedAttrList &", "attrs"),
               MethodParameter(
                   "llvm::function_ref<::mlir::InFlightDiagnostic()>",
-                  "getDiag"))
+                  "emitError"))
           ->body();
 
   opClass.declare<UsingDeclaration>("Properties", "FoldAdaptor::Properties");
@@ -1266,7 +1266,7 @@ void OpEmitter::genPropertiesSupport() {
   setPropMethod << R"decl(
   ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set properties";
+    emitError() << "expected DictionaryAttr to set properties";
     return ::mlir::failure();
   }
     )decl";
@@ -1274,16 +1274,16 @@ void OpEmitter::genPropertiesSupport() {
   const char *propFromAttrFmt = R"decl(;
     {{
       auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-               ::llvm::function_ref<::mlir::InFlightDiagnostic &()> getDiag) {{
+               ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
         {0};
       };
       {2};
       if (!attr) {{
-        getDiag() << "expected key entry for {1} in DictionaryAttr to set "
+        emitError() << "expected key entry for {1} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
-      if (::mlir::failed(setFromAttr(prop.{1}, attr, getDiag)))
+      if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
         return ::mlir::failure();
     }
 )decl";
@@ -1338,7 +1338,7 @@ void OpEmitter::genPropertiesSupport() {
     {2}
     if (attr || /*isRequired=*/{1}) {{
       if (!attr) {{
-        getDiag() << "expected key entry for {0} in DictionaryAttr to set "
+        emitError() << "expected key entry for {0} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
@@ -1346,7 +1346,7 @@ void OpEmitter::genPropertiesSupport() {
       if (convertedAttr) {{
         propStorage = convertedAttr;
       } else {{
-        getDiag() << "Invalid attribute `{0}` in property conversion: " << attr;
+        emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
         return ::mlir::failure();
       }
     }
@@ -1535,7 +1535,7 @@ void OpEmitter::genPropertiesSupport() {
           << formatv(R"(
     {{
       ::mlir::Attribute attr = attrs.get({0}AttrName(opName));
-      if (attr && ::mlir::failed({1}(attr, "{2}", getDiag)))
+      if (attr && ::mlir::failed({1}(attr, "{2}", emitError)))
         return ::mlir::failure();
     }
 )",
@@ -2071,14 +2071,26 @@ void OpEmitter::genNamedOperandSetters() {
       continue;
     std::string name = op.getGetterName(operand.name);
 
-    auto *m = opClass.addMethod(operand.isVariadicOfVariadic()
-                                    ? "::mlir::MutableOperandRangeRange"
-                                    : "::mlir::MutableOperandRange",
-                                name + "Mutable");
+    StringRef returnType;
+    if (operand.isVariadicOfVariadic()) {
+      returnType = "::mlir::MutableOperandRangeRange";
+    } else if (operand.isVariableLength()) {
+      returnType = "::mlir::MutableOperandRange";
+    } else {
+      returnType = "::mlir::OpOperand &";
+    }
+    auto *m = opClass.addMethod(returnType, name + "Mutable");
     ERROR_IF_PRUNED(m, name, op);
     auto &body = m->body();
-    body << "  auto range = getODSOperandIndexAndLength(" << i << ");\n"
-         << "  auto mutableRange = "
+    body << "  auto range = getODSOperandIndexAndLength(" << i << ");\n";
+
+    if (!operand.isVariadicOfVariadic() && !operand.isVariableLength()) {
+      // In case of a single operand, return a single OpOperand.
+      body << "  return getOperation()->getOpOperand(range.first);\n";
+      continue;
+    }
+
+    body << "  auto mutableRange = "
             "::mlir::MutableOperandRange(getOperation(), "
             "range.first, range.second";
     if (attrSizedOperands) {
@@ -3211,9 +3223,11 @@ void OpEmitter::genSideEffectInterfaceMethods() {
   // The code used to add an effect instance.
   // {0}: The effect class.
   // {1}: Optional value or symbol reference.
-  // {1}: The resource class.
+  // {2}: The side effect stage.
+  // {3}: Does this side effect act on every single value of resource.
+  // {4}: The resource class.
   const char *addEffectCode =
-      "  effects.emplace_back({0}::get(), {1}{2}::get());\n";
+      "  effects.emplace_back({0}::get(), {1}{2}, {3}, {4}::get());\n";
 
   for (auto &it : interfaceEffects) {
     // Generate the 'getEffects' method.
@@ -3230,20 +3244,25 @@ void OpEmitter::genSideEffectInterfaceMethods() {
     for (auto &location : it.second) {
       StringRef effect = location.effect.getName();
       StringRef resource = location.effect.getResource();
+      int stage = (int)location.effect.getStage();
+      bool effectOnFullRegion = (int)location.effect.getEffectOnfullRegion();
       if (location.kind == EffectKind::Static) {
         // A static instance has no attached value.
-        body << llvm::formatv(addEffectCode, effect, "", resource).str();
+        body << llvm::formatv(addEffectCode, effect, "", stage,
+                              effectOnFullRegion, resource)
+                    .str();
       } else if (location.kind == EffectKind::Symbol) {
         // A symbol reference requires adding the proper attribute.
         const auto *attr = op.getArg(location.index).get<NamedAttribute *>();
         std::string argName = op.getGetterName(attr->name);
         if (attr->attr.isOptional()) {
           body << "  if (auto symbolRef = " << argName << "Attr())\n  "
-               << llvm::formatv(addEffectCode, effect, "symbolRef, ", resource)
+               << llvm::formatv(addEffectCode, effect, "symbolRef, ", stage,
+                                effectOnFullRegion, resource)
                       .str();
         } else {
           body << llvm::formatv(addEffectCode, effect, argName + "Attr(), ",
-                                resource)
+                                stage, effectOnFullRegion, resource)
                       .str();
         }
       } else {
@@ -3251,7 +3270,9 @@ void OpEmitter::genSideEffectInterfaceMethods() {
         body << "  for (::mlir::Value value : getODS"
              << (location.kind == EffectKind::Operand ? "Operands" : "Results")
              << "(" << location.index << "))\n  "
-             << llvm::formatv(addEffectCode, effect, "value, ", resource).str();
+             << llvm::formatv(addEffectCode, effect, "value, ", stage,
+                              effectOnFullRegion, resource)
+                    .str();
       }
     }
   }

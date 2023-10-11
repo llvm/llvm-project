@@ -133,9 +133,11 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     level-expressions collectively define an affine map from dimension-coordinates to
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
-    automatically. Within the sparse storage format, we refer to indices that are
-    stored explicitly as **coordinates** and offsets into the storage format as
-    **positions**.
+    automatically.
+    
+    Each dimension could also have an optional `SparseTensorDimSliceAttr`.
+    Within the sparse storage format, we refer to indices that are stored explicitly
+    as **coordinates** and offsets into the storage format as **positions**.
 
     The supported level-formats are the following:
 
@@ -176,9 +178,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       coordinate over all levels).  The choices are `8`, `16`, `32`,
       `64`, or, the default, `0` to indicate a native bitwidth.
 
-    - An optional array of `SparseTensorDimSliceAttr`, which specifies
-      how the sparse tensor is partitioned on each dimension.
-
     Examples:
 
     ```mlir
@@ -217,7 +216,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // Block sparse row storage (2x3 blocks).
     #BSR = #sparse_tensor.encoding<{
       map = ( i, j ) ->
-      ( i floordiv 2 : compressed,
+      ( i floordiv 2 : dense,
         j floordiv 3 : compressed,
         i mod 2      : dense,
         j mod 3      : dense
@@ -225,13 +224,48 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<20x30xf32, #BSR> ...
 
+    // Same block sparse row storage (2x3 blocks) but this time
+    // also with a redundant reverse mapping, which can be inferred.
+    #BSR_explicit = #sparse_tensor.encoding<{
+      map = { ib, jb, ii, jj }
+            ( i = ib * 2 + ii,
+              j = jb * 3 + jj) ->
+      ( ib = i floordiv 2 : dense,
+        jb = j floordiv 3 : compressed,
+        ii = i mod 2 : dense,
+        jj = j mod 3 : dense)
+    }>
+    ... tensor<20x30xf32, #BSR_explicit> ...
+
+    // ELL format. 
+    // In the simple format for matrix, one array stores values and another
+    // array stores column indices. The arrays have the same number of rows
+    // as the original matrix, but only have as many columns as 
+    // the maximum number of nonzeros on a row of the original matrix.
+    // There are many variants for ELL such as jagged diagonal scheme.
+    // To implement ELL, map provides a notion of "counting a
+    // dimension", where every stored element with the same coordinate
+    // is mapped to a new slice. For instance, ELL storage of a 2-d
+    // tensor can be defined with the mapping (i, j) -> (#i, i, j)
+    // using the notation of [Chou20]. Lacking the # symbol in MLIR's
+    // affine mapping, we use a free symbol c to define such counting,
+    // together with a constant that denotes the number of resulting
+    // slices. For example, the mapping [c](i, j) -> (c * 3 * i, i, j)
+    // with the level-types ["dense", "dense", "compressed"] denotes ELL
+    // storage with three jagged diagonals that count the dimension i.
+    #ELL = #sparse_tensor.encoding<{
+      map = [c](i, j) -> (c * 3 * i : dense, i : dense, j : compressed)
+    }>
+    ... tensor<?x?xf64, #ELL> ...
+
     // CSR slice (offset = 0, size = 4, stride = 1 on the first dimension;
     // offset = 0, size = 8, and a dynamic stride on the second dimension).
     #CSR_SLICE = #sparse_tensor.encoding<{
-      lvlTypes = [ "dense", "compressed" ],
-      dimSlices = [ (0, 4, 1), (0, 8, ?) ]
+      map = (i : #sparse_tensor<slice(0, 4, 1)>,
+             j : #sparse_tensor<slice(0, 8, ?)>) ->
+            (i : dense, j : compressed)
     }>
-    ... tensor<?x?xf64, #CSC_SLICE> ...
+    ... tensor<?x?xf64, #CSR_SLICE> ...
 
     ```
   }];
@@ -333,7 +367,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseDLT(getLvlType(l)); }
     bool isTwoOutOfFourLvl(::mlir::sparse_tensor::Level l) const { return isTwoOutOfFourDLT(getLvlType(l)); }
     bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedDLT(getLvlType(l)); }
-    bool isCompressedWithHiLvl(::mlir::sparse_tensor::Level l) const { return isCompressedWithHiDLT(getLvlType(l)); }
+    bool isLooseCompressedLvl(::mlir::sparse_tensor::Level l) const { return isLooseCompressedDLT(getLvlType(l)); }
     bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
     bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
     bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
@@ -388,6 +422,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     std::optional<uint64_t> getStaticLvlSliceOffset(::mlir::sparse_tensor::Level lvl) const;
     std::optional<uint64_t> getStaticLvlSliceSize(::mlir::sparse_tensor::Level lvl) const;
     std::optional<uint64_t> getStaticLvlSliceStride(::mlir::sparse_tensor::Level lvl) const;
+
+    //
+    // Printing methods.
+    //
+
+    void printSymbols(AffineMap &map, AsmPrinter &printer) const;
+    void printDimensions(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
+    void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::DimLevelType> lvlTypes) const;
   }];
 
   let genVerifyDecl = 1;

@@ -12,11 +12,14 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from addw, slliw and mulw instructions
-// whenever all users are dependent only on the lower word of the result of the
-// instruction. We do this only for addw, slliw, and mulw because the -w forms
-// are less compressible: c.add and c.slli have a larger register encoding than
-// their w counterparts, and there's no compressible version of mulw.
+// Then it removes the -w suffix from opw instructions whenever all users are
+// dependent only on the lower word of the result of the instruction.
+// The cases handled are:
+// * addw because c.add has a larger register encoding than c.addw.
+// * addiw because it helps reduce test differences between RV32 and RV64
+//   w/o being a pessimization.
+// * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
+// * slliw because c.slliw doesn't exist and c.slli does
 //
 //===---------------------------------------------------------------------===//
 
@@ -78,6 +81,30 @@ FunctionPass *llvm::createRISCVOptWInstrsPass() {
   return new RISCVOptWInstrs();
 }
 
+static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
+                                        unsigned Bits) {
+  const MachineInstr &MI = *UserOp.getParent();
+  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+
+  if (!PseudoInfo)
+    return false;
+
+  const MCInstrDesc &MCID = MI.getDesc();
+  const uint64_t TSFlags = MCID.TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return false;
+  assert(RISCVII::hasVLOp(TSFlags));
+  const unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
+
+  if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
+    return false;
+
+  auto NumDemandedBits =
+      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+  return NumDemandedBits && Bits >= *NumDemandedBits;
+}
+
 // Checks if all users only demand the lower \p OrigBits of the original
 // instruction's result.
 // TODO: handle multiple interdependent transformations
@@ -108,6 +135,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       switch (UserMI->getOpcode()) {
       default:
+        if (vectorPseudoHasAllNBitUsers(UserOp, Bits))
+          break;
         return false;
 
       case RISCV::ADDIW:
@@ -635,6 +664,7 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       default:
         continue;
       case RISCV::ADDW:  Opc = RISCV::ADD;  break;
+      case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
       }

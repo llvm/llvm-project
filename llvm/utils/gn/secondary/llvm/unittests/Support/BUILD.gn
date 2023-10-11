@@ -84,6 +84,7 @@ unittest("SupportTests") {
     "SwapByteOrderTest.cpp",
     "TarWriterTest.cpp",
     "ThreadPool.cpp",
+    "ThreadSafeAllocatorTest.cpp",
     "Threading.cpp",
     "TimeProfilerTest.cpp",
     "TimerTest.cpp",

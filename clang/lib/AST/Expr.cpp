@@ -491,6 +491,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.HadMultipleCandidates = false;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
+  DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.Loc = L;
@@ -518,6 +519,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
     = (TemplateArgs || TemplateKWLoc.isValid()) ? 1 : 0;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
+  DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
     auto Deps = TemplateArgumentDependence::None;
@@ -659,7 +661,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
   std::string Buffer;
   Buffer.reserve(128);
   llvm::raw_string_ostream Out(Buffer);
-  Ctx->mangleTypeName(Ty, Out);
+  Ctx->mangleCanonicalTypeName(Ty, Out);
 
   return Out.str();
 }
@@ -772,21 +774,18 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
-    const auto &LO = Context.getLangOpts();
-    if (((IK == Func || IK == Function) && !LO.MicrosoftExt) ||
-        (IK == LFunction && LO.MicrosoftExt))
+    if (IK != PrettyFunction && IK != PrettyFunctionNoVirtual &&
+        IK != FuncSig && IK != LFuncSig)
       return FD->getNameAsString();
 
     SmallString<256> Name;
     llvm::raw_svector_ostream Out(Name);
 
-    if (IK != Function) {
-      if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
-        if (MD->isVirtual() && IK != PrettyFunctionNoVirtual)
-          Out << "virtual ";
-        if (MD->isStatic())
-          Out << "static ";
-      }
+    if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
+      if (MD->isVirtual() && IK != PrettyFunctionNoVirtual)
+        Out << "virtual ";
+      if (MD->isStatic())
+        Out << "static ";
     }
 
     class PrettyCallbacks final : public PrintingCallbacks {
@@ -801,10 +800,9 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     private:
       const LangOptions &LO;
     };
-    PrintingPolicy Policy(LO);
-    PrettyCallbacks PrettyCB(LO);
+    PrintingPolicy Policy(Context.getLangOpts());
+    PrettyCallbacks PrettyCB(Context.getLangOpts());
     Policy.Callbacks = &PrettyCB;
-    Policy.UseClassForTemplateArgument = LO.MicrosoftExt;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
@@ -830,11 +828,6 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     }
 
     FD->printQualifiedName(POut, Policy);
-
-    if ((IK == Function || IK == Func) && LO.MicrosoftExt) {
-      Out << Proto;
-      return std::string(Name);
-    }
 
     POut << "(";
     if (FT) {
@@ -1628,6 +1621,10 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     // This should never be overloaded and so should never return null.
     CalleeType = Expr::findBoundMemberType(Callee);
     assert(!CalleeType.isNull());
+  } else if (CalleeType->isRecordType()) {
+    // If the Callee is a record type, then it is a not-yet-resolved
+    // dependent call to the call operator of that type.
+    return Ctx.DependentTy;
   } else if (CalleeType->isDependentType() ||
              CalleeType->isSpecificPlaceholderType(BuiltinType::Overload)) {
     return Ctx.DependentTy;

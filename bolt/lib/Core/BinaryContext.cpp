@@ -1026,6 +1026,31 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
   return nullptr;
 }
 
+BinaryData *BinaryContext::getGOTSymbol() {
+  // First tries to find a global symbol with that name
+  BinaryData *GOTSymBD = getBinaryDataByName("_GLOBAL_OFFSET_TABLE_");
+  if (GOTSymBD)
+    return GOTSymBD;
+
+  // This symbol might be hidden from run-time link, so fetch the local
+  // definition if available.
+  GOTSymBD = getBinaryDataByName("_GLOBAL_OFFSET_TABLE_/1");
+  if (!GOTSymBD)
+    return nullptr;
+
+  // If the local symbol is not unique, fail
+  unsigned Index = 2;
+  SmallString<30> Storage;
+  while (const BinaryData *BD =
+             getBinaryDataByName(Twine("_GLOBAL_OFFSET_TABLE_/")
+                                     .concat(Twine(Index++))
+                                     .toStringRef(Storage)))
+    if (BD->getAddress() != GOTSymBD->getAddress())
+      return nullptr;
+
+  return GOTSymBD;
+}
+
 bool BinaryContext::setBinaryDataSize(uint64_t Address, uint64_t Size) {
   auto NI = BinaryDataMap.find(Address);
   assert(NI != BinaryDataMap.end());
@@ -1863,6 +1888,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
+  if (auto Label = MIB->getLabel(Instruction))
+    OS << " # Label: " << **Label;
 
   MIB->printAnnotations(Instruction, OS);
 

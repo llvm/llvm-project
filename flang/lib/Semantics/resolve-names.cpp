@@ -4111,6 +4111,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       if (GenericDetails *
           generic{DEREF(FindSymbol(name)).detailsIf<GenericDetails>()}) {
         generic->clear_specific();
+        name.symbol = nullptr;
       } else {
         EraseSymbol(name);
       }

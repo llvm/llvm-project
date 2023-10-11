@@ -253,6 +253,45 @@ OptionalFileEntryRef ModuleMap::findHeader(
   return NormalHdrFile;
 }
 
+/// Determine whether the given file name is the name of a builtin
+/// header, supplied by Clang to replace, override, or augment existing system
+/// headers.
+static bool isBuiltinHeaderName(StringRef FileName) {
+  return llvm::StringSwitch<bool>(FileName)
+           .Case("float.h", true)
+           .Case("iso646.h", true)
+           .Case("limits.h", true)
+           .Case("stdalign.h", true)
+           .Case("stdarg.h", true)
+           .Case("stdatomic.h", true)
+           .Case("stdbool.h", true)
+           .Case("stddef.h", true)
+           .Case("stdint.h", true)
+           .Case("tgmath.h", true)
+           .Case("unwind.h", true)
+           .Default(false);
+}
+
+/// Determine whether the given module name is the name of a builtin
+/// module that is cyclic with a system module  on some platforms.
+static bool isBuiltInModuleName(StringRef ModuleName) {
+  return llvm::StringSwitch<bool>(ModuleName)
+           .Case("_Builtin_float", true)
+           .Case("_Builtin_inttypes", true)
+           .Case("_Builtin_iso646", true)
+           .Case("_Builtin_limits", true)
+           .Case("_Builtin_stdalign", true)
+           .Case("_Builtin_stdarg", true)
+           .Case("_Builtin_stdatomic", true)
+           .Case("_Builtin_stdbool", true)
+           .Case("_Builtin_stddef", true)
+           .Case("_Builtin_stdint", true)
+           .Case("_Builtin_stdnoreturn", true)
+           .Case("_Builtin_tgmath", true)
+           .Case("_Builtin_unwind", true)
+           .Default(false);
+}
+
 void ModuleMap::resolveHeader(Module *Mod,
                               const Module::UnresolvedHeaderDirective &Header,
                               bool &NeedsFramework) {
@@ -297,7 +336,7 @@ bool ModuleMap::resolveAsBuiltinHeader(
       llvm::sys::path::is_absolute(Header.FileName) ||
       Mod->isPartOfFramework() || !Mod->IsSystem || Header.IsUmbrella ||
       !BuiltinIncludeDir || BuiltinIncludeDir == Mod->Directory ||
-      !isBuiltinHeader(Header.FileName))
+      !LangOpts.BuiltinHeadersInSystemModules || !isBuiltinHeaderName(Header.FileName))
     return false;
 
   // This is a system module with a top-level header. This header
@@ -373,32 +412,12 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
   return Name;
 }
 
-/// Determine whether the given file name is the name of a builtin
-/// header, supplied by Clang to replace, override, or augment existing system
-/// headers.
-bool ModuleMap::isBuiltinHeader(StringRef FileName) {
-  return llvm::StringSwitch<bool>(FileName)
-           .Case("float.h", true)
-           .Case("iso646.h", true)
-           .Case("limits.h", true)
-           .Case("stdalign.h", true)
-           .Case("stdarg.h", true)
-           .Case("stdatomic.h", true)
-           .Case("stdbool.h", true)
-           .Case("stddef.h", true)
-           .Case("stdint.h", true)
-           .Case("tgmath.h", true)
-           .Case("unwind.h", true)
-           .Default(false);
+bool ModuleMap::isBuiltinHeader(FileEntryRef File) {
+  return File.getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
+         isBuiltinHeaderName(llvm::sys::path::filename(File.getName()));
 }
 
-bool ModuleMap::isBuiltinHeader(const FileEntry *File) {
-  return File->getDir() == BuiltinIncludeDir &&
-         ModuleMap::isBuiltinHeader(llvm::sys::path::filename(File->getName()));
-}
-
-ModuleMap::HeadersMap::iterator
-ModuleMap::findKnownHeader(const FileEntry *File) {
+ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
   resolveHeaderDirectives(File);
   HeadersMap::iterator Known = Headers.find(File);
   if (HeaderInfo.getHeaderSearchOpts().ImplicitModuleMaps &&
@@ -691,7 +710,7 @@ ModuleMap::findAllModulesForHeader(FileEntryRef File) {
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-ModuleMap::findResolvedModulesForHeader(const FileEntry *File) const {
+ModuleMap::findResolvedModulesForHeader(FileEntryRef File) const {
   // FIXME: Is this necessary?
   resolveHeaderDirectives(File);
   auto It = Headers.find(File);
@@ -907,9 +926,9 @@ Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
 
   // Mark the main source file as being within the newly-created module so that
   // declarations and macros are properly visibility-restricted to it.
-  auto *MainFile = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+  auto MainFile = SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID());
   assert(MainFile && "no input file for module interface");
-  Headers[MainFile].push_back(KnownHeader(Result, PrivateHeader));
+  Headers[*MainFile].push_back(KnownHeader(Result, PrivateHeader));
 
   return Result;
 }
@@ -1353,7 +1372,7 @@ LLVM_DUMP_METHOD void ModuleMap::dump() {
   llvm::errs() << "Headers:";
   for (HeadersMap::iterator H = Headers.begin(), HEnd = Headers.end();
        H != HEnd; ++H) {
-    llvm::errs() << "  \"" << H->first->getName() << "\" -> ";
+    llvm::errs() << "  \"" << H->first.getName() << "\" -> ";
     for (SmallVectorImpl<KnownHeader>::const_iterator I = H->second.begin(),
                                                       E = H->second.end();
          I != E; ++I) {
@@ -1531,8 +1550,6 @@ namespace clang {
     /// Skip tokens until we reach the a token with the given kind
     /// (or the end of the file).
     void skipUntil(MMToken::TokenKind K);
-
-    using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 
     bool parseModuleId(ModuleId &Id);
     void parseModuleDecl();
@@ -2472,7 +2489,10 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   }
 
   bool NeedsFramework = false;
-  Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
+  // Don't add the top level headers to the builtin modules if the builtin headers
+  // belong to the system modules.
+  if (!Map.LangOpts.BuiltinHeadersInSystemModules || ActiveModule->isSubModule() || !isBuiltInModuleName(ActiveModule->Name))
+    Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
 
   if (NeedsFramework)
     Diags.Report(CurrModuleDeclLoc, diag::note_mmap_add_framework_keyword)

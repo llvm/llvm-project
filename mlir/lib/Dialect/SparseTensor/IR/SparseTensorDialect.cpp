@@ -422,10 +422,10 @@ const static DimLevelType validDLTs[] = {DimLevelType::Dense,
                                          DimLevelType::SingletonNu,
                                          DimLevelType::SingletonNo,
                                          DimLevelType::SingletonNuNo,
-                                         DimLevelType::CompressedWithHi,
-                                         DimLevelType::CompressedWithHiNu,
-                                         DimLevelType::CompressedWithHiNo,
-                                         DimLevelType::CompressedWithHiNuNo};
+                                         DimLevelType::LooseCompressed,
+                                         DimLevelType::LooseCompressedNu,
+                                         DimLevelType::LooseCompressedNo,
+                                         DimLevelType::LooseCompressedNuNo};
 
 static std::optional<DimLevelType> parseDLT(StringRef str) {
   for (DimLevelType dlt : validDLTs)
@@ -586,31 +586,67 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
-  // Print the struct-like storage in dictionary fashion.
-  printer << "<{ lvlTypes = [ ";
-  llvm::interleaveComma(getLvlTypes(), printer, [&](DimLevelType dlt) {
-    printer << "\"" << toMLIRString(dlt) << "\"";
-  });
-  printer << " ]";
+  auto map = static_cast<AffineMap>(getDimToLvl());
+  // Empty affine map indicates identity map
+  if (!map)
+    map = AffineMap::getMultiDimIdentityMap(getLvlTypes().size(), getContext());
+  printer << "<{ map = ";
+  printSymbols(map, printer);
+  printer << '(';
+  printDimensions(map, printer, getDimSlices());
+  printer << ") -> (";
+  printLevels(map, printer, getLvlTypes());
+  printer << ')';
   // Print remaining members only for non-default values.
-  if (!isIdentity())
-    printer << ", dimToLvl = affine_map<" << getDimToLvl() << ">";
   if (getPosWidth())
     printer << ", posWidth = " << getPosWidth();
   if (getCrdWidth())
     printer << ", crdWidth = " << getCrdWidth();
-  if (!getDimSlices().empty()) {
-    printer << ", dimSlices = [ ";
-    llvm::interleaveComma(getDimSlices(), printer,
-                          [&](SparseTensorDimSliceAttr attr) {
-                            // Calls SparseTensorDimSliceAttr::print directly to
-                            // skip mnemonic.
-                            attr.print(printer);
-                          });
-    printer << " ]";
-  }
-
   printer << " }>";
+}
+
+void SparseTensorEncodingAttr::printSymbols(AffineMap &map,
+                                            AsmPrinter &printer) const {
+  if (map.getNumSymbols() == 0)
+    return;
+  printer << '[';
+  for (unsigned i = 0, n = map.getNumSymbols() - 1; i < n; i++)
+    printer << 's' << i << ", ";
+  if (map.getNumSymbols() >= 1)
+    printer << 's' << map.getNumSymbols() - 1;
+  printer << ']';
+}
+
+void SparseTensorEncodingAttr::printDimensions(
+    AffineMap &map, AsmPrinter &printer,
+    ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
+  if (!dimSlices.empty()) {
+    for (unsigned i = 0, n = map.getNumDims() - 1; i < n; i++)
+      printer << 'd' << i << " : " << dimSlices[i] << ", ";
+    if (map.getNumDims() >= 1) {
+      printer << 'd' << map.getNumDims() - 1 << " : "
+              << dimSlices[map.getNumDims() - 1];
+    }
+  } else {
+    for (unsigned i = 0, n = map.getNumDims() - 1; i < n; i++)
+      printer << 'd' << i << ", ";
+    if (map.getNumDims() >= 1)
+      printer << 'd' << map.getNumDims() - 1;
+  }
+}
+
+void SparseTensorEncodingAttr::printLevels(
+    AffineMap &map, AsmPrinter &printer,
+    ArrayRef<DimLevelType> lvlTypes) const {
+  for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
+    map.getResult(i).print(printer.getStream());
+    printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
+  }
+  if (map.getNumResults() >= 1) {
+    auto lastIndex = map.getNumResults() - 1;
+    map.getResult(lastIndex).print(printer.getStream());
+    printer << " : " << toMLIRString(lvlTypes[lastIndex]);
+  }
 }
 
 LogicalResult
@@ -712,7 +748,7 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 bool mlir::sparse_tensor::isCOOType(SparseTensorEncodingAttr enc,
                                     Level startLvl, bool isUnique) {
   if (!enc ||
-      !(enc.isCompressedLvl(startLvl) || enc.isCompressedWithHiLvl(startLvl)))
+      !(enc.isCompressedLvl(startLvl) || enc.isLooseCompressedLvl(startLvl)))
     return false;
   const Level lvlRank = enc.getLvlRank();
   for (Level l = startLvl + 1; l < lvlRank; ++l)
@@ -974,14 +1010,14 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
   return success();
 }
 
-LogicalResult PackOp::verify() {
+LogicalResult AssembleOp::verify() {
   const auto valuesTp = getRankedTensorType(getValues());
   const auto lvlsTp = getLevels().getTypes();
   const auto resTp = getSparseTensorType(getResult());
   return verifyPackUnPack(*this, true, resTp, valuesTp, lvlsTp);
 }
 
-LogicalResult UnpackOp::verify() {
+LogicalResult DisassembleOp::verify() {
   if (getOutValues().getType() != getRetValues().getType())
     return emitError("output values and return value type mismatch");
 
@@ -1028,6 +1064,44 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   if (!getSparseTensorEncoding(dstType) && dstType == getSource().getType())
     return getSource();
   return {};
+}
+
+bool ConvertOp::directConvertable() {
+  if (isSortCOOConvert())
+    return false;
+
+  SparseTensorType srcStt = getSparseTensorType(getSource());
+  SparseTensorType dstStt = getSparseTensorType(getDest());
+
+  // We can always directly convert to unordered sparse tensor or dense tensor
+  // since dense tensor support random access.
+  if (dstStt.isAllDense() || !dstStt.isAllOrdered())
+    return true;
+
+  if (srcStt.isAllOrdered() && dstStt.isAllOrdered() &&
+      srcStt.hasSameDimToLvl(dstStt)) {
+    return true;
+  }
+
+  // Source and dest tensors are ordered in different ways. We only do direct
+  // dense to sparse conversion when the dense input is defined by a sparse
+  // constant. Note that we can theoretically always directly convert from dense
+  // inputs by rotating dense loops but it leads to bad cache locality and hurt
+  // performance.
+  if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())
+    if (isa<SparseElementsAttr>(constOp.getValue()))
+      return true;
+
+  return false;
+}
+
+bool ConvertOp::isSortCOOConvert() {
+  // TODO: we should instead use a different sort_coo operation to handle
+  // the conversion between COOs (but with different ordering).
+  return isUniqueCOOType(getSource().getType()) &&
+         isUniqueCOOType(getDest().getType()) &&
+         !getSparseTensorType(getSource()).isAllOrdered() &&
+         getSparseTensorType(getDest()).isAllOrdered();
 }
 
 LogicalResult ToPositionsOp::verify() {
@@ -1363,7 +1437,7 @@ LogicalResult SelectOp::verify() {
   return success();
 }
 
-LogicalResult SortCooOp::verify() {
+LogicalResult SortOp::verify() {
   AffineMap xPerm = getPermMap();
   uint64_t nx = xPerm.getNumDims();
   if (nx < 1)
