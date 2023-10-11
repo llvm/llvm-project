@@ -6,13 +6,13 @@ define i8 @load_acquire_i8(ptr %ptr) {
 ; LA32-LABEL: load_acquire_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.b $a0, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 20
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_acquire_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.b $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 20
 ; LA64-NEXT:    ret
   %val = load atomic i8, ptr %ptr acquire, align 1
   ret i8 %val
@@ -22,13 +22,13 @@ define i16 @load_acquire_i16(ptr %ptr) {
 ; LA32-LABEL: load_acquire_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.h $a0, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 20
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_acquire_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.h $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 20
 ; LA64-NEXT:    ret
   %val = load atomic i16, ptr %ptr acquire, align 2
   ret i16 %val
@@ -38,13 +38,13 @@ define i32 @load_acquire_i32(ptr %ptr) {
 ; LA32-LABEL: load_acquire_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 20
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_acquire_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.w $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 20
 ; LA64-NEXT:    ret
   %val = load atomic i32, ptr %ptr acquire, align 4
   ret i32 %val
@@ -66,7 +66,7 @@ define i64 @load_acquire_i64(ptr %ptr) {
 ; LA64-LABEL: load_acquire_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 20
 ; LA64-NEXT:    ret
   %val = load atomic i64, ptr %ptr acquire, align 8
   ret i64 %val
@@ -202,13 +202,13 @@ define i8 @load_seq_cst_i8(ptr %ptr) {
 ; LA32-LABEL: load_seq_cst_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.b $a0, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_seq_cst_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.b $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    ret
   %val = load atomic i8, ptr %ptr seq_cst, align 1
   ret i8 %val
@@ -218,13 +218,13 @@ define i16 @load_seq_cst_i16(ptr %ptr) {
 ; LA32-LABEL: load_seq_cst_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.h $a0, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_seq_cst_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.h $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    ret
   %val = load atomic i16, ptr %ptr seq_cst, align 2
   ret i16 %val
@@ -234,13 +234,13 @@ define i32 @load_seq_cst_i32(ptr %ptr) {
 ; LA32-LABEL: load_seq_cst_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a0, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_seq_cst_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.w $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    ret
   %val = load atomic i32, ptr %ptr seq_cst, align 4
   ret i32 %val
@@ -262,7 +262,7 @@ define i64 @load_seq_cst_i64(ptr %ptr) {
 ; LA64-LABEL: load_seq_cst_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    ret
   %val = load atomic i64, ptr %ptr seq_cst, align 8
   ret i64 %val
@@ -271,13 +271,13 @@ define i64 @load_seq_cst_i64(ptr %ptr) {
 define void @store_release_i8(ptr %ptr, i8 signext %v) {
 ; LA32-LABEL: store_release_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 18
 ; LA32-NEXT:    st.b $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_release_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 18
 ; LA64-NEXT:    st.b $a1, $a0, 0
 ; LA64-NEXT:    ret
   store atomic i8 %v, ptr %ptr release, align 1
@@ -287,13 +287,13 @@ define void @store_release_i8(ptr %ptr, i8 signext %v) {
 define void @store_release_i16(ptr %ptr, i16 signext %v) {
 ; LA32-LABEL: store_release_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 18
 ; LA32-NEXT:    st.h $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_release_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 18
 ; LA64-NEXT:    st.h $a1, $a0, 0
 ; LA64-NEXT:    ret
   store atomic i16 %v, ptr %ptr release, align 2
@@ -303,7 +303,7 @@ define void @store_release_i16(ptr %ptr, i16 signext %v) {
 define void @store_release_i32(ptr %ptr, i32 signext %v) {
 ; LA32-LABEL: store_release_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 18
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -465,16 +465,16 @@ define void @store_monotonic_i64(ptr %ptr, i64 %v) {
 define void @store_seq_cst_i8(ptr %ptr, i8 signext %v) {
 ; LA32-LABEL: store_seq_cst_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    st.b $a1, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_seq_cst_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    st.b $a1, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    ret
   store atomic i8 %v, ptr %ptr seq_cst, align 1
   ret void
@@ -483,16 +483,16 @@ define void @store_seq_cst_i8(ptr %ptr, i8 signext %v) {
 define void @store_seq_cst_i16(ptr %ptr, i16 signext %v) {
 ; LA32-LABEL: store_seq_cst_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    st.h $a1, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_seq_cst_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    st.h $a1, $a0, 0
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    dbar 16
 ; LA64-NEXT:    ret
   store atomic i16 %v, ptr %ptr seq_cst, align 2
   ret void
@@ -501,9 +501,9 @@ define void @store_seq_cst_i16(ptr %ptr, i16 signext %v) {
 define void @store_seq_cst_i32(ptr %ptr, i32 signext %v) {
 ; LA32-LABEL: store_seq_cst_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    dbar 16
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: store_seq_cst_i32:
