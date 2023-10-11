@@ -3607,10 +3607,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         // In C++14, generic lambdas allow 'auto' in their parameters.
         if (!SemaRef.getLangOpts().CPlusPlus14 && Auto &&
             Auto->getKeyword() == AutoTypeKeyword::Auto) {
-          Error = 24;
+          Error = 24; // auto not allowed in lambda parameter (before C++14)
           break;
         } else if (!Auto || Auto->getKeyword() != AutoTypeKeyword::Auto) {
-          Error = 16;
+          Error = 16; // __auto_type or decltype(auto) not allowed in lambda parameter
           break;
         }
         Info = SemaRef.getCurLambda();
