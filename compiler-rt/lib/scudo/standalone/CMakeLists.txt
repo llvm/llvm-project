@@ -84,6 +84,7 @@ set(SCUDO_HEADERS
   quarantine.h
   release.h
   report.h
+  report_linux.h
   secondary.h
   size_class_map.h
   stack_depot.h
