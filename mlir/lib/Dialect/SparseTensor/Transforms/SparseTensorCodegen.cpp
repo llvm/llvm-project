@@ -710,6 +710,8 @@ struct SparseSortCOOConverter : public OpConversionPattern<ConvertOp> {
 
     // Otherwise we need another data shuffle and a non-identity map.
     assert(dstStt.hasSameDimToLvl(srcStt));
+    (void)dstStt; // to silence warning when assertion is disabled
+
     auto id = AffineMap::getMultiDimIdentityMap(srcStt.getLvlRank(), ctx);
 
     rewriter.create<SortOp>(loc, nnz, crd, ValueRange{val}, id,
