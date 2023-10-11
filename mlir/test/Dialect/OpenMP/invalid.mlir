@@ -1663,7 +1663,7 @@ llvm.mlir.global internal @_QFsubEx() : i32
 func.func @omp_region_invalid() {
   // expected-error @below {{'omp.structured_region' op must be used under an OpenMP Dialect operation}}
   omp.structured_region {
-    omp.terminator
+    omp.yield
   }
   return
 }
@@ -1674,7 +1674,7 @@ func.func @omp_region_invalid(%c: i1) {
   scf.if %c {
     // expected-error @below {{'omp.structured_region' op must be used under an OpenMP Dialect operation}}
     omp.structured_region {
-      omp.terminator
+      omp.yield
     }
   }
   return

@@ -619,7 +619,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
      ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
-     "AtomicUpdateOp", "SimdLoopOp"]>]> {
+     "AtomicUpdateOp", "SimdLoopOp", "StructuredRegionOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -1999,8 +1999,9 @@ def StructuredRegionOp : OpenMP_Op<"structured_region"> {
     ```
     // Example with `omp.sections`
     omp.sections {
-      omp.structured_region {
-        call @foo : () -> ()
+      %x = omp.structured_region {
+        %t = call @foo : () -> (i32)
+        omp.yield(%t : i32)
       }
       omp.terminator
     }
@@ -2015,8 +2016,9 @@ def StructuredRegionOp : OpenMP_Op<"structured_region"> {
     value.
   }];
   let regions = (region AnyRegion:$region);
+  let results = (outs Variadic<AnyType>:$result);
   let assemblyFormat = [{
-    $region attr-dict
+    ( `(` type($result)^ `)` )? $region attr-dict
   }];
   let hasVerifier = 1;
 }
