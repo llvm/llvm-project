@@ -73,37 +73,35 @@ static void format(const T &Fractional, struct tm &LT, raw_ostream &OS,
                    StringRef Style) {
   using namespace std::chrono;
   // Handle extensions first. strftime mangles unknown %x on some platforms.
-  if (Style.empty())
-    Style = "%Y-%m-%d %H:%M:%S.%N";
+  if (Style.empty()) Style = "%Y-%m-%d %H:%M:%S.%N";
   std::string Format;
   raw_string_ostream FStream(Format);
   for (unsigned I = 0; I < Style.size(); ++I) {
-    if (Style[I] == '%' && Style.size() > I + 1)
-      switch (Style[I + 1]) {
-      case 'L': // Milliseconds, from Ruby.
-        FStream << llvm::format(
-            "%.3lu", (long)duration_cast<milliseconds>(Fractional).count());
-        ++I;
-        continue;
-      case 'f': // Microseconds, from Python.
-        FStream << llvm::format(
-            "%.6lu", (long)duration_cast<microseconds>(Fractional).count());
-        ++I;
-        continue;
-      case 'N': // Nanoseconds, from date(1).
-        FStream << llvm::format(
-            "%.9lu", (long)duration_cast<nanoseconds>(Fractional).count());
-        ++I;
-        continue;
-      case '%': // Consume %%, so %%f parses as (%%)f not %(%f)
-        FStream << "%%";
-        ++I;
-        continue;
+    if (Style[I] == '%' && Style.size() > I + 1) switch (Style[I + 1]) {
+        case 'L':  // Milliseconds, from Ruby.
+          FStream << llvm::format(
+              "%.3lu", (long)duration_cast<milliseconds>(Fractional).count());
+          ++I;
+          continue;
+        case 'f':  // Microseconds, from Python.
+          FStream << llvm::format(
+              "%.6lu", (long)duration_cast<microseconds>(Fractional).count());
+          ++I;
+          continue;
+        case 'N':  // Nanoseconds, from date(1).
+          FStream << llvm::format(
+              "%.9lu", (long)duration_cast<nanoseconds>(Fractional).count());
+          ++I;
+          continue;
+        case '%':  // Consume %%, so %%f parses as (%%)f not %(%f)
+          FStream << "%%";
+          ++I;
+          continue;
       }
     FStream << Style[I];
   }
   FStream.flush();
-  char Buffer[256]; // Should be enough for anywhen.
+  char Buffer[256];  // Should be enough for anywhen.
   size_t Len = strftime(Buffer, sizeof(Buffer), Format.c_str(), &LT);
   OS << (Len ? Buffer : "BAD-DATE-FORMAT");
 }

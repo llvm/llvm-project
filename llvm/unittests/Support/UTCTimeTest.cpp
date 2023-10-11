@@ -1,4 +1,4 @@
-//===- unittests/Support/UTFTestTest.cpp ----------------- ----------------===//
+//===- unittests/Support/UTCTimeTest.cpp ----------------- ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace llvm {
 namespace sys {
 namespace {
 
-TEST(UTFTime, convertutc) {
+TEST(UTCTime, convertutc) {
   // Get the current time.
   time_t currentTime;
   time(&currentTime);
@@ -25,7 +25,6 @@ TEST(UTFTime, convertutc) {
   SmallString<15> customResultString;
   raw_svector_ostream T(customResultString);
   T << formatv("{0:%Y-%m-%d %H:%M:%S}", llvm::sys::toUtcTime(currentTime));
-
 
   // Convert with gmtime.
   char gmtimeResultString[20];
