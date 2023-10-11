@@ -64,6 +64,8 @@ public:
   unsigned getCharBit() const;
   /// Return the floating-point semantics for T.
   const llvm::fltSemantics &getFloatSemantics(QualType T) const;
+  /// Return the size of T in bits.
+  uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
 
   /// Classifies an expression.
   std::optional<PrimType> classify(QualType T) const;

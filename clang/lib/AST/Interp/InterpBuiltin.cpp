@@ -41,7 +41,8 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   APSInt R;
   INT_TYPE_SWITCH(T, {
     T Val = Stk.peek<T>(Offset);
-    R = APSInt(APInt(T::bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+    R = APSInt(
+        APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
   });
 
   return R;
