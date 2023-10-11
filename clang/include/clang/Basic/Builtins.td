@@ -727,12 +727,6 @@ def RotateRight : BitInt8_16_32_64BuiltinsTemplate, Builtin {
 // FIXME: The builtins marked FunctionWithBuiltinPrefix below should be
 //        merged with the library definitions. They are currently not because
 //        the attributes are different.
-def BuiltinCalloc : Builtin {
-  let Spellings = ["__builtin_calloc"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "void*(size_t, size_t)";
-}
-
 def BuiltinConstantP : Builtin {
   let Spellings = ["__builtin_constant_p"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, UnevaluatedArguments, Constexpr];
@@ -775,46 +769,16 @@ def BuiltinAssumeAligned : Builtin {
   let Prototype = "void*(void const*, size_t, ...)";
 }
 
-def BuiltinFree : Builtin {
-  let Spellings = ["__builtin_free"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "void(void*)";
-}
-
-def BuiltinMalloc : Builtin {
-  let Spellings = ["__builtin_malloc"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "void*(size_t)";
-}
-
 def BuiltinMemcpyInline : Builtin {
   let Spellings = ["__builtin_memcpy_inline"];
   let Attributes = [NoThrow];
   let Prototype = "void(void*, void const*, _Constant size_t)";
 }
 
-def BuiltinMempcpy : Builtin {
-  let Spellings = ["__builtin_mempcpy"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "void*(void*, void const*, size_t)";
-}
-
 def BuiltinMemsetInline : Builtin {
   let Spellings = ["__builtin_memset_inline"];
   let Attributes = [NoThrow];
   let Prototype = "void(void*, int, _Constant size_t)";
-}
-
-def BuiltinStrcspn : Builtin {
-  let Spellings = ["__builtin_strcspn"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "size_t(char const*, char const*)";
-}
-
-def BuiltinRealloc : Builtin {
-  let Spellings = ["__builtin_realloc"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "void*(void*, size_t)";
 }
 
 def BuiltinReturnAddress : Builtin {
@@ -2539,7 +2503,9 @@ def Abort : LibBuiltin<"stdlib.h"> {
 
 def Calloc : LibBuiltin<"stdlib.h"> {
   let Spellings = ["calloc"];
+  let Attributes = [NoThrow];
   let Prototype = "void*(size_t, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def Exit : LibBuiltin<"stdlib.h"> {
@@ -2550,17 +2516,23 @@ def Exit : LibBuiltin<"stdlib.h"> {
 
 def Malloc : LibBuiltin<"stdlib.h"> {
   let Spellings = ["malloc"];
+  let Attributes = [NoThrow];
   let Prototype = "void*(size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def Realloc : LibBuiltin<"stdlib.h"> {
   let Spellings = ["realloc"];
+  let Attributes = [NoThrow];
   let Prototype = "void*(void*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def Free : LibBuiltin<"stdlib.h"> {
   let Spellings = ["free"];
+  let Attributes = [NoThrow];
   let Prototype = "void(void*)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def StrToD : LibBuiltin<"stdlib.h"> {
@@ -2612,16 +2584,11 @@ def MemCpy : LibBuiltin<"string.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
-def BuiltinMemCmp : Builtin {
-  let Spellings = ["__builtin_memcmp"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Constexpr];
-  let Prototype = "int(void const*, void const*, size_t)";
-}
-
 def MemCmp : LibBuiltin<"string.h"> {
   let Spellings = ["memcmp"];
-  let Attributes = [Constexpr];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "int(void const*, void const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def MemMove : LibBuiltin<"string.h"> {
@@ -2694,7 +2661,9 @@ def StrChr : LibBuiltin<"string.h"> {
 
 def StrcSpn : LibBuiltin<"string.h"> {
   let Spellings = ["strcspn"];
+  let Attributes = [NoThrow];
   let Prototype = "size_t(char const*, char const*)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def StrpBrk : LibBuiltin<"string.h"> {
@@ -2753,14 +2722,7 @@ def StrLen : LibBuiltin<"string.h"> {
 // FIXME: This list is incomplete.
 def Printf : LibBuiltin<"stdio.h"> {
   let Spellings = ["printf"];
-  let Attributes = [PrintfFormat<0>];
-  let Prototype = "int(char const*, ...)";
-}
-
-// FIXME: The builtin and library function should have the same signature.
-def BuiltinPrintf : Builtin {
-  let Spellings = ["__builtin_printf"];
-  let Attributes = [NoThrow, PrintfFormat<0>, FunctionWithBuiltinPrefix];
+  let Attributes = [NoThrow, PrintfFormat<0>];
   let Prototype = "int(char const* restrict, ...)";
 }
 
@@ -3060,7 +3022,9 @@ def MemcCpy : GNULibBuiltin<"stdlib.h"> {
 
 def MempCpy : GNULibBuiltin<"stdlib.h"> {
   let Spellings = ["mempcpy"];
+  let Attributes = [NoThrow]
   let Prototype = "void*(void*, void const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def StpCpy : GNULibBuiltin<"stdlib.h"> {
@@ -3121,17 +3085,11 @@ def Bcopy : GNULibBuiltin<"strings.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
-// FIXME: This should be part of BCmp.
-def BuiltinBCmp : Builtin {
-  let Spellings = ["__builtin_bcmp"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Constexpr];
-  let Prototype = "int(void const*, void const*, size_t)";
-}
-
 def BCmp : GNULibBuiltin<"strings.h"> {
   let Spellings = ["bcmp"];
-  let Attributes = [Constexpr];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "int(void const*, void const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def StrCaseCmp : GNULibBuiltin<"strings.h"> {
