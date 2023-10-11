@@ -1,4 +1,4 @@
-// RUN: %clangxx -fsanitize=undefined -Wno-prio-ctor-dtor -shared-libsan %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -fsanitize=undefined -shared-libsan %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // Ensure ubsan runtime/interceptors are lazily initialized if called early.
 
