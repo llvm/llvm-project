@@ -1326,7 +1326,7 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
                                          const MCSubtargetInfo &STI,
                                          const MCRegisterInfo &MRI,
                                          const MCTargetOptions &Options,
-                                         support::endianness Endian) {
+                                         llvm::endianness Endian) {
   const Triple &TheTriple = STI.getTargetTriple();
   switch (TheTriple.getObjectFormat()) {
   default:

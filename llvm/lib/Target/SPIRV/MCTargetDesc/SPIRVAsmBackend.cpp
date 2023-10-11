@@ -18,7 +18,7 @@ namespace {
 
 class SPIRVAsmBackend : public MCAsmBackend {
 public:
-  SPIRVAsmBackend(support::endianness Endian) : MCAsmBackend(Endian) {}
+  SPIRVAsmBackend(llvm::endianness Endian) : MCAsmBackend(Endian) {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

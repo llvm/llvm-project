@@ -64,7 +64,7 @@ Error DWARFLinkerImpl::link() {
 
   dwarf::FormParams GlobalFormat = {GlobalData.getOptions().TargetDWARFVersion,
                                     0, dwarf::DwarfFormat::DWARF32};
-  support::endianness GlobalEndianness = llvm::endianness::native;
+  llvm::endianness GlobalEndianness = llvm::endianness::native;
 
   if (TheDwarfEmitter) {
     GlobalEndianness = TheDwarfEmitter->getTargetTriple().isLittleEndian()

@@ -106,7 +106,7 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  support::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = support::little;
   InstrProfSummaryBuilder *SummaryBuilder;
   InstrProfSummaryBuilder *CSSummaryBuilder;
 
@@ -182,8 +182,7 @@ InstrProfWriter::InstrProfWriter(bool Sparse,
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
 // Internal interface for testing purpose only.
-void InstrProfWriter::setValueProfDataEndianness(
-    support::endianness Endianness) {
+void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
 

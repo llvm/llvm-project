@@ -538,7 +538,7 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
   }
 }
 
-Expected<support::endianness>
+Expected<llvm::endianness>
 DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:

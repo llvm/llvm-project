@@ -340,7 +340,7 @@ typedef struct ValueProfRecord {
    * Do byte swap for this instance. \c Old is the original order before
    * the swap, and \c New is the New byte order.
    */
-  void swapBytes(support::endianness Old, support::endianness New);
+  void swapBytes(llvm::endianness Old, llvm::endianness New);
 #endif
 } ValueProfRecord;
 
@@ -395,15 +395,15 @@ typedef struct ValueProfData {
   static Expected<std::unique_ptr<ValueProfData>>
   getValueProfData(const unsigned char *SrcBuffer,
                    const unsigned char *const SrcBufferEnd,
-                   support::endianness SrcDataEndianness);
+                   llvm::endianness SrcDataEndianness);
   /*!
    * Swap byte order from \c Endianness order to host byte order.
    */
-  void swapBytesToHost(support::endianness Endianness);
+  void swapBytesToHost(llvm::endianness Endianness);
   /*!
    * Swap byte order from host byte order to \c Endianness order.
    */
-  void swapBytesFromHost(support::endianness Endianness);
+  void swapBytesFromHost(llvm::endianness Endianness);
   /*!
    * Return the total size of \c ValueProfileData.
    */
