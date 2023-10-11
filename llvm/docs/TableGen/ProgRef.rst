@@ -1850,7 +1850,7 @@ and non-0 as true.
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
 
-``!repr(``\ *value*` ``)``
+``!repr(``\ *value*\ ``)``
     Represents *value* as a string. String format for the value is not
     guaranteed to be stable. Intended for debugging purposes only.
 
