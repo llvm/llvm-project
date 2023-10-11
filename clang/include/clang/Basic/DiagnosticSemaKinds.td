@@ -6391,16 +6391,12 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
 
 def err_counted_by_attr_not_on_flexible_array_member : Error<
   "'counted_by' only applies to flexible array members">;
-def err_flexible_array_counted_by_attr_field_not_found : Error<
-  "field %0 in 'counted_by' not found">;
-def err_flexible_array_counted_by_attr_field_not_found_suggest : Error<
-  "field %0 in 'counted_by' not found; did you mean %1?">;
-def err_flexible_array_counted_by_attr_field_not_found_in_struct : Error<
-  "field %0 in 'counted_by' is not found in struct">;
-def err_flexible_array_counted_by_attr_refers_to_self : Error<
-  "field %0 in 'counted_by' cannot refer to the flexible array">;
+def err_counted_by_attr_refers_to_flexible_array : Error<
+  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_must_be_in_structure : Error<
+  "field %0 in 'counted_by' not inside structure">;
 def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' is not a non-boolean integer type">;
+  "field %0 in 'counted_by' must be a non-boolean integer type">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 
