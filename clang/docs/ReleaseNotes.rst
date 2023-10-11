@@ -538,6 +538,9 @@ X86 Support
 
 - Added option ``-m[no-]evex512`` to disable ZMM and 64-bit mask instructions
   for AVX512 features.
+- Support ISA of ``USER_MSR``.
+  * Support intrinsic of ``_urdmsr``.
+  * Support intrinsic of ``_uwrmsr``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
