@@ -503,15 +503,15 @@ class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
                            == }]
                          # allowedlength>)>]>;
 
-// Normalizes a (possibly negative) index so it can be easily bounds checked.
-// Negative values are mapped to their absolute value.
-//  - These are used to index in reverse (i.e. index -1 would be the last element)
-// Positive values are mapped to their value + 1.
-//  - This results the same range of values as the negative indices
-// This allows bounds checking to be: len(list) >= NormalizeIndex<idx>.ret (see
-// first CPred of IsNthDimSizeIsOneOfPred).
+// Normalizes an index so the indices in both directions have the same value.
+// For example, when indexing forwards index 2 is the third element. When
+// indexing in reverse the third element is -3. This helper would map both of
+// these to the "normalized" index of 3. This makes the bounds checking in
+// IsNthDimSizeIsOneOfPred simpler (see first CPred).
 class NormalizeIndex<int value> {
-  int ret = !if(!lt(value, 0), !sub(0, value), !add(value, 1));
+  int ret = !if(!lt(value, 0),
+    !sub(0, value)  /* -value if negative */,
+    !add(value, 1)  /* value + 1 if positive*/);
 }
 
 // Whether the n-th dim of the shape is contained within `allowedSizes`.
