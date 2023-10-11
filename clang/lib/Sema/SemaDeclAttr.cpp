@@ -2352,126 +2352,26 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UnusedAttr(S.Context, AL));
 }
 
-static void diagnoseInvalidPriority(Sema &S, uint32_t Priority,
-                                    const ParsedAttr &A,
-                                    SourceLocation PriorityLoc) {
-  constexpr uint32_t ReservedPriorityLower = 101, ReservedPriorityUpper = 65535;
-
-  // Only perform the priority check if the attribute is outside of a system
-  // header. Values <= 100 are reserved for the implementation, and libc++
-  // benefits from being able to specify values in that range. Values > 65535
-  // are reserved for historical reasons.
-  if ((Priority < ReservedPriorityLower || Priority > ReservedPriorityUpper) &&
-      !S.getSourceManager().isInSystemHeader(A.getLoc())) {
-    S.Diag(A.getLoc(), diag::warn_priority_out_of_range)
-        << PriorityLoc << A << ReservedPriorityLower << ReservedPriorityUpper;
-  }
-}
-
-static bool FunctionParamsAreMainLike(ASTContext &Context,
-                                      const FunctionDecl *FD) {
-  assert(FD->hasPrototype() && "expected the function to have a prototype");
-  const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  QualType CharPP =
-      Context.getPointerType(Context.getPointerType(Context.CharTy));
-  QualType Expected[] = {Context.IntTy, CharPP, CharPP, CharPP};
-  for (unsigned I = 0;
-       I < sizeof(Expected) / sizeof(QualType) && I < FPT->getNumParams();
-       ++I) {
-    QualType AT = FPT->getParamType(I);
-
-    if (!Context.hasSameUnqualifiedType(AT, Expected[I])) {
-      if (Expected[I] == CharPP) {
-        // As an extension, the following forms are okay:
-        //   char const **
-        //   char const * const *
-        //   char * const *
-
-        QualifierCollector Qs;
-        const PointerType *PT;
-        if ((PT = Qs.strip(AT)->getAs<PointerType>()) &&
-            (PT = Qs.strip(PT->getPointeeType())->getAs<PointerType>()) &&
-            Context.hasSameType(QualType(Qs.strip(PT->getPointeeType()), 0),
-                                Context.CharTy)) {
-          Qs.removeConst();
-          if (!Qs.empty())
-            return false;
-          continue; // Accepted as an extension.
-        }
-      }
-      return false;
-    }
-  }
-  return true;
-}
-
-template <typename CtorDtorAttr>
-static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t Priority = CtorDtorAttr::DefaultPriority;
+static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  uint32_t priority = ConstructorAttr::DefaultPriority;
   if (S.getLangOpts().HLSL && AL.getNumArgs()) {
     S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
   }
-
-  // If we're given an argument for the priority, check that it's valid.
-  if (AL.getNumArgs()) {
-    if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), Priority))
-      return;
-
-    // Diagnose an invalid priority, but continue to process the attribute.
-    diagnoseInvalidPriority(S, Priority, AL, AL.getArgAsExpr(0)->getExprLoc());
-  }
-
-  // Ensure the function we're attaching to is something that is sensible to
-  // automatically call before or after main(); it should accept no arguments.
-  // In theory, a void return type is the only truly safe return type (consider
-  // that calling conventions may place returned values in a hidden pointer
-  // argument passed to the function that will not be present when called
-  // automatically). However, there is a significant amount of existing code
-  // which uses an int return type. So we will accept void, int, and
-  // unsigned int return types. Any other return type, or a non-void parameter
-  // list is treated as an error because it's a form of type system
-  // incompatibility. The function also cannot be a member function. We allow
-  // K&R C functions because that's a difficult edge case where it depends on
-  // how the function is defined as to whether it does or does not expect
-  // arguments.
-  //
-  // However! glibc on ELF will pass the same arguments to a constructor
-  // function as are given to main(), so we will allow `int, char *[]` and
-  // `int, char *[], char *[]` (or qualified versions thereof), but only if
-  // the target is explicitly for glibc.
-  const auto *FD = cast<FunctionDecl>(D);
-  QualType RetTy = FD->getReturnType();
-  bool IsGlibC = S.Context.getTargetInfo().getTriple().isGNUEnvironment();
-  if (!(RetTy->isVoidType() ||
-        RetTy->isSpecificBuiltinType(BuiltinType::UInt) ||
-        RetTy->isSpecificBuiltinType(BuiltinType::Int)) ||
-      FD->isVariadic() ||
-      (FD->hasPrototype() &&
-       ((!IsGlibC && FD->getNumParams() != 0) ||
-        (IsGlibC && !FunctionParamsAreMainLike(S.Context, FD))))) {
-    S.Diag(AL.getLoc(), diag::err_ctor_dtor_attr_on_non_void_func)
-        << AL << FD->getSourceRange();
+  if (AL.getNumArgs() &&
+      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
     return;
-  }
-  if (FD->getType()->castAs<FunctionType>()->getCallConv() !=
-      CallingConv::CC_C) {
-    S.Diag(AL.getLoc(), diag::err_ctor_dtor_calling_conv)
-        << AL << FD->getSourceRange();
-    return;
-  }
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
-    S.Diag(AL.getLoc(), diag::err_ctor_dtor_member_func)
-        << AL << FD->getSourceRange();
-    return;
-  }
-  if (FD->isConsteval()) {
-    S.Diag(AL.getLoc(), diag::err_ctordtor_attr_consteval)
-        << AL << FD->getSourceRange();
-    return;
-  }
 
-  D->addAttr(CtorDtorAttr::Create(S.Context, Priority, AL));
+  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
+}
+
+static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  uint32_t priority = DestructorAttr::DefaultPriority;
+  if (AL.getNumArgs() &&
+      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
+    return;
+
+  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
 }
 
 template <typename AttrTy>
@@ -3997,9 +3897,16 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Diagnose an invalid priority, but continue to process the attribute.
-  diagnoseInvalidPriority(S, prioritynum, AL, E->getExprLoc());
-
+  // Only perform the priority check if the attribute is outside of a system
+  // header. Values <= 100 are reserved for the implementation, and libc++
+  // benefits from being able to specify values in that range.
+  if ((prioritynum < 101 || prioritynum > 65535) &&
+      !S.getSourceManager().isInSystemHeader(AL.getLoc())) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_range)
+        << E->getSourceRange() << AL << 101 << 65535;
+    AL.setInvalid();
+    return;
+  }
   D->addAttr(::new (S.Context) InitPriorityAttr(S.Context, AL, prioritynum));
 }
 
@@ -9075,13 +8982,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handlePassObjectSizeAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Constructor:
-    handleCtorDtorAttr<ConstructorAttr>(S, D, AL);
+      handleConstructorAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Deprecated:
     handleDeprecatedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Destructor:
-    handleCtorDtorAttr<DestructorAttr>(S, D, AL);
+      handleDestructorAttr(S, D, AL);
     break;
   case ParsedAttr::AT_EnableIf:
     handleEnableIfAttr(S, D, AL);
