@@ -3,8 +3,12 @@
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
+/// This tests printing (multiple) string literals works.
+
 func.func @entry() {
    // CHECK: Hello, World!
    vector.print str "Hello, World!"
+   // CHECK-NEXT: Bye!
+   vector.print str "Bye!"
    return
 }

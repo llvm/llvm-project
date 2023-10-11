@@ -1,5 +1,4 @@
-
-//===- PrintCallHelper.h - LLVM Interfaces ----------------------*- C++ -*-===//
+//===- PrintCallHelper.h - Helper to emit runtime print calls ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,12 +14,7 @@
 
 namespace mlir {
 
-class Location;
-class ModuleOp;
 class OpBuilder;
-class Operation;
-class Type;
-class ValueRange;
 class LLVMTypeConverter;
 
 namespace LLVM {
