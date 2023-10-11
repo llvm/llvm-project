@@ -27,9 +27,9 @@
 
 namespace scudo {
 
-void NORETURN die() { abort(); }
-
 uptr getPageSize() { return getauxval(AT_PAGESZ); }
+
+void NORETURN die() { abort(); }
 
 void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {

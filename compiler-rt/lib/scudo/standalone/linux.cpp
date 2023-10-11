@@ -40,9 +40,9 @@
 
 namespace scudo {
 
-void NORETURN die() { abort(); }
-
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
+
+void NORETURN die() { abort(); }
 
 // TODO: Will be deprecated. Use the interfaces in MemMapLinux instead.
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
