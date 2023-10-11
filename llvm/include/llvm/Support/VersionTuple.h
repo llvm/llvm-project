@@ -22,7 +22,7 @@
 #include <tuple>
 
 namespace llvm {
-template <typename HasherT, support::endianness Endianness> class HashBuilder;
+template <typename HasherT, llvm::endianness Endianness> class HashBuilder;
 class raw_ostream;
 class StringRef;
 
