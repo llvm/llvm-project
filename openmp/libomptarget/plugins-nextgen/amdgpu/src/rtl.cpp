@@ -579,7 +579,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &KernelObject},
         {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, &ArgsSize},
         {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &GroupSize},
-        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &PrivateSize}};
+        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &PrivateSize},
+        {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK, &DynCallstack}};
 
     for (auto &Info : RequiredInfos) {
       Status = hsa_executable_symbol_get_info(Symbol, Info.first, Info.second);
@@ -587,6 +588,12 @@ struct AMDGPUKernelTy : public GenericKernelTy {
               Status, "Error in hsa_executable_symbol_get_info: %s"))
         return Err;
     }
+
+    // Get the currently set dynamic stack size from the device as 32bit value.
+    assert(Device.getTargetStackSize() <=
+               std::numeric_limits<uint32_t>::max() &&
+           "AMDGPU Private Address Space may not exceed 32bit range");
+    TargetStackSize = static_cast<uint32_t>(Device.getTargetStackSize());
 
     // Make sure it is a kernel symbol.
     if (SymbolType != HSA_SYMBOL_KIND_KERNEL)
@@ -665,6 +672,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   uint32_t getPrivateSize() const { return PrivateSize; }
   uint16_t getConstWGSize() const { return ConstWGSize; }
 
+  // Get dynamic callstack information.
+  bool hasDynamicCallstack() const { return DynCallstack; }
+  uint32_t getTargetStackSize() const { return TargetStackSize; }
+
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
@@ -680,6 +691,14 @@ private:
   uint32_t ArgsSize;
   uint32_t GroupSize;
   uint32_t PrivateSize;
+
+  // The kernel meta data if a dynamic callstack is being used.
+  bool DynCallstack;
+
+  // The dynamic / target callstack size (from environmental variable).
+  // Note: While the EnVar is provided as uint64_t, the amdgpu private address
+  // space uses 32 bit.
+  uint32_t TargetStackSize;
 
   /// The size of implicit kernel arguments.
   uint32_t ImplicitArgsSize;
@@ -1054,7 +1073,10 @@ struct AMDGPUQueueTy {
     Packet->grid_size_x = NumBlocks * NumThreads;
     Packet->grid_size_y = 1;
     Packet->grid_size_z = 1;
-    Packet->private_segment_size = Kernel.getPrivateSize();
+    Packet->private_segment_size =
+        Kernel.hasDynamicCallstack()
+            ? std::max(Kernel.getPrivateSize(), Kernel.getTargetStackSize())
+            : Kernel.getPrivateSize();
     Packet->group_segment_size = GroupSize;
     Packet->kernel_object = Kernel.getKernelObject();
     Packet->kernarg_address = KernelArgs;
@@ -3146,7 +3168,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
-    Value = 0;
+    // Return 1024, in conformity to hipLimitStackSize.
+    Value = 1024;
     return Plugin::success();
   }
   Error setDeviceStackSize(uint64_t Value) override {

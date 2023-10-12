@@ -817,6 +817,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   int32_t getOMPTeamsThreadLimit() const { return OMP_TeamsThreadLimit; }
 
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
+  uint64_t getTargetStackSize() const { return OMPX_TargetStackSize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   virtual uint32_t getOMPXLowTripCount() const {
