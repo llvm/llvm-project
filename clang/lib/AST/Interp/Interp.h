@@ -55,6 +55,10 @@ bool CheckArray(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if a pointer is live and accessible.
 bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
+
+/// Checks if a pointer is a dummy pointer.
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+
 /// Checks if a pointer is null.
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK);
@@ -1423,8 +1427,9 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // Compute the largest index into the array.
   T MaxIndex = T::from(Ptr.getNumElems(), Offset.bitWidth());
 
+  bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.
-  auto InvalidOffset = [&]() {
+  auto DiagInvalidOffset = [&]() -> void {
     const unsigned Bits = Offset.bitWidth();
     APSInt APOffset(Offset.toAPSInt().extend(Bits + 2), false);
     APSInt APIndex(Index.toAPSInt().extend(Bits + 2), false);
@@ -1434,27 +1439,30 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
         << NewIndex
         << /*array*/ static_cast<int>(!Ptr.inArray())
         << static_cast<unsigned>(MaxIndex);
-    return false;
+    Invalid = true;
   };
 
   T MaxOffset = T::from(MaxIndex - Index, Offset.bitWidth());
   if constexpr (Op == ArithOp::Add) {
     // If the new offset would be negative, bail out.
     if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
-      return InvalidOffset();
+      DiagInvalidOffset();
 
     // If the new offset would be out of bounds, bail out.
     if (Offset.isPositive() && Offset > MaxOffset)
-      return InvalidOffset();
+      DiagInvalidOffset();
   } else {
     // If the new offset would be negative, bail out.
     if (Offset.isPositive() && Index < Offset)
-      return InvalidOffset();
+      DiagInvalidOffset();
 
     // If the new offset would be out of bounds, bail out.
     if (Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
-      return InvalidOffset();
+      DiagInvalidOffset();
   }
+
+  if (Invalid && !Ptr.isDummy())
+    return false;
 
   // Offset is valid - compute it on unsigned.
   int64_t WideIndex = static_cast<int64_t>(Index);

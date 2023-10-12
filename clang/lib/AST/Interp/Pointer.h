@@ -313,6 +313,8 @@ public:
   bool isActive() const { return Base == 0 || getInlineDesc()->IsActive; }
   /// Checks if a structure is a base class.
   bool isBaseClass() const { return isField() && getInlineDesc()->IsBase; }
+  /// Checks if the pointer pointers to a dummy value.
+  bool isDummy() const { return getDeclDesc()->isDummy(); }
 
   /// Checks if an object or a subfield is mutable.
   bool isConst() const {

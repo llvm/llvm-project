@@ -109,6 +109,8 @@ public:
   const bool IsTemporary = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
+  /// Flag indicating if this is a dummy descriptor.
+  const bool IsDummy = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -136,6 +138,8 @@ public:
   /// Allocates a descriptor for a record.
   Descriptor(const DeclTy &D, Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
+
+  Descriptor(const DeclTy &D, MetadataSize MD);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -190,6 +194,8 @@ public:
   bool isArray() const { return IsArray; }
   /// Checks if the descriptor is of a record.
   bool isRecord() const { return !IsArray && ElemRecord; }
+  /// Checks if this is a dummy descriptor.
+  bool isDummy() const { return IsDummy; }
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

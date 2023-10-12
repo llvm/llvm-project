@@ -284,6 +284,13 @@ Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+    : Source(D), ElemSize(1), Size(ElemSize), MDSize(MD.value_or(0)),
+      AllocSize(Size + MDSize), ElemRecord(nullptr), IsConst(true),
+      IsMutable(false), IsTemporary(false), IsDummy(true) {
+  assert(Source && "Missing source");
+}
+
 QualType Descriptor::getType() const {
   if (auto *E = asExpr())
     return E->getType();

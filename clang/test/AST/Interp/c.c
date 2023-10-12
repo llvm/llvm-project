@@ -47,3 +47,13 @@ _Static_assert(&a != 0, ""); // ref-warning {{always true}} \
                              // expected-warning {{always true}} \
                              // pedantic-expected-warning {{always true}} \
                              // pedantic-expected-warning {{is a GNU extension}}
+_Static_assert((&c + 1) != 0, ""); // pedantic-ref-warning {{is a GNU extension}} \
+                                   // pedantic-expected-warning {{is a GNU extension}}
+_Static_assert((&a + 100) != 0, ""); // pedantic-ref-warning {{is a GNU extension}} \
+                                     // pedantic-ref-note {{100 of non-array}} \
+                                     // pedantic-expected-note {{100 of non-array}} \
+                                     // pedantic-expected-warning {{is a GNU extension}}
+_Static_assert((&a - 100) != 0, ""); // pedantic-ref-warning {{is a GNU extension}} \
+                                     // pedantic-expected-warning {{is a GNU extension}} \
+                                     // pedantic-ref-note {{-100 of non-array}} \
+                                     // pedantic-expected-note {{-100 of non-array}}
