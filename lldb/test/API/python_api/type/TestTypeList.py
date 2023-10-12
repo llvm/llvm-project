@@ -126,7 +126,13 @@ class TypeAndTypeListTestCase(TestBase):
 
         task_ptr_type = task_type.GetPointerType()
         invalid_type = task_ptr_type.FindNestedType("name")
-        self.assertFalse(invalid_type.IsValid())
+        self.assertFalse(invalid_type)
+
+        invalid_type = task_type.FindNestedType("")
+        self.assertFalse(invalid_type)
+
+        invalid_type = task_type.FindNestedType(None)
+        self.assertFalse(invalid_type)
 
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
