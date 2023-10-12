@@ -49,8 +49,8 @@ class raw_ostream;
 template <class GraphType> struct GraphTraits;
 
 extern template class LLVM_CLASS_ABI DomTreeNodeBase<BasicBlock>;
-extern template class DominatorTreeBase<BasicBlock, false>; // DomTree
-extern template class DominatorTreeBase<BasicBlock, true>; // PostDomTree
+extern template class LLVM_CLASS_ABI DominatorTreeBase<BasicBlock, false>; // DomTree
+extern template class LLVM_CLASS_ABI DominatorTreeBase<BasicBlock, true>; // PostDomTree
 
 extern template class cfg::Update<BasicBlock *>;
 
