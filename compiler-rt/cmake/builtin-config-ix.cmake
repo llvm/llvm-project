@@ -33,12 +33,6 @@ asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
-builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_SME
-"
-asm(\".arch armv9-a+sme\");
-asm(\"smstart\");
-")
-
 if(ANDROID)
   set(OS_NAME "Android")
 else()
