@@ -349,8 +349,6 @@ public:
 
   ~SparseTensorStorage() final = default;
 
-  void sortInPlace();
-
   /// Partially specialize these getter methods based on template types.
   void getPositions(std::vector<P> **out, uint64_t lvl) final {
     assert(out && "Received nullptr for out parameter");
@@ -470,6 +468,63 @@ public:
     // <https://github.com/llvm/llvm-project/issues/54179>
     assert(coo->getElements().size() == values.size());
     return coo;
+  }
+
+  /// Sort the unordered tensor in place, the method assumes that it is
+  /// an unordered COO tensor.
+  void sortInPlace() {
+    uint64_t nnz = values.size();
+#ifndef NDEBUG
+    for (uint64_t l = 0; l < getLvlRank(); l++)
+      assert(nnz == coordinates[l].size());
+#endif
+
+    // In-place permutation.
+    auto applyPerm = [this](std::vector<uint64_t> &perm) {
+      size_t length = perm.size();
+      size_t lvlRank = getLvlRank();
+      // Cache for the current level coordinates.
+      std::vector<P> lvlCrds(lvlRank);
+      for (size_t i = 0; i < length; i++) {
+        size_t current = i;
+        if (i != perm[current]) {
+          for (size_t l = 0; l < lvlRank; l++)
+            lvlCrds[l] = coordinates[l][i];
+          V val = values[i];
+          // Deals with a permutation cycle.
+          while (i != perm[current]) {
+            size_t next = perm[current];
+            // Swaps the level coordinates and value.
+            for (size_t l = 0; l < lvlRank; l++)
+              coordinates[l][current] = coordinates[l][next];
+            values[current] = values[next];
+            perm[current] = current;
+            current = next;
+          }
+          for (size_t l = 0; l < lvlRank; l++)
+            coordinates[l][current] = lvlCrds[l];
+          values[current] = val;
+          perm[current] = current;
+        }
+      }
+    };
+
+    std::vector<uint64_t> sortedIdx(nnz, 0);
+    for (uint64_t i = 0; i < nnz; i++)
+      sortedIdx[i] = i;
+
+    std::sort(sortedIdx.begin(), sortedIdx.end(),
+              [this](uint64_t lhs, uint64_t rhs) {
+                for (uint64_t l = 0; l < getLvlRank(); l++) {
+                  if (coordinates[l][lhs] == coordinates[l][rhs])
+                    continue;
+                  return coordinates[l][lhs] < coordinates[l][rhs];
+                }
+                assert(false && "duplicate coordinates");
+                return false;
+              });
+
+    applyPerm(sortedIdx);
   }
 
 private:
@@ -969,62 +1024,6 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
       new SparseTensorStorage<P, C, V>(dimRank, dimShape, lvlRank, lvlSizes,
                                        lvlTypes, src2lvl, lvl2dim, buffers);
   return tensor;
-}
-
-template <typename P, typename C, typename V>
-void SparseTensorStorage<P, C, V>::sortInPlace() {
-  uint64_t nnz = values.size();
-#ifndef NDEBUG
-  for (uint64_t l = 0; l < getLvlRank(); l++)
-    assert(nnz == coordinates[l].size());
-#endif
-
-  // In-place permutation.
-  auto applyPerm = [this](std::vector<uint64_t> &perm) {
-    size_t length = perm.size();
-    size_t lvlRank = getLvlRank();
-    // Cache for the current level coordinates.
-    std::vector<P> lvlCrds(lvlRank);
-    for (size_t i = 0; i < length; i++) {
-      size_t current = i;
-      if (i != perm[current]) {
-        for (size_t l = 0; l < lvlRank; l++)
-          lvlCrds[l] = coordinates[l][i];
-        V val = values[i];
-        // Deals with a permutation cycle.
-        while (i != perm[current]) {
-          size_t next = perm[current];
-          // Swaps the level coordinates and value.
-          for (size_t l = 0; l < lvlRank; l++)
-            coordinates[l][current] = coordinates[l][next];
-          values[current] = values[next];
-          perm[current] = current;
-          current = next;
-        }
-        for (size_t l = 0; l < lvlRank; l++)
-          coordinates[l][current] = lvlCrds[l];
-        values[current] = val;
-        perm[current] = current;
-      }
-    }
-  };
-
-  std::vector<uint64_t> sortedIdx(nnz, 0);
-  for (uint64_t i = 0; i < nnz; i++)
-    sortedIdx[i] = i;
-
-  std::sort(sortedIdx.begin(), sortedIdx.end(),
-            [this](uint64_t lhs, uint64_t rhs) {
-              for (uint64_t l = 0; l < getLvlRank(); l++) {
-                if (coordinates[l][lhs] == coordinates[l][rhs])
-                  continue;
-                return coordinates[l][lhs] < coordinates[l][rhs];
-              }
-              assert(false && "duplicate coordinates");
-              return false;
-            });
-
-  applyPerm(sortedIdx);
 }
 
 template <typename P, typename C, typename V>
