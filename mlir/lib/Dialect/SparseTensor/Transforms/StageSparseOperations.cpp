@@ -46,7 +46,6 @@ struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
     // -> sort
     Type dstCOOTp = getCOOFromTypeWithOrdering(
         dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/true);
-    // TODO: this should be a sort_coo operation.
     Value dstCOO = rewriter.create<ReorderCOOOp>(
         loc, dstCOOTp, srcCOO, SparseTensorSortKind::HybridQuickSort);
 
