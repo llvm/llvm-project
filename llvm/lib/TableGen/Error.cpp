@@ -174,7 +174,7 @@ void CheckDump(SMLoc Loc, Init *Message) {
   if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(MessageInit->getValue());
   else
-    PrintNote("(dump message is not a string)");
+    PrintNote("(dump message is not a string - use `!repr`)");
 }
 
 } // end namespace llvm
