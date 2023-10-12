@@ -98,7 +98,7 @@
 /* Define if zstd compression is available */
 #cmakedefine01 LLVM_ENABLE_ZSTD
 
-/* Define if LLVM is using tflite instead of libtensorflow */
+/* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 
 /* Define to 1 if you have the <sysexits.h> header file. */

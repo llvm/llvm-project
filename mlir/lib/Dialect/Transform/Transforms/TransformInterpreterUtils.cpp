@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -30,6 +31,59 @@ using namespace mlir;
 
 #define DEBUG_TYPE "transform-dialect-interpreter-utils"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
+
+/// Expands the given list of `paths` to a list of `.mlir` files.
+///
+/// Each entry in `paths` may either be a regular file, in which case it ends up
+/// in the result list, or a directory, in which case all (regular) `.mlir`
+/// files in that directory are added. Any other file types lead to a failure.
+LogicalResult transform::detail::expandPathsToMLIRFiles(
+    ArrayRef<std::string> &paths, MLIRContext *context,
+    SmallVectorImpl<std::string> &fileNames) {
+  for (const std::string &path : paths) {
+    auto loc = FileLineColLoc::get(context, path, 0, 0);
+
+    if (llvm::sys::fs::is_regular_file(path)) {
+      LLVM_DEBUG(DBGS() << "Adding '" << path << "' to list of files\n");
+      fileNames.push_back(path);
+      continue;
+    }
+
+    if (!llvm::sys::fs::is_directory(path)) {
+      return emitError(loc)
+             << "'" << path << "' is neither a file nor a directory";
+    }
+
+    LLVM_DEBUG(DBGS() << "Looking for files in '" << path << "':\n");
+
+    std::error_code ec;
+    for (llvm::sys::fs::directory_iterator it(path, ec), itEnd;
+         it != itEnd && !ec; it.increment(ec)) {
+      const std::string &fileName = it->path();
+
+      if (it->type() != llvm::sys::fs::file_type::regular_file) {
+        LLVM_DEBUG(DBGS() << "  Skipping non-regular file '" << fileName
+                          << "'\n");
+        continue;
+      }
+
+      if (!StringRef(fileName).endswith(".mlir")) {
+        LLVM_DEBUG(DBGS() << "  Skipping '" << fileName
+                          << "' because it does not end with '.mlir'\n");
+        continue;
+      }
+
+      LLVM_DEBUG(DBGS() << "  Adding '" << fileName << "' to list of files\n");
+      fileNames.push_back(fileName);
+    }
+
+    if (ec)
+      return emitError(loc) << "error while opening files in '" << path
+                            << "': " << ec.message();
+  }
+
+  return success();
+}
 
 LogicalResult transform::detail::parseTransformModuleFromFile(
     MLIRContext *context, llvm::StringRef transformFileName,
@@ -91,10 +145,50 @@ transform::detail::findTransformEntryPoint(Operation *root, ModuleOp module,
   return nullptr;
 }
 
-/// Return whether `func1` can be merged into `func2`. For that to work `func1`
-/// has to be a declaration (aka has to be external) and `func2` either has to
-/// be a declaration as well, or it has to be public (otherwise, it wouldn't
-/// be visible by `func1`).
+LogicalResult transform::detail::assembleTransformLibraryFromPaths(
+    MLIRContext *context, ArrayRef<std::string> transformLibraryPaths,
+    OwningOpRef<ModuleOp> &transformModule) {
+  // Assemble list of library files.
+  SmallVector<std::string> libraryFileNames;
+  if (failed(detail::expandPathsToMLIRFiles(transformLibraryPaths, context,
+                                            libraryFileNames)))
+    return failure();
+
+  // Parse modules from library files.
+  SmallVector<OwningOpRef<ModuleOp>> parsedLibraries;
+  for (const std::string &libraryFileName : libraryFileNames) {
+    OwningOpRef<ModuleOp> parsedLibrary;
+    if (failed(transform::detail::parseTransformModuleFromFile(
+            context, libraryFileName, parsedLibrary)))
+      return failure();
+    parsedLibraries.push_back(std::move(parsedLibrary));
+  }
+
+  // Merge parsed libraries into one module.
+  auto loc = FileLineColLoc::get(context, "<shared-library-module>", 0, 0);
+  OwningOpRef<ModuleOp> mergedParsedLibraries =
+      ModuleOp::create(loc, "__transform");
+  {
+    mergedParsedLibraries.get()->setAttr("transform.with_named_sequence",
+                                         UnitAttr::get(context));
+    IRRewriter rewriter(context);
+    // TODO: extend `mergeSymbolsInto` to support multiple `other` modules.
+    for (OwningOpRef<ModuleOp> &parsedLibrary : parsedLibraries) {
+      if (failed(transform::detail::mergeSymbolsInto(
+              mergedParsedLibraries.get(), std::move(parsedLibrary))))
+        return mergedParsedLibraries->emitError()
+               << "failed to verify merged transform module";
+    }
+  }
+
+  transformModule = std::move(mergedParsedLibraries);
+  return success();
+}
+
+/// Return whether `func1` can be merged into `func2`. For that to work
+/// `func1` has to be a declaration (aka has to be external) and `func2`
+/// either has to be a declaration as well, or it has to be public (otherwise,
+/// it wouldn't be visible by `func1`).
 static bool canMergeInto(FunctionOpInterface func1, FunctionOpInterface func2) {
   return func1.isExternal() && (func2.isPublic() || func2.isExternal());
 }
@@ -281,8 +375,9 @@ transform::detail::mergeSymbolsInto(Operation *target,
       auto collidingFuncOp =
           cast<FunctionOpInterface>(collidingOp.getOperation());
 
-      // Both ops are in the target module now and can be treated symmetrically,
-      // so w.l.o.g. we can reduce to merging `funcOp` into `collidingFuncOp`.
+      // Both ops are in the target module now and can be treated
+      // symmetrically, so w.l.o.g. we can reduce to merging `funcOp` into
+      // `collidingFuncOp`.
       if (!canMergeInto(funcOp, collidingFuncOp)) {
         std::swap(funcOp, collidingFuncOp);
       }
@@ -317,17 +412,24 @@ LogicalResult transform::applyTransformNamedSequence(
     const TransformOptions &options, StringRef entryPoint) {
   Operation *transformRoot =
       detail::findTransformEntryPoint(payload, transformModule, entryPoint);
-  if (!transformRoot)
-    return failure();
+  if (!transformRoot) {
+    return payload->emitError()
+           << "could not find transform entry point: " << entryPoint
+           << " in either payload or transform module";
+  }
 
   // `transformModule` may not be modified.
-  OwningOpRef<Operation *> clonedTransformModule(transformModule->clone());
   if (transformModule && !transformModule->isAncestor(transformRoot)) {
+    OwningOpRef<Operation *> clonedTransformModule(transformModule->clone());
     if (failed(detail::mergeSymbolsInto(
             SymbolTable::getNearestSymbolTable(transformRoot),
-            std::move(clonedTransformModule))))
-      return failure();
+            std::move(clonedTransformModule)))) {
+      return payload->emitError() << "failed to merge symbols";
+    }
   }
+
+  LLVM_DEBUG(DBGS() << "Apply\n" << *transformRoot << "\n");
+  LLVM_DEBUG(DBGS() << "To\n" << *payload << "\n");
 
   // Apply the transform to the IR, do not enforce top-level constraints.
   RaggedArray<MappedValue> noExtraMappings;

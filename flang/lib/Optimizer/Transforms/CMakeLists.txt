@@ -28,6 +28,7 @@ add_flang_library(FIRTransforms
   HLFIROpsIncGen
 
   LINK_LIBS
+  FIRAnalysis
   FIRBuilder
   FIRCodeGen
   FIRDialect
