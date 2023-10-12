@@ -970,6 +970,16 @@ def TuneLUIADDIFusion
     : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",
                        "true", "Enable LUI+ADDI macrofusion">;
 
+def TuneAUIPCADDIFusion
+    : SubtargetFeature<"auipc-addi-fusion", "HasAUIPCADDIFusion",
+                       "true", "Enable AUIPC+ADDI macrofusion">;
+def TuneSLLISRLIFusion
+    : SubtargetFeature<"slli-srli-fusion", "HasSLLISRLIFusion",
+                       "true", "Enable SLLI+SRLI macrofusion">;
+def TuneLDADDFusion
+    : SubtargetFeature<"ld-add-fusion", "HasLDADDFusion",
+                       "true", "Enable fusion of load with the last instruction of the address calculation">;
+
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
@@ -987,9 +997,19 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
 
+<<<<<<< HEAD
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana-Veyron Series processors",
                                          [TuneLUIADDIFusion]>;
+=======
+def TuneVeyronFusions : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana Veyron-Series processors",
+                                         [TuneLUIADDIFusion,
+                                          TuneAUIPCADDIFusion,
+                                          TuneSLLISRLIFusion,
+                                          TuneLDADDFusion]>;
+
+>>>>>>> bbf0196a7d42 ([RISCV] Macro-fusion support for veyron-v1 CPU.)
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
