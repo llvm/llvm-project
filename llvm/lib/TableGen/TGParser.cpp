@@ -566,7 +566,7 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   Rec->checkRecordAssertions();
 
   // Run the dumps.
-  Rec->checkRecordDumps();
+  Rec->emitRecordDumps();
 
   // If ObjectBody has template arguments, it's an error.
   assert(Rec->getTemplateArgs().empty() && "How'd this get template args?");

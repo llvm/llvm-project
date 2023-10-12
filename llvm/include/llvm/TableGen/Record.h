@@ -1824,7 +1824,7 @@ public:
   void appendDumps(const Record *Rec) { Dumps.append(Rec->Dumps); }
 
   void checkRecordAssertions();
-  void checkRecordDumps();
+  void emitRecordDumps();
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {

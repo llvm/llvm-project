@@ -2313,7 +2313,7 @@ DefInit *VarDefInit::instantiate() {
     NewRec->checkRecordAssertions();
 
     // Check the assertions.
-    NewRec->checkRecordDumps();
+    NewRec->emitRecordDumps();
 
     Def = DefInit::get(NewRec);
   }
@@ -3133,7 +3133,7 @@ void Record::checkRecordAssertions() {
   }
 }
 
-void Record::checkRecordDumps() {
+void Record::emitRecordDumps() {
   RecordResolver R(*this);
   R.setFinal(true);
 
