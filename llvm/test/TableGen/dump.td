@@ -43,3 +43,16 @@ multiclass MC<dag s> {
 }
 defm X : MC<(op a)>;
 
+foreach i = [-1, 2] in {
+// CHECK: [[FILE]]:[[@LINE+4]]:3: note: i = -1 (negative)
+// CHECK: [[FILE]]:[[@LINE+8]]:5: note: i + 1  <= 0
+// CHECK: [[FILE]]:[[@LINE+2]]:3: note: i = 2 (positive)
+// CHECK: [[FILE]]:[[@LINE+4]]:5: note: i + 1  > 0 (i + 1 = 3)
+  dump "i = " # !repr(i) # !if(!ge(i,0), " (positive)", " (negative)");
+  defvar ip1 = !add(i, 1);
+  if !gt(ip1,0) then {
+    dump "i + 1 > 0 (i + 1 = " # !repr(ip1) # ")";
+  } else {
+    dump "i + 1 <= 0" ;
+  }
+}
