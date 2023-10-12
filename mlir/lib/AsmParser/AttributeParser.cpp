@@ -1225,6 +1225,7 @@ Attribute Parser::parseStridedLayoutAttr() {
 ///                         `[` integer-literal `]<` attribute-value `>`
 ///
 Attribute Parser::parseDistinctAttr(Type type) {
+  SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_distinct);
   if (parseToken(Token::l_square, "expected '[' after 'distinct'"))
     return {};
@@ -1269,7 +1270,7 @@ Attribute Parser::parseDistinctAttr(Type type) {
     DistinctAttr distinctAttr = DistinctAttr::create(referencedAttr);
     it = distinctAttrs.try_emplace(*value, distinctAttr).first;
   } else if (it->getSecond().getReferencedAttr() != referencedAttr) {
-    emitError("referenced attribute does not match previous definition: ")
+    emitError(loc, "referenced attribute does not match previous definition: ")
         << it->getSecond().getReferencedAttr();
     return {};
   }
