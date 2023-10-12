@@ -653,7 +653,7 @@ static bool canCreateThunkFor(Function *F) {
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
-    if (F->front().size() <= 2) {
+    if (F->front().sizeWithoutDebug() < 2) {
       LLVM_DEBUG(dbgs() << "canCreateThunkFor: " << F->getName()
                         << " is too small to bother creating a thunk for\n");
       return false;
