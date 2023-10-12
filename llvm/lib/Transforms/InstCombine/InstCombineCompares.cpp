@@ -2899,9 +2899,17 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
 static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
                                    Value *Op1, IRBuilderBase &Builder,
                                    bool HasOneUse) {
+  auto FoldConstant = [&](bool Val) {
+    Constant *Res = Val ? Builder.getTrue() : Builder.getFalse();
+    if (Op0->getType()->isVectorTy())
+      Res = ConstantVector::getSplat(
+          cast<VectorType>(Op0->getType())->getElementCount(), Res);
+    return Res;
+  };
+
   switch (Table.to_ulong()) {
   case 0: // 0 0 0 0
-    return Builder.getFalse();
+    return FoldConstant(false);
   case 1: // 0 0 0 1
     return HasOneUse ? Builder.CreateNot(Builder.CreateOr(Op0, Op1)) : nullptr;
   case 2: // 0 0 1 0
@@ -2931,7 +2939,7 @@ static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
   case 14: // 1 1 1 0
     return Builder.CreateOr(Op0, Op1);
   case 15: // 1 1 1 1
-    return Builder.getTrue();
+    return FoldConstant(true);
   default:
     llvm_unreachable("Invalid Operation");
   }
