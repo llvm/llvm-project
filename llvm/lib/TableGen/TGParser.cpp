@@ -4392,6 +4392,8 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
 #endif
 
 bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
+  // Location of the `dump` statement.
+  SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Dump && "Unknown tok");
   Lex.Lex(); // eat the operation
 
@@ -4406,7 +4408,6 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  SMLoc Loc = Lex.getLoc();
   if (CurRec)
     CurRec->addDump(Loc, Message);
   else

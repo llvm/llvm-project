@@ -173,7 +173,7 @@ void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
 // Dump a message to stderr.
 void dumpMessage(SMLoc Loc, Init *Message) {
   if (auto *MessageInit = dyn_cast<StringInit>(Message))
-    PrintNote(MessageInit->getValue());
+    PrintNote(Loc, MessageInit->getValue());
   else
     PrintNote("(dump message is not a string - use `!repr`)");
 }
