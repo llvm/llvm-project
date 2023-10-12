@@ -295,13 +295,17 @@ static bool isODSReserved(StringRef str) {
 /// (does not change the `name` if it already is suitable) and returns the
 /// modified version.
 static std::string sanitizeName(StringRef name) {
-  std::string processed_str = name.str();
+  std::string processedStr = name.str();
+  std::replace_if(
+      processedStr.begin(), processedStr.end(),
+      [](char c) { return !llvm::isAlnum(c); }, '_');
 
-  std::replace(processed_str.begin(), processed_str.end(), '-', '_');
+  if (llvm::isDigit(*processedStr.begin()))
+    return "_" + processedStr;
 
-  if (isPythonReserved(processed_str) || isODSReserved(processed_str))
-    return processed_str + "_";
-  return processed_str;
+  if (isPythonReserved(processedStr) || isODSReserved(processedStr))
+    return processedStr + "_";
+  return processedStr;
 }
 
 static std::string attrSizedTraitForKind(const char *kind) {
@@ -977,7 +981,6 @@ static void emitValueBuilder(const Operator &op,
                              llvm::SmallVector<std::string> functionArgs,
                              raw_ostream &os) {
   auto name = sanitizeName(op.getOperationName());
-  iterator_range<llvm::SplittingIterator> splitName = llvm::split(name, ".");
   // Params with (possibly) default args.
   auto valueBuilderParams =
       llvm::map_range(functionArgs, [](const std::string &argAndMaybeDefault) {
@@ -996,16 +999,16 @@ static void emitValueBuilder(const Operator &op,
         auto lhs = *llvm::split(arg, "=").begin();
         return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
       });
-  os << llvm::formatv(
-      valueBuilderTemplate,
-      // Drop dialect name and then sanitize again (to catch e.g. func.return).
-      sanitizeName(llvm::join(++splitName.begin(), splitName.end(), "_")),
-      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
-      llvm::join(opBuilderArgs, ", "),
-      (op.getNumResults() > 1
-           ? "_Sequence[_ods_ir.OpResult]"
-           : (op.getNumResults() > 0 ? "_ods_ir.OpResult"
-                                     : "_ods_ir.Operation")));
+  std::string nameWithoutDialect =
+      op.getOperationName().substr(op.getOperationName().find('.') + 1);
+  os << llvm::formatv(valueBuilderTemplate, sanitizeName(nameWithoutDialect),
+                      op.getCppClassName(),
+                      llvm::join(valueBuilderParams, ", "),
+                      llvm::join(opBuilderArgs, ", "),
+                      (op.getNumResults() > 1
+                           ? "_Sequence[_ods_ir.OpResult]"
+                           : (op.getNumResults() > 0 ? "_ods_ir.OpResult"
+                                                     : "_ods_ir.Operation")));
 }
 
 /// Emits bindings for a specific Op to the given output stream.

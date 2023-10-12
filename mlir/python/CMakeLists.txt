@@ -52,7 +52,6 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/AffineOps.td
   SOURCES
     dialects/affine.py
-    dialects/_affine_ops_ext.py
   DIALECT_NAME affine
   GEN_ENUM_BINDINGS)
 
