@@ -28,6 +28,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include <algorithm>
 #include <queue>
 using namespace llvm;
 
@@ -1441,31 +1442,30 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
       // We can't handle the case when the source AVL register of *NextMI is
       // defined after MI
-      if (NextMI && NextMI->getOperand(1).isReg()) {
-        for (const MachineOperand &MO : MI.operands()) {
-          if (MO.isReg() && MO.isDef() &&
-              MO.getReg() == NextMI->getOperand(1).getReg()) {
-            Used.demandVL();
-            break;
-          }
-        }
-      }
+      if (NextMI && NextMI->getOperand(1).isReg() &&
+          std::any_of(MI.operands_begin(), MI.operands_end(),
+                      [&](const MachineOperand &MO) {
+                        return MO.isReg() && MO.isDef() &&
+                               MO.getReg() == NextMI->getOperand(1).getReg();
+                      }))
+        Used.demandVL();
 
       continue;
     }
 
     Register VRegDef = MI.getOperand(0).getReg();
     if (VRegDef != RISCV::X0 &&
-        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef))) {
-      for (MachineInstr &UserMI : MRI->use_nodbg_instructions(VRegDef)) {
-        // do not track uses by *NextMI since we will deal with them explicitly,
-        // and also ignore uses by instructions that will be removed
-        if ((!NextMI || !UserMI.isIdenticalTo(*NextMI)) &&
-            !ToDelete.contains(&UserMI)) {
-          Used.demandVL();
-          break;
-        }
-      }
+        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)) &&
+        std::any_of(MRI->use_instr_nodbg_begin(VRegDef),
+                    MRI->use_instr_nodbg_end(),
+                    [&](const MachineInstr &UserMI) {
+                      // do not track uses by *NextMI since we will deal with
+                      // them explicitly, and also ignore uses by instructions
+                      // that will be removed
+                      return (!NextMI || !UserMI.isIdenticalTo(*NextMI)) &&
+                             !ToDelete.contains(&UserMI);
+                    })) {
+      Used.demandVL();
     }
 
     if (NextMI) {
