@@ -244,3 +244,17 @@ v_ceil_f64 v[254:255], 0.0
 
 v_ceil_f64 v[254:255], 0x0
 // GFX1210: v_ceil_f64_e32 v[254:255], 0            ; encoding: [0x80,0x30,0xfc,0x7f]
+
+// Enforce 64-bit literal even if it fits in low 32 bits (a very small double number).
+// Given the backward compatibility with the syntax allowing short hex strings representing
+// high 32 bits only this is the only way to encode a small number as a hex.
+// Make sure lit64() is used on printing to disambiguate short hex string.
+
+v_ceil_f64 v[254:255], lit64(0x7b)
+// GFX1210: v_ceil_f64_e32 v[254:255], lit64(0x7b)  ; encoding: [0xfe,0x30,0xfc,0x7f,0x7b,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+
+v_ceil_f64 v[254:255], lit64(123)
+// GFX1210: v_ceil_f64_e32 v[254:255], lit64(0x7b)  ; encoding: [0xfe,0x30,0xfc,0x7f,0x7b,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+
+v_ceil_f64 v[254:255], 2.1e-320
+// GFX1210: v_ceil_f64_e32 v[254:255], lit64(0x109a) ; encoding: [0xfe,0x30,0xfc,0x7f,0x9a,0x10,0x00,0x00,0x00,0x00,0x00,0x00]

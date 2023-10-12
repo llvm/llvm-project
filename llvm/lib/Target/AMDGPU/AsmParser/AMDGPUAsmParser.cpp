@@ -75,6 +75,8 @@ public:
     bool Abs = false;
     bool Neg = false;
     bool Sext = false;
+    bool Lit = false;
+    bool Lit64 = false;
 
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
@@ -2364,7 +2366,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    if (isInt<32>(Val) || isUInt<32>(Val))
+    if ((isInt<32>(Val) || isUInt<32>(Val)) && !getModifiers().Lit64)
       Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? Val << 32 : Lo_32(Val);
 
     Inst.addOperand(MCOperand::createImm(Val));
@@ -3135,7 +3137,8 @@ bool
 AMDGPUAsmParser::isNamedOperandModifier(const AsmToken &Token, const AsmToken &NextToken) const {
   if (Token.is(AsmToken::Identifier) && NextToken.is(AsmToken::LParen)) {
     const auto &str = Token.getString();
-    return str == "abs" || str == "neg" || str == "sext";
+    return str == "abs" || str == "neg" || str == "sext" || str == "lit" ||
+           str == "lit64";
   }
   return false;
 }
@@ -3224,6 +3227,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
                                               bool AllowImm) {
   bool Neg, SP3Neg;
   bool Abs, SP3Abs;
+  bool Lit64, Lit;
   SMLoc Loc;
 
   // Disable ambiguous constructs like '--1' etc. Should use neg(-1) instead.
@@ -3243,6 +3247,18 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
   if (Abs && !skipToken(AsmToken::LParen, "expected left paren after abs"))
     return ParseStatus::Failure;
 
+  Lit64 = trySkipId("lit64");
+  if (Lit64) {
+    if (!skipToken(AsmToken::LParen, "expected left paren after lit64"))
+      return ParseStatus::Failure;
+    if (!getFeatureBits()[Feature64BitLiterals])
+      return Error(Loc, "lit64 is not supported on this GPU");
+  }
+
+  Lit = !Lit64 && trySkipId("lit");
+  if (Lit && !skipToken(AsmToken::LParen, "expected left paren after lit"))
+    return ParseStatus::Failure;
+
   Loc = getLoc();
   SP3Abs = trySkipToken(AsmToken::Pipe);
   if (Abs && SP3Abs)
@@ -3255,7 +3271,11 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     Res = parseReg(Operands);
   }
   if (!Res.isSuccess())
-    return (SP3Neg || Neg || SP3Abs || Abs) ? ParseStatus::Failure : Res;
+    return (SP3Neg || Neg || SP3Abs || Abs || Lit || Lit64) ?
+               ParseStatus::Failure : Res;
+
+  if ((Lit || Lit64) && !Operands.back()->isImm())
+    Error(Loc, "expected immediate with lit modifier");
 
   if (SP3Abs && !skipToken(AsmToken::Pipe, "expected vertical bar"))
     return ParseStatus::Failure;
@@ -3263,12 +3283,17 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     return ParseStatus::Failure;
   if (Neg && !skipToken(AsmToken::RParen, "expected closing parentheses"))
     return ParseStatus::Failure;
+  if ((Lit || Lit64) &&
+      !skipToken(AsmToken::RParen, "expected closing parentheses"))
+    return ParseStatus::Failure;
 
   AMDGPUOperand::Modifiers Mods;
   Mods.Abs = Abs || SP3Abs;
   Mods.Neg = Neg || SP3Neg;
+  Mods.Lit = Lit;
+  Mods.Lit64 = Lit64;
 
-  if (Mods.hasFPModifiers()) {
+  if (Mods.hasFPModifiers() || Lit || Lit64) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     if (Op.isExpr())
       return Error(Op.getStartLoc(), "expected an absolute expression");

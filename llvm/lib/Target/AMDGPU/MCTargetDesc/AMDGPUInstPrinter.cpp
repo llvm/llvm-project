@@ -621,6 +621,11 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
     assert(isUInt<32>(Imm) || isInt<32>(Imm) ||
            STI.hasFeature(AMDGPU::Feature64BitLiterals));
 
+    if (IsFP && !Hi_32(Imm) && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+      return;
+    }
+
     // In rare situations, we will have a 32-bit literal in a 64-bit
     // operand. This is technically allowed for the encoding of s_mov_b64.
     O << formatHex(static_cast<uint64_t>(Imm));

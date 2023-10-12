@@ -106,3 +106,13 @@ v_add_f32 v1, 0x12345678abcdef00, v2
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX1210-ERR: v_add_f32 v1, 0x12345678abcdef00, v2
 // GFX1210-ERR:               ^
+
+v_ceil_f64 v[2:3], lit64(v[0:1])
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected immediate with lit modifier
+// GFX1210-ERR: v_ceil_f64 v[2:3], lit64(v[0:1]
+// GFX1210-ERR:                          ^
+
+v_ceil_f64 v[2:3], lit64(123
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected closing parentheses
+// GFX1210-ERR: v_ceil_f64 v[2:3], lit64(123
+// GFX1210-ERR:                             ^
