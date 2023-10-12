@@ -161,6 +161,13 @@ inline bool hasAnySparseOperandOrResult(Operation *op) {
 }
 
 //
+// Inference.
+//
+
+AffineMap inferLvlToDim(AffineMap dimToLvl, MLIRContext *context);
+AffineMap inverseBlockSparsity(AffineMap dimToLvl, MLIRContext *context);
+
+//
 // Reordering.
 //
 

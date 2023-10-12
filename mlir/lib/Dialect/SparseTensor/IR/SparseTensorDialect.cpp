@@ -293,9 +293,8 @@ Type SparseTensorEncodingAttr::getCrdType() const {
 SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withDimToLvl(AffineMap dimToLvl) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
-  // TODO: infer lvlToDim
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(), dimToLvl,
-                                       /*lvlToDim*/ AffineMap(), getPosWidth(),
+                                       getLvlToDim(), getPosWidth(),
                                        getCrdWidth());
 }
 
@@ -583,7 +582,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 #undef RETURN_ON_FAIL
 
   // Construct struct-like storage for attribute.
-  AffineMap lvlToDim; // TODO: infer
+  AffineMap lvlToDim = inferLvlToDim(dimToLvl, parser.getContext());
   return parser.getChecked<SparseTensorEncodingAttr>(
       parser.getContext(), lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
       dimSlices);
@@ -749,6 +748,71 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   return nullptr;
 }
 
+AffineMap mlir::sparse_tensor::inferLvlToDim(AffineMap dimToLvl,
+                                             MLIRContext *context) {
+  auto map = static_cast<AffineMap>(dimToLvl);
+  AffineMap lvlToDim;
+  // TODO: support ELL instead of returning an empty lvlToDim.
+  if (!map || map.getNumSymbols() != 0) {
+    lvlToDim = AffineMap();
+  } else if (map.isPermutation()) {
+    lvlToDim = inversePermutation(map);
+  } else {
+    lvlToDim = inverseBlockSparsity(map, context);
+  }
+  return lvlToDim;
+}
+
+AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
+                                                    MLIRContext *context) {
+  SmallVector<AffineExpr> lvlExprs;
+  auto numLvls = dimToLvl.getNumResults();
+  lvlExprs.reserve(numLvls);
+  // lvlExprComponents stores information of the floordiv and mod operations
+  // applied to the same dimension, so as to build the lvlToDim map.
+  // Map key is the position of the dimension in dimToLvl.
+  // Map value is a SmallVector that contains lvl var for floordiv, multiplier,
+  // lvl var for mod in dimToLvl.
+  // For example, for il = i floordiv 2 and ii = i mod 2, the SmalleVector
+  // would be [il, 2, ii]. It could be used to build the AffineExpr
+  // i = il * 2 + ii in lvlToDim.
+  std::map<unsigned, SmallVector<AffineExpr, 3>> lvlExprComponents;
+  for (unsigned i = 0, n = numLvls; i < n; i++) {
+    auto result = dimToLvl.getResult(i);
+    if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
+      if (result.getKind() == AffineExprKind::FloorDiv) {
+        SmallVector<AffineExpr, 3> components;
+        // Level variable for floordiv.
+        components.push_back(getAffineDimExpr(i, context));
+        // Multiplier.
+        components.push_back(binOp.getRHS());
+        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        lvlExprComponents[pos] = components;
+      } else if (result.getKind() == AffineExprKind::Mod) {
+        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        assert(lvlExprComponents.find(pos) != lvlExprComponents.end() &&
+               "expected floordiv before mod");
+        // Level variable for mod.
+        lvlExprComponents[pos].push_back(getAffineDimExpr(i, context));
+      } else {
+        assert(false && "expected floordiv or mod");
+      }
+    } else {
+      lvlExprs.push_back(getAffineDimExpr(i, context));
+    }
+  }
+  for (auto &components : lvlExprComponents) {
+    assert(components.second.size() == 3 &&
+           "expected 3 components to build lvlExprs");
+    auto mulOp = getAffineBinaryOpExpr(
+        AffineExprKind::Mul, components.second[0], components.second[1]);
+    auto addOp =
+        getAffineBinaryOpExpr(AffineExprKind::Add, mulOp, components.second[2]);
+    lvlExprs.push_back(addOp);
+  }
+  return dimToLvl.get(dimToLvl.getNumResults(), 0, lvlExprs, context);
+}
+
 bool mlir::sparse_tensor::isCOOType(SparseTensorEncodingAttr enc,
                                     Level startLvl, bool isUnique) {
   if (!enc ||
@@ -811,7 +875,7 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
   // default value.
   unsigned posWidth = src.getPosWidth();
   unsigned crdWidth = src.getCrdWidth();
-  AffineMap invPerm; // TODO
+  auto invPerm = src.getLvlToDim();
   auto enc = SparseTensorEncodingAttr::get(src.getContext(), lvlTypes, lvlPerm,
                                            invPerm, posWidth, crdWidth);
   return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
