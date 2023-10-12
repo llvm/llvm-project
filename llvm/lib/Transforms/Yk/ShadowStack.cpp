@@ -188,20 +188,10 @@ public:
             // IR for.
 
             if (CI.getCalledFunction()) {
-              if (CI.getCalledFunction()->getName() == "pthread_create") {
-                // The global shadow stack needs to be thread local. In each new
-                // thread created we need to malloc a new shadow stack and
-                // assign it to that threads shadow stack global. Note: it's not
-                // enough to look for `pthread_create` in here, as this call
-                // could be hidden inside an external library.
-                Context.emitError(
-                    "Unable to add shadow stack: No support for threads yet!");
-                return false;
-              }
               // Skip some known intrinsics. YKFIXME: Is there a more general
               // solution, e.g. skip all intrinsics?
-              else if (CI.getCalledFunction()->getName() ==
-                       "llvm.experimental.stackmap") {
+              if (CI.getCalledFunction()->getName() ==
+                  "llvm.experimental.stackmap") {
                 continue;
               } else if (CI.getCalledFunction()->getName() ==
                          "llvm.dbg.declare") {
