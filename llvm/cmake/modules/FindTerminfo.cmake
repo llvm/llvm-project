@@ -17,7 +17,7 @@ if(Terminfo_LIBRARIES)
   include(CMakePushCheckState)
   cmake_push_check_state()
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${Terminfo_LIBRARIES})
-  set(SRC [=[
+  set(Terminfo_LINKABLE_SRC [=[
     #ifdef __cplusplus
     extern "C" {
     #endif
@@ -29,10 +29,10 @@ if(Terminfo_LIBRARIES)
     ]=])
   if(DEFINED CMAKE_C_COMPILER)
     include(CheckCSourceCompiles)
-    check_c_source_compiles("${SRC}" Terminfo_LINKABLE)
+    check_c_source_compiles("${Terminfo_LINKABLE_SRC}" Terminfo_LINKABLE)
   else()
     include(CheckCXXSourceCompiles)
-    check_cxx_source_compiles("${SRC}" Terminfo_LINKABLE)
+    check_cxx_source_compiles("${Terminfo_LINKABLE_SRC}" Terminfo_LINKABLE)
   endif()
   cmake_pop_check_state()
 endif()

@@ -40,7 +40,7 @@ if(FFI_LIBRARIES)
   include(CMakePushCheckState)
   cmake_push_check_state()
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${FFI_LIBRARIES})
-  set(SRC [=[
+  set(HAVE_FFI_CALL_SRC [=[
     #ifdef __cplusplus
     extern "C" {
     #endif
@@ -54,10 +54,10 @@ if(FFI_LIBRARIES)
     ]=])
   if(DEFINED CMAKE_C_COMPILER)
     include(CheckCSourceCompiles)
-    check_c_source_compiles("${SRC}" HAVE_FFI_CALL)
+    check_c_source_compiles("${HAVE_FFI_CALL_SRC}" HAVE_FFI_CALL)
   else()
     include(CheckCXXSourceCompiles)
-    check_cxx_source_compiles("${SRC}" HAVE_FFI_CALL)
+    check_cxx_source_compiles("${HAVE_FFI_CALL_SRC}" HAVE_FFI_CALL)
   endif()
   cmake_pop_check_state()
 endif()
