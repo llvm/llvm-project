@@ -190,8 +190,7 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
     Value zero =
         rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 0));
 
-    // Emulate 64-bit unsigned addition by allowing our addition to overflow,
-    // and then set the carry accordingly.
+    // Calculate the carry by checking if the addition resulted in an overflow.
     Value out = rewriter.create<IAddOp>(loc, lhs, rhs);
     Value cmp = rewriter.create<ULessThanOp>(loc, out, lhs);
     Value carry = rewriter.create<SelectOp>(loc, cmp, one, zero);
