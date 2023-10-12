@@ -758,6 +758,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i64,
                        Legal);
 
+  if (Subtarget->has64BitLiterals())
+    setOperationAction({ISD::Constant, ISD::ConstantFP}, {MVT::i64, MVT::f64},
+                       Legal);
+
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
@@ -11047,6 +11051,11 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
     if ((bitOpWithConstantIsReducible(Opc, ValLo) ||
          bitOpWithConstantIsReducible(Opc, ValHi)) ||
         (CRHS->hasOneUse() && !TII->isInlineConstant(CRHS->getAPIntValue()))) {
+      // We have 64-bit scalar and/or/xor, but do not have vector forms.
+      if (Subtarget->has64BitLiterals() && CRHS->hasOneUse() &&
+          !CRHS->use_begin()->isDivergent())
+        return SDValue();
+
     // If we need to materialize a 64-bit immediate, it will be split up later
     // anyway. Avoid creating the harder to understand 64-bit immediate
     // materialization.

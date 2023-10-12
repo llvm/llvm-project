@@ -451,6 +451,28 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     return;
   }
 
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
+               Triple::amdgcn;
+  if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
+      (CurDAG->isConstantIntBuildVectorOrConstantInt(SDValue(N, 0)) ||
+       CurDAG->isConstantFPBuildVectorOrConstantFP(SDValue(N, 0)))) {
+    uint64_t C = 0;
+    unsigned EltSize = EltVT.getSizeInBits();
+    for (unsigned I = 0; I < NumVectorElts; ++I) {
+      uint64_t Val;
+      if (ConstantFPSDNode *CF = dyn_cast<ConstantFPSDNode>(N->getOperand(I))) {
+        Val = CF->getValueAPF().bitcastToAPInt().getZExtValue();
+      } else
+        Val = N->getConstantOperandVal(I);
+      C |= Val << (EltSize * I);
+    }
+    SDValue CV = CurDAG->getTargetConstant(C, DL, MVT::i64);
+    MachineSDNode *Copy = CurDAG->getMachineNode(AMDGPU::S_MOV_B64, DL, VT, CV);
+    CurDAG->SelectNodeTo(N, AMDGPU::COPY_TO_REGCLASS, VT, SDValue(Copy, 0),
+                         RegClass);
+    return;
+  }
+
   assert(NumVectorElts <= 32 && "Vectors with more than 32 elements not "
                                   "supported yet");
   // 32 = Max Num Vector Elements
@@ -458,8 +480,6 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   // 1 = Vector Register Class
   SmallVector<SDValue, 32 * 2 + 1> RegSeqArgs(NumVectorElts * 2 + 1);
 
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
-               Triple::amdgcn;
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
@@ -591,7 +611,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::Constant:
   case ISD::ConstantFP: {
-    if (N->getValueType(0).getSizeInBits() != 64 || isInlineImmediate(N))
+    if (N->getValueType(0).getSizeInBits() != 64 || isInlineImmediate(N) ||
+        Subtarget->has64BitLiterals())
       break;
 
     uint64_t Imm;
@@ -3709,7 +3730,8 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
     if (!RC || SIRI->isSGPRClass(RC))
       return false;
 
-    if (RC != &AMDGPU::VS_32RegClass) {
+    if (RC != &AMDGPU::VS_32RegClass &&
+        (RC != &AMDGPU::VS_64RegClass || !Subtarget->has64BitLiterals())) {
       AllUsesAcceptSReg = false;
       SDNode * User = *U;
       if (User->isMachineOpcode()) {

@@ -1814,6 +1814,18 @@ def : GCNPat <
   (S_MOV_B32 imm:$imm)
 >;
 
+let SubtargetPredicate = Has64BitLiterals in {
+def : GCNPat <
+  (i64 imm:$imm),
+  (S_MOV_B64 imm:$imm)
+>;
+
+def : GCNPat <
+  (f64 fpimm:$imm),
+  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 $imm)))
+>;
+}
+
 // Same as a 32-bit inreg
 def : GCNPat<
   (i32 (UniformUnaryFrag<sext> i16:$src)),

@@ -2159,6 +2159,9 @@ def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
 
+def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
+  AssemblerPredicate<(all_of Feature64BitLiterals)>;
+
 def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;
 

@@ -2624,7 +2624,9 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   if (DstRB->getID() == AMDGPU::VCCRegBankID) {
     Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   } else {
-    Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
+    Opcode = Size == 64 && Subtarget->has64BitLiterals()
+                 ? IsSgpr ? AMDGPU::S_MOV_B64 : AMDGPU::V_MOV_B64_e32
+                 : IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 
     // We should never produce s1 values on banks other than VCC. If the user of
     // this already constrained the register, we may incorrectly think it's VCC
@@ -2633,7 +2635,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
       return false;
   }
 
-  if (Size != 64) {
+  if (Size != 64 || Subtarget->has64BitLiterals()) {
     I.setDesc(TII.get(Opcode));
     I.addImplicitDefUseOperands(*MF);
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);

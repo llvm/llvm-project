@@ -1,10 +1,10 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX900 %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,NOTGFX1210-PACKED,NOTGFX1210-PACKED-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,NOTGFX1210-PACKED %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,NOTGFX1210-PACKED,NOTGFX1210-PACKED-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,NOTGFX1210-PACKED %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-SDAG,GFX1210,GFX1210-SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,PACKED-GISEL,GFX1210,GFX1210-GISEL %s
 
 ; GCN-LABEL: {{^}}fadd_v2_vv:
 ; GFX900-COUNT-2: v_add_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -57,7 +57,9 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; FIXME: GISel does not use op_sel for splat constants.
 
 ; GCN-LABEL: {{^}}fadd_v2_v_imm:
-; PACKED:         s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; NOTGFX1210-PACKED: s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; GFX1210-SDAG:      s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; GFX1210-GISEL:     s_mov_b32 s[[K:[0-9]+]], 0x42c80000
 ; GFX900-COUNT-2: v_add_f32_e32 v{{[0-9]+}}, 0x42c80000, v{{[0-9]+}}
 ; PACKED-SDAG:    v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K]]:{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
 ; PACKED-GISEL:   v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K]]:{{[0-9:]+}}]{{$}}
@@ -102,8 +104,11 @@ define amdgpu_kernel void @fadd_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GCN-LABEL: {{^}}fadd_v2_v_lit_hi0:
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
-; PACKED-DAG: s_mov_b64 [[K:s\[[0-9:]+\]]], 0x3f800000
-; PACKED:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[K]]
+; NOTGFX1210-PACKED-DAG: s_mov_b64 [[K:s\[[0-9:]+\]]], 0x3f800000
+; GFX1210-GISEL:         s_mov_b64 [[K:s\[[0-9:]+\]]], 0x3f800000
+; NOTGFX1210-PACKED:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[K]]
+; GFX1210-SDAG:          v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 1.0
+; GFX1210-GISEL:         v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[K]]
 define amdgpu_kernel void @fadd_v2_v_lit_hi0(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
@@ -116,8 +121,11 @@ define amdgpu_kernel void @fadd_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GCN-LABEL: {{^}}fadd_v2_v_lit_lo0:
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
-; PACKED-DAG: s_mov_b32 s[[LO:[0-9]+]], 0
-; PACKED-DAG: s_mov_b32 s[[HI:[0-9]+]], 1.0
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s[[LO:[0-9]+]], 0
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s[[HI:[0-9]+]], 1.0
+; GFX1210-GISEL-DAG:     s_mov_b32 s[[LO:[0-9]+]], 0
+; GFX1210-GISEL-DAG:     s_mov_b32 s[[HI:[0-9]+]], 1.0
+; GFX1210-SDAG:          s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], 0x3f80000000000000
 ; PACKED:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[LO]]:[[HI]]]{{$}}
 define amdgpu_kernel void @fadd_v2_v_lit_lo0(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -131,8 +139,11 @@ define amdgpu_kernel void @fadd_v2_v_lit_lo0(ptr addrspace(1) %a) {
 ; GCN-LABEL: {{^}}fadd_v2_v_unfoldable_lit:
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-; PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 1.0
-; PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 2.0
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 1.0
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 2.0
+; GFX1210-GISEL-DAG:     s_mov_b32 s{{[0-9]+}}, 1.0
+; GFX1210-GISEL-DAG:     s_mov_b32 s{{[0-9]+}}, 2.0
+; GFX1210-SDAG:          s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], 0x400000003f800000
 ; PACKED:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fadd_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -278,7 +289,8 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 }
 
 ; GCN-LABEL: {{^}}fmul_v2_v_imm:
-; PACKED:         s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; NOTGFX1210-PACKED: s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; GFX1210:           s_mov_b32 s[[K:[0-9]+]], 0x42c80000
 ; GFX900-COUNT-2: v_mul_f32_e32 v{{[0-9]+}}, 0x42c80000, v{{[0-9]+}}
 ; PACKED-SDAG:    v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K]]:{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
 ; PACKED-GISEL:   v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K]]:{{[0-9:]+}}]{{$}}
@@ -323,8 +335,11 @@ define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GCN-LABEL: {{^}}fmul_v2_v_unfoldable_lit:
 ; GFX900-DAG: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; GFX900-DAG: v_mul_f32_e32 v{{[0-9]+}}, 0x40400000, v{{[0-9]+}}
-; PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 4.0
-; PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 0x40400000
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 4.0
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 0x40400000
+; GFX1210-GISEL-DAG:     s_mov_b32 s{{[0-9]+}}, 4.0
+; GFX1210-GISEL-DAG:     s_mov_b32 s{{[0-9]+}}, 0x40400000
+; GFX1210-SDAG:          s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], 0x4040000040800000
 ; PACKED:     v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fmul_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -400,7 +415,9 @@ define amdgpu_kernel void @fma_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 }
 
 ; GCN-LABEL: {{^}}fma_v2_v_imm:
-; GCN-DAG:         s_mov_b32 s[[K1:[0-9]+]], 0x42c80000
+; GFX900:          s_mov_b32 s[[K1:[0-9]+]], 0x42c80000
+; NOTGFX1210-PACKED-DAG: s_mov_b32 s[[K1:[0-9]+]], 0x42c80000
+; GFX1210-DAG:     s_mov_b32 s[[K1:[0-9]+]], 0x42c80000
 ; GFX900-DAG:      v_mov_b32_e32 v[[K2:[0-9]+]], 0x43480000
 ; PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}[[K2:[0-9]+]], 0x43480000
 ; GFX900-COUNT-2:  v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, s[[K1]], v[[K2]]
@@ -445,12 +462,14 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 }
 
 ; GCN-LABEL: {{^}}fma_v2_v_unfoldable_lit:
-; GCN-DAG:         s_mov_b32 s{{[0-9]+}}, 0x40400000
+; NOTGFX1210-DAG:  s_mov_b32 s{{[0-9]+}}, 0x40400000
 ; GFX900-DAG:      v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, 4.0, 1.0
 ; GFX900-DAG:      v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, 2.0
-; PACKED-SDAG-DAG: s_mov_b32 s{{[0-9]+}}, 4.0
-; PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}{{[0-9]+}}, 1.0
-; PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}{{[0-9]+}}, 2.0
+; NOTGFX1210-PACKED-SDAG-DAG: s_mov_b32 s{{[0-9]+}}, 4.0
+; NOTGFX1210-PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}{{[0-9]+}}, 1.0
+; NOTGFX1210-PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}{{[0-9]+}}, 2.0
+; GFX1210-GISEL:   s_mov_b32 s{{[0-9]+}}, 4.0
+; GFX1210-SDAG:    s_mov_b64 s[{{[0-9:]+}}], 0x4040000040800000
 ; PACKED:          v_pk_fma_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}], {{[vs]}}[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

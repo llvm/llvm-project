@@ -87,9 +87,7 @@ define amdgpu_ps <2 x float> @test_add_u64_v_small_imm(i64 %a) {
 ;
 ; GFX1210-LABEL: test_add_u64_v_small_imm:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_mov_b64 s[0:1], 0x1f4
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1210-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[0:1], 0x1f4, v[0:1]
 ; GFX1210-NEXT:    ; return to shader part epilog
   %add = add i64 %a, 500
   %ret = bitcast i64 %add to <2 x float>
@@ -105,10 +103,7 @@ define amdgpu_ps <2 x float> @test_add_u64_v_64bit_imm(i64 %a) {
 ;
 ; GFX1210-LABEL: test_add_u64_v_64bit_imm:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_mov_b32 s0, 0x3b9ac9ff
-; GFX1210-NEXT:    s_mov_b32 s1, 1
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1210-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1210-NEXT:    v_add_nc_u64_e32 v[0:1], 0x13b9ac9ff, v[0:1]
 ; GFX1210-NEXT:    ; return to shader part epilog
   %add = add i64 %a, 5294967295
   %ret = bitcast i64 %add to <2 x float>
@@ -116,13 +111,20 @@ define amdgpu_ps <2 x float> @test_add_u64_v_64bit_imm(i64 %a) {
 }
 
 define amdgpu_ps <2 x float> @test_add_u64_s_small_imm(i64 inreg %a) {
-; GCN-LABEL: test_add_u64_s_small_imm:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b64 s[2:3], 0x1f4
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GCN-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
-; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GCN-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: test_add_u64_s_small_imm:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_mov_b64 s[2:3], 0x1f4
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1210-LABEL: test_add_u64_s_small_imm:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x1f4
+; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1210-NEXT:    ; return to shader part epilog
   %add = add i64 %a, 500
   %ret = bitcast i64 %add to <2 x float>
   ret <2 x float> %ret

@@ -989,7 +989,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       // fold an immediate into the shrunk instruction as a literal operand. In
       // GFX10 VOP3 instructions can take a literal operand anyway, so there is
       // no advantage to doing this.
+      // However, if 64-bit literals are allowed we still need to shrink it
+      // for such literal to be able to fold.
       if (ST->hasVOP3Literal() &&
+          (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
           !MF.getProperties().hasProperty(
               MachineFunctionProperties::Property::NoVRegs))
         continue;

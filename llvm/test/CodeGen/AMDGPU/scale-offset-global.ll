@@ -311,21 +311,13 @@ entry:
 }
 
 define amdgpu_ps void @global_store_b64_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
-; SDAG-LABEL: global_store_b64_idxprom:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0x3ff00000
-; SDAG-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: global_store_b64_idxprom:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], 1.0
-; GISEL-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
-; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: global_store_b64_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_mov_b64_e32 v[2:3], 1.0
+; GCN-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds double, ptr addrspace(1) %p, i64 %idxprom
