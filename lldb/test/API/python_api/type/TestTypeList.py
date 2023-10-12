@@ -132,6 +132,13 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(union_type)
         self.DebugSBType(union_type)
 
+        # Check that we don't find indirectly nested types
+
+        self.assertTrue(enum_type.size == 1)
+
+        invalid_type = task_type.FindDirectNestedType("E2")
+        self.assertFalse(invalid_type)
+
         # Check that FindDirectNestedType handles types without DeclContext
         # and other errorneous inputs
         task_ptr_type = task_type.GetPointerType()

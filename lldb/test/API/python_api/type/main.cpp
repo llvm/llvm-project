@@ -8,7 +8,7 @@ public:
         TASK_TYPE_1,
         TASK_TYPE_2
     } type;
-    enum E {} e;
+    enum E : unsigned char {} e;
     union U {
     } u;
     // This struct is anonymous b/c it does not have a name
@@ -24,6 +24,8 @@ public:
     } my_type_is_nameless;
     struct name {
       int x;
+      enum E : int {} e;
+      enum E2 {} e2;
     } my_type_is_named;
     Task(int i, Task *n):
         id(i),
