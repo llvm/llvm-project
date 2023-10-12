@@ -134,7 +134,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     level-coordinates. The dimension-expressions collectively define the inverse map,
     which only needs to be provided for elaborate cases where it cannot be inferred
     automatically.
-    
+
     Each dimension could also have an optional `SparseTensorDimSliceAttr`.
     Within the sparse storage format, we refer to indices that are stored explicitly
     as **coordinates** and offsets into the storage format as **positions**.
@@ -237,10 +237,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<20x30xf32, #BSR_explicit> ...
 
-    // ELL format. 
+    // ELL format.
     // In the simple format for matrix, one array stores values and another
     // array stores column indices. The arrays have the same number of rows
-    // as the original matrix, but only have as many columns as 
+    // as the original matrix, but only have as many columns as
     // the maximum number of nonzeros on a row of the original matrix.
     // There are many variants for ELL such as jagged diagonal scheme.
     // To implement ELL, map provides a notion of "counting a
@@ -376,6 +376,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// the null encoding (since dense-tensors are always all-dense).
     bool isAllDense() const;
 
+    /// Returns true if it is a sparse tensor encoding in COO format.
+    bool isCOO() const;
+
     /// Returns true if every level is ordered.  Also returns true for
     /// the null encoding (since dense-tensors are always all-ordered).
     bool isAllOrdered() const;
@@ -468,6 +471,10 @@ def SparseTensorStorageSpecifierKindAttr
 def IsSparseTensorPred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
 
+def IsCOOPred
+  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
+          "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isCOO()">;
+
 def IsSparseTensorSlicePred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
@@ -478,10 +485,14 @@ def IsSparseTensorSlicePred
 class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
+class COOSparseTensorOf<list<Type> allowedTypes>
+  : TensorOf<allowedTypes, [IsCOOPred], "COO sparse tensor">;
+
 class SparseTensorSliceOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
 
 def AnySparseTensor : SparseTensorOf<[AnyType]>;
+def AnyCOOSparseTensor : COOSparseTensorOf<[AnyType]>;
 def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
 
 class RankedSparseTensorOf<list<Type> allowedTypes>

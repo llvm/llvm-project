@@ -43,6 +43,9 @@ static _Bool has_sme(void)  {
 
 #endif // defined(__linux__)
 
+#if __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
+#endif
 __attribute__((constructor(90)))
 static void init_aarch64_has_sme(void) {
   __aarch64_has_sme_and_tpidr2_el0 = has_sme();

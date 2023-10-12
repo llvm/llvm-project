@@ -32,6 +32,16 @@
 #define CFI_OFFSET_VG_MINUS_16 .cfi_escape 0x10, 0x2e, 0x03, 0x11, 0x70, 0x22 // $vg  @ cfa - 16
 #endif
 
+#if !defined(__APPLE__)
+#define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
+#define TPIDR2_SYMBOL_OFFSET :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
+#else
+// MachO requires @page/@pageoff directives because the global is defined
+// in a different file. Otherwise this file may fail to build.
+#define TPIDR2_SYMBOL SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@page
+#define TPIDR2_SYMBOL_OFFSET SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)@pageoff
+#endif
+
 .arch ARCH
 
 // Utility function which calls a system's abort() routine. Because the function
@@ -68,8 +78,8 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
   mov x0, xzr
   mov x1, xzr
 
-  adrp  x16, SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
-  ldrb w16, [x16, :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)]
+  adrp  x16, TPIDR2_SYMBOL
+  ldrb w16, [x16, TPIDR2_SYMBOL_OFFSET]
   cbz w16, 1f
 0:
   orr x0, x0, #0xC000000000000000
@@ -118,8 +128,8 @@ END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_restore)
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
   // does nothing.
-  adrp  x14, SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
-  ldrb w14, [x14, :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)]
+  adrp  x14, TPIDR2_SYMBOL
+  ldrb w14, [x14, TPIDR2_SYMBOL_OFFSET]
   cbz w14, 1f
 
   // If TPIDR2_EL0 is null, the subroutine does nothing.
@@ -157,8 +167,8 @@ END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_save)
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
   // If the current thread does not have access to SME, the subroutine does
   // nothing.
-  adrp  x14, SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)
-  ldrb w14, [x14, :lo12:SYMBOL_NAME(__aarch64_has_sme_and_tpidr2_el0)]
+  adrp  x14, TPIDR2_SYMBOL
+  ldrb w14, [x14, TPIDR2_SYMBOL_OFFSET]
   cbz w14, 0f
 
   // Otherwise, the subroutine behaves as if it did the following:
