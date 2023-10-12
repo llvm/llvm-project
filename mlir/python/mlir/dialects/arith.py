@@ -8,7 +8,10 @@ from ._arith_enum_gen import *
 
 try:
     from ..ir import *
-    from ._ods_common import get_default_loc_context as _get_default_loc_context, _cext as _ods_cext
+    from ._ods_common import (
+        get_default_loc_context as _get_default_loc_context,
+        _cext as _ods_cext,
+    )
 
     from typing import Any, List, Union
 except ImportError as e:
@@ -33,6 +36,7 @@ def _is_integer_like_type(type: Type):
 
 def _is_float_type(type: Type):
     return _is_any_of(type, [BF16Type, F16Type, F32Type, F64Type])
+
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ConstantOp(ConstantOp):

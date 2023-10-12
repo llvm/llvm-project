@@ -847,7 +847,6 @@ populateBuilderRegions(const Operator &op,
 /// rebuild anew).
 static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
                                                            raw_ostream &os) {
-  // If we are asked to skip default builders, comply.
   llvm::SmallVector<std::string> builderArgs;
   llvm::SmallVector<std::string> builderLines;
   llvm::SmallVector<std::string> operandArgNames;
@@ -980,7 +979,6 @@ static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
 static void emitValueBuilder(const Operator &op,
                              llvm::SmallVector<std::string> functionArgs,
                              raw_ostream &os) {
-  auto name = sanitizeName(op.getOperationName());
   // Params with (possibly) default args.
   auto valueBuilderParams =
       llvm::map_range(functionArgs, [](const std::string &argAndMaybeDefault) {
