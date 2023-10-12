@@ -65,7 +65,7 @@ void testReferenceToPointerWithNullptr() {
                                       // expected-note@-1 {{Dereference of null pointer}}
 }
 
-void aaa() {
+void testNullReferenceToPointer() {
   struct Wrapper {char c; int *&a;};
   Wrapper w {'c', *(int **)0 };           // expected-note{{'w.a' initialized to a null pointer value}}
                                           // expected-warning@-1 {{binding dereferenced null pointer to reference has undefined behavior}}
