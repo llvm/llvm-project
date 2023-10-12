@@ -133,6 +133,15 @@ def expand_promoted_fmed3 : GICombineRule<
 
 } // End Predicates = [NotHasMed3_16]
 
+// Form G_AMDGPU_SGPR_S1_TO_VCC_COPY from (copy (trunc)) with the right regbanks.
+def fold_sgpr_s1_to_vcc_copy : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $tmp),
+         (G_TRUNC $tmp, $src),
+    [{ return Helper.matchExpandPromotedF16FMed3(*${fptrunc}, ${src0}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }]),
+  (apply [{ Helper.applyExpandPromotedF16FMed3(*${fptrunc}, ${src0}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }])
+>;
+
 // Combines which should only apply on SI/CI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
@@ -155,7 +164,8 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
 
 def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
-  [unmerge_merge, unmerge_cst, unmerge_undef,
+  [unmerge_merge, unmerge_cst, unmerge_undef, trunc_ext_fold,
+   anyext_trunc_fold, select_constant_cmp,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
 }

@@ -36,7 +36,6 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB0_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, 1
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB0_4
 ; GFX9-NEXT:  ; %bb.3: ; %bb0
@@ -121,7 +120,6 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB1_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, 1
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB1_4
 ; GFX9-NEXT:  ; %bb.3: ; %bb0

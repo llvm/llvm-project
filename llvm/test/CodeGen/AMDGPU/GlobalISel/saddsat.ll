@@ -1081,7 +1081,6 @@ define amdgpu_ps i24 @s_saddsat_i24(i24 inreg %lhs, i24 inreg %rhs) {
 ; GFX8-NEXT:    s_xor_b32 s0, s1, s0
 ; GFX8-NEXT:    s_ashr_i32 s1, s3, 23
 ; GFX8-NEXT:    s_add_i32 s1, s1, 0xff800000
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
 ; GFX8-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, s1, s2
 ; GFX8-NEXT:    ; return to shader part epilog

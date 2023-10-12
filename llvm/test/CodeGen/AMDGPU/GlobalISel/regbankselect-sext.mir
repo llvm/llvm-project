@@ -69,7 +69,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s16) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ANYEXT]](s32), [[C1]], [[C]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[SELECT]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -90,7 +94,10 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ANYEXT]](s32), [[C1]], [[C]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -111,7 +118,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s64) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ANYEXT]](s32), [[C1]], [[C]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -199,7 +210,11 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s16) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ANYEXT]](s32), [[C1]], [[C]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[SELECT]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s16) = G_SEXT %1
@@ -217,7 +232,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ANYEXT]](s32), [[C1]], [[C]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_SEXT %1
@@ -235,7 +253,11 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s64) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ANYEXT]](s32), [[C1]], [[C]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s64) = G_SEXT %1

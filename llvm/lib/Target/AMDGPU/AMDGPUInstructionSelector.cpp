@@ -2153,24 +2153,40 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   assert(Size <= 32 || Size == 64);
   const MachineOperand &CCOp = I.getOperand(1);
   Register CCReg = CCOp.getReg();
+
+  Register TrueVal = I.getOperand(2).getReg();
+  Register FalseVal = I.getOperand(3).getReg();
   if (!isVCC(CCReg, *MRI)) {
     unsigned SelectOpcode = Size == 64 ? AMDGPU::S_CSELECT_B64 :
                                          AMDGPU::S_CSELECT_B32;
     MachineInstr *CopySCC = BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::SCC)
             .addReg(CCReg);
 
-    // The generic constrainSelectedInstRegOperands doesn't work for the scc register
-    // bank, because it does not cover the register class that we used to represent
-    // for it.  So we need to manually set the register class here.
-    if (!MRI->getRegClassOrNull(CCReg))
-        MRI->setRegClass(CCReg, TRI.getConstrainedRegClassForOperand(CCOp, *MRI));
-    MachineInstr *Select = BuildMI(*BB, &I, DL, TII.get(SelectOpcode), DstReg)
-            .add(I.getOperand(2))
-            .add(I.getOperand(3));
+    bool Ret = constrainSelectedInstRegOperands(*CopySCC, TII, TRI, RBI);
 
-    bool Ret = false;
-    Ret |= constrainSelectedInstRegOperands(*Select, TII, TRI, RBI);
-    Ret |= constrainSelectedInstRegOperands(*CopySCC, TII, TRI, RBI);
+    // select 1, 0 is just a copy SCC.
+    if (getIConstantVRegVal(TrueVal, *MRI) == 1 &&
+        getIConstantVRegVal(FalseVal, *MRI) == 0) {
+      // FIXME: Do we need to have two copies or could we get away with just
+      // returning CCReg?
+      MachineInstr *RetCopy =
+          BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
+              .addReg(AMDGPU::SCC);
+      Ret |= constrainSelectedInstRegOperands(*RetCopy, TII, TRI, RBI);
+    } else {
+      // The generic constrainSelectedInstRegOperands doesn't work for the scc
+      // register bank, because it does not cover the register class that we
+      // used to represent for it.  So we need to manually set the register
+      // class here.
+      if (!MRI->getRegClassOrNull(CCReg))
+        MRI->setRegClass(CCReg,
+                         TRI.getConstrainedRegClassForOperand(CCOp, *MRI));
+      MachineInstr *Select = BuildMI(*BB, &I, DL, TII.get(SelectOpcode), DstReg)
+                                 .addReg(TrueVal)
+                                 .addReg(FalseVal);
+      Ret |= constrainSelectedInstRegOperands(*Select, TII, TRI, RBI);
+    }
+
     I.eraseFromParent();
     return Ret;
   }
@@ -2181,11 +2197,11 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
 
   MachineInstr *Select =
       BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
-              .addImm(0)
-              .add(I.getOperand(3))
-              .addImm(0)
-              .add(I.getOperand(2))
-              .add(I.getOperand(1));
+          .addImm(0)
+          .addReg(FalseVal)
+          .addImm(0)
+          .addReg(TrueVal)
+          .add(I.getOperand(1));
 
   bool Ret = constrainSelectedInstRegOperands(*Select, TII, TRI, RBI);
   I.eraseFromParent();

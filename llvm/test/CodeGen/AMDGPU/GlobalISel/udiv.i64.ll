@@ -323,7 +323,6 @@ define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB1_3: ; %Flow
 ; CHECK-NEXT:    s_xor_b32 s1, s4, 1
-; CHECK-NEXT:    s_and_b32 s1, s1, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB1_5
 ; CHECK-NEXT:  ; %bb.4:
