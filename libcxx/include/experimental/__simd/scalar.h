@@ -46,6 +46,11 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
 
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept { return {__v}; }
+
+  template <class _Generator>
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
+    return {__g(std::integral_constant<size_t, 0>())};
+  }
 };
 
 template <class _Tp>
