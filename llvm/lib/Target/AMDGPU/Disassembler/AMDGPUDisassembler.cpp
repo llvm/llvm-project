@@ -378,13 +378,13 @@ static DecodeStatus decodeOperand_AVLdSt_Any(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, DAsm->decodeSrcOp(Opw, Imm | 256));
 }
 
-static DecodeStatus
-decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm, uint64_t Addr,
-                       const MCDisassembler *Decoder) {
+static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
+                                           uint64_t Addr,
+                                           const MCDisassembler *Decoder) {
   assert(Imm < (1 << 9) && "9-bit encoding");
   auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm,
-                                            false, 64, true));
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm, false, 64, true));
 }
 
 static DecodeStatus
@@ -1459,8 +1459,7 @@ int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
                                           bool MandatoryLiteral,
-                                          unsigned ImmWidth,
-                                          bool IsFP) const {
+                                          unsigned ImmWidth, bool IsFP) const {
   using namespace AMDGPU::EncValues;
 
   assert(Val < 1024); // enum10
