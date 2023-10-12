@@ -69,6 +69,13 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* Added constructs for debugging TableGen files:
+
+  * `dump` keyword to dump messages to standard error, see
+     https://github.com/llvm/llvm-project/pull/68793.
+  * `!repr` bang operator to inspect the content of values, see
+     https://github.com/llvm/llvm-project/pull/68716.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
