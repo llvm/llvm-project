@@ -2009,16 +2009,6 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
           "  }\n";
 }
 
-/// Generate a check that a DefaultValuedAttr has a value that is non-default.
-static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
-                                    AttributeVariable &attrElement) {
-  FmtContext fctx;
-  Attribute attr = attrElement.getVar()->attr;
-  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
-  body << " && " << op.getGetterName(attrElement.getVar()->name) << "Attr() != "
-       << tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue());
-}
-
 /// Generate the check for the anchor of an optional group.
 static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
                                           const Operator &op,
@@ -2052,7 +2042,12 @@ static void genOptionalGroupPrinterAnchor(FormatElement *anchor,
         if (attr.hasDefaultValue()) {
           // Consider a default-valued attribute as present if it's not the
           // default value.
-          genNonDefaultValueCheck(body, op, *element);
+          FmtContext fctx;
+          fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+          body << " && " << op.getGetterName(element->getVar()->name)
+               << "Attr() != "
+               << tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                        attr.getDefaultValue());
           return;
         }
         llvm_unreachable("attribute must be optional or default-valued");
@@ -2163,6 +2158,7 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 
   // Emit the OIList
   if (auto *oilist = dyn_cast<OIListElement>(element)) {
+    genLiteralPrinter(" ", body, shouldEmitSpace, lastWasPunctuation);
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -2174,14 +2170,8 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       for (VariableElement *var : vars) {
         TypeSwitch<FormatElement *>(var)
             .Case([&](AttributeVariable *attrEle) {
-              body << " || (" << op.getGetterName(attrEle->getVar()->name)
+              body << " || " << op.getGetterName(attrEle->getVar()->name)
                    << "Attr()";
-              Attribute attr = attrEle->getVar()->attr;
-              if (attr.hasDefaultValue()) {
-                // Don't print default-valued attributes.
-                genNonDefaultValueCheck(body, op, *attrEle);
-              }
-              body << ")";
             })
             .Case([&](OperandVariable *ele) {
               if (ele->getVar()->isVariadic()) {
