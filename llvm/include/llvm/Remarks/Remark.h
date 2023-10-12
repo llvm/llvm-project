@@ -52,10 +52,6 @@ struct Argument {
 
   /// Implement operator<< on Argument.
   void print(raw_ostream &OS) const;
-  /// Return the value of argument as int.
-  std::optional<int> getValAsInt() const;
-  /// Check if the argument value can be parsed as int.
-  bool isValInt() const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

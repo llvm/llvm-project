@@ -1,14 +1,7 @@
 RUN: llvm-remarkutil annotation-count --parser=yaml --annotation-type=remark %p/Inputs/annotation-count.yaml | FileCheck %s
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/annotation-count.yaml | llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark | FileCheck %s
-RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --remark-name="AnnotationSummary" %p/Inputs/annotation-count.yaml | FileCheck %s --check-prefix=COUNT-CHECK
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/annotation-count.yaml | llvm-remarkutil count --parser=bitstream --count-by=arg --group-by=function --remark-name="AnnotationSummary" | FileCheck %s --check-prefix=COUNT-CHECK
 
 ; CHECK-LABEL: Function,Count
 ; CHECK: func1,1
 ; CHECK: func2,2
 ; CHECK: func3,3
-
-; COUNT-CHECK-LABEL: Function,count
-; COUNT-CHECK: func1,1
-; COUNT-CHECK: func2,2
-; COUNT-CHECK: func3,3

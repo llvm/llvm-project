@@ -1,14 +1,7 @@
 RUN: llvm-remarkutil instruction-count --parser=yaml %p/Inputs/instruction-count.yaml | FileCheck %s
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil instruction-count --parser=bitstream | FileCheck %s
-RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function --remark-name="InstructionCount" %p/Inputs/instruction-count.yaml | FileCheck %s --check-prefix=COUNT-CHECK
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml  | llvm-remarkutil count --parser=bitstream --count-by=arg --group-by=function --remark-name="InstructionCount" | FileCheck %s --check-prefix=COUNT-CHECK
 
 ; CHECK-LABEL: Function,InstructionCount
 ; CHECK: func1,1
 ; CHECK: func2,2
 ; CHECK: func3,3
-
-; COUNT-CHECK-LABEL: Function,NumInstructions
-; COUNT-CHECK: func1,1
-; COUNT-CHECK: func2,2
-; COUNT-CHECK: func3,3
