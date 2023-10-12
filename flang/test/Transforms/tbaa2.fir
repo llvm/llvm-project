@@ -49,14 +49,15 @@
 // CHECK: #[[ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
 // CHECK: #[[ANY_GLBL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANY_DATA]], 0>}>
 // CHECK: #[[ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK: #[[ANY_DIRECT:.+]] = #llvm.tbaa_type_desc<id = "direct data", members = {<#[[ANY_DATA]], 0>}>
 // CHECK: #[[GLBL_ZSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEzstart", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_ZSTOP:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEzstop", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_YSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEystart", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_YSTOP:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEystop", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_XSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodExstart", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[ARG_LOW:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeElow", members = {<#[[ANY_ARG]], 0>}>
-// CHECK: #[[GLBL_A:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEa", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[GLBL_B:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEb", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[DIRECT_A:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodEa", members = {<#[[ANY_DIRECT]], 0>}>
+// CHECK: #[[DIRECT_B:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodEb", members = {<#[[ANY_DIRECT]], 0>}>
 // CHECK: #[[ARG_Z:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEz", members = {<#[[ANY_ARG]], 0>}>
 // CHECK: #[[GLBL_DYINV:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEdyinv", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[ARG_Y:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEy", members = {<#[[ANY_ARG]], 0>}>
@@ -67,8 +68,8 @@
 // CHECK: #[[GLBL_YSTOP_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_YSTOP]], access_type = #[[GLBL_YSTOP]], offset = 0>
 // CHECK: #[[GLBL_XSTART_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_XSTART]], access_type = #[[GLBL_XSTART]], offset = 0>
 // CHECK: #[[ARG_LOW_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_LOW]], access_type = #[[ARG_LOW]], offset = 0>
-// CHECK: #[[GLBL_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_A]], access_type = #[[GLBL_A]], offset = 0>
-// CHECK: #[[GLBL_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_B]], access_type = #[[GLBL_B]], offset = 0>
+// CHECK: #[[DIRECT_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[DIRECT_A]], access_type = #[[DIRECT_A]], offset = 0>
+// CHECK: #[[DIRECT_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[DIRECT_B]], access_type = #[[DIRECT_B]], offset = 0>
 // CHECK: #[[ARG_Z_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_Z]], access_type = #[[ARG_Z]], offset = 0>
 // CHECK: #[[GLBL_DYINV_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_DYINV]], access_type = #[[GLBL_DYINV]], offset = 0>
 // CHECK: #[[ARG_Y_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_Y]], access_type = #[[ARG_Y]], offset = 0>
@@ -315,7 +316,7 @@
 // CHECK:                 %[[VAL_83:.*]]:3 = fir.box_dims %[[VAL_79]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 // CHECK:                 %[[VAL_84:.*]] = fir.shape_shift %[[VAL_83]]#0, %[[VAL_83]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:                 %[[VAL_85:.*]] = fir.array_coor %[[VAL_82]](%[[VAL_84]]) %[[VAL_81]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_86:.*]] = fir.load %[[VAL_85]] {tbaa = [#[[GLBL_A_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_86:.*]] = fir.load %[[VAL_85]] {tbaa = [#[[DIRECT_A_TAG]]]} : !fir.ref<f32>
 // load from box
 // CHECK:                 %[[VAL_87:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
 // load from local allocation
@@ -338,7 +339,7 @@
 // CHECK:                 %[[VAL_102:.*]]:3 = fir.box_dims %[[VAL_100]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 // CHECK:                 %[[VAL_103:.*]] = fir.shape_shift %[[VAL_102]]#0, %[[VAL_102]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:                 %[[VAL_104:.*]] = fir.array_coor %[[VAL_101]](%[[VAL_103]]) %[[VAL_81]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, i64) -> !fir.ref<f32>
-// CHECK:                 %[[VAL_105:.*]] = fir.load %[[VAL_104]] {tbaa = [#[[GLBL_B_TAG]]]} : !fir.ref<f32>
+// CHECK:                 %[[VAL_105:.*]] = fir.load %[[VAL_104]] {tbaa = [#[[DIRECT_B_TAG]]]} : !fir.ref<f32>
 // CHECK:                 %[[VAL_106:.*]] = fir.array_coor %[[VAL_39]] %[[VAL_89]], %[[VAL_81]], %[[VAL_91]] : (!fir.box<!fir.array<?x?x?xf32>>, i64, i64, i64) -> !fir.ref<f32>
 // CHECK:                 %[[VAL_107:.*]] = fir.load %[[VAL_106]] {tbaa = [#[[ARG_Z_TAG]]]} : !fir.ref<f32>
 // CHECK:                 %[[VAL_108:.*]] = arith.subi %[[VAL_80]], %[[VAL_6]] : i32

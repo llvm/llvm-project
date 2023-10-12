@@ -38,6 +38,9 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool>
     enableGlobals("globals-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
                   llvm::cl::desc("Add TBAA tags to global variables"));
+static llvm::cl::opt<bool>
+    enableDirect("direct-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
+                 llvm::cl::desc("Add TBAA tags to direct variables"));
 // This is **known unsafe** (misscompare in spec2017/wrf_r). It should
 // not be enabled by default.
 // The code is kept so that these may be tried with new benchmarks to see if
@@ -151,13 +154,28 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
 
     // TBAA for global variables
   } else if (enableGlobals &&
-             (source.kind == fir::AliasAnalysis::SourceKind::Global ||
-              source.kind == fir::AliasAnalysis::SourceKind::Direct)) {
+             source.kind == fir::AliasAnalysis::SourceKind::Global) {
     mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
                                       << " at " << *op << "\n");
     tag = state.getFuncTree(func).globalDataTree.getTag(name);
+
+    // TBAA for SourceKind::Direct
+  } else if (enableDirect &&
+             source.kind == fir::AliasAnalysis::SourceKind::Direct) {
+    if (source.u.is<mlir::SymbolRefAttr>()) {
+      mlir::SymbolRefAttr glbl = source.u.get<mlir::SymbolRefAttr>();
+      const char *name = glbl.getRootReference().data();
+      LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
+                                        << " at " << *op << "\n");
+      tag = state.getFuncTree(func).directDataTree.getTag(name);
+    } else {
+      // SourceKind::Direct is likely to be extended to cases which are not a
+      // SymbolRefAttr in the future
+      LLVM_DEBUG(llvm::dbgs().indent(2) << "Can't get name for direct "
+                                        << source << " at " << *op << "\n");
+    }
 
     // TBAA for local allocations
   } else if (enableLocalAllocs &&
