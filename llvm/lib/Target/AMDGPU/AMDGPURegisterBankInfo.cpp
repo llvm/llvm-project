@@ -2578,49 +2578,18 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       assert(SelType == S32 || SelType == S16 || SelType == S64);
       B.setInstrAndDebugLoc(MI);
 
-      const auto BuildSelect = [&B, &MRI, Signed, &SrcReg](Register Dst,
-                                                           LLT Ty) {
-        Register False = B.buildConstant(Ty, 0).getReg(0);
-        MRI.setRegBank(False, AMDGPU::SGPRRegBank);
+      Register False = B.buildConstant(SelType, 0).getReg(0);
+      MRI.setRegBank(False, AMDGPU::SGPRRegBank);
 
-        Register True = B.buildConstant(Ty, Signed ? -1 : 1).getReg(0);
-        MRI.setRegBank(True, AMDGPU::SGPRRegBank);
+      Register True = B.buildConstant(SelType, Signed ? -1 : 1).getReg(0);
+      MRI.setRegBank(True, AMDGPU::SGPRRegBank);
 
-        Register SrcExt = B.buildAnyExt(Ty, SrcReg).getReg(0);
-        MRI.setRegBank(SrcExt, AMDGPU::SGPRRegBank);
+      Register SrcExt = B.buildZExt(SelType, SrcReg).getReg(0);
+      MRI.setRegBank(SrcExt, AMDGPU::SGPRRegBank);
 
-        B.buildSelect(Dst, SrcExt, True, False);
-      };
-
-      if (SelType == S32 || SelType == S16) {
-        BuildSelect(DstReg, SelType);
-      } else if (SelType == S64) {
-        Register LoPart = MRI.createGenericVirtualRegister(S32);
-        MRI.setRegBank(LoPart, AMDGPU::SGPRRegBank);
-        BuildSelect(LoPart, S32);
-
-        Register HiPart;
-        switch (Opc) {
-        case AMDGPU::G_ANYEXT:
-          HiPart = B.buildUndef(S32).getReg(0);
-          MRI.setRegBank(HiPart, AMDGPU::SGPRRegBank);
-          break;
-        case AMDGPU::G_ZEXT:
-          HiPart = B.buildConstant(S32, 0).getReg(0);
-          MRI.setRegBank(HiPart, AMDGPU::SGPRRegBank);
-          break;
-        case AMDGPU::G_SEXT:
-          HiPart = LoPart;
-          break;
-        default:
-          llvm_unreachable("Unexpected Opcode");
-        }
-
-        B.buildMergeLikeInstr(DstReg, {LoPart, HiPart});
-      } else
-        llvm_unreachable("bad type");
-
+      B.buildSelect(DstReg, SrcExt, True, False);
       MRI.setRegBank(DstReg, *SrcBank);
+
       MI.eraseFromParent();
       return;
     }
