@@ -2638,7 +2638,9 @@ TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
 
 CompilerDeclContext
 TypeSystemClang::GetCompilerDeclContextForType(const CompilerType &type) {
-  return CreateDeclContext(GetDeclContextForType(type));
+  if (auto *decl_context = GetDeclContextForType(type))
+    return CreateDeclContext(decl_context);
+  return CompilerDeclContext();
 }
 
 /// Aggressively desugar the provided type, skipping past various kinds of

@@ -1086,6 +1086,8 @@ CompilerType TypeImpl::FindNestedType(ConstString name) {
   auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
   auto *symbol_file = type_system->GetSymbolFile();
   auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
+  if (!decl_context.IsValid())
+    return CompilerType();
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
   TypeMap search_result;
   symbol_file->FindTypes(name, decl_context, /*max_matches*/ 1,
