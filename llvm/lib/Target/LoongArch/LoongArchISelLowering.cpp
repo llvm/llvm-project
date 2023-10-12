@@ -214,8 +214,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FRINT, MVT::f64, Legal);
   }
 
-  setOperationAction(ISD::FP16_TO_FP,        MVT::f32,   Expand);
-  setOperationAction(ISD::FP_TO_FP16,        MVT::f32,   Expand);
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
