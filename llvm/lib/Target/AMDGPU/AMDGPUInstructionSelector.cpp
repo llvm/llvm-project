@@ -4997,8 +4997,8 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   // an immediate offset.
   Register SOffset;
   unsigned Offset;
-  std::tie(SOffset, Offset) =
-      AMDGPU::getBaseWithConstantOffset(*MRI, Root.getReg(), KB);
+  std::tie(SOffset, Offset) = AMDGPU::getBaseWithConstantOffset(
+      *MRI, Root.getReg(), KB, /*CheckNUW*/ true);
   if (!SOffset)
     return std::nullopt;
 

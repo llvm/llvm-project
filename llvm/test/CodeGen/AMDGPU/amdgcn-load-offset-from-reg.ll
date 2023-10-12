@@ -109,6 +109,76 @@ define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset(<4 x i32> inreg %ba
   ret void
 }
 
+; GCN-LABEL: name: test_buffer_load_sgpr_plus_imm_offset_nuw
+; SDAG-DAG: %[[BASE0:.*]]:sgpr_32 = COPY $sgpr0
+; SDAG-DAG: %[[BASE1:.*]]:sgpr_32 = COPY $sgpr1
+; SDAG-DAG: %[[BASE2:.*]]:sgpr_32 = COPY $sgpr2
+; SDAG-DAG: %[[BASE3:.*]]:sgpr_32 = COPY $sgpr3
+; SDAG-DAG: %[[OFFSET:.*]]:sgpr_32 = COPY $sgpr4
+; SDAG-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
+; SDAG: S_BUFFER_LOAD_DWORD_SGPR_IMM killed %[[BASE]], %[[OFFSET]], 77,
+; GISEL-DAG: %[[BASE0:.*]]:sreg_32 = COPY $sgpr0
+; GISEL-DAG: %[[BASE1:.*]]:sreg_32 = COPY $sgpr1
+; GISEL-DAG: %[[BASE2:.*]]:sreg_32 = COPY $sgpr2
+; GISEL-DAG: %[[BASE3:.*]]:sreg_32 = COPY $sgpr3
+; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr4
+; GISEL-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
+; GISEL: S_BUFFER_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[OFFSET]], 77,
+define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset_nuw(<4 x i32> inreg %base, i32 inreg %i, ptr addrspace(1) inreg %out) #0 {
+  %off = add nuw i32 %i, 77
+  %v = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %base, i32 %off, i32 0)
+  store i32 %v, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; GCN-LABEL: name: test_buffer_load_sgpr_plus_imm_offset_nsw
+; SDAG-DAG: %[[BASE0:.*]]:sgpr_32 = COPY $sgpr0
+; SDAG-DAG: %[[BASE1:.*]]:sgpr_32 = COPY $sgpr1
+; SDAG-DAG: %[[BASE2:.*]]:sgpr_32 = COPY $sgpr2
+; SDAG-DAG: %[[BASE3:.*]]:sgpr_32 = COPY $sgpr3
+; SDAG-DAG: %[[OFFSET:.*]]:sgpr_32 = COPY $sgpr4
+; SDAG-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
+; SDAG-DAG: %[[ADD:.*]]:sreg_32 = nsw S_ADD_I32 %4, killed %11, implicit-def dead $scc
+; SDAG: S_BUFFER_LOAD_DWORD_SGPR_IMM killed %[[BASE]], killed %[[ADD]], 0,
+; GISEL-DAG: %[[BASE0:.*]]:sreg_32 = COPY $sgpr0
+; GISEL-DAG: %[[BASE1:.*]]:sreg_32 = COPY $sgpr1
+; GISEL-DAG: %[[BASE2:.*]]:sreg_32 = COPY $sgpr2
+; GISEL-DAG: %[[BASE3:.*]]:sreg_32 = COPY $sgpr3
+; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr4
+; GISEL-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
+; GISEL-DAG: %[[ADD:.*]]:sreg_32 = nsw S_ADD_I32 %1, %10, implicit-def dead $scc
+; GISEL: S_BUFFER_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[ADD]], 0,
+define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset_nsw(<4 x i32> inreg %base, i32 inreg %i, ptr addrspace(1) inreg %out) #0 {
+    %off = add nsw i32 %i, 77
+    %v = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %base, i32 %off, i32 0)
+    store i32 %v, ptr addrspace(1) %out, align 4
+    ret void
+  }
+
+; GCN-LABEL: name: test_buffer_load_sgpr_plus_imm_offset_noflags
+; SDAG-DAG: %[[BASE0:.*]]:sgpr_32 = COPY $sgpr0
+; SDAG-DAG: %[[BASE1:.*]]:sgpr_32 = COPY $sgpr1
+; SDAG-DAG: %[[BASE2:.*]]:sgpr_32 = COPY $sgpr2
+; SDAG-DAG: %[[BASE3:.*]]:sgpr_32 = COPY $sgpr3
+; SDAG-DAG: %[[OFFSET:.*]]:sgpr_32 = COPY $sgpr4
+; SDAG-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
+; SDAG-DAG: %[[ADD:.*]]:sreg_32 = S_ADD_I32 %4, killed %11, implicit-def dead $scc
+; SDAG: S_BUFFER_LOAD_DWORD_SGPR_IMM killed %[[BASE]], killed %[[ADD]], 0,
+; GISEL-DAG: %[[BASE0:.*]]:sreg_32 = COPY $sgpr0
+; GISEL-DAG: %[[BASE1:.*]]:sreg_32 = COPY $sgpr1
+; GISEL-DAG: %[[BASE2:.*]]:sreg_32 = COPY $sgpr2
+; GISEL-DAG: %[[BASE3:.*]]:sreg_32 = COPY $sgpr3
+; GISEL-DAG: %[[OFFSET:.*]]:sreg_32 = COPY $sgpr4
+; GISEL-DAG: %[[BASE:.*]]:sgpr_128 = REG_SEQUENCE %[[BASE0]], %subreg.sub0, %[[BASE1]], %subreg.sub1, %[[BASE2]], %subreg.sub2, %[[BASE3]], %subreg.sub3
+; GISEL-DAG: %[[ADD:.*]]:sreg_32 = S_ADD_I32 %1, %10, implicit-def dead $scc
+; GISEL: S_BUFFER_LOAD_DWORD_SGPR_IMM %[[BASE]], %[[ADD]], 0,
+define amdgpu_cs void @test_buffer_load_sgpr_plus_imm_offset_noflags(<4 x i32> inreg %base, i32 inreg %i, ptr addrspace(1) inreg %out) #0 {
+    %off = add i32 %i, 77
+    %v = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %base, i32 %off, i32 0)
+    store i32 %v, ptr addrspace(1) %out, align 4
+    ret void
+  }
+
 ; GCN-LABEL: name: test_buffer_load_sgpr_or_imm_offset
 ; SDAG-DAG: %[[BASE0:.*]]:sgpr_32 = COPY $sgpr0
 ; SDAG-DAG: %[[BASE1:.*]]:sgpr_32 = COPY $sgpr1
