@@ -2599,8 +2599,7 @@ defm modules : BoolFOption<"modules",
   NegFlag<SetFalse>, BothFlags<[NoXarchOption, CoreOption]>>;
 def fbuiltin_headers_in_system_modules : Flag <["-"], "fbuiltin-headers-in-system-modules">,
   Group<f_Group>,
-  Flags<[NoXarchOption]>,
-  Visibility<[CC1Option]>,
+  Flags<[NoXarchOption,CC1Option]>,
   ShouldParseIf<fmodules.KeyPath>,
   HelpText<"builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers">,
   MarshallingInfoFlag<LangOpts<"BuiltinHeadersInSystemModules">>;
