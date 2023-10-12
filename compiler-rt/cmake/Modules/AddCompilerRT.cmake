@@ -312,6 +312,10 @@ function(add_compiler_rt_runtime name type)
       set(COMPONENT_OPTION COMPONENT ${libname})
     endif()
 
+    if(type STREQUAL "SHARED")
+      list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
+    endif()
+
     if(type STREQUAL "OBJECT")
       if(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_TARGET)
         list(APPEND extra_cflags_${libname} "--target=${CMAKE_C_COMPILER_TARGET}")
