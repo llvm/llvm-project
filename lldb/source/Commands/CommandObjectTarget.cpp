@@ -1467,7 +1467,7 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
                                      Module *module) {
   if (module) {
-    if (SymbolFile *symbol_file = module->GetSymbolFile(true)) {
+    if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
       if (symbol_file->GetSeparateDebugInfo(d)) {
         list.AddItem(
