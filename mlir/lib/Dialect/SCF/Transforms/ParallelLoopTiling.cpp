@@ -110,7 +110,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     // If the loop bounds and the loop step are constant and if the number of
     // loop iterations is an integer multiple of the tile size, we use a static
     // bound for the inner loop.
-    if (lowerBoundConstant && upperBoundConstant && stepConstant && tileSize) {
+    if (lowerBoundConstant && upperBoundConstant && stepConstant) {
       auto numIterations = llvm::divideCeil(upperBoundConstant.value() -
                                                 lowerBoundConstant.value(),
                                             stepConstant.value());
@@ -196,8 +196,11 @@ struct ParallelLoopTiling
 
   void runOnOperation() override {
     for (auto tileSize : tileSizes)
-      if (tileSize == 0)
-        signalPassFailure();
+      if (tileSize == 0) {
+        mlir::emitError(mlir::UnknownLoc::get(&Pass::getContext()),
+                        "tile size cannot be 0");
+        return signalPassFailure();
+      }
     auto *parentOp = getOperation();
     SmallVector<ParallelOp, 2> innermostPloops;
     getInnermostParallelLoops(parentOp, innermostPloops);
