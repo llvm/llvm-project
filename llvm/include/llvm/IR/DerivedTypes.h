@@ -132,7 +132,10 @@ public:
   }
 
   /// Parameter type accessors.
-  Type *getParamType(unsigned i) const { return ContainedTys[i+1]; }
+  Type *getParamType(unsigned i) const {
+    assert(i < getNumParams() && "getParamType() out of range!");
+    return ContainedTys[i + 1];
+  }
 
   /// Return the number of fixed parameters this function type requires.
   /// This does not consider varargs.
