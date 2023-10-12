@@ -289,3 +289,72 @@ entry:
   call void @llvm.aarch64.settag(ptr %c2, i64 128)
   ret void
 }
+
+; Function Attrs: nounwind
+declare i32 @printf(ptr, ...) #0
+
+@.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+
+; Case 1
+; Insert point of stg merge is followed by nzcv read
+; Don't merge in this case
+
+define i32 @stg_no_merge(i32 %in) {
+entry:
+; CHECK-LABEL: stg_no_merge:
+; CHECK: stg sp, [sp, #528]
+; CHECK-NEXT: .LBB10_1:
+; CHECK: st2g x9, [x9], #32
+; CHECK-NEXT: subs x8, x8, #32
+; CHECK-NEXT: b.ne .LBB10_1
+; CHECK-NEXT: // %bb.2:
+; CHECK-NEXT: cmp w0, #10
+; CHECK-NEXT: stg sp, [sp]
+; CHECK-NEXT: b.ge .LBB10_4
+
+  %a = alloca i8, i32 16, align 16
+  %b = alloca i8, i32 512, align 16
+  %c = alloca i8, i32 16, align 16
+  call void @llvm.aarch64.settag(ptr %a, i64 16)
+  call void @llvm.aarch64.settag(ptr %b, i64 512)
+  %cmp = icmp slt i32 %in, 10
+  call void @llvm.aarch64.settag(ptr %c, i64 16)
+  br i1 %cmp, label %return0, label %return1
+
+return0:                                           ; preds = %entry
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 10) #1
+  ret i32 0
+
+return1:
+  ret i32 1
+}
+
+; Case 2
+; Insert point of stg merge is not followed by nzcv read
+; Merge in this case
+
+define i32 @stg_merge(i32 %in) {
+entry:
+; CHECK-LABEL: stg_merge:
+; CHECK: mov x8, #544
+; CHECK-NEXT: .LBB11_1:
+; CHECK: st2g sp, [sp], #32
+; CHECK-NEXT: subs x8, x8, #32
+; CHECK-NEXT: b.ne .LBB11_1
+
+
+  %a = alloca i8, i32 16, align 16
+  %b = alloca i8, i32 512, align 16
+  %c = alloca i8, i32 16, align 16
+  call void @llvm.aarch64.settag(ptr %a, i64 16)
+  call void @llvm.aarch64.settag(ptr %b, i64 512)
+  call void @llvm.aarch64.settag(ptr %c, i64 16)
+  br label %return1
+
+return0:                                           ; preds = %entry
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 10) #1
+  ret i32 0
+
+return1:
+  ret i32 1
+}

@@ -3703,6 +3703,17 @@ bool isMergeableStackTaggingInstruction(MachineInstr &MI, int64_t &Offset,
   return true;
 }
 
+bool isNZCVLiveOut(MachineBasicBlock &MBB) {
+  // Loop over all of the successors of the basic block, checking to see if
+  // the value is either live in the block, or if it is killed in the block.
+  // We are checking for LiveIns alone
+  for (MachineBasicBlock *SuccMBB : MBB.successors()) {
+    if (SuccMBB->isLiveIn(AArch64::NZCV))
+      return true;
+  }
+  return false;
+}
+
 // Detect a run of memory tagging instructions for adjacent stack frame slots,
 // and replace them with a shorter instruction sequence:
 // * replace STG + STG with ST2G
@@ -3762,6 +3773,33 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
   // New code will be inserted after the last tagging instruction we've found.
   MachineBasicBlock::iterator InsertI = Instrs.back().MI;
   InsertI++;
+
+  // All the gathered stack tag instructions are merged and placed after
+  // last tag store in the list. The check should be made if the nzcv
+  // flag that we might be overriding will affect upcoming instructions
+  // that reads the flag(Here NZCV) or if the register is live out. If
+  // the flag is defined again we don't have this problem as the flag
+  // is anyway subject to modification.
+  // Though there could be different ways to curb this maltransformation,
+  // this seems to be simple and straight forward without changing
+  // existing algorithm.
+  // FIXME : This approach of bailing out from merge is also conservative
+  // in some ways like even if stg loops are not present after merge
+  // these checks are done (which are not needed).
+  bool modifiesFirst = false, readsFirst = false;
+  for (MachineBasicBlock::iterator I = InsertI, E = MBB->end(); I != E; I++) {
+    MachineInstr &MI = *I;
+    if (MI.readsRegister(AArch64::NZCV)) {
+      readsFirst = true;
+      break;
+    }
+    if (MI.modifiesRegister(AArch64::NZCV)) {
+      modifiesFirst = true;
+      break;
+    }
+  }
+  if (!modifiesFirst && (readsFirst || isNZCVLiveOut(*MBB)))
+    return InsertI;
 
   llvm::stable_sort(Instrs,
                     [](const TagStoreInstr &Left, const TagStoreInstr &Right) {
