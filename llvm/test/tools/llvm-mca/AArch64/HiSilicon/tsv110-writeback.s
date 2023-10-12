@@ -720,23 +720,23 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ld1	{ v1.1d }, [x27], #8
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ld1	{ v1.2d }, [x27], #16
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ld1	{ v1.2s }, [x27], #8
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ld1	{ v1.4h }, [x27], #8
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ld1	{ v1.4s }, [x27], #16
+# CHECK:      [0,0]     DeeeeeER  ..   ld1	{ v1.1d }, [x27], #8
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ld1	{ v1.2d }, [x27], #16
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ld1	{ v1.2s }, [x27], #8
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ld1	{ v1.4h }, [x27], #8
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ld1	{ v1.4s }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -746,33 +746,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.1d }, [x27], #8
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.2d }, [x27], #16
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.2s }, [x27], #8
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.4h }, [x27], #8
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ld1	{ v1.4s }, [x27], #16
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.2d }, [x27], #16
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.2s }, [x27], #8
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.4h }, [x27], #8
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.4s }, [x27], #16
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [1] Code Region - G02
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ld1	{ v1.8b }, [x27], #8
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ld1	{ v1.8h }, [x27], #16
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ld1	{ v1.16b }, [x27], #16
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ld1	{ v1.1d }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ld1	{ v1.2d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   ld1	{ v1.8b }, [x27], #8
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ld1	{ v1.8h }, [x27], #16
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ld1	{ v1.16b }, [x27], #16
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ld1	{ v1.1d }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ld1	{ v1.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -782,33 +782,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.8b }, [x27], #8
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.8h }, [x27], #16
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.16b }, [x27], #16
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.1d }, [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ld1	{ v1.2d }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.8h }, [x27], #16
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.16b }, [x27], #16
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.1d }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.2d }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [2] Code Region - G03
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ld1	{ v1.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ld1	{ v1.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ld1	{ v1.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ld1	{ v1.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ld1	{ v1.8h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   ld1	{ v1.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ld1	{ v1.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ld1	{ v1.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ld1	{ v1.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ld1	{ v1.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -818,33 +818,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.2s }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.4h }, [x27], x28
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.4s }, [x27], x28
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.8b }, [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ld1	{ v1.8h }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.4h }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.4s }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.8b }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.8h }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [3] Code Region - G04
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ld1	{ v1.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ld1	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ld1	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ld1	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ld1	{ v1.4h, v2.4h }, [x27], #16
+# CHECK:      [0,0]     DeeeeeER  ..   ld1	{ v1.16b }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ld1	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ld1	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ld1	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ld1	{ v1.4h, v2.4h }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -854,33 +854,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.16b }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ld1	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [4] Code Region - G05
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ld1	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ld1	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ld1	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ld1	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ld1	{ v1.1d, v2.1d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   ld1	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ld1	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ld1	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ld1	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ld1	{ v1.1d, v2.1d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -890,33 +890,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ld1	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [5] Code Region - G06
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ld1	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ld1	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ld1	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ld1	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ld1	{ v1.8b, v2.8b }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   ld1	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ld1	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ld1	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ld1	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ld1	{ v1.8b, v2.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -926,33 +926,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ld1	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ld1	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ld1	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [6] Code Region - G07
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2803
+# CHECK-NEXT: Total Cycles:      608
 # CHECK-NEXT: Total uOps:        1600
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.18
+# CHECK-NEXT: uOps Per Cycle:    2.63
+# CHECK-NEXT: IPC:               0.82
 # CHECK-NEXT: Block RThroughput: 5.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    .    .   ld1	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .   ld1	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=========eeeeeeER .    .    .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: [0,3]     . D==============eeeeeeER.    .   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: [0,4]     .  D===================eeeeeeER   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK:      [0,0]     DeeeeeER  .  .   ld1	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER .  .   ld1	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeeER  .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
+# CHECK-NEXT: [0,3]     . D=eeeeeeER .   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,4]     .  D==eeeeeeER   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -962,33 +962,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: 4.     1     20.0   0.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT:        1     10.4   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ld1	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
+# CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT:        1     2.0    0.4    0.0       <total>
 
 # CHECK:      [7] Code Region - G08
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      757
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    2.64
+# CHECK-NEXT: IPC:               0.66
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: [0,1]     .D=====eeeeeeER.    .    .    . .   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: [0,2]     . D==========eeeeeeER    .    . .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,3]     .  D===============eeeeeeER   . .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: [0,4]     .   D====================eeeeeeER   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK:      [0,0]     DeeeeeeER .   .   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: [0,1]     .DeeeeeeER.   .   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: [0,2]     . D=eeeeeeER  .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: [0,3]     .  D=eeeeeeER .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: [0,4]     .   D==eeeeeeER   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -998,33 +998,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: 3.     1     16.0   0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: 4.     1     21.0   0.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT:        1     11.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: 2.     1     2.0    1.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT:        1     1.8    0.6    0.0       <total>
 
 # CHECK:      [8] Code Region - G09
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      757
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    2.64
+# CHECK-NEXT: IPC:               0.66
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: [0,1]     .D=====eeeeeeER.    .    .    . .   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     . D==========eeeeeeER    .    . .   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D===============eeeeeeER   . .   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D====================eeeeeeER   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeER .   .   ld1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeER.   .   ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     . D=eeeeeeER  .   ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     .  D=eeeeeeER .   ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     .   D==eeeeeeER   ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1034,33 +1034,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: 3.     1     16.0   0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: 4.     1     21.0   0.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT:        1     11.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    1.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT:        1     1.8    0.6    0.0       <total>
 
 # CHECK:      [9] Code Region - G10
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      708
 # CHECK-NEXT: Total uOps:        1800
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.60
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    2.54
+# CHECK-NEXT: IPC:               0.71
 # CHECK-NEXT: Block RThroughput: 6.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     .D=====eeeeeeER.    .    .    . .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     . D==========eeeeeeER    .    . .   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D===============eeeeeeER   . .   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: [0,4]     .   D====================eeeeeeER   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK:      [0,0]     DeeeeeeER .   .   ld1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeER.   .   ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     . D=eeeeeeER  .   ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .  D=eeeeeeER .   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: [0,4]     .   D==eeeeeeER   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1070,33 +1070,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: 3.     1     16.0   0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: 4.     1     21.0   0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT:        1     11.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    1.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: 3.     1     2.0    0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: 4.     1     3.0    1.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT:        1     1.8    0.6    0.0       <total>
 
 # CHECK:      [10] Code Region - G11
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    2.95
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: [0,1]     .D=====eeeeeeER.    .    .    . .   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: [0,2]     . D==========eeeeeeER    .    . .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: [0,3]     .  D===============eeeeeeER   . .   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,4]     .   D====================eeeeeeER   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: [0,1]     .DeeeeeeER. .   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: [0,2]     . DeeeeeeER .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: [0,3]     .  DeeeeeeER.   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: [0,4]     .   DeeeeeeER   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1106,33 +1106,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: 3.     1     16.0   0.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: 4.     1     21.0   0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT:        1     11.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [11] Code Region - G12
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    2.95
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: [0,1]     .D=====eeeeeeER.    .    .    . .   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT: [0,2]     . D==========eeeeeeER    .    . .   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D===============eeeeeeER   . .   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D====================eeeeeeER   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeER . .   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: [0,1]     .DeeeeeeER. .   ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeER .   ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DeeeeeeER.   ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: [0,4]     .   DeeeeeeER   ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1142,33 +1142,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: 3.     1     16.0   0.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: 4.     1     21.0   0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT:        1     11.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [12] Code Region - G13
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3103
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.48
-# CHECK-NEXT: IPC:               0.16
+# CHECK-NEXT: uOps Per Cycle:    1.49
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 4.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    .  .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,1]     .D=====eeeeeeER.    .    .    .  .   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: [0,2]     . D==========eeeeeeER    .    .  .   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D===============eeeeeeER   .  .   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D====================eeeeeeeER   ld1	{ v1.b }[0], [x27], #1
+# CHECK:      [0,0]     DeeeeeeER .    .  .   ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeER.    .  .   ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeER    .  .   ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DeeeeeeER   .  .   ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: [0,4]     .   D=====eeeeeeeER   ld1	{ v1.b }[0], [x27], #1
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1178,11 +1178,11 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: 3.     1     16.0   0.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: 4.     1     21.0   0.0    0.0       ld1	{ v1.b }[0], [x27], #1
-# CHECK-NEXT:        1     11.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: 4.     1     6.0    0.0    0.0       ld1	{ v1.b }[0], [x27], #1
+# CHECK-NEXT:        1     2.0    0.2    0.0       <total>
 
 # CHECK:      [13] Code Region - G14
 
@@ -1260,23 +1260,23 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      1103
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.43
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    1.36
+# CHECK-NEXT: IPC:               0.45
 # CHECK-NEXT: Block RThroughput: 3.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld1	{ v1.d }[0], [x27], x28
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld1r	{ v1.1d }, [x27], #8
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld1r	{ v1.2d }, [x27], #8
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld1r	{ v1.2s }, [x27], #4
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld1r	{ v1.4h }, [x27], #2
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld1	{ v1.d }[0], [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld1r	{ v1.1d }, [x27], #8
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld1r	{ v1.2d }, [x27], #8
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld1r	{ v1.2s }, [x27], #4
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld1r	{ v1.4h }, [x27], #2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1286,33 +1286,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1	{ v1.d }[0], [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld1r	{ v1.1d }, [x27], #8
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld1r	{ v1.2d }, [x27], #8
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld1r	{ v1.2s }, [x27], #4
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld1r	{ v1.4h }, [x27], #2
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1r	{ v1.1d }, [x27], #8
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1r	{ v1.2d }, [x27], #8
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1r	{ v1.2s }, [x27], #4
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1r	{ v1.4h }, [x27], #2
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [16] Code Region - G17
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.43
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    2.95
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 3.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld1r	{ v1.4s }, [x27], #4
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld1r	{ v1.8b }, [x27], #1
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld1r	{ v1.8h }, [x27], #2
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld1r	{ v1.16b }, [x27], #1
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld1r	{ v1.1d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld1r	{ v1.4s }, [x27], #4
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld1r	{ v1.8b }, [x27], #1
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld1r	{ v1.8h }, [x27], #2
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld1r	{ v1.16b }, [x27], #1
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld1r	{ v1.1d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1322,33 +1322,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1r	{ v1.4s }, [x27], #4
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld1r	{ v1.8b }, [x27], #1
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld1r	{ v1.8h }, [x27], #2
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld1r	{ v1.16b }, [x27], #1
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld1r	{ v1.1d }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1r	{ v1.8b }, [x27], #1
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1r	{ v1.8h }, [x27], #2
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1r	{ v1.16b }, [x27], #1
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1r	{ v1.1d }, [x27], x28
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [17] Code Region - G18
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        1500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.43
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    2.95
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 3.8
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld1r	{ v1.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld1r	{ v1.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld1r	{ v1.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld1r	{ v1.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld1r	{ v1.8b }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld1r	{ v1.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld1r	{ v1.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld1r	{ v1.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld1r	{ v1.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld1r	{ v1.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1358,33 +1358,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1r	{ v1.2d }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld1r	{ v1.2s }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld1r	{ v1.4h }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld1r	{ v1.4s }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld1r	{ v1.8b }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1r	{ v1.2s }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld1r	{ v1.4h }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld1r	{ v1.4s }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld1r	{ v1.8b }, [x27], x28
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [18] Code Region - G19
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        1800
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.51
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    3.54
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 4.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld1r	{ v1.8h }, [x27], x28
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld1r	{ v1.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld2	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld2	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld2	{ v1.4h, v2.4h }, [x27], #16
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld1r	{ v1.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld1r	{ v1.16b }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld2	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld2	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld2	{ v1.4h, v2.4h }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1394,33 +1394,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld1r	{ v1.8h }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld1r	{ v1.16b }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld1r	{ v1.16b }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [19] Code Region - G20
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    3.93
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld2	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld2	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld2	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld2	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld2	{ v1.2d, v2.2d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld2	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld2	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld2	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld2	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld2	{ v1.2d, v2.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1430,33 +1430,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld2	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld2	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld2	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [20] Code Region - G21
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    3.93
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld2	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld2	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld2	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld2	{ v1.8h, v2.8h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld2	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld2	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld2	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld2	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld2	{ v1.8h, v2.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1466,22 +1466,22 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld2	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld2	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [21] Code Region - G22
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      2909
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    0.69
+# CHECK-NEXT: IPC:               0.17
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
@@ -1548,23 +1548,23 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      2303
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    0.87
+# CHECK-NEXT: IPC:               0.22
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          012345
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld2	{ v1.s, v2.s }[0], [x27], x28
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld2	{ v1.d, v2.d }[0], [x27], #16
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld2	{ v1.d, v2.d }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld2r	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld2r	{ v1.2d, v2.2d }, [x27], #16
+# CHECK:      [0,0]     DeeeeeeeER.    .    .    .   ld2	{ v1.s, v2.s }[0], [x27], x28
+# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .   ld2	{ v1.d, v2.d }[0], [x27], #16
+# CHECK-NEXT: [0,2]     . D============eeeeeeeER .   ld2	{ v1.d, v2.d }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .  D============eeeeeeeER.   ld2r	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: [0,4]     .   D============eeeeeeeER   ld2r	{ v1.2d, v2.2d }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1576,31 +1576,31 @@ ldr  x2, [x1], #254
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld2	{ v1.s, v2.s }[0], [x27], x28
 # CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld2	{ v1.d, v2.d }[0], [x27], #16
 # CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2	{ v1.d, v2.d }[0], [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2r	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2r	{ v1.2d, v2.2d }, [x27], #16
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 3.     1     13.0   0.0    0.0       ld2r	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT: 4.     1     13.0   0.0    0.0       ld2r	{ v1.2d, v2.2d }, [x27], #16
+# CHECK-NEXT:        1     9.4    0.2    0.0       <total>
 
 # CHECK:      [24] Code Region - G25
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    3.93
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld2r	{ v1.2s, v2.2s }, [x27], #8
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld2r	{ v1.4h, v2.4h }, [x27], #4
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld2r	{ v1.4s, v2.4s }, [x27], #8
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld2r	{ v1.8b, v2.8b }, [x27], #2
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld2r	{ v1.8h, v2.8h }, [x27], #4
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld2r	{ v1.2s, v2.2s }, [x27], #8
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld2r	{ v1.4h, v2.4h }, [x27], #4
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld2r	{ v1.4s, v2.4s }, [x27], #8
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld2r	{ v1.8b, v2.8b }, [x27], #2
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld2r	{ v1.8h, v2.8h }, [x27], #4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1610,33 +1610,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld2r	{ v1.2s, v2.2s }, [x27], #8
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld2r	{ v1.4h, v2.4h }, [x27], #4
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2r	{ v1.4s, v2.4s }, [x27], #8
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2r	{ v1.8b, v2.8b }, [x27], #2
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2r	{ v1.8h, v2.8h }, [x27], #4
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld2r	{ v1.4h, v2.4h }, [x27], #4
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2r	{ v1.4s, v2.4s }, [x27], #8
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2r	{ v1.8b, v2.8b }, [x27], #2
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2r	{ v1.8h, v2.8h }, [x27], #4
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [25] Code Region - G26
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3503
+# CHECK-NEXT: Total Cycles:      509
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.57
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    3.93
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01234567
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    . .   ld2r	{ v1.16b, v2.16b }, [x27], #2
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    . .   ld2r	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    . .   ld2r	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    . .   ld2r	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeER   ld2r	{ v1.4h, v2.4h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeER.  .   ld2r	{ v1.16b, v2.16b }, [x27], #2
+# CHECK-NEXT: [0,1]     .DeeeeeeeER  .   ld2r	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeeER .   ld2r	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER.   ld2r	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,4]     .   DeeeeeeeER   ld2r	{ v1.4h, v2.4h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1646,33 +1646,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld2r	{ v1.16b, v2.16b }, [x27], #2
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld2r	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2r	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2r	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld2r	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld2r	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2r	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2r	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld2r	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [26] Code Region - G27
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3603
+# CHECK-NEXT: Total Cycles:      609
 # CHECK-NEXT: Total uOps:        2100
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.58
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    3.45
+# CHECK-NEXT: IPC:               0.82
 # CHECK-NEXT: Block RThroughput: 5.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012345678
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeER.    .    .    .    .    .  .   ld2r	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,1]     .D======eeeeeeeER   .    .    .    .  .   ld2r	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,2]     . D============eeeeeeeER .    .    .  .   ld2r	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,3]     .  D==================eeeeeeeER    .  .   ld2r	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,4]     .   D========================eeeeeeeeER   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK:      [0,0]     DeeeeeeeER.   .   ld2r	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,1]     .DeeeeeeeER   .   ld2r	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,2]     . DeeeeeeeER  .   ld2r	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,3]     .  DeeeeeeeER .   ld2r	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,4]     .   DeeeeeeeeER   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1682,33 +1682,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld2r	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld2r	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld2r	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld2r	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ld2r	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ld2r	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ld2r	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ld3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [27] Code Region - G28
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.48
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1718,33 +1718,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [28] Code Region - G29
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.48
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1754,33 +1754,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [29] Code Region - G30
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      2011
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    1.24
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     0123456789          0
+# CHECK-NEXT: Index     0123456789          0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
+# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .   ld3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .    .    .    .   ld3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.    .    .    .   ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .    .D======eeeeeeeeER  .    .   ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
+# CHECK-NEXT: [0,4]     .    .  D============eeeeeeeeER   ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1790,11 +1790,11 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: 3.     1     7.0    0.0    0.0       ld3	{ v1.b, v2.b, v3.b }[0], [x27], #3
+# CHECK-NEXT: 4.     1     13.0   0.0    0.0       ld3	{ v1.b, v2.b, v3.b }[8], [x27], #3
+# CHECK-NEXT:        1     4.6    0.6    0.0       <total>
 
 # CHECK:      [30] Code Region - G31
 
@@ -1872,23 +1872,23 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.48
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], #24
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], #24
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], #24
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1898,33 +1898,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], #24
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], #24
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], #12
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], #6
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], #12
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [33] Code Region - G34
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.48
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], #3
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], #6
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], #3
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], #6
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1934,33 +1934,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], #3
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], #6
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], #6
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], #3
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3r	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3r	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [34] Code Region - G35
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.48
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -1970,33 +1970,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3r	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld3r	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld3r	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld3r	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld3r	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [35] Code Region - G36
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4803
+# CHECK-NEXT: Total Cycles:      1410
 # CHECK-NEXT: Total uOps:        4100
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.85
-# CHECK-NEXT: IPC:               0.10
+# CHECK-NEXT: uOps Per Cycle:    2.91
+# CHECK-NEXT: IPC:               0.35
 # CHECK-NEXT: Block RThroughput: 10.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          0
-# CHECK-NEXT: Index     0123456789          0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          0123
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    .    .    .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeeeER    .    .    .    .    .    .   ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: [0,2]     .    D=============eeeeeeeeeeER    .    .    .    .   ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: [0,3]     .    .  D====================eeeeeeeeeeER    .    .   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: [0,4]     .    .    .D===========================eeeeeeeeeeER   ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK:      [0,0]     DeeeeeeeeER    .    .  .   ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,1]     . DeeeeeeeeeeER.    .  .   ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: [0,2]     .    DeeeeeeeeeeER  .  .   ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: [0,3]     .    .  DeeeeeeeeeeER  .   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: [0,4]     .    .    .DeeeeeeeeeeER   ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2006,33 +2006,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld3r	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: 2.     1     14.0   0.0    0.0       ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: 3.     1     21.0   0.0    0.0       ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: 4.     1     28.0   0.0    0.0       ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT:        1     14.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [36] Code Region - G37
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      5003
+# CHECK-NEXT: Total Cycles:      1510
 # CHECK-NEXT: Total uOps:        4500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.90
-# CHECK-NEXT: IPC:               0.10
+# CHECK-NEXT: uOps Per Cycle:    2.98
+# CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 11.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234
 
-# CHECK:      [0,0]     DeeeeeeeeeeER  .    .    .    .    .    .    .    . .   ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,1]     .  D=======eeeeeeeeeeER  .    .    .    .    .    . .   ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: [0,2]     .    .D==============eeeeeeeeeeER  .    .    .    . .   ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: [0,3]     .    .   D=====================eeeeeeeeeeER  .    . .   ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,4]     .    .    . D============================eeeeeeeeeeER   ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeeeER  .    .   .   ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: [0,1]     .  DeeeeeeeeeeER    .   .   ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: [0,2]     .    .DeeeeeeeeeeER .   .   ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: [0,3]     .    .   DeeeeeeeeeeER  .   ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: [0,4]     .    .    . DeeeeeeeeeeER   ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2042,33 +2042,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: 1.     1     8.0    0.0    0.0       ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: 2.     1     15.0   0.0    0.0       ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: 3.     1     22.0   0.0    0.0       ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: 4.     1     29.0   0.0    0.0       ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT:        1     15.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [37] Code Region - G38
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      5003
+# CHECK-NEXT: Total Cycles:      1510
 # CHECK-NEXT: Total uOps:        4500
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.90
-# CHECK-NEXT: IPC:               0.10
+# CHECK-NEXT: uOps Per Cycle:    2.98
+# CHECK-NEXT: IPC:               0.33
 # CHECK-NEXT: Block RThroughput: 11.3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789          0123456789
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          01234
 
-# CHECK:      [0,0]     DeeeeeeeeeeER  .    .    .    .    .    .    .    . .   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,1]     .  D=======eeeeeeeeeeER  .    .    .    .    .    . .   ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,2]     .    .D==============eeeeeeeeeeER  .    .    .    . .   ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: [0,3]     .    .   D=====================eeeeeeeeeeER  .    . .   ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: [0,4]     .    .    . D============================eeeeeeeeeeER   ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeeeER  .    .   .   ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,1]     .  DeeeeeeeeeeER    .   .   ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,2]     .    .DeeeeeeeeeeER .   .   ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: [0,3]     .    .   DeeeeeeeeeeER  .   ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: [0,4]     .    .    . DeeeeeeeeeeER   ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2078,11 +2078,11 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: 1.     1     8.0    0.0    0.0       ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: 2.     1     15.0   0.0    0.0       ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: 3.     1     22.0   0.0    0.0       ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: 4.     1     29.0   0.0    0.0       ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT:        1     15.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [38] Code Region - G39
 
@@ -2160,23 +2160,23 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      2003
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.75
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    1.50
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     0123456789
+# CHECK-NEXT: Index     0123456789          012
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
+# CHECK:      [0,0]     DeeeeeeeeER    .    . .   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
+# CHECK-NEXT: [0,1]     . D======eeeeeeeeER . .   ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .   D=====eeeeeeeeER. .   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: [0,3]     .    .D=====eeeeeeeeER.   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
+# CHECK-NEXT: [0,4]     .    .  D====eeeeeeeeER   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2187,32 +2187,32 @@ ldr  x2, [x1], #254
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
 # CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 2.     1     6.0    0.0    0.0       ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: 3.     1     6.0    1.0    0.0       ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #32
+# CHECK-NEXT: 4.     1     5.0    0.0    0.0       ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #16
+# CHECK-NEXT:        1     5.0    0.4    0.0       <total>
 
 # CHECK:      [41] Code Region - G42
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.75
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.97
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #8
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #16
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #4
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #8
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #4
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #8
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #16
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #4
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #8
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2222,33 +2222,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #8
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #16
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #4
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #8
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #4
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #16
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #4
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #8
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #4
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [42] Code Region - G43
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      1009
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.75
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    2.97
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 7.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     012345678
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    .    . .   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    .    . .   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeeeeER.    . .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     .    .  D========================eeeeeeeeER   ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeER    .  .   ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER  .  .   ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER.  .   ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     .    .DeeeeeeeeER .   ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     .    .  DeeeeeeeeER   ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2258,33 +2258,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld4r	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: 4.     1     25.0   0.0    0.0       ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT:        1     13.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld4r	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4r	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    1.0    0.0       ld4r	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       ld4r	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>
 
 # CHECK:      [43] Code Region - G44
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3403
+# CHECK-NEXT: Total Cycles:      807
 # CHECK-NEXT: Total uOps:        2400
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.71
-# CHECK-NEXT: IPC:               0.15
+# CHECK-NEXT: uOps Per Cycle:    2.97
+# CHECK-NEXT: IPC:               0.62
 # CHECK-NEXT: Block RThroughput: 6.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    ..   ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     . D======eeeeeeeeER .    .    .    ..   ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     .   D============eeeeeeeeER   .    ..   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .    .D==================eeeeeER   ..   ldp	s1, s2, [x27], #248
-# CHECK-NEXT: [0,4]     .    . D======================eeeeeER   ldp	d1, d2, [x27], #496
+# CHECK:      [0,0]     DeeeeeeeeER   .   ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     . DeeeeeeeeER .   ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     .   DeeeeeeeeER   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .    .DeeeeeE-R   ldp	s1, s2, [x27], #248
+# CHECK-NEXT: [0,4]     .    . DeeeeeER   ldp	d1, d2, [x27], #496
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2294,33 +2294,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ld4r	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: 2.     1     13.0   0.0    0.0       ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: 3.     1     19.0   0.0    0.0       ldp	s1, s2, [x27], #248
-# CHECK-NEXT: 4.     1     23.0   0.0    0.0       ldp	d1, d2, [x27], #496
-# CHECK-NEXT:        1     12.6   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    1.0    0.0       ld4r	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: 3.     1     1.0    1.0    1.0       ldp	s1, s2, [x27], #248
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ldp	d1, d2, [x27], #496
+# CHECK-NEXT:        1     1.0    0.8    0.2       <total>
 
 # CHECK:      [44] Code Region - G45
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2403
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1600
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.21
+# CHECK-NEXT: uOps Per Cycle:    3.16
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          0123456
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    ..   ldp	q1, q2, [x27], #992
-# CHECK-NEXT: [0,1]     .D====eeeeeER  .    .    ..   ldp	s1, s2, [x27, #248]!
-# CHECK-NEXT: [0,2]     . D========eeeeeER  .    ..   ldp	d1, d2, [x27, #496]!
-# CHECK-NEXT: [0,3]     .  D============eeeeeER  ..   ldp	q1, q2, [x27, #992]!
-# CHECK-NEXT: [0,4]     .   D================eeeeER   ldp	w1, w2, [x27], #248
+# CHECK:      [0,0]     DeeeeeER  .   ldp	q1, q2, [x27], #992
+# CHECK-NEXT: [0,1]     .DeeeeeER .   ldp	s1, s2, [x27, #248]!
+# CHECK-NEXT: [0,2]     . DeeeeeER.   ldp	d1, d2, [x27, #496]!
+# CHECK-NEXT: [0,3]     .  DeeeeeER   ldp	q1, q2, [x27, #992]!
+# CHECK-NEXT: [0,4]     .   DeeeeER   ldp	w1, w2, [x27], #248
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2330,33 +2330,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldp	q1, q2, [x27], #992
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldp	s1, s2, [x27, #248]!
-# CHECK-NEXT: 2.     1     9.0    0.0    0.0       ldp	d1, d2, [x27, #496]!
-# CHECK-NEXT: 3.     1     13.0   0.0    0.0       ldp	q1, q2, [x27, #992]!
-# CHECK-NEXT: 4.     1     17.0   0.0    0.0       ldp	w1, w2, [x27], #248
-# CHECK-NEXT:        1     9.0    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ldp	s1, s2, [x27, #248]!
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ldp	d1, d2, [x27, #496]!
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ldp	q1, q2, [x27, #992]!
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ldp	w1, w2, [x27], #248
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [45] Code Region - G46
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1800
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.90
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    3.56
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 4.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   ldp	x1, x2, [x27], #496
-# CHECK-NEXT: [0,1]     .D===eeeeER    .    . .   ldp	w1, w2, [x27, #248]!
-# CHECK-NEXT: [0,2]     . D======eeeeER.    . .   ldp	x1, x2, [x27, #496]!
-# CHECK-NEXT: [0,3]     .  D=========eeeeER . .   ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: [0,4]     .   D============eeeeER   ldpsw	x1, x2, [x27, #248]!
+# CHECK:      [0,0]     DeeeeER   .   ldp	x1, x2, [x27], #496
+# CHECK-NEXT: [0,1]     .DeeeeER  .   ldp	w1, w2, [x27, #248]!
+# CHECK-NEXT: [0,2]     . DeeeeER .   ldp	x1, x2, [x27, #496]!
+# CHECK-NEXT: [0,3]     .  DeeeeER.   ldpsw	x1, x2, [x27], #248
+# CHECK-NEXT: [0,4]     .   DeeeeER   ldpsw	x1, x2, [x27, #248]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2366,33 +2366,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldp	x1, x2, [x27], #496
-# CHECK-NEXT: 1.     1     4.0    0.0    0.0       ldp	w1, w2, [x27, #248]!
-# CHECK-NEXT: 2.     1     7.0    0.0    0.0       ldp	x1, x2, [x27, #496]!
-# CHECK-NEXT: 3.     1     10.0   0.0    0.0       ldpsw	x1, x2, [x27], #248
-# CHECK-NEXT: 4.     1     13.0   0.0    0.0       ldpsw	x1, x2, [x27, #248]!
-# CHECK-NEXT:        1     7.0    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     1.0    0.0    0.0       ldp	w1, w2, [x27, #248]!
+# CHECK-NEXT: 2.     1     1.0    0.0    0.0       ldp	x1, x2, [x27, #496]!
+# CHECK-NEXT: 3.     1     1.0    0.0    0.0       ldpsw	x1, x2, [x27], #248
+# CHECK-NEXT: 4.     1     1.0    0.0    0.0       ldpsw	x1, x2, [x27, #248]!
+# CHECK-NEXT:        1     1.0    0.2    0.0       <total>
 
 # CHECK:      [46] Code Region - G47
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ldr	b1, [x27], #254
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ldr	h1, [x27], #254
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ldr	s1, [x27], #254
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ldr	d1, [x27], #254
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ldr	q1, [x27], #254
+# CHECK:      [0,0]     DeeeeeER  ..   ldr	b1, [x27], #254
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ldr	h1, [x27], #254
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ldr	s1, [x27], #254
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ldr	d1, [x27], #254
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ldr	q1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2402,33 +2402,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldr	b1, [x27], #254
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ldr	h1, [x27], #254
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ldr	s1, [x27], #254
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ldr	d1, [x27], #254
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ldr	q1, [x27], #254
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldr	h1, [x27], #254
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	s1, [x27], #254
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldr	d1, [x27], #254
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldr	q1, [x27], #254
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [47] Code Region - G48
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   ldr	b1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   ldr	h1, [x27, #254]!
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   ldr	s1, [x27, #254]!
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   ldr	d1, [x27, #254]!
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   ldr	q1, [x27, #254]!
+# CHECK:      [0,0]     DeeeeeER  ..   ldr	b1, [x27, #254]!
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   ldr	h1, [x27, #254]!
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   ldr	s1, [x27, #254]!
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   ldr	d1, [x27, #254]!
+# CHECK-NEXT: [0,4]     . D==eeeeeER   ldr	q1, [x27, #254]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2438,33 +2438,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldr	b1, [x27, #254]!
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       ldr	h1, [x27, #254]!
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       ldr	s1, [x27, #254]!
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       ldr	d1, [x27, #254]!
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       ldr	q1, [x27, #254]!
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldr	h1, [x27, #254]!
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	s1, [x27, #254]!
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldr	d1, [x27, #254]!
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldr	q1, [x27, #254]!
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [48] Code Region - G49
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   ldr	w1, [x27], #254
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   ldr	x1, [x27], #254
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   ldr	w1, [x27, #254]!
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   ldr	x1, [x27, #254]!
-# CHECK-NEXT: [0,4]     . D==============eeeeER   ldrb	w1, [x27], #254
+# CHECK:      [0,0]     DeeeeER   .   ldr	w1, [x27], #254
+# CHECK-NEXT: [0,1]     D=eeeeER  .   ldr	x1, [x27], #254
+# CHECK-NEXT: [0,2]     .D=eeeeER .   ldr	w1, [x27, #254]!
+# CHECK-NEXT: [0,3]     .D==eeeeER.   ldr	x1, [x27, #254]!
+# CHECK-NEXT: [0,4]     . D==eeeeER   ldrb	w1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2474,33 +2474,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldr	w1, [x27], #254
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldr	x1, [x27], #254
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       ldr	w1, [x27, #254]!
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       ldr	x1, [x27, #254]!
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       ldrb	w1, [x27], #254
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldr	x1, [x27], #254
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldr	w1, [x27, #254]!
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldr	x1, [x27, #254]!
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldrb	w1, [x27], #254
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [49] Code Region - G50
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   ldrb	w1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   ldrh	w1, [x27], #254
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   ldrh	w1, [x27, #254]!
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   ldrsb	w1, [x27], #254
-# CHECK-NEXT: [0,4]     . D==============eeeeER   ldrsb	x1, [x27], #254
+# CHECK:      [0,0]     DeeeeER   .   ldrb	w1, [x27, #254]!
+# CHECK-NEXT: [0,1]     D=eeeeER  .   ldrh	w1, [x27], #254
+# CHECK-NEXT: [0,2]     .D=eeeeER .   ldrh	w1, [x27, #254]!
+# CHECK-NEXT: [0,3]     .D==eeeeER.   ldrsb	w1, [x27], #254
+# CHECK-NEXT: [0,4]     . D==eeeeER   ldrsb	x1, [x27], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2510,33 +2510,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldrb	w1, [x27, #254]!
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldrh	w1, [x27], #254
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       ldrh	w1, [x27, #254]!
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       ldrsb	w1, [x27], #254
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       ldrsb	x1, [x27], #254
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldrh	w1, [x27], #254
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldrh	w1, [x27, #254]!
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldrsb	w1, [x27], #254
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldrsb	x1, [x27], #254
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [50] Code Region - G51
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   ldrsb	w1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   ldrsb	x1, [x27, #254]!
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   ldrsh	w1, [x27], #254
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   ldrsh	x1, [x27], #254
-# CHECK-NEXT: [0,4]     . D==============eeeeER   ldrsh	w1, [x27, #254]!
+# CHECK:      [0,0]     DeeeeER   .   ldrsb	w1, [x27, #254]!
+# CHECK-NEXT: [0,1]     D=eeeeER  .   ldrsb	x1, [x27, #254]!
+# CHECK-NEXT: [0,2]     .D=eeeeER .   ldrsh	w1, [x27], #254
+# CHECK-NEXT: [0,3]     .D==eeeeER.   ldrsh	x1, [x27], #254
+# CHECK-NEXT: [0,4]     . D==eeeeER   ldrsh	w1, [x27, #254]!
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2546,33 +2546,32 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldrsb	w1, [x27, #254]!
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldrsb	x1, [x27, #254]!
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       ldrsh	w1, [x27], #254
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       ldrsh	x1, [x27], #254
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       ldrsh	w1, [x27, #254]!
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldrsb	x1, [x27, #254]!
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldrsh	w1, [x27], #254
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       ldrsh	x1, [x27], #254
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       ldrsh	w1, [x27, #254]!
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [51] Code Region - G52
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1803
+# CHECK-NEXT: Total Cycles:      505
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.55
-# CHECK-NEXT: IPC:               0.28
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    .   ldrsh	x1, [x27, #254]!
-# CHECK-NEXT: [0,1]     D====eeeeER    .    .   ldrsw	x1, [x27], #254
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    .   ldrsw	x1, [x27, #254]!
-# CHECK-NEXT: [0,3]     .D===========eeeER  .   st1	{ v1.1d }, [x27], #8
-# CHECK-NEXT: [0,4]     . D=============eeeER   st1	{ v1.2d }, [x27], #16
+# CHECK:      [0,0]     DeeeeER  .   ldrsh	x1, [x27, #254]!
+# CHECK-NEXT: [0,1]     D=eeeeER .   ldrsw	x1, [x27], #254
+# CHECK-NEXT: [0,2]     .D=eeeeER.   ldrsw	x1, [x27, #254]!
+# CHECK-NEXT: [0,3]     .D==eeeER.   st1	{ v1.1d }, [x27], #8
+# CHECK-NEXT: [0,4]     . D==eeeER   st1	{ v1.2d }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2582,33 +2581,32 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldrsh	x1, [x27, #254]!
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldrsw	x1, [x27], #254
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       ldrsw	x1, [x27, #254]!
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st1	{ v1.1d }, [x27], #8
-# CHECK-NEXT: 4.     1     14.0   0.0    0.0       st1	{ v1.2d }, [x27], #16
-# CHECK-NEXT:        1     8.0    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldrsw	x1, [x27], #254
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       ldrsw	x1, [x27, #254]!
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.1d }, [x27], #8
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.2d }, [x27], #16
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [52] Code Region - G53
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1503
+# CHECK-NEXT: Total Cycles:      505
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    .    . .   st1	{ v1.2s }, [x27], #8
-# CHECK-NEXT: [0,1]     D===eeeER .    . .   st1	{ v1.4h }, [x27], #8
-# CHECK-NEXT: [0,2]     .D=====eeeER   . .   st1	{ v1.4s }, [x27], #16
-# CHECK-NEXT: [0,3]     .D========eeeER. .   st1	{ v1.8b }, [x27], #8
-# CHECK-NEXT: [0,4]     . D==========eeeER   st1	{ v1.8h }, [x27], #16
+# CHECK:      [0,0]     DeeeER   .   st1	{ v1.2s }, [x27], #8
+# CHECK-NEXT: [0,1]     D=eeeER  .   st1	{ v1.4h }, [x27], #8
+# CHECK-NEXT: [0,2]     .D=eeeER .   st1	{ v1.4s }, [x27], #16
+# CHECK-NEXT: [0,3]     .D==eeeER.   st1	{ v1.8b }, [x27], #8
+# CHECK-NEXT: [0,4]     . D==eeeER   st1	{ v1.8h }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2618,33 +2616,32 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.2s }, [x27], #8
-# CHECK-NEXT: 1.     1     4.0    0.0    0.0       st1	{ v1.4h }, [x27], #8
-# CHECK-NEXT: 2.     1     6.0    0.0    0.0       st1	{ v1.4s }, [x27], #16
-# CHECK-NEXT: 3.     1     9.0    0.0    0.0       st1	{ v1.8b }, [x27], #8
-# CHECK-NEXT: 4.     1     11.0   0.0    0.0       st1	{ v1.8h }, [x27], #16
-# CHECK-NEXT:        1     6.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.4h }, [x27], #8
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4s }, [x27], #16
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.8b }, [x27], #8
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8h }, [x27], #16
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [53] Code Region - G54
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1503
+# CHECK-NEXT: Total Cycles:      505
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    .    . .   st1	{ v1.16b }, [x27], #16
-# CHECK-NEXT: [0,1]     D===eeeER .    . .   st1	{ v1.1d }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=====eeeER   . .   st1	{ v1.2d }, [x27], x28
-# CHECK-NEXT: [0,3]     .D========eeeER. .   st1	{ v1.2s }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==========eeeER   st1	{ v1.4h }, [x27], x28
+# CHECK:      [0,0]     DeeeER   .   st1	{ v1.16b }, [x27], #16
+# CHECK-NEXT: [0,1]     D=eeeER  .   st1	{ v1.1d }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeER .   st1	{ v1.2d }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeER.   st1	{ v1.2s }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeER   st1	{ v1.4h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2654,33 +2651,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.16b }, [x27], #16
-# CHECK-NEXT: 1.     1     4.0    0.0    0.0       st1	{ v1.1d }, [x27], x28
-# CHECK-NEXT: 2.     1     6.0    0.0    0.0       st1	{ v1.2d }, [x27], x28
-# CHECK-NEXT: 3.     1     9.0    0.0    0.0       st1	{ v1.2s }, [x27], x28
-# CHECK-NEXT: 4.     1     11.0   0.0    0.0       st1	{ v1.4h }, [x27], x28
-# CHECK-NEXT:        1     6.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.1d }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.2d }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.2s }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.4h }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [54] Code Region - G55
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1603
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.31
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    .    .  .   st1	{ v1.4s }, [x27], x28
-# CHECK-NEXT: [0,1]     D===eeeER .    .  .   st1	{ v1.8b }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=====eeeER   .  .   st1	{ v1.8h }, [x27], x28
-# CHECK-NEXT: [0,3]     .D========eeeER.  .   st1	{ v1.16b }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==========eeeeER   st1	{ v1.1d, v2.1d }, [x27], #16
+# CHECK:      [0,0]     DeeeER    .   st1	{ v1.4s }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeER   .   st1	{ v1.8b }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeER  .   st1	{ v1.8h }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeER .   st1	{ v1.16b }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeER   st1	{ v1.1d, v2.1d }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2690,33 +2687,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.4s }, [x27], x28
-# CHECK-NEXT: 1.     1     4.0    0.0    0.0       st1	{ v1.8b }, [x27], x28
-# CHECK-NEXT: 2.     1     6.0    0.0    0.0       st1	{ v1.8h }, [x27], x28
-# CHECK-NEXT: 3.     1     9.0    0.0    0.0       st1	{ v1.16b }, [x27], x28
-# CHECK-NEXT: 4.     1     11.0   0.0    0.0       st1	{ v1.1d, v2.1d }, [x27], #16
-# CHECK-NEXT:        1     6.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.8b }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.8h }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.16b }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.1d, v2.1d }, [x27], #16
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [55] Code Region - G56
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st1	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st1	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st1	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st1	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st1	{ v1.8b, v2.8b }, [x27], #16
+# CHECK:      [0,0]     DeeeeER   .   st1	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st1	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st1	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st1	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: [0,4]     . D==eeeeER   st1	{ v1.8b, v2.8b }, [x27], #16
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2726,33 +2723,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st1	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st1	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st1	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st1	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [56] Code Region - G57
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st1	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st1	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st1	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st1	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st1	{ v1.2s, v2.2s }, [x27], x28
+# CHECK:      [0,0]     DeeeeER   .   st1	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st1	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st1	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st1	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeER   st1	{ v1.2s, v2.2s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2762,33 +2759,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st1	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st1	{ v1.1d, v2.1d }, [x27], x28
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st1	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st1	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.1d, v2.1d }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [57] Code Region - G58
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st1	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st1	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st1	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st1	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st1	{ v1.16b, v2.16b }, [x27], x28
+# CHECK:      [0,0]     DeeeeER   .   st1	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st1	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st1	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st1	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeER   st1	{ v1.16b, v2.16b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2798,33 +2795,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st1	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st1	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st1	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st1	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [58] Code Region - G59
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK:      [0,0]     DeeeeeER  ..   st1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2834,33 +2831,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.1d, v2.1d, v3.1d }, [x27], #24
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [59] Code Region - G60
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   st1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2870,33 +2867,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [60] Code Region - G61
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   st1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2906,33 +2903,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [61] Code Region - G62
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2903
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.34
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          01
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    .    ..   st1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeeER .    .    .    ..   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: [0,2]     .D==========eeeeeeER.    .    ..   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: [0,3]     .D================eeeeeeER    ..   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: [0,4]     . D=====================eeeeeeER   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK:      [0,0]     DeeeeeER  . .   st1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeeER. .   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: [0,2]     .D=eeeeeeER .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: [0,3]     .D==eeeeeeER.   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: [0,4]     . D==eeeeeeER   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2942,33 +2939,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
-# CHECK-NEXT: 2.     1     11.0   0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: 3.     1     17.0   0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT: 4.     1     22.0   0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT:        1     11.4   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], #32
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [62] Code Region - G63
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: [0,1]     D======eeeeeeER.    .    .    . .   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,2]     .D===========eeeeeeER    .    . .   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: [0,3]     .D=================eeeeeeER   . .   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: [0,4]     . D======================eeeeeeER   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeER . .   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: [0,1]     D=eeeeeeER. .   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: [0,2]     .D=eeeeeeER .   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: [0,3]     .D==eeeeeeER.   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: [0,4]     . D==eeeeeeER   st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -2978,33 +2975,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: 2.     1     12.0   0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: 3.     1     18.0   0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT: 4.     1     23.0   0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
-# CHECK-NEXT:        1     12.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.1d, v2.1d, v3.1d, v4.1d }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [63] Code Region - G64
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     D======eeeeeeER.    .    .    . .   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===========eeeeeeER    .    . .   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     .D=================eeeeeeER   . .   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     . D======================eeeeeeER   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeER . .   st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeeER. .   st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeeER .   st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeeER.   st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeeER   st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3014,33 +3011,32 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: 2.     1     12.0   0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: 3.     1     18.0   0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: 4.     1     23.0   0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT:        1     12.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [64] Code Region - G65
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2103
+# CHECK-NEXT: Total Cycles:      505
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.48
-# CHECK-NEXT: IPC:               0.24
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          0123
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .  .   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: [0,1]     D======eeeeeeER.    .  .   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===========eeeER  .  .   st1	{ v1.b }[0], [x27], #1
-# CHECK-NEXT: [0,3]     .D==============eeeER  .   st1	{ v1.b }[8], [x27], #1
-# CHECK-NEXT: [0,4]     . D================eeeER   st1	{ v1.b }[0], [x27], x28
+# CHECK:      [0,0]     DeeeeeeER.   st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeeER   st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeE--R   st1	{ v1.b }[0], [x27], #1
+# CHECK-NEXT: [0,3]     .D==eeeE-R   st1	{ v1.b }[8], [x27], #1
+# CHECK-NEXT: [0,4]     . D==eeeER   st1	{ v1.b }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3050,33 +3046,32 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: 2.     1     12.0   0.0    0.0       st1	{ v1.b }[0], [x27], #1
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st1	{ v1.b }[8], [x27], #1
-# CHECK-NEXT: 4.     1     17.0   0.0    0.0       st1	{ v1.b }[0], [x27], x28
-# CHECK-NEXT:        1     10.4   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    2.0       st1	{ v1.b }[0], [x27], #1
+# CHECK-NEXT: 3.     1     3.0    0.0    1.0       st1	{ v1.b }[8], [x27], #1
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.b }[0], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.6       <total>
 
 # CHECK:      [65] Code Region - G66
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1503
+# CHECK-NEXT: Total Cycles:      505
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    .    . .   st1	{ v1.b }[8], [x27], x28
-# CHECK-NEXT: [0,1]     D===eeeER .    . .   st1	{ v1.h }[0], [x27], #2
-# CHECK-NEXT: [0,2]     .D=====eeeER   . .   st1	{ v1.h }[4], [x27], #2
-# CHECK-NEXT: [0,3]     .D========eeeER. .   st1	{ v1.h }[0], [x27], x28
-# CHECK-NEXT: [0,4]     . D==========eeeER   st1	{ v1.h }[4], [x27], x28
+# CHECK:      [0,0]     DeeeER   .   st1	{ v1.b }[8], [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeER  .   st1	{ v1.h }[0], [x27], #2
+# CHECK-NEXT: [0,2]     .D=eeeER .   st1	{ v1.h }[4], [x27], #2
+# CHECK-NEXT: [0,3]     .D==eeeER.   st1	{ v1.h }[0], [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeER   st1	{ v1.h }[4], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3086,33 +3081,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.b }[8], [x27], x28
-# CHECK-NEXT: 1.     1     4.0    0.0    0.0       st1	{ v1.h }[0], [x27], #2
-# CHECK-NEXT: 2.     1     6.0    0.0    0.0       st1	{ v1.h }[4], [x27], #2
-# CHECK-NEXT: 3.     1     9.0    0.0    0.0       st1	{ v1.h }[0], [x27], x28
-# CHECK-NEXT: 4.     1     11.0   0.0    0.0       st1	{ v1.h }[4], [x27], x28
-# CHECK-NEXT:        1     6.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.h }[0], [x27], #2
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.h }[4], [x27], #2
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.h }[0], [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st1	{ v1.h }[4], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [66] Code Region - G67
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      1603
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.62
-# CHECK-NEXT: IPC:               0.31
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    .    .  .   st1	{ v1.s }[0], [x27], #4
-# CHECK-NEXT: [0,1]     D===eeeER .    .  .   st1	{ v1.s }[0], [x27], x28
-# CHECK-NEXT: [0,2]     .D=====eeeER   .  .   st1	{ v1.d }[0], [x27], #8
-# CHECK-NEXT: [0,3]     .D========eeeER.  .   st1	{ v1.d }[0], [x27], x28
-# CHECK-NEXT: [0,4]     . D==========eeeeER   st2	{ v1.2d, v2.2d }, [x27], #32
+# CHECK:      [0,0]     DeeeER    .   st1	{ v1.s }[0], [x27], #4
+# CHECK-NEXT: [0,1]     D=eeeER   .   st1	{ v1.s }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeER  .   st1	{ v1.d }[0], [x27], #8
+# CHECK-NEXT: [0,3]     .D==eeeER .   st1	{ v1.d }[0], [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeER   st2	{ v1.2d, v2.2d }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3122,33 +3117,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st1	{ v1.s }[0], [x27], #4
-# CHECK-NEXT: 1.     1     4.0    0.0    0.0       st1	{ v1.s }[0], [x27], x28
-# CHECK-NEXT: 2.     1     6.0    0.0    0.0       st1	{ v1.d }[0], [x27], #8
-# CHECK-NEXT: 3.     1     9.0    0.0    0.0       st1	{ v1.d }[0], [x27], x28
-# CHECK-NEXT: 4.     1     11.0   0.0    0.0       st2	{ v1.2d, v2.2d }, [x27], #32
-# CHECK-NEXT:        1     6.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st1	{ v1.s }[0], [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st1	{ v1.d }[0], [x27], #8
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st1	{ v1.d }[0], [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.2d, v2.2d }, [x27], #32
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [67] Code Region - G68
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st2	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st2	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st2	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st2	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st2	{ v1.8h, v2.8h }, [x27], #32
+# CHECK:      [0,0]     DeeeeER   .   st2	{ v1.2s, v2.2s }, [x27], #16
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st2	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st2	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: [0,4]     . D==eeeeER   st2	{ v1.8h, v2.8h }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3158,33 +3153,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st2	{ v1.2s, v2.2s }, [x27], #16
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st2	{ v1.4h, v2.4h }, [x27], #16
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st2	{ v1.4s, v2.4s }, [x27], #32
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st2	{ v1.8b, v2.8b }, [x27], #16
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st2	{ v1.8h, v2.8h }, [x27], #32
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st2	{ v1.4h, v2.4h }, [x27], #16
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.4s, v2.4s }, [x27], #32
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.8b, v2.8b }, [x27], #16
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.8h, v2.8h }, [x27], #32
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [68] Code Region - G69
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st2	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st2	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st2	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st2	{ v1.4s, v2.4s }, [x27], x28
+# CHECK:      [0,0]     DeeeeER   .   st2	{ v1.16b, v2.16b }, [x27], #32
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st2	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st2	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeER   st2	{ v1.4s, v2.4s }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3194,33 +3189,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st2	{ v1.16b, v2.16b }, [x27], #32
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st2	{ v1.2d, v2.2d }, [x27], x28
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st2	{ v1.2s, v2.2s }, [x27], x28
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st2	{ v1.4h, v2.4h }, [x27], x28
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st2	{ v1.4s, v2.4s }, [x27], x28
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st2	{ v1.2d, v2.2d }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.2s, v2.2s }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.4h, v2.4h }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.4s, v2.4s }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [69] Code Region - G70
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st2	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st2	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st2	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st2	{ v1.b, v2.b }[0], [x27], #2
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st2	{ v1.b, v2.b }[8], [x27], #2
+# CHECK:      [0,0]     DeeeeER   .   st2	{ v1.8b, v2.8b }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st2	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st2	{ v1.b, v2.b }[0], [x27], #2
+# CHECK-NEXT: [0,4]     . D==eeeeER   st2	{ v1.b, v2.b }[8], [x27], #2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3230,33 +3225,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st2	{ v1.8b, v2.8b }, [x27], x28
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st2	{ v1.8h, v2.8h }, [x27], x28
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st2	{ v1.16b, v2.16b }, [x27], x28
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st2	{ v1.b, v2.b }[0], [x27], #2
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st2	{ v1.b, v2.b }[8], [x27], #2
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st2	{ v1.8h, v2.8h }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.16b, v2.16b }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.b, v2.b }[0], [x27], #2
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.b, v2.b }[8], [x27], #2
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [70] Code Region - G71
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st2	{ v1.b, v2.b }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st2	{ v1.b, v2.b }[8], [x27], x28
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st2	{ v1.h, v2.h }[0], [x27], #4
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st2	{ v1.h, v2.h }[4], [x27], #4
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st2	{ v1.h, v2.h }[0], [x27], x28
+# CHECK:      [0,0]     DeeeeER   .   st2	{ v1.b, v2.b }[0], [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.b, v2.b }[8], [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st2	{ v1.h, v2.h }[0], [x27], #4
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st2	{ v1.h, v2.h }[4], [x27], #4
+# CHECK-NEXT: [0,4]     . D==eeeeER   st2	{ v1.h, v2.h }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3266,33 +3261,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st2	{ v1.b, v2.b }[0], [x27], x28
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st2	{ v1.b, v2.b }[8], [x27], x28
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st2	{ v1.h, v2.h }[0], [x27], #4
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st2	{ v1.h, v2.h }[4], [x27], #4
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st2	{ v1.h, v2.h }[0], [x27], x28
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st2	{ v1.b, v2.b }[8], [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.h, v2.h }[0], [x27], #4
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.h, v2.h }[4], [x27], #4
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.h, v2.h }[0], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [71] Code Region - G72
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2003
+# CHECK-NEXT: Total Cycles:      506
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.25
+# CHECK-NEXT: uOps Per Cycle:    1.98
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          012
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER   .    .    . .   st2	{ v1.h, v2.h }[4], [x27], x28
-# CHECK-NEXT: [0,1]     D====eeeeER    .    . .   st2	{ v1.s, v2.s }[0], [x27], #8
-# CHECK-NEXT: [0,2]     .D=======eeeeER.    . .   st2	{ v1.s, v2.s }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .D===========eeeeER . .   st2	{ v1.d, v2.d }[0], [x27], #16
-# CHECK-NEXT: [0,4]     . D==============eeeeER   st2	{ v1.d, v2.d }[0], [x27], x28
+# CHECK:      [0,0]     DeeeeER   .   st2	{ v1.h, v2.h }[4], [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeER  .   st2	{ v1.s, v2.s }[0], [x27], #8
+# CHECK-NEXT: [0,2]     .D=eeeeER .   st2	{ v1.s, v2.s }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeER.   st2	{ v1.d, v2.d }[0], [x27], #16
+# CHECK-NEXT: [0,4]     . D==eeeeER   st2	{ v1.d, v2.d }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3302,31 +3297,30 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st2	{ v1.h, v2.h }[4], [x27], x28
-# CHECK-NEXT: 1.     1     5.0    0.0    0.0       st2	{ v1.s, v2.s }[0], [x27], #8
-# CHECK-NEXT: 2.     1     8.0    0.0    0.0       st2	{ v1.s, v2.s }[0], [x27], x28
-# CHECK-NEXT: 3.     1     12.0   0.0    0.0       st2	{ v1.d, v2.d }[0], [x27], #16
-# CHECK-NEXT: 4.     1     15.0   0.0    0.0       st2	{ v1.d, v2.d }[0], [x27], x28
-# CHECK-NEXT:        1     8.2    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st2	{ v1.s, v2.s }[0], [x27], #8
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st2	{ v1.s, v2.s }[0], [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st2	{ v1.d, v2.d }[0], [x27], #16
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st2	{ v1.d, v2.d }[0], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [72] Code Region - G73
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
-# CHECK-NEXT: Total Cycles:      1503
+# CHECK-NEXT: Total Cycles:      307
 # CHECK-NEXT: Total uOps:        600
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.95
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    . .   st3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: [0,1]     D=====eeeeeER  . .   st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: [0,2]     .D=========eeeeeER   st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK:      [0,0]     DeeeeeER .   st3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
+# CHECK-NEXT: [0,1]     D=eeeeeER.   st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: [0,2]     .D=eeeeeER   st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3336,31 +3330,31 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.2d, v2.2d, v3.2d }, [x27], #48
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
-# CHECK-NEXT:        1     5.7    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.2s, v2.2s, v3.2s }, [x27], #24
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.4h, v2.4h, v3.4h }, [x27], #24
+# CHECK-NEXT:        1     1.7    0.3    0.0       <total>
 
 # CHECK:      [73] Code Region - G74
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   st3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3370,33 +3364,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.4s, v2.4s, v3.4s }, [x27], #48
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.8b, v2.8b, v3.8b }, [x27], #24
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.8h, v2.8h, v3.8h }, [x27], #48
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.16b, v2.16b, v3.16b }, [x27], #48
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.2d, v2.2d, v3.2d }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [74] Code Region - G75
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   st3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3406,33 +3400,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.2s, v2.2s, v3.2s }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.4h, v2.4h, v3.4h }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.4s, v2.4s, v3.4s }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.8b, v2.8b, v3.8b }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.8h, v2.8h, v3.8h }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [75] Code Region - G76
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st3	{ v1.b, v2.b, v3.b }[0], [x27], #3
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
+# CHECK:      [0,0]     DeeeeeER  ..   st3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st3	{ v1.b, v2.b, v3.b }[0], [x27], #3
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3442,33 +3436,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.16b, v2.16b, v3.16b }, [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[0], [x27], #3
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[0], [x27], #3
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[8], [x27], #3
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[0], [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.b, v2.b, v3.b }[8], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [76] Code Region - G77
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      2503
+# CHECK-NEXT: Total Cycles:      507
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.40
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    . .   st3	{ v1.h, v2.h, v3.h }[0], [x27], #6
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    . .   st3	{ v1.h, v2.h, v3.h }[4], [x27], #6
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    . .   st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .D==============eeeeeER  . .   st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
-# CHECK-NEXT: [0,4]     . D==================eeeeeER   st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
+# CHECK:      [0,0]     DeeeeeER  ..   st3	{ v1.h, v2.h, v3.h }[0], [x27], #6
+# CHECK-NEXT: [0,1]     D=eeeeeER ..   st3	{ v1.h, v2.h, v3.h }[4], [x27], #6
+# CHECK-NEXT: [0,2]     .D=eeeeeER..   st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeER.   st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeER   st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3478,33 +3472,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.h, v2.h, v3.h }[0], [x27], #6
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st3	{ v1.h, v2.h, v3.h }[4], [x27], #6
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
-# CHECK-NEXT: 4.     1     19.0   0.0    0.0       st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
-# CHECK-NEXT:        1     10.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.h, v2.h, v3.h }[4], [x27], #6
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.h, v2.h, v3.h }[0], [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st3	{ v1.h, v2.h, v3.h }[4], [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st3	{ v1.s, v2.s, v3.s }[0], [x27], #12
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [77] Code Region - G78
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3103
+# CHECK-NEXT: Total Cycles:      510
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.32
-# CHECK-NEXT: IPC:               0.16
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeER  .    .    .    .    .  .   st3	{ v1.s, v2.s, v3.s }[0], [x27], x28
-# CHECK-NEXT: [0,1]     D=====eeeeeER  .    .    .    .  .   st3	{ v1.d, v2.d, v3.d }[0], [x27], #24
-# CHECK-NEXT: [0,2]     .D=========eeeeeER  .    .    .  .   st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
-# CHECK-NEXT: [0,3]     .D==============eeeeeeeeER    .  .   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: [0,4]     . D=====================eeeeeeeeER   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK:      [0,0]     DeeeeeER  .   .   st3	{ v1.s, v2.s, v3.s }[0], [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeER .   .   st3	{ v1.d, v2.d, v3.d }[0], [x27], #24
+# CHECK-NEXT: [0,2]     .D=eeeeeER.   .   st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3514,33 +3508,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st3	{ v1.s, v2.s, v3.s }[0], [x27], x28
-# CHECK-NEXT: 1.     1     6.0    0.0    0.0       st3	{ v1.d, v2.d, v3.d }[0], [x27], #24
-# CHECK-NEXT: 2.     1     10.0   0.0    0.0       st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
-# CHECK-NEXT: 3.     1     15.0   0.0    0.0       st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
-# CHECK-NEXT: 4.     1     22.0   0.0    0.0       st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
-# CHECK-NEXT:        1     10.8   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st3	{ v1.d, v2.d, v3.d }[0], [x27], #24
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st3	{ v1.d, v2.d, v3.d }[0], [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], #64
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], #32
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [78] Code Region - G79
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      510
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.25
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeER   .    .    . .   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: [0,4]     . D==============================eeeeeeeeER   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK:      [0,0]     DeeeeeeeeER   .   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
+# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3550,33 +3544,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], #32
-# CHECK-NEXT: 1.     1     9.0    0.0    0.0       st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
-# CHECK-NEXT: 2.     1     16.0   0.0    0.0       st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
-# CHECK-NEXT: 3.     1     24.0   0.0    0.0       st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
-# CHECK-NEXT: 4.     1     31.0   0.0    0.0       st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
-# CHECK-NEXT:        1     16.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], #64
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], #32
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], #64
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], #64
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [79] Code Region - G80
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      4003
+# CHECK-NEXT: Total Cycles:      510
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.25
-# CHECK-NEXT: IPC:               0.12
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012
+# CHECK-NEXT:                     01234
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    .    . .   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    .    . .   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===============eeeeeeeeER   .    .    . .   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: [0,3]     .D=======================eeeeeeeeER.    . .   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: [0,4]     . D==============================eeeeeeeeER   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeER   .   st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeeeeER  .   st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeeeeER .   st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: [0,3]     .D==eeeeeeeeER.   st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeeeeER   st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3586,33 +3580,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st4	{ v1.2d, v2.2d, v3.2d, v4.2d }, [x27], x28
-# CHECK-NEXT: 1.     1     9.0    0.0    0.0       st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
-# CHECK-NEXT: 2.     1     16.0   0.0    0.0       st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
-# CHECK-NEXT: 3.     1     24.0   0.0    0.0       st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
-# CHECK-NEXT: 4.     1     31.0   0.0    0.0       st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
-# CHECK-NEXT:        1     16.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st4	{ v1.2s, v2.2s, v3.2s, v4.2s }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.4h, v2.4h, v3.4h, v4.4h }, [x27], x28
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.4s, v2.4s, v3.4s, v4.4s }, [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.8b, v2.8b, v3.8b, v4.8b }, [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [80] Code Region - G81
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3403
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.15
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeER    .    .    .    .    ..   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: [0,1]     D========eeeeeeeeER .    .    .    ..   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: [0,2]     .D===============eeeeeeER.    .    ..   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
-# CHECK-NEXT: [0,3]     .D=====================eeeeeeER    ..   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
-# CHECK-NEXT: [0,4]     . D==========================eeeeeeER   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
+# CHECK:      [0,0]     DeeeeeeeeER .   st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeeeeER.   st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeeE-R.   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
+# CHECK-NEXT: [0,3]     .D==eeeeeeER.   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
+# CHECK-NEXT: [0,4]     . D==eeeeeeER   st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3622,33 +3616,33 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st4	{ v1.8h, v2.8h, v3.8h, v4.8h }, [x27], x28
-# CHECK-NEXT: 1.     1     9.0    0.0    0.0       st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
-# CHECK-NEXT: 2.     1     16.0   0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
-# CHECK-NEXT: 3.     1     22.0   0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
-# CHECK-NEXT: 4.     1     27.0   0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
-# CHECK-NEXT:        1     15.0   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st4	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    1.0       st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], #4
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], #4
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[0], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.2       <total>
 
 # CHECK:      [81] Code Region - G82
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      500
-# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total Cycles:      508
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          012
-# CHECK-NEXT: Index     0123456789          0123456789
+# CHECK-NEXT:                     012
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    .    . .   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
-# CHECK-NEXT: [0,1]     D======eeeeeeER.    .    .    . .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
-# CHECK-NEXT: [0,2]     .D===========eeeeeeER    .    . .   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
-# CHECK-NEXT: [0,3]     .D=================eeeeeeER   . .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
-# CHECK-NEXT: [0,4]     . D======================eeeeeeER   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
+# CHECK:      [0,0]     DeeeeeeER . .   st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
+# CHECK-NEXT: [0,1]     D=eeeeeeER. .   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
+# CHECK-NEXT: [0,2]     .D=eeeeeeER .   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
+# CHECK-NEXT: [0,3]     .D==eeeeeeER.   st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
+# CHECK-NEXT: [0,4]     . D==eeeeeeER   st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3658,32 +3652,32 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st4	{ v1.b, v2.b, v3.b, v4.b }[8], [x27], x28
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
-# CHECK-NEXT: 2.     1     12.0   0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
-# CHECK-NEXT: 3.     1     18.0   0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
-# CHECK-NEXT: 4.     1     23.0   0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
-# CHECK-NEXT:        1     12.2   0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], #8
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], #8
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[0], [x27], x28
+# CHECK-NEXT: 4.     1     3.0    0.0    0.0       st4	{ v1.h, v2.h, v3.h, v4.h }[4], [x27], x28
+# CHECK-NEXT:        1     2.2    0.2    0.0       <total>
 
 # CHECK:      [82] Code Region - G83
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      2403
+# CHECK-NEXT: Total Cycles:      408
 # CHECK-NEXT: Total uOps:        800
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          0123456
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeeeER .    .    .    ..   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
-# CHECK-NEXT: [0,1]     D======eeeeeeER.    .    ..   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
-# CHECK-NEXT: [0,2]     .D===========eeeeeeER    ..   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
-# CHECK-NEXT: [0,3]     .D=================eeeeeeER   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
+# CHECK:      [0,0]     DeeeeeeER ..   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
+# CHECK-NEXT: [0,1]     D=eeeeeeER..   st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
+# CHECK-NEXT: [0,2]     .D=eeeeeeER.   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
+# CHECK-NEXT: [0,3]     .D==eeeeeeER   st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3693,10 +3687,10 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], #16
-# CHECK-NEXT: 1.     1     7.0    0.0    0.0       st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
-# CHECK-NEXT: 2.     1     12.0   0.0    0.0       st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
-# CHECK-NEXT: 3.     1     18.0   0.0    0.0       st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
-# CHECK-NEXT:        1     9.5    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    0.0    0.0       st4	{ v1.s, v2.s, v3.s, v4.s }[0], [x27], x28
+# CHECK-NEXT: 2.     1     2.0    0.0    0.0       st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], #32
+# CHECK-NEXT: 3.     1     3.0    0.0    0.0       st4	{ v1.d, v2.d, v3.d, v4.d }[0], [x27], x28
+# CHECK-NEXT:        1     2.0    0.3    0.0       <total>
 
 # CHECK:      [83] Code Region - G84
 
@@ -3724,8 +3718,8 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       stp	s1, s2, [x27], #248
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       stp	d1, d2, [x27], #496
-# CHECK-NEXT:        1     1.5    0.5    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       stp	d1, d2, [x27], #496
+# CHECK-NEXT:        1     1.5    1.0    0.0       <total>
 
 # CHECK:      [84] Code Region - G85
 
@@ -3757,11 +3751,11 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       stp	q1, q2, [x27], #992
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       stp	s1, s2, [x27, #248]!
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       stp	d1, d2, [x27, #496]!
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       stp	q1, q2, [x27, #992]!
-# CHECK-NEXT: 4.     1     5.0    0.0    0.0       stp	w1, w2, [x27], #248
-# CHECK-NEXT:        1     3.0    0.2    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       stp	s1, s2, [x27, #248]!
+# CHECK-NEXT: 2.     1     3.0    1.0    0.0       stp	d1, d2, [x27, #496]!
+# CHECK-NEXT: 3.     1     4.0    1.0    0.0       stp	q1, q2, [x27, #992]!
+# CHECK-NEXT: 4.     1     5.0    1.0    0.0       stp	w1, w2, [x27], #248
+# CHECK-NEXT:        1     3.0    1.0    0.0       <total>
 
 # CHECK:      [85] Code Region - G86
 
@@ -3933,19 +3927,20 @@ ldr  x2, [x1], #254
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      404
+# CHECK-NEXT: Total Cycles:      110
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.99
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    3.64
+# CHECK-NEXT: IPC:               1.82
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT:                     0
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeeER.   ldr	x1, [x27], #254
-# CHECK-NEXT: [0,1]     D=eeeeER   ldr	x2, [x1], #254
+# CHECK:      [0,0]     DeeeeER   .   ldr	x1, [x27], #254
+# CHECK-NEXT: [0,1]     D====eeeeER   ldr	x2, [x1], #254
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -3955,5 +3950,5 @@ ldr  x2, [x1], #254
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       ldr	x1, [x27], #254
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       ldr	x2, [x1], #254
-# CHECK-NEXT:        1     1.5    0.5    0.0       <total>
+# CHECK-NEXT: 1.     1     5.0    0.0    0.0       ldr	x2, [x1], #254
+# CHECK-NEXT:        1     3.0    0.5    0.0       <total>
