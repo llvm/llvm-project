@@ -88,8 +88,8 @@ MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
       void *tensor, StridedMemRefType<V, 0> *vref,                             \
       StridedMemRefType<index_type, 1> *dimCoordsRef);                         \
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
-
 #undef DECL_FORWARDINGINSERT
+
 /// Coordinate-scheme method for getting the next element while iterating.
 #define DECL_GETNEXT(VNAME, V)                                                 \
   MLIR_CRUNNERUTILS_EXPORT bool _mlir_ciface_getNext##VNAME(                   \
