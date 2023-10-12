@@ -3,16 +3,16 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # LLVM libc project.
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
     "libc_math_function",
     "libc_support_library",
 )
-load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
-load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 
 package(
     default_visibility = ["//visibility:public"],
