@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=c99 -std=c99 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=c11 -std=c11 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=c23 -std=c23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=c23 -std=c2x %s
 
 struct astruct { char member; };
 
