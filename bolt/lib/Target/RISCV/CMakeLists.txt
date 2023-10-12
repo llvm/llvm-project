@@ -13,7 +13,7 @@ add_llvm_library(LLVMBOLTTargetRISCV
   RISCVCommonTableGen
   )
 
-target_link_libraries(LLVMBOLTTargetRISCV PRIVATE LLVMBOLTCore)
+target_link_libraries(LLVMBOLTTargetRISCV PRIVATE LLVMBOLTCore LLVMBOLTUtils)
 
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/RISCV

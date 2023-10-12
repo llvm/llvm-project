@@ -1676,6 +1676,10 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
                        "ret\n"
                        :::);
   // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  __asm__ __volatile__("ebreak");
+  // clang-format on
 #else
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1699,6 +1703,10 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
                        RESTORE_ALL
                        "ret\n"
                        :::);
+  // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  __asm__ __volatile__("ebreak");
   // clang-format on
 #else
   // clang-format off
@@ -1726,6 +1734,16 @@ extern "C" __attribute((naked)) void __bolt_instr_start()
                        "br x16\n"
                        :::);
   // clang-format on
+#elif defined(__riscv)
+  // clang-format off
+  // Only a0 (fini address) needs to be saved. Simply store it temporarily in a
+  // callee-saved register.
+  __asm__ __volatile__("mv s0, a0\n"
+                       "call __bolt_instr_setup\n"
+                       "mv a0, s0\n"
+                       "tail __bolt_start_trampoline\n"
+                       :::);
+  // clang-format on
 #else
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1748,6 +1766,8 @@ extern "C" void __bolt_instr_fini() {
                        RESTORE_ALL
                        :::);
   // clang-format on
+#elif defined(__riscv)
+  __bolt_fini_trampoline();
 #else
   __asm__ __volatile__("call __bolt_fini_trampoline\n" :::);
 #endif
