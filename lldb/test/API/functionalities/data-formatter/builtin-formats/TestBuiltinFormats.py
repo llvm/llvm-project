@@ -3,9 +3,9 @@ Tests the builtin formats of LLDB.
 """
 
 import lldb
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
@@ -19,6 +19,21 @@ class TestCase(TestBase):
         self.assertTrue(result.Succeeded(), result.GetError())
         return result.GetOutput()
 
+    @no_debug_info_test
+    @skipIfWindows
+    def testAllPlatforms(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+        # We can dump correctly non char* c-strings with explicit formatting.
+        self.assertIn(' = ""', self.getFormatted("c-string", "void_empty_cstring"));
+        self.assertIn(' = ""', self.getFormatted("c-string", "empty_cstring"));
+
+
+    # TODO: Move as many asserts as possible within this function to `testAllPlatforms`.
+    # Currently `arm` is being skipped even though many asserts would effectively
+    # pass.
     @no_debug_info_test
     @skipIfWindows
     # uint128_t not available on arm.
