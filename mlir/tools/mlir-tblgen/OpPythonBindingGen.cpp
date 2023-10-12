@@ -302,8 +302,12 @@ static bool isODSReserved(StringRef str) {
 /// modified version.
 static std::string sanitizeName(StringRef name) {
   std::string processed_str = name.str();
+  std::replace_if(
+      processed_str.begin(), processed_str.end(),
+      [](char c) { return !llvm::isAlnum(c); }, '_');
 
-  std::replace(processed_str.begin(), processed_str.end(), '-', '_');
+  if (llvm::isDigit(*processed_str.begin()))
+    return "_" + processed_str;
 
   if (isPythonReserved(processed_str) || isODSReserved(processed_str))
     return processed_str + "_";
@@ -988,8 +992,6 @@ static void emitValueBuilder(const Operator &op,
   // If we are asked to skip default builders, comply.
   if (op.skipDefaultBuilders())
     return;
-  auto name = sanitizeName(op.getOperationName());
-  iterator_range<llvm::SplittingIterator> splitName = llvm::split(name, ".");
   // Params with (possibly) default args.
   auto valueBuilderParams =
       llvm::map_range(functionArgs, [](const std::string &argAndMaybeDefault) {
@@ -1008,16 +1010,16 @@ static void emitValueBuilder(const Operator &op,
         auto lhs = *llvm::split(arg, "=").begin();
         return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
       });
-  os << llvm::formatv(
-      valueBuilderTemplate,
-      // Drop dialect name and then sanitize again (to catch e.g. func.return).
-      sanitizeName(llvm::join(++splitName.begin(), splitName.end(), "_")),
-      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
-      llvm::join(opBuilderArgs, ", "),
-      (op.getNumResults() > 1
-           ? "_Sequence[_ods_ir.OpResult]"
-           : (op.getNumResults() > 0 ? "_ods_ir.OpResult"
-                                     : "_ods_ir.Operation")));
+  std::string name_without_dialect =
+      op.getOperationName().substr(op.getOperationName().find('.') + 1);
+  os << llvm::formatv(valueBuilderTemplate, sanitizeName(name_without_dialect),
+                      op.getCppClassName(),
+                      llvm::join(valueBuilderParams, ", "),
+                      llvm::join(opBuilderArgs, ", "),
+                      (op.getNumResults() > 1
+                           ? "_Sequence[_ods_ir.OpResult]"
+                           : (op.getNumResults() > 0 ? "_ods_ir.OpResult"
+                                                     : "_ods_ir.Operation")));
 }
 
 /// Emits bindings for a specific Op to the given output stream.
