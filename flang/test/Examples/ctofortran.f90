@@ -1,4 +1,5 @@
 ! UNSUPPORTED: system-windows
+! REQUIRES: clang
 ! RUN: split-file %s %t
 ! RUN: %clang -c %t/cfile.c
 ! RUN: %flang -flang-experimental-hlfir cfile.o %t/src.f90 -o %t/ctofortran
