@@ -1,0 +1,25 @@
+name: "Check libc++ generated files"
+on:
+  pull_request:
+    paths:
+      - 'libcxx/**'
+
+jobs:
+  check_generated_files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clangformat: 17.0.1
+
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja
+
+      - name: Check generated files
+        run: libcxx/utils/ci/run-buildbot check-generated-output
