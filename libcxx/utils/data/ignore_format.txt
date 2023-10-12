@@ -5265,7 +5265,6 @@ libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/ba
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/ctor.default.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/ctor.outer_iterator.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/equal.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/increment.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/iter_move.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/iter_swap.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.inner/types.compile.pass.cpp
@@ -5275,11 +5274,8 @@ libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer/ct
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer/equal.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer/types.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer.value/ctor.default.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.lazy.split/range.lazy.split.outer.value/view_interface.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.lazy.split/types.h
-libcxx/test/std/ranges/range.adaptors/range.lazy.split/view_interface.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/adaptor.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.reverse/base.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/begin.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/borrowing.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.reverse/ctad.compile.pass.cpp
@@ -5300,7 +5296,6 @@ libcxx/test/std/ranges/range.adaptors/range.take/ctad.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/ctor.default.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/range_concept_conformance.compile.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/sentinel/ctor.pass.cpp
-libcxx/test/std/ranges/range.adaptors/range.take/sentinel/eq.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/size.pass.cpp
 libcxx/test/std/ranges/range.adaptors/range.take/types.h
 libcxx/test/std/ranges/range.adaptors/range.take.while/adaptor.pass.cpp
@@ -5357,7 +5352,6 @@ libcxx/test/std/ranges/range.factories/range.iota.view/iterator/ctor.value.pass.
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/decrement.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/increment.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/member_typedefs.compile.pass.cpp
-libcxx/test/std/ranges/range.factories/range.iota.view/iterator/minus.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/star.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/iterator/subscript.pass.cpp
 libcxx/test/std/ranges/range.factories/range.iota.view/range_concept_conformance.compile.pass.cpp
