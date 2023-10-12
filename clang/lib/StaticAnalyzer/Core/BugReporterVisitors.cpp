@@ -177,8 +177,7 @@ static const MemRegion *
 getLocationRegionIfReference(const Expr *E, const ExplodedNode *N,
                              bool LookingForReference = true) {
   if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-    // This handles other kinds of null references,
-    // for example, references from FieldRegions:
+    // This handles null references from FieldRegions, for example:
     //   struct Wrapper { int &ref; };
     //   Wrapper w = { *(int *)0 };
     //   w.ref = 1;
