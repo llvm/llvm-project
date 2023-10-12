@@ -2679,15 +2679,23 @@ protected:
                 return false;
               }
 
+              // We expect to see "type", "symfile", and
+              // "separate-debug-info-files" as fields in the dictionary, even
+              // if they're empty.
               llvm::StringRef type;
+              separate_debug_info_list->GetValueForKeyAsString("type", type);
               llvm::StringRef symfile;
-              StructuredData::Array *files;
-              assert(separate_debug_info_list->GetValueForKeyAsString("type",
-                                                                      type));
-              assert(separate_debug_info_list->GetValueForKeyAsString("symfile",
-                                                                      symfile));
-              assert(separate_debug_info_list->GetValueForKeyAsArray(
-                  "separate-debug-info-files", files));
+              separate_debug_info_list->GetValueForKeyAsString("symfile",
+                                                               symfile);
+              StructuredData::Array *files = nullptr;
+              separate_debug_info_list->GetValueForKeyAsArray(
+                  "separate-debug-info-files", files);
+              if (files == nullptr) {
+                result.AppendWarningWithFormat(
+                    "Expected \"separate-debug-info-files\" field in separate "
+                    "debug info dictionary");
+                return false;
+              }
 
               strm << "Symbol file: " << symfile;
               strm.EOL();
