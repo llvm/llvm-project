@@ -6372,6 +6372,9 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
+defm alias_analysis : BoolOptionWithoutMarshalling<"f", "alias-analysis",
+  PosFlag<SetTrue, [], [], "Pass alias information on to LLVM (default when optimizing for speed)">,
+  NegFlag<SetFalse, [], [], "Do not pass alias information on to LLVM (default for unoptimized builds)">>;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,

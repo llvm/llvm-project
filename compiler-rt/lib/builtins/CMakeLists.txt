@@ -551,6 +551,8 @@ set(aarch64_SOURCES
   ${GENERIC_SOURCES}
   cpu_model.c
   aarch64/fp_mode.c
+  aarch64/sme-abi.S
+  aarch64/sme-abi-init.c
 )
 
 # Generate outline atomics helpers from lse.S base
@@ -779,6 +781,7 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
+  append_list_if(COMPILER_RT_HAS_ASM_SME HAS_ASM_SME BUILTIN_DEFS)
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
