@@ -103,6 +103,13 @@ function (gen_rst_file_from_td output_file td_option source docs_targets)
 endfunction()
 
 if (LLVM_ENABLE_SPHINX)
+  llvm_find_program(dot)
+  if (HAVE_DOT)
+    set(DOT ${LLVM_PATH_DOT})
+  else()
+    message(FATAL_ERROR "Cannot find DOT")
+  endif()
+
   include(AddSphinxTarget)
   if (SPHINX_FOUND AND (${SPHINX_OUTPUT_HTML} OR ${SPHINX_OUTPUT_MAN}))
     # Copy rst files to build directory before generating the html
