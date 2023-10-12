@@ -163,6 +163,12 @@ New checks
   Flags coroutines that suspend while a lock guard is in scope at the
   suspension point.
 
+- New :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
+
+  Detects when objects of certain hostile RAII types persists across suspension points in a coroutine.
+  Such hostile types include scoped-lockable types and types belonging to a configurable denylist.
+
 - New :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check.
 
@@ -179,12 +185,6 @@ New checks
 
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
-
-- New :doc:`misc-coroutine-hostile-raii
-  <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
-
-  Detects when objects of certain hostile RAII types persists across suspension points in a coroutine.
-  Such hostile types include scoped-lockable types and types belonging to a configurable denylist.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

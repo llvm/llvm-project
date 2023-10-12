@@ -1,4 +1,4 @@
-//===--- CoroutineHostileRAIICheck.h - clang-tidy ---------------*- C++-*-===//
+//===--- CoroutineHostileRAIICheck.h - clang-tidy ----------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void checkVarDecl(VarDecl *VD);
+  void checkVarDecl(const VarDecl *VD);
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
   std::vector<StringRef> RAIIDenyList;

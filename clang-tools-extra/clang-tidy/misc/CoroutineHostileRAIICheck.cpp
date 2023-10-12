@@ -1,4 +1,4 @@
-//===--- CoroutineSuspensionHostileCheck.cpp - clang-tidy --------------===//
+//===--- CoroutineHostileRAII.cpp - clang-tidy ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(coyieldExpr().bind("suspension"), this);
 }
 
-void CoroutineHostileRAIICheck::checkVarDecl(VarDecl *VD) {
+void CoroutineHostileRAIICheck::checkVarDecl(const VarDecl *VD) {
   RecordDecl *RD = VD->getType().getCanonicalType()->getAsRecordDecl();
   if (RD->hasAttr<clang::ScopedLockableAttr>()) {
     diag(VD->getLocation(),
