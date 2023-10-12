@@ -119,29 +119,29 @@ class TypeAndTypeListTestCase(TestBase):
 
         self.assertEqual(task_type, task_head_pointee_type)
 
-        # Check whether we can find a nested type by name
-        name_type = task_type.FindNestedType("name")
+        # Check whether we can find a directly nested type by name
+        name_type = task_type.FindDirectNestedType("name")
         self.assertTrue(name_type)
         self.DebugSBType(name_type)
 
-        enum_type = task_type.FindNestedType("E")
+        enum_type = task_type.FindDirectNestedType("E")
         self.assertTrue(enum_type)
         self.DebugSBType(enum_type)
 
-        union_type = task_type.FindNestedType("U")
+        union_type = task_type.FindDirectNestedType("U")
         self.assertTrue(union_type)
         self.DebugSBType(union_type)
 
-        # Check that FindNestedType handles types without DeclContext
+        # Check that FindDirectNestedType handles types without DeclContext
         # and other errorneous inputs
         task_ptr_type = task_type.GetPointerType()
-        invalid_type = task_ptr_type.FindNestedType("name")
+        invalid_type = task_ptr_type.FindDirectNestedType("name")
         self.assertFalse(invalid_type)
 
-        invalid_type = task_type.FindNestedType("")
+        invalid_type = task_type.FindDirectNestedType("")
         self.assertFalse(invalid_type)
 
-        invalid_type = task_type.FindNestedType(None)
+        invalid_type = task_type.FindDirectNestedType(None)
         self.assertFalse(invalid_type)
 
         # We'll now get the child member 'id' from 'task_head'.

@@ -586,12 +586,12 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
   return eTemplateArgumentKindNull;
 }
 
-SBType SBType::FindNestedType(const char *name) {
+SBType SBType::FindDirectNestedType(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
   if (!IsValid())
     return SBType();
-  auto ret = SBType(m_opaque_sp->FindNestedType(ConstString(name)));
+  auto ret = SBType(m_opaque_sp->FindDirectNestedType(ConstString(name)));
   return ret;
 }
 

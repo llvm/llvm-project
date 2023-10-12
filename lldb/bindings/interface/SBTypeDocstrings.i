@@ -721,11 +721,12 @@ SBType supports the eq/ne operator. For example,::
 ) lldb::SBType::GetTypeFlags;
 
 %feature("docstring",
-    "Searches for a nested type that has provided name.
+    "Searches for a directly nested type that has provided name.
 
     Returns the type if it was found.
-    Returns invalid type if nothing was found."
-) lldb::SBType::FindNestedType;
+    Returns invalid type if nothing was found.
+    "
+) lldb::SBType::FindDirectNestedType;
 
 %feature("docstring",
 "Represents a list of :py:class:`SBType` s.

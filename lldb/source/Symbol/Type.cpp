@@ -1082,7 +1082,7 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   return true;
 }
 
-CompilerType TypeImpl::FindNestedType(ConstString name) {
+CompilerType TypeImpl::FindDirectNestedType(ConstString name) {
   if (name.IsEmpty())
     return CompilerType();
   auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
