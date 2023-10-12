@@ -169,19 +169,42 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
   }
 }
 
+/// \brief Returns the number of elements of 'container_type'
+/// as if its elements had type 'element_type'.
+///
+/// For example, a container of type
+/// `uint8_t __attribute__((vector_size(16)))` has 16 elements.
+/// But calling `CalculateNumChildren` with an 'element_type'
+/// of `float` (4-bytes) will return `4` because we are interpreting
+/// the byte-array as a `float32[]`.
+///
+/// \param[in] container_type The type of the container We
+/// are calculating the children of.
+///
+/// \param[in] element_type The type of elements we interpret
+/// container_type to contain for the purposes of calculating
+/// the number of children.
+///
+/// If size of the container is not a multiple of 'element_type'
+/// returns 0.
+///
+/// On error, returns 0.
 static size_t CalculateNumChildren(CompilerType container_type,
                                    CompilerType element_type) {
   std::optional<uint64_t> container_size =
       container_type.GetByteSize(/* exe_scope */ nullptr);
+  if (!container_size)
+    return 0;
+
   std::optional<uint64_t> element_size =
       element_type.GetByteSize(/* exe_scope */ nullptr);
+  if (!element_size || !*element_size)
+    return 0;
 
-  if (container_size && element_size && *element_size) {
-    if (*container_size % *element_size)
-      return 0;
-    return *container_size / *element_size;
-  }
-  return 0;
+  if (*container_size % *element_size)
+    return 0;
+
+  return *container_size / *element_size;
 }
 
 namespace lldb_private {
