@@ -727,6 +727,11 @@ public:
   std::optional<StringRef> tryGetCPUName() const override;
 }; // XCOFFObjectFile
 
+extern template Expected<ArrayRef<ExceptionSectionEntry32>> LLVM_FUNC_ABI
+XCOFFObjectFile::getExceptionEntries() const;
+extern template Expected<ArrayRef<ExceptionSectionEntry64>> LLVM_FUNC_ABI
+XCOFFObjectFile::getExceptionEntries() const;
+
 typedef struct LLVM_CLASS_ABI {
   uint8_t LanguageId;
   uint8_t CpuTypeId;
