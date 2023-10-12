@@ -1542,7 +1542,10 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   }
   if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
     targetIt++;
-    symbol->set(Symbol::Flag::OmpPreDetermined);
+    // If this object already had a DSA then it is not predetermined
+    if (!IsObjectWithDSA(*symbol)) {
+      symbol->set(Symbol::Flag::OmpPreDetermined);
+    }
     iv.symbol = symbol; // adjust the symbol within region
     for (auto it{dirContext_.rbegin()}; it != targetIt; ++it) {
       AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpPrivate, *it);
