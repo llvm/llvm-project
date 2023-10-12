@@ -52,6 +52,10 @@ static cl::opt<bool> ForceEmitZeroFlag(
   cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
   cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EmitForAllMemOpFlag(
+    "amdgpu-waitcnt-for-all-mem-op",
+    cl::desc("Emit s_waitcnt 0 after each memory operation"), cl::init(false));
+
 namespace {
 // Class of object that encapsulates latest instruction counter score
 // associated with the operand.  Used for determining whether
@@ -387,6 +391,8 @@ private:
   // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
+
+  bool insertWaitcntAfterMemOp(MachineFunction &MF);
 
 public:
   static char ID;
@@ -1809,6 +1815,23 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   return HasVMemLoad && UsesVgprLoadedOutside;
 }
 
+bool SIInsertWaitcnts::insertWaitcntAfterMemOp(MachineFunction &MF) {
+  bool Modified = false;
+
+  for (auto &MBB : MF) {
+    for (auto It = MBB.begin(); It != MBB.end();) {
+      bool IsMemOp = It->mayLoadOrStore();
+      ++It;
+      if (IsMemOp) {
+        BuildMI(MBB, It, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
+        Modified = true;
+      }
+    }
+  }
+
+  return Modified;
+}
+
 bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
@@ -1818,6 +1841,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   PDT = &getAnalysis<MachinePostDominatorTree>();
+
+  bool Modified = false;
+
+  if (EmitForAllMemOpFlag) {
+    Modified = insertWaitcntAfterMemOp(MF);
+  }
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
@@ -1847,7 +1876,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   TrackedWaitcntSet.clear();
   BlockInfos.clear();
-  bool Modified = false;
 
   if (!MFI->isEntryFunction()) {
     // Wait for any outstanding memory operations that the input registers may
