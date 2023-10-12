@@ -169,14 +169,12 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
   }
 }
 
-static size_t CalculateNumChildren(
-    CompilerType container_type, CompilerType element_type,
-    lldb_private::ExecutionContextScope *exe_scope =
-        nullptr // does not matter here because all we trade in are basic types
-    ) {
+static size_t CalculateNumChildren(CompilerType container_type,
+                                   CompilerType element_type) {
   std::optional<uint64_t> container_size =
-      container_type.GetByteSize(exe_scope);
-  std::optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
+      container_type.GetByteSize(/* exe_scope */ nullptr);
+  std::optional<uint64_t> element_size =
+      element_type.GetByteSize(/* exe_scope */ nullptr);
 
   if (container_size && element_size && *element_size) {
     if (*container_size % *element_size)
