@@ -2584,7 +2584,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       Register True = B.buildConstant(SelType, Signed ? -1 : 1).getReg(0);
       MRI.setRegBank(True, AMDGPU::SGPRRegBank);
 
-      Register SrcExt = B.buildZExt(SelType, SrcReg).getReg(0);
+      // Extend to S16/S32, but keep it at S32 for S64 SelType.
+      Register SrcExt = B.buildZExt(SelType != S64 ? SelType : S32, SrcReg).getReg(0);
       MRI.setRegBank(SrcExt, AMDGPU::SGPRRegBank);
 
       B.buildSelect(DstReg, SrcExt, True, False);
@@ -2637,7 +2638,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
         SrcBank->getID() == AMDGPU::SGPRRegBankID;
 
       // TODO: Should s16 select be legal?
-      LLT SelType = UseSel64 ? LLT::scalar(64) : S32;
+      LLT SelType = UseSel64 ? S64 : S32;
       auto True = B.buildConstant(SelType, Signed ? -1 : 1);
       auto False = B.buildConstant(SelType, 0);
 
