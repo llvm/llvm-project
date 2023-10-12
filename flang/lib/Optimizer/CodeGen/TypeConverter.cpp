@@ -26,7 +26,8 @@
 
 namespace fir {
 
-LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA)
+LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
+                                     bool forceUnifiedTBAATree)
     : mlir::LLVMTypeConverter(module.getContext(),
                               [&] {
                                 mlir::LowerToLLVMOptions options(
@@ -38,8 +39,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA)
       specifics(CodeGenSpecifics::get(module.getContext(),
                                       getTargetTriple(module),
                                       getKindMapping(module))),
-      tbaaBuilder(
-          std::make_unique<TBAABuilder>(module->getContext(), applyTBAA)) {
+      tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
+                                                forceUnifiedTBAATree)) {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
   // Each conversion should return a value of type mlir::Type.
