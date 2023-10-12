@@ -241,6 +241,16 @@ public:
     return true;
   }
 
+  /// Gets the dimension-to-level mapping.
+  //
+  // TODO: This is only ever used for passing into `genAddEltCall`;
+  // is there a better way to encapsulate that pattern (both to avoid
+  // this one-off getter, and to avoid potential mixups)?
+  Value getDimToLvl() const {
+    assert(isInitialized() && "Must initialize before getDimToLvl");
+    return params[kParamDim2Lvl];
+  }
+
   /// Generates a function call, with the current static parameters
   /// and the given dynamic arguments.
   Value genNewCall(Action action, Value ptr = Value()) {
@@ -289,74 +299,6 @@ static void genDelCOOCall(OpBuilder &builder, Location loc, Type elemTp,
   createFuncCall(builder, loc, name, {}, coo, EmitCInterface::Off);
 }
 
-<<<<<<< HEAD
-=======
-/// Generates a call to release/delete a `SparseTensorIterator`.
-static void genDelIteratorCall(OpBuilder &builder, Location loc, Type elemTp,
-                               Value iter) {
-  SmallString<26> name{"delSparseTensorIterator",
-                       primaryTypeFunctionSuffix(elemTp)};
-  createFuncCall(builder, loc, name, {}, iter, EmitCInterface::Off);
-}
-
-/// Generates a call with a forwarding insertion.
-static void genForwardingInsert(OpBuilder &builder, Location loc, Type eltType,
-                                Value tensor, Value valPtr, Value dimCoords) {
-  SmallString<9> name{"forwardingInsert", primaryTypeFunctionSuffix(eltType)};
-  SmallVector<Value, 4> params{tensor, valPtr, dimCoords};
-  Type pTp = getOpaquePointerType(builder);
-  createFuncCall(builder, loc, name, pTp, params, EmitCInterface::On);
-}
-
-/// Generates a call to `iter->getNext()`.  If there is a next element,
-/// then it is copied into the out-parameters `coords` and `elemPtr`,
-/// and the return value is true.  If there isn't a next element, then
-/// the return value is false.
-///
-/// The `coords` argument uses the same coordinate-space as the `iter`
-/// (which can be either dim- or lvl-coords, depending on context).
-static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
-                            Value coords, Value elemPtr) {
-  Type elemTp = cast<ShapedType>(elemPtr.getType()).getElementType();
-  SmallString<10> name{"getNext", primaryTypeFunctionSuffix(elemTp)};
-  SmallVector<Value, 3> params{iter, coords, elemPtr};
-  Type i1 = builder.getI1Type();
-  return createFuncCall(builder, loc, name, i1, params, EmitCInterface::On)
-      .getResult(0);
-}
-
-/// Loads the value stored in `elemPtr`, and stores it at the coordinates
-/// `cvs` into a dense tensor created by `allocDenseTensor`.
-static void insertScalarIntoDenseTensor(OpBuilder &builder, Location loc,
-                                        Value elemPtr, Value tensor,
-                                        ValueRange cvs) {
-  Value elemV = builder.create<memref::LoadOp>(loc, elemPtr);
-  builder.create<memref::StoreOp>(loc, elemV, tensor, cvs);
-}
-
-/// Determine if the runtime library supports direct conversion to the
-/// given target `dimTypes`.
-static bool canUseDirectConversion(ArrayRef<DimLevelType> dimTypes) {
-  bool alreadyCompressed = false;
-  for (const auto dlt : dimTypes) {
-    if (isCompressedDLT(dlt)) {
-      if (alreadyCompressed)
-        return false; // Multiple compressed dimensions not yet supported.
-      alreadyCompressed = true;
-    } else if (isDenseDLT(dlt)) {
-      if (alreadyCompressed)
-        return false; // Dense after Compressed not yet supported.
-    } else if (isSingletonDLT(dlt)) {
-      // Direct conversion doesn't have any particular problems with
-      // singleton after compressed.
-    } else { // TODO: investigate
-      return false;
-    }
-  }
-  return true;
-}
-
->>>>>>> 3d8f29859dbb ([mlir][sparse] refactor dense2sparse and const2sparse conversion)
 //===----------------------------------------------------------------------===//
 // Conversion rules.
 //===----------------------------------------------------------------------===//
@@ -540,7 +482,6 @@ public:
     const auto srcTp = getSparseTensorType(op.getInputCoo());
     const auto dstTp = getSparseTensorType(op);
 
-<<<<<<< HEAD
     const Value src = adaptor.getInputCoo();
 
     NewCallParams params(rewriter, loc);
@@ -548,142 +489,6 @@ public:
     rewriter.replaceOp(op, params.genBuffers(dstTp, dimSizes)
                                .genNewCall(Action::kSortCOOInPlace, src));
 
-=======
-    const Dimension dimRank = srcTp.getDimRank();
-    const Type elemTp = srcTp.getElementType();
-    const Value src = adaptor.getOperands()[0];
-    if (srcTp.hasEncoding() && dstTp.hasEncoding()) {
-      const auto srcEnc = srcTp.getEncoding();
-      const auto dstEnc = dstTp.getEncoding();
-      // This is a sparse => sparse conversion, which is handled as follows:
-      //   t = src->toCOO();         ; src to COO in dst order
-      //   dst = newSparseTensor(t)
-      // Using the coordinate scheme as an intermediate does not always
-      // yield the fastest conversion but avoids the need for a full
-      // O(N^2) conversion matrix.
-      if (dstEnc == srcEnc) {
-        rewriter.replaceOp(op, adaptor.getOperands()); // hidden nop cast
-        return success();
-      }
-      NewCallParams params(rewriter, loc);
-      SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
-      bool useDirectConversion;
-      switch (options.sparseToSparseStrategy) {
-      case SparseToSparseConversionStrategy::kViaCOO:
-        useDirectConversion = false;
-        break;
-      case SparseToSparseConversionStrategy::kDirect:
-        useDirectConversion = true;
-        assert(canUseDirectConversion(dstEnc.getLvlTypes()) &&
-               "Unsupported target for direct sparse-to-sparse conversion");
-        break;
-      case SparseToSparseConversionStrategy::kAuto:
-        useDirectConversion = canUseDirectConversion(dstEnc.getLvlTypes());
-        break;
-      }
-      if (useDirectConversion) {
-        rewriter.replaceOp(
-            op, params.genBuffers(srcTp.withEncoding(dstEnc), dimSizes)
-                    .genNewCall(Action::kSparseToSparse, src));
-      } else { // use via-COO conversion.
-        // Set up encoding with right mix of src and dst so that the two
-        // method calls can share most parameters, while still providing
-        // the correct sparsity information to either of them.
-        const auto mixedEnc =
-            dstEnc.withBitWidths(srcEnc.getPosWidth(), srcEnc.getCrdWidth());
-        // TODO: This is the only place where `kToCOO` (or `kToIterator`)
-        // is called with a non-identity permutation.  Is there any clean
-        // way to push the permutation over to the `kFromCOO` side instead?
-        Value coo = params.genBuffers(srcTp.withEncoding(mixedEnc), dimSizes)
-                        .genNewCall(Action::kToCOO, src);
-        Value dst = params.setTemplateTypes(srcTp.withEncoding(dstEnc))
-                        .genNewCall(Action::kFromCOO, coo);
-        genDelCOOCall(rewriter, loc, elemTp, coo);
-        rewriter.replaceOp(op, dst);
-      }
-      return success();
-    }
-    if (srcTp.hasEncoding() && !dstTp.hasEncoding()) {
-      const auto srcEnc = srcTp.getEncoding();
-      // This is sparse => dense conversion, which is handled as follows:
-      //   dst = new Tensor(0);
-      //   iter = new SparseTensorIterator(src);
-      //   while (elem = iter->getNext()) {
-      //     dst[elem.coords] = elem.value;
-      //   }
-      //   delete iter;
-      //
-      // Fabricate a no-permutation encoding for NewCallParams
-      // The position/coordinate types must be those of `src`.
-      // The dimLevelTypes aren't actually used by Action::kToIterator.
-      const auto dstEnc = SparseTensorEncodingAttr::get(
-          op->getContext(),
-          SmallVector<DimLevelType>(dimRank, DimLevelType::Dense), AffineMap(),
-          AffineMap(), srcEnc.getPosWidth(), srcEnc.getCrdWidth());
-      SmallVector<Value> dimSizes = getDimSizes(rewriter, loc, srcTp, src);
-      Value iter = NewCallParams(rewriter, loc)
-                       .genBuffers(dstTp.withEncoding(dstEnc), dimSizes)
-                       .genNewCall(Action::kToIterator, src);
-      const Type iTp = rewriter.getIndexType();
-      Value dimCoords = genAlloca(rewriter, loc, dimRank, iTp);
-      Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
-      // TODO: Dense buffers should be allocated/deallocated via the callback
-      // in BufferizationOptions.
-      Value dst = allocDenseTensor(rewriter, loc, dstTp, dimSizes);
-      const SmallVector<Value> noArgs;
-      const SmallVector<Type> noTypes;
-      auto whileOp = rewriter.create<scf::WhileOp>(loc, noTypes, noArgs);
-      Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, noTypes);
-      rewriter.setInsertionPointToEnd(before);
-      Value cond = genGetNextCall(rewriter, loc, iter, dimCoords, elemPtr);
-      rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
-      Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
-      rewriter.setInsertionPointToStart(after);
-      const auto dcvs = loadAll(rewriter, loc, dimRank, dimCoords);
-      insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, dcvs);
-      rewriter.create<scf::YieldOp>(loc);
-      rewriter.setInsertionPointAfter(whileOp);
-      genDelIteratorCall(rewriter, loc, elemTp, iter);
-      rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(
-          op, dstTp.getRankedTensorType(), dst);
-      return success();
-    }
-    assert(!srcTp.hasEncoding() && dstTp.hasEncoding());
-    // This is a "dense => sparse conversion" or a "sparse constant => sparse
-    // conversion" which is conceptually handled as follows, with an additional
-    // test for nonzero values for the dense case.
-    //
-    //   st = newSparseTensor()                  ; ST with forwarding COO
-    //   for i1 in dim1, ..., ik in dimk         ; loop nest or range(NNZ) loop
-    //     val = a[i1,..,ik]                     ;
-    //     st->insertForwarding(val, [i1,..,ik]) ; maps dim to level
-    //   st->endForwardingInsert()               ; finalize forwarding
-    //
-    // Note that the traversal code is actually implemented using MLIR IR to
-    // avoid having to expose too much low-level memref traversal details to
-    // the runtime support library.
-    SmallVector<Value> dimSizes;
-    sizesFromSrc(rewriter, dimSizes, loc, src);
-    NewCallParams params(rewriter, loc);
-    Value tensor =
-        params.genBuffers(dstTp, dimSizes).genNewCall(Action::kEmptyForward);
-    const Type iTp = rewriter.getIndexType();
-    Value dimCoords = genAlloca(rewriter, loc, dimRank, iTp);
-    Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
-    genDenseTensorOrSparseConstantIterLoop(
-        rewriter, loc, src, dimRank,
-        [&](OpBuilder &builder, Location loc, Value val, ValueRange dcvs) {
-          assert(dcvs.size() == static_cast<size_t>(dimRank));
-          storeAll(builder, loc, dimCoords, dcvs);
-          builder.create<memref::StoreOp>(loc, val, elemPtr);
-          genForwardingInsert(builder, loc, elemTp, tensor, elemPtr, dimCoords);
-        });
-    // Final call to construct sparse tensor storage.
-    StringRef name = "endForwardingInsert";
-    createFuncCall(rewriter, op->getLoc(), name, {}, tensor,
-                   EmitCInterface::Off);
-    rewriter.replaceOp(op, tensor);
->>>>>>> 3d8f29859dbb ([mlir][sparse] refactor dense2sparse and const2sparse conversion)
     return success();
   }
 };
@@ -801,7 +606,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getHasInserts()) {
       // Finalize any pending insertions.
-      StringRef name = "endLexInsert";
+      StringRef name = "endInsert";
       createFuncCall(rewriter, op->getLoc(), name, {}, adaptor.getOperands(),
                      EmitCInterface::Off);
     }
