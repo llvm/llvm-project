@@ -27,8 +27,8 @@ class TestCase(TestBase):
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
         # We can dump correctly non char* c-strings with explicit formatting.
-        self.assertIn(' = ""', self.getFormatted("c-string", "void_empty_cstring"));
-        self.assertIn(' = ""', self.getFormatted("c-string", "empty_cstring"));
+        self.assertIn(' = ""', self.getFormatted("c-string", "void_empty_cstring"))
+        self.assertIn(' = ""', self.getFormatted("c-string", "empty_cstring"))
 
 
     # TODO: Move as many asserts as possible within this function to `testAllPlatforms`.
