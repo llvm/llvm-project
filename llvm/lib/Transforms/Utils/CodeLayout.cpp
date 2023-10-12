@@ -475,11 +475,11 @@ void ChainT::mergeEdges(ChainT *Other) {
   }
 }
 
+using NodeIter = std::vector<NodeT *>::const_iterator;
+
 /// A wrapper around three concatenated vectors (chains) of nodes; it is used
 /// to avoid extra instantiation of the vectors.
 struct MergedNodesT {
-  using NodeIter = std::vector<NodeT *>::const_iterator;
-
   MergedNodesT(NodeIter Begin1, NodeIter End1, NodeIter Begin2 = NodeIter(),
                NodeIter End2 = NodeIter(), NodeIter Begin3 = NodeIter(),
                NodeIter End3 = NodeIter())
@@ -547,12 +547,12 @@ MergedNodesT mergeNodes(const std::vector<NodeT *> &X,
                         const std::vector<NodeT *> &Y, size_t MergeOffset,
                         MergeTypeT MergeType) {
   // Split the first chain, X, into X1 and X2.
-  MergedNodesT::NodeIter BeginX1 = X.begin();
-  MergedNodesT::NodeIter EndX1 = X.begin() + MergeOffset;
-  MergedNodesT::NodeIter BeginX2 = X.begin() + MergeOffset;
-  MergedNodesT::NodeIter EndX2 = X.end();
-  MergedNodesT::NodeIter BeginY = Y.begin();
-  MergedNodesT::NodeIter EndY = Y.end();
+  NodeIter BeginX1 = X.begin();
+  NodeIter EndX1 = X.begin() + MergeOffset;
+  NodeIter BeginX2 = X.begin() + MergeOffset;
+  NodeIter EndX2 = X.end();
+  NodeIter BeginY = Y.begin();
+  NodeIter EndY = Y.end();
 
   // Construct a new chain from the three existing ones.
   switch (MergeType) {
