@@ -2272,6 +2272,9 @@ DefInit *VarDefInit::instantiate() {
     // Copy assertions from class to instance.
     NewRec->appendAssertions(Class);
 
+    // Copy dumps from class to instance.
+    NewRec->appendDumps(Class);
+
     // Substitute and resolve template arguments
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
@@ -2305,6 +2308,9 @@ DefInit *VarDefInit::instantiate() {
 
     // Check the assertions.
     NewRec->checkRecordAssertions();
+
+    // Check the assertions.
+    NewRec->checkRecordDumps();
 
     Def = DefInit::get(NewRec);
   }
@@ -2862,6 +2868,11 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
     Assertion.Condition = Value;
     Value = Assertion.Message->resolveReferences(R);
     Assertion.Message = Value;
+  }
+  // Resolve the dump expressions.
+  for (auto &Dump : Dumps) {
+    Init *Value = Dump.Message->resolveReferences(R);
+    Dump.Message = Value;
   }
 }
 

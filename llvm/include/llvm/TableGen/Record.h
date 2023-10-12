@@ -1821,6 +1821,8 @@ public:
     Assertions.append(Rec->Assertions);
   }
 
+  void appendDumps(const Record *Rec) { Dumps.append(Rec->Dumps); }
+
   void checkRecordAssertions();
   void checkRecordDumps();
   void checkUnusedTemplateArgs();

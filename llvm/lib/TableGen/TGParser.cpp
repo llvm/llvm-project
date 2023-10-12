@@ -313,6 +313,9 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   // Copy the subclass record's assertions to the new record.
   CurRec->appendAssertions(SC);
 
+  // Copy the subclass record's dumps to the new record.
+  CurRec->appendDumps(SC);
+
   Init *Name;
   if (CurRec->isClass())
     Name = VarInit::get(QualifiedNameOfImplicitName(*CurRec),
@@ -4269,6 +4272,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= Defset
 ///   Object ::= Defvar
 ///   Object ::= Assert
+///   Object ::= Dump
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:

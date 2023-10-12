@@ -56,3 +56,18 @@ foreach i = [-1, 2] in {
     dump "i + 1 <= 0" ;
   }
 }
+
+class Code<code val> {
+  dump "val = " # !repr(val);
+  code Val = val;
+  int number = 0;
+}
+// CHECK: [[FILE]]:[[@LINE-4]]:3: note: val = [{a = a +1;}]
+def IncrementA : Code<[{a = a +1;}]>;
+class InheritFromCode : Code<[{f(x);}]>{
+  let number = 33;
+  dump "number = " # !repr(number);
+}
+// CHECK: [[FILE]]:[[@LINE-10]]:3: note: val = [{f(x);}]
+// CHECK: [[FILE]]:[[@LINE-3]]:3: note: number = 33
+def ModeCode : InheritFromCode;
