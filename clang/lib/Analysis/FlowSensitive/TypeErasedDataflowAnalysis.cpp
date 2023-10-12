@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
-#include <memory>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -33,8 +32,8 @@
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -53,19 +52,8 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
-static bool isLoopHead(const CFGBlock &B) {
-  if (const auto *T = B.getTerminatorStmt())
-    switch (T->getStmtClass()) {
-      case Stmt::WhileStmtClass:
-      case Stmt::DoStmtClass:
-      case Stmt::ForStmtClass:
-      case Stmt::CXXForRangeStmtClass:
-        return true;
-      default:
-        return false;
-    }
-
-  return false;
+static bool isBackedgeNode(const CFGBlock &B) {
+ return B.getLoopTarget() != nullptr;
 }
 
 namespace {
@@ -502,14 +490,15 @@ runTypeErasedDataflowAnalysis(
         PostVisitCFG) {
   PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
 
-  PostOrderCFGView POV(&CFCtx.getCFG());
-  ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
+  const clang::CFG &CFG = CFCtx.getCFG();
+  PostOrderCFGView POV(&CFG);
+  ForwardDataflowWorklist Worklist(CFG, &POV);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size());
+      CFG.size());
 
   // The entry basic block doesn't contain statements so it can be skipped.
-  const CFGBlock &Entry = CFCtx.getCFG().getEntry();
+  const CFGBlock &Entry = CFG.getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
                                      InitEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
@@ -553,7 +542,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isLoopHead(*Block)) {
+      if (isBackedgeNode(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =
