@@ -1291,7 +1291,7 @@ LLVM_READNONE
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE
-bool isValid32BitLiteral(uint64_t Val, bool IsFP);
+bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 

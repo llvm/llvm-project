@@ -4314,15 +4314,16 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
       uint64_t Value = static_cast<uint64_t>(MO.getImm());
-      bool IsFP = AMDGPU::isSISrcFPOperand(Desc, OpIdx);
-      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP);
+      bool IsFP64 = AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
+                    AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
+      bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
       if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value)) {
         Error(getLitLoc(Operands), "invalid operand for instruction");
         return false;
       }
 
-      if (IsFP && IsValid32Op)
+      if (IsFP64 && IsValid32Op)
         Value = Hi_32(Value);
 
       if (NumLiterals == 0 || LiteralValue != Value) {
