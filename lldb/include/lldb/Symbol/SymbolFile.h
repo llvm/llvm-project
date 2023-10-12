@@ -22,6 +22,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
@@ -433,6 +434,18 @@ public:
   /// GetFrameVariableError() for details on what are considered errors.
   virtual bool GetDebugInfoHadFrameVariableErrors() const = 0;
   virtual void SetDebugInfoHadFrameVariableErrors() = 0;
+
+  /// Return true if separate debug info files are supported and this function
+  /// succeeded, false otherwise.
+  ///
+  /// \param[out] d
+  ///     If this function succeeded, then this will be a dictionary that
+  ///     contains the keys "type", "symfile", and "separate-debug-info-files".
+  ///     "type" can be used to assume the structure of each object in
+  ///     "separate-debug-info-files".
+  virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d) {
+    return false;
+  };
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
