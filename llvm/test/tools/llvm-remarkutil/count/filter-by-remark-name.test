@@ -1,0 +1,10 @@
+RUN: llvm-remarkutil count --parser=yaml --remark-name=Remark %p/Inputs/remark-filter-by.yaml | FileCheck %s 
+RUN: llvm-remarkutil count --parser=yaml --rremark-name=R.* %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=CHECKALL 
+
+; CHECK-LABEL: Source,Count
+; CHECK: path/to/anno.c,1
+; CHECK: path/to/anno2.c,1
+
+; CHECKALL-LABEL: Source,Count
+; CHECKALL: path/to/anno.c,2
+; CHECKALL: path/to/anno2.c,2
