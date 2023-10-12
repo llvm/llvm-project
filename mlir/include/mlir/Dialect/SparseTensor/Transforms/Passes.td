@@ -201,10 +201,6 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
-  let options = [
-    Option<"sparseToSparse", "s2s-strategy", "int32_t", "0",
-           "Set the strategy for sparse-to-sparse conversion">,
-  ];
 }
 
 def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {

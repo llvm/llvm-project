@@ -1060,20 +1060,12 @@ LogicalResult ConvertOp::verify() {
 }
 
 OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
-  Type dstType = getType();
-  // Fold trivial dense-to-dense convert and leave trivial sparse-to-sparse
-  // convert for codegen to remove. This is because we use trivial
-  // sparse-to-sparse convert to tell bufferization that the sparse codegen
-  // will expand the tensor buffer into sparse tensor storage.
-  if (!getSparseTensorEncoding(dstType) && dstType == getSource().getType())
+  if (getType() == getSource().getType())
     return getSource();
   return {};
 }
 
 bool ConvertOp::directConvertable() {
-  if (isSortCOOConvert())
-    return false;
-
   SparseTensorType srcStt = getSparseTensorType(getSource());
   SparseTensorType dstStt = getSparseTensorType(getDest());
 
@@ -1097,15 +1089,6 @@ bool ConvertOp::directConvertable() {
       return true;
 
   return false;
-}
-
-bool ConvertOp::isSortCOOConvert() {
-  // TODO: we should instead use a different sort_coo operation to handle
-  // the conversion between COOs (but with different ordering).
-  return isUniqueCOOType(getSource().getType()) &&
-         isUniqueCOOType(getDest().getType()) &&
-         !getSparseTensorType(getSource()).isAllOrdered() &&
-         getSparseTensorType(getDest()).isAllOrdered();
 }
 
 LogicalResult ToPositionsOp::verify() {

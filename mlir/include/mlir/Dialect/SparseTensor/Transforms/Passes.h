@@ -119,37 +119,11 @@ public:
   SparseTensorTypeToPtrConverter();
 };
 
-/// Defines a strategy for implementing sparse-to-sparse conversion.
-/// `kAuto` leaves it up to the compiler to automatically determine
-/// the method used.  `kViaCOO` converts the source tensor to COO and
-/// then converts the COO to the target format.  `kDirect` converts
-/// directly via the algorithm in <https://arxiv.org/abs/2001.02609>;
-/// however, beware that there are many formats not supported by this
-/// conversion method.
-enum class SparseToSparseConversionStrategy { kAuto, kViaCOO, kDirect };
-
-/// Converts command-line sparse2sparse flag to the strategy enum.
-SparseToSparseConversionStrategy sparseToSparseConversionStrategy(int32_t flag);
-
-/// SparseTensorConversion options.
-struct SparseTensorConversionOptions {
-  SparseTensorConversionOptions(SparseToSparseConversionStrategy s2s)
-      : sparseToSparseStrategy(s2s) {}
-  SparseTensorConversionOptions()
-      : SparseTensorConversionOptions(SparseToSparseConversionStrategy::kAuto) {
-  }
-  SparseToSparseConversionStrategy sparseToSparseStrategy;
-};
-
 /// Sets up sparse tensor conversion rules.
-void populateSparseTensorConversionPatterns(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    const SparseTensorConversionOptions &options =
-        SparseTensorConversionOptions());
+void populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
+                                            RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createSparseTensorConversionPass();
-std::unique_ptr<Pass>
-createSparseTensorConversionPass(const SparseTensorConversionOptions &options);
 
 //===----------------------------------------------------------------------===//
 // The SparseTensorCodegen pass.
@@ -235,7 +209,6 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass();
 std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     const bufferization::OneShotBufferizationOptions &bufferizationOptions,
     const SparsificationOptions &sparsificationOptions,
-    const SparseTensorConversionOptions &sparseTensorConversionOptions,
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
     bool enableVLAVectorization, bool enableSIMDIndex32);
