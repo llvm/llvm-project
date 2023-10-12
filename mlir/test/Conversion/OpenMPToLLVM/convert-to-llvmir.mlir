@@ -90,7 +90,7 @@ func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4:
 // CHECK-LABEL: @atomic_write
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr<i32>)
 // CHECK: %[[VAL0:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK: omp.atomic.write %[[ARG0]] = %[[VAL0]] memory_order(relaxed) : !llvm.ptr<i32>, i32
+// CHECK: omp.atomic.write %[[ARG0]] = %[[VAL0]] hint(none) memory_order(relaxed) : !llvm.ptr<i32>, i32
 func.func @atomic_write(%a: !llvm.ptr<i32>) -> () {
   %1 = arith.constant 1 : i32
   omp.atomic.write %a = %1 hint(none) memory_order(relaxed) : !llvm.ptr<i32>, i32
