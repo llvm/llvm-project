@@ -977,7 +977,6 @@ set(files
   scoped_allocator
   semaphore
   set
-  setjmp.h
   shared_mutex
   source_location
   span

@@ -456,10 +456,7 @@ module std_math_h [system] {
   header "math.h"
   export *
 }
-module std_setjmp_h [system] {
-  header "setjmp.h"
-  export *
-}
+// <setjmp.h> provided by C library.
 // <signal.h> provided by C library.
 // FIXME: <stdalign.h> is missing.
 // <stdarg.h> provided by compiler.
