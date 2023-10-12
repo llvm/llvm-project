@@ -112,14 +112,14 @@ static unsigned getValForKey(StringRef Key, const Remark &Remark) {
 }
 
 Error Filters::regexArgumentsValid() {
-  if (RemarkNameFilter.has_value() && RemarkNameFilter->IsRegex)
-    if (auto E = checkRegex(std::get<Regex>(RemarkNameFilter->FilterRE)))
+  if (RemarkNameFilter && RemarkNameFilter->IsRegex)
+    if (auto E = checkRegex(RemarkNameFilter->FilterRE))
       return E;
-  if (PassNameFilter.has_value() && PassNameFilter->IsRegex)
-    if (auto E = checkRegex(std::get<Regex>(PassNameFilter->FilterRE)))
+  if (PassNameFilter && PassNameFilter->IsRegex)
+    if (auto E = checkRegex(PassNameFilter->FilterRE))
       return E;
-  if (ArgFilter.has_value() && ArgFilter->IsRegex)
-    if (auto E = checkRegex(std::get<Regex>(ArgFilter->FilterRE)))
+  if (ArgFilter && ArgFilter->IsRegex)
+    if (auto E = checkRegex(ArgFilter->FilterRE))
       return E;
   return Error::success();
 }

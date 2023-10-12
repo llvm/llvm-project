@@ -50,7 +50,8 @@ inline std::string groupByToStr(GroupBy GroupBy) {
 /// Filter object which can be either a string or a regex to match with the
 /// remark properties.
 struct FilterMatcher {
-  std::variant<Regex, std::string> FilterRE, FilterStr;
+  Regex FilterRE;
+  std::string FilterStr;
   bool IsRegex;
   FilterMatcher(std::string Filter, bool IsRegex) : IsRegex(IsRegex) {
     if (IsRegex)
@@ -61,9 +62,8 @@ struct FilterMatcher {
 
   bool match(StringRef StringToMatch) const {
     if (IsRegex)
-      return std::get<Regex>(FilterRE).match(StringToMatch);
-    std::string FString = std::get<std::string>(FilterStr);
-    return FString == StringToMatch.trim().str();
+      return FilterRE.match(StringToMatch);
+    return FilterStr == StringToMatch.trim().str();
   }
 };
 
@@ -164,7 +164,7 @@ struct ArgumentCounter : Counter {
     AC.GroupBy = GroupBy;
     for (auto &Arg : Arguments) {
       if (Arg.IsRegex) {
-        if (auto E = checkRegex(std::get<Regex>(Arg.FilterRE)))
+        if (auto E = checkRegex(Arg.FilterRE))
           return E;
       }
     }
