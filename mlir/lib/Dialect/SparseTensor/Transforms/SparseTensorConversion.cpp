@@ -791,9 +791,8 @@ mlir::SparseTensorTypeToPtrConverter::SparseTensorTypeToPtrConverter() {
 
 /// Populates the given patterns list with conversion rules required for
 /// the sparsification of linear algebra operations.
-void mlir::populateSparseTensorConversionPatterns(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    const SparseTensorConversionOptions &options) {
+void mlir::populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
+                                                  RewritePatternSet &patterns) {
   patterns
       .add<SparseReturnConverter, SparseTensorToDimSizeConverter,
            SparseCastConverter, SparseTensorNewConverter,
