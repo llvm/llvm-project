@@ -520,20 +520,18 @@ private:
 
 /// A wrapper around two concatenated vectors (chains) of jumps.
 struct MergedJumpsT {
-  MergedJumpsT(const std::vector<JumpT *> *Jumps) { JumpArray[0] = Jumps; }
+  MergedJumpsT(const std::vector<JumpT *> *Jumps1,
+               const std::vector<JumpT *> *Jumps2 = nullptr) {
+    assert(!Jumps1->empty() && "cannot merge empty jump list");
+    JumpArray[0] = Jumps1;
+    JumpArray[1] = Jumps2;
+  }
 
   template <typename F> void forEach(const F &Func) const {
     for (auto Jumps : JumpArray)
       if (Jumps != nullptr)
         for (JumpT *Jump : *Jumps)
           Func(Jump);
-  }
-
-  bool empty() const { return JumpArray[0]->empty(); }
-
-  void append(const std::vector<JumpT *> *Jumps) {
-    assert(JumpArray[1] == nullptr && "cannot extend MergedJumpsT");
-    JumpArray[1] = Jumps;
   }
 
 private:
@@ -794,9 +792,6 @@ private:
   /// Compute the Ext-TSP score for a given node order and a list of jumps.
   double extTSPScore(const MergedNodesT &Nodes,
                      const MergedJumpsT &Jumps) const {
-    if (Jumps.empty() || Nodes.empty())
-      return 0.0;
-
     uint64_t CurAddr = 0;
     Nodes.forEach([&](const NodeT *Node) {
       Node->EstimatedAddr = CurAddr;
@@ -825,11 +820,10 @@ private:
     if (Edge->hasCachedMergeGain(ChainPred, ChainSucc))
       return Edge->getCachedMergeGain(ChainPred, ChainSucc);
 
+    assert(!Edge->jumps().empty() && "trying to merge chains w/o jumps");
     // Precompute jumps between ChainPred and ChainSucc.
-    MergedJumpsT Jumps(&Edge->jumps());
     ChainEdge *EdgePP = ChainPred->getEdge(ChainPred);
-    if (EdgePP != nullptr)
-      Jumps.append(&EdgePP->jumps());
+    MergedJumpsT Jumps(&Edge->jumps(), EdgePP ? &EdgePP->jumps() : nullptr);
 
     // This object holds the best chosen gain of merging two chains.
     MergeGainT Gain = MergeGainT();
@@ -966,7 +960,7 @@ private:
     // Sorting chains by density in the decreasing order.
     std::sort(SortedChains.begin(), SortedChains.end(),
               [&](const ChainT *L, const ChainT *R) {
-                // Place the entry point is at the beginning of the order.
+                // Place the entry point at the beginning of the order.
                 if (L->isEntry() != R->isEntry())
                   return L->isEntry();
 
@@ -1186,9 +1180,9 @@ private:
   /// result is a pair with the first element being the gain and the second
   /// element being the corresponding merging type.
   MergeGainT getBestMergeGain(ChainEdge *Edge) const {
+    assert(!Edge->jumps().empty() && "trying to merge chains w/o jumps");
     // Precompute jumps between ChainPred and ChainSucc.
-    auto Jumps = Edge->jumps();
-    assert(!Jumps.empty() && "trying to merge chains w/o jumps");
+    MergedJumpsT Jumps(&Edge->jumps());
     ChainT *SrcChain = Edge->srcChain();
     ChainT *DstChain = Edge->dstChain();
 
@@ -1227,7 +1221,7 @@ private:
   ///
   /// The two chains are not modified in the method.
   MergeGainT computeMergeGain(ChainT *ChainPred, ChainT *ChainSucc,
-                              const std::vector<JumpT *> &Jumps,
+                              const MergedJumpsT &Jumps,
                               MergeTypeT MergeType) const {
     // This doesn't depend on the ordering of the nodes
     double FreqGain = freqBasedLocalityGain(ChainPred, ChainSucc);
@@ -1278,24 +1272,22 @@ private:
   }
 
   /// Compute the change of the distance locality after merging the chains.
-  double distBasedLocalityGain(const MergedNodesT &MergedBlocks,
-                               const std::vector<JumpT *> &Jumps) const {
-    if (Jumps.empty())
-      return 0.0;
+  double distBasedLocalityGain(const MergedNodesT &Nodes,
+                               const MergedJumpsT &Jumps) const {
     uint64_t CurAddr = 0;
-    MergedBlocks.forEach([&](const NodeT *Node) {
+    Nodes.forEach([&](const NodeT *Node) {
       Node->EstimatedAddr = CurAddr;
       CurAddr += Node->Size;
     });
 
     double CurScore = 0;
     double NewScore = 0;
-    for (const JumpT *Arc : Jumps) {
-      uint64_t SrcAddr = Arc->Source->EstimatedAddr + Arc->Offset;
-      uint64_t DstAddr = Arc->Target->EstimatedAddr;
-      NewScore += distScore(SrcAddr, DstAddr, Arc->ExecutionCount);
-      CurScore += distScore(0, TotalSize, Arc->ExecutionCount);
-    }
+    Jumps.forEach([&](const JumpT *Jump) {
+      uint64_t SrcAddr = Jump->Source->EstimatedAddr + Jump->Offset;
+      uint64_t DstAddr = Jump->Target->EstimatedAddr;
+      NewScore += distScore(SrcAddr, DstAddr, Jump->ExecutionCount);
+      CurScore += distScore(0, TotalSize, Jump->ExecutionCount);
+    });
     return NewScore - CurScore;
   }
 
