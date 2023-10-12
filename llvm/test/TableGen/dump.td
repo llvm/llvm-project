@@ -71,3 +71,16 @@ class InheritFromCode : Code<[{f(x);}]>{
 // CHECK: [[FILE]]:[[@LINE-10]]:3: note: val = [{f(x);}]
 // CHECK: [[FILE]]:[[@LINE-3]]:3: note: number = 33
 def ModeCode : InheritFromCode;
+
+
+class BaseClassForSet;
+multiclass DefineSubSet {
+  def _One : BaseClassForSet;
+  def _Two : BaseClassForSet;
+}
+defset list<BaseClassForSet> TheSet = {
+defm Subset: DefineSubSet;
+def Three : BaseClassForSet;
+}
+// CHECK: [[FILE]]:[[@LINE+1]]:1: note: TheSet = [Subset_One, Subset_Two, Three]
+dump "TheSet = " # !repr(TheSet);

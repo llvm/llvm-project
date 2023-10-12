@@ -806,9 +806,12 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         OS << *Def->getDef();
         OS.flush();
         return StringInit::get(RK, S);
-      }
-      // Otherwise, print the value of the variable.
-      else {
+      } else {
+        // Otherwise, print the value of the variable.
+        //
+        // NOTE: we could look recursively !repr the elements of a
+        // list, but that could produce a lot of output when printing
+        // a defset.
         return StringInit::get(RK, LHS->getAsString());
       }
     }
