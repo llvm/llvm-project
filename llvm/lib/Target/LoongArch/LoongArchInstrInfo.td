@@ -1661,7 +1661,29 @@ def : RegRegStPat<store, STX_D, GPR, i64>;
 
 /// Atomic loads and stores
 
-def : Pat<(atomic_fence timm, timm), (DBAR 0)>;
+// DBAR hint encoding for LA664 and later micro-architectures, paraphrased from
+// the Linux patch revealing it [1]:
+//
+// - Bit 4: kind of constraint (0: completion, 1: ordering)
+// - Bit 3: barrier for previous read (0: true, 1: false)
+// - Bit 2: barrier for previous write (0: true, 1: false)
+// - Bit 1: barrier for succeeding read (0: true, 1: false)
+// - Bit 0: barrier for succeeding write (0: true, 1: false)
+//
+// Hint 0x700: barrier for "read after read" from the same address, which is
+// e.g. needed by LL-SC loops on older models. (DBAR 0x700 behaves the same as
+// nop if such reordering is disabled on supporting newer models.)
+//
+// [1]: https://lore.kernel.org/loongarch/20230516124536.535343-1-chenhuacai@loongson.cn/
+//
+// Implementations without support for the finer-granularity hints simply treat
+// all as the full barrier (DBAR 0), so we can unconditionally start emiting the
+// more precise hints right away.
+
+def : Pat<(atomic_fence 4, timm), (DBAR 0b10100)>; // acquire
+def : Pat<(atomic_fence 5, timm), (DBAR 0b10010)>; // release
+def : Pat<(atomic_fence 6, timm), (DBAR 0b10000)>; // acqrel
+def : Pat<(atomic_fence 7, timm), (DBAR 0b10000)>; // seqcst
 
 defm : LdPat<atomic_load_8, LD_B>;
 defm : LdPat<atomic_load_16, LD_H>;

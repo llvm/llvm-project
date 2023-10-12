@@ -16,6 +16,8 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
@@ -517,22 +519,37 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
   }
 }
 
+/// Sorts `ops` according to dominance. Relies on the topological order of basic
+/// blocks to get a deterministic ordering.
+static void dominanceSort(SmallVector<Operation *> &ops, Region &region) {
+  // Produce a topological block order and construct a map to lookup the indices
+  // of blocks.
+  DenseMap<Block *, size_t> topoBlockIndices;
+  SetVector<Block *> topologicalOrder = getTopologicallySortedBlocks(region);
+  for (auto [index, block] : llvm::enumerate(topologicalOrder))
+    topoBlockIndices[block] = index;
+
+  // Combining the topological order of the basic blocks together with block
+  // internal operation order guarantees a deterministic, dominance respecting
+  // order.
+  llvm::sort(ops, [&](Operation *lhs, Operation *rhs) {
+    size_t lhsBlockIndex = topoBlockIndices.at(lhs->getBlock());
+    size_t rhsBlockIndex = topoBlockIndices.at(rhs->getBlock());
+    if (lhsBlockIndex == rhsBlockIndex)
+      return lhs->isBeforeInBlock(rhs);
+    return lhsBlockIndex < rhsBlockIndex;
+  });
+}
+
 void MemorySlotPromoter::removeBlockingUses() {
   llvm::SmallVector<Operation *> usersToRemoveUses(
       llvm::make_first_range(info.userToBlockingUses));
 
-  // The uses need to be traversed in *reverse dominance* order to ensure that
-  // transitive replacements are performed correctly.
-  // NOTE: The order can be non-deterministic, due to a pointer comparision, but
-  // this has no effect on the result of the pattern. This is necessary to get a
-  // strict weak order relation.
-  llvm::sort(usersToRemoveUses, [&](Operation *lhs, Operation *rhs) {
-    return dominance.properlyDominates(rhs, lhs) ||
-           (!dominance.properlyDominates(lhs, rhs) && rhs < lhs);
-  });
+  // Sort according to dominance.
+  dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent());
 
   llvm::SmallVector<Operation *> toErase;
-  for (Operation *toPromote : usersToRemoveUses) {
+  for (Operation *toPromote : llvm::reverse(usersToRemoveUses)) {
     if (auto toPromoteMemOp = dyn_cast<PromotableMemOpInterface>(toPromote)) {
       Value reachingDef = reachingDefs.lookup(toPromoteMemOp);
       // If no reaching definition is known, this use is outside the reach of

@@ -179,39 +179,45 @@ extern "C" {
     switch (action) {                                                          \
     case Action::kEmpty:                                                       \
       return SparseTensorStorage<P, C, V>::newEmpty(                           \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, lvl2dim);            \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim);   \
     case Action::kFromCOO: {                                                   \
       assert(ptr && "Received nullptr for SparseTensorCOO object");            \
       auto &coo = *static_cast<SparseTensorCOO<V> *>(ptr);                     \
       return SparseTensorStorage<P, C, V>::newFromCOO(                         \
-          dimRank, dimSizes, lvlRank, lvlTypes, lvl2dim, coo);                 \
+          dimRank, dimSizes, lvlRank, lvlTypes, dim2lvl, lvl2dim, coo);        \
     }                                                                          \
     case Action::kSparseToSparse: {                                            \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       auto &tensor = *static_cast<SparseTensorStorageBase *>(ptr);             \
       return SparseTensorStorage<P, C, V>::newFromSparseTensor(                \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, lvl2dim, dimRank,    \
-          dim2lvl, tensor);                                                    \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
+          dimRank, tensor);                                                    \
     }                                                                          \
     case Action::kEmptyCOO:                                                    \
       return new SparseTensorCOO<V>(lvlRank, lvlSizes);                        \
     case Action::kToCOO: {                                                     \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
-      return tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl);                \
+      return tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl, lvl2dim);       \
     }                                                                          \
     case Action::kToIterator: {                                                \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
-      auto *coo = tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl);           \
+      auto *coo = tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl, lvl2dim);  \
       return new SparseTensorIterator<V>(coo);                                 \
     }                                                                          \
     case Action::kPack: {                                                      \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       intptr_t *buffers = static_cast<intptr_t *>(ptr);                        \
       return SparseTensorStorage<P, C, V>::packFromLvlBuffers(                 \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, lvl2dim, dimRank,    \
-          dim2lvl, buffers);                                                   \
+          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
+          dimRank, buffers);                                                   \
+    }                                                                          \
+    case Action::kSortCOOInPlace: {                                            \
+      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
+      auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
+      tensor.sortInPlace();                                                    \
+      return ptr;                                                              \
     }                                                                          \
     }                                                                          \
     MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                            \
@@ -249,9 +255,6 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
   const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
-
-  // Prepare map.
-  // TODO: start using MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim) below
 
   // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
   // This is safe because of the static_assert above.
@@ -403,7 +406,7 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATES)
 #undef IMPL_GETOVERHEAD
 
 // TODO: use MapRef here for translation of coordinates
-// TOOD: remove dim2lvl
+// TODO: remove dim2lvl
 #define IMPL_ADDELT(VNAME, V)                                                  \
   void *_mlir_ciface_addElt##VNAME(                                            \
       void *lvlCOO, StridedMemRefType<V, 0> *vref,                             \

@@ -270,6 +270,10 @@ subroutine acc_private_allocatable_array(a, n)
   do i = 1, n
     a(i) = i
   end do
+
+  !$acc serial private(a)
+  a(i) = 1
+  !$acc end serial
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_private_allocatable_array(
@@ -278,7 +282,8 @@ end subroutine
 ! HLFIR: %[[BOX:.*]] = fir.load %[[DECLA_A]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! HLFIR: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! HLFIR: %[[PRIVATE:.*]] = acc.private varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.heap<!fir.array<?xi32>> {name = "a"}
-! HLFIR: acc.parallel private(@privatization_box_heap_Uxi32 -> %[[PRIVATE]] : !fir.heap<!fir.array<?xi32>>) {
+! HLFIR: acc.parallel private(@privatization_box_heap_Uxi32 -> %[[PRIVATE]] : !fir.heap<!fir.array<?xi32>>)
+! HLFIR: acc.serial private(@privatization_box_heap_Uxi32 -> %{{.*}} : !fir.heap<!fir.array<?xi32>>)
 
 subroutine acc_private_pointer_array(a, n)
   integer, pointer :: a(:)

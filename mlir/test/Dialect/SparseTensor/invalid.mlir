@@ -839,3 +839,25 @@ func.func @sparse_alloc_escapes(%arg0: index) -> tensor<10x?xf64, #CSR> {
   %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSR>
   return %0: tensor<10x?xf64, #CSR>
 }
+
+// -----
+
+#UnorderedCOO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique, nonordered), d1 : singleton(nonordered))}>
+#OrderedCOOPerm = #sparse_tensor.encoding<{map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton)}>
+
+func.func @sparse_permuted_reorder_coo(%arg0 : tensor<?x?xf32, #UnorderedCOO>) -> tensor<?x?xf32, #OrderedCOOPerm> {
+  // expected-error@+1 {{Unmatched dim2lvl map between input and result COO}}
+  %ret = sparse_tensor.reorder_coo quick_sort %arg0 : tensor<?x?xf32, #UnorderedCOO> to tensor<?x?xf32, #OrderedCOOPerm>
+  return %ret : tensor<?x?xf32, #OrderedCOOPerm>
+}
+
+// -----
+
+#UnorderedCOO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique, nonordered), d1 : singleton(nonordered))}>
+#OrderedCOO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
+
+func.func @sparse_permuted_reorder_coo(%arg0 : tensor<?x?xf32, #UnorderedCOO>) -> tensor<?x?xf64, #OrderedCOO> {
+  // expected-error@+1 {{Unmatched storage format between input and result COO}}
+  %ret = sparse_tensor.reorder_coo quick_sort %arg0 : tensor<?x?xf32, #UnorderedCOO> to tensor<?x?xf64, #OrderedCOO>
+  return %ret : tensor<?x?xf64, #OrderedCOO>
+}
