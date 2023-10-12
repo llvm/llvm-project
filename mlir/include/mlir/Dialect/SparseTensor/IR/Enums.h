@@ -151,6 +151,8 @@ enum class Action : uint32_t {
   kToCOO = 5,
   kToIterator = 6,
   kPack = 7,
+  // Sort an unordered COO in place.
+  kSortCOOInPlace = 8,
 };
 
 /// This enum defines all the sparse representations supportable by

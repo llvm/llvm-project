@@ -213,6 +213,12 @@ extern "C" {
           dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
           dimRank, buffers);                                                   \
     }                                                                          \
+    case Action::kSortCOOInPlace: {                                            \
+      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
+      auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
+      tensor.sortInPlace();                                                    \
+      return ptr;                                                              \
+    }                                                                          \
     }                                                                          \
     MLIR_SPARSETENSOR_FATAL("unknown action: %d\n",                            \
                             static_cast<uint32_t>(action));                    \

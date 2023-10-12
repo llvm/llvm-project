@@ -88,6 +88,8 @@ struct SparseCompilerOptions
       *this, "enable-buffer-initialization",
       desc("Enable zero-initialization of memory buffers"), init(false)};
 
+  // TODO: Delete the option, it should also be false after switching to
+  // buffer-deallocation-pass
   PassOptions::Option<bool> createSparseDeallocs{
       *this, "create-sparse-deallocs",
       desc("Specify if the temporary buffers created by the sparse "
@@ -99,11 +101,6 @@ struct SparseCompilerOptions
   PassOptions::Option<int32_t> vectorLength{
       *this, "vl", desc("Set the vector length (0 disables vectorization)"),
       init(0)};
-
-  // These options must be kept in sync with `SparseTensorConversionBase`.
-  PassOptions::Option<int32_t> sparseToSparse{
-      *this, "s2s-strategy",
-      desc("Set the strategy for sparse-to-sparse conversion"), init(0)};
 
   // These options must be kept in sync with the `ConvertVectorToLLVM`
   // (defined in include/mlir/Dialect/SparseTensor/Pipelines/Passes.h).
@@ -172,12 +169,6 @@ struct SparseCompilerOptions
     return SparsificationOptions(parallelization, gpuDataTransfer,
                                  enableIndexReduction, enableGPULibgen,
                                  enableRuntimeLibrary);
-  }
-
-  /// Projects out the options for `createSparseTensorConversionPass`.
-  SparseTensorConversionOptions sparseTensorConversionOptions() const {
-    return SparseTensorConversionOptions(
-        sparseToSparseConversionStrategy(sparseToSparse));
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
