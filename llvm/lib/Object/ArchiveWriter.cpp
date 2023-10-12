@@ -18,6 +18,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -657,6 +658,10 @@ static void writeECSymbols(raw_ostream &Out, object::Archive::Kind Kind,
 static bool isECObject(object::SymbolicFile &Obj) {
   if (Obj.isCOFF())
     return cast<llvm::object::COFFObjectFile>(&Obj)->getMachine() !=
+           COFF::IMAGE_FILE_MACHINE_ARM64;
+
+  if (Obj.isCOFFImportFile())
+    return cast<llvm::object::COFFImportFile>(&Obj)->getMachine() !=
            COFF::IMAGE_FILE_MACHINE_ARM64;
 
   if (Obj.isIR()) {
