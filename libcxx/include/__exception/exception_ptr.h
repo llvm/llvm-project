@@ -12,10 +12,10 @@
 #include <__config>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
+#include <__type_traits/decay.h>
 #include <__typeinfo/typeinfo.h>
 #include <cstddef>
 #include <cstdlib>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -70,7 +70,7 @@ template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 #    if defined(LIBCXX_BUILDING_LIBCXXABI)
-  using _Ep2 = typename decay<_Ep>::type;
+  using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
   try {
