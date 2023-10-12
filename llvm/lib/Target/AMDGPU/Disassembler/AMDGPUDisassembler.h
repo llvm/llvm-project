@@ -233,14 +233,12 @@ public:
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                        bool MandatoryLiteral = false,
-                        unsigned ImmWidth = 0,
+                        bool MandatoryLiteral = false, unsigned ImmWidth = 0,
                         bool IsFP = false) const;
 
   MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
                                bool MandatoryLiteral = false,
-                               unsigned ImmWidth = 0,
-                               bool IsFP = false) const;
+                               unsigned ImmWidth = 0, bool IsFP = false) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
