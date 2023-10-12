@@ -16552,8 +16552,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 #define PPC_CPU(Name, NumericID) .Case(Name, NumericID)
 #include "llvm/TargetParser/PPCTargetParser.def"
                             .Default(-1U);
-    Value *Op0 =
-        llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
+    Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_is");
     return Builder.CreateICmpEQ(TheCall,

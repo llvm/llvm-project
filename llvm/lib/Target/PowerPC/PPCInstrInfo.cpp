@@ -3114,10 +3114,8 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     if ((FAType == PPC_FAWORD_HWCAP && Subtarget.isLittleEndian()) ||
         (FAType == PPC_FAWORD_HWCAP2 && !Subtarget.isLittleEndian()))
       Offset = Subtarget.isPPC64() ? -0x7064 : -0x703C;
-    else if ((FAType == PPC_FAWORD_HWCAP2 &&
-              Subtarget.isLittleEndian()) ||
-             (FAType == PPC_FAWORD_HWCAP &&
-              !Subtarget.isLittleEndian()))
+    else if ((FAType == PPC_FAWORD_HWCAP2 && Subtarget.isLittleEndian()) ||
+             (FAType == PPC_FAWORD_HWCAP && !Subtarget.isLittleEndian()))
       Offset = Subtarget.isPPC64() ? -0x7068 : -0x7040;
     else if (FAType == PPC_FAWORD_CPUID)
       Offset = Subtarget.isPPC64() ? -0x705C : -0x7034;
