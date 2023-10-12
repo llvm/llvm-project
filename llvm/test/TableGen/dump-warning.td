@@ -6,5 +6,5 @@ class A {
   dag X =(op op);
 }
 def a : A;
-// CHECK: [[FILE]]:[[@LINE+1]]:1: note: dump message is not a string - use `!repr`
+// CHECK: [[FILE]]:[[@LINE+1]]:1: warning: dump message is not a string - use `!repr`
 dump a;
