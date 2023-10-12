@@ -2584,8 +2584,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       Register True = B.buildConstant(SelType, Signed ? -1 : 1).getReg(0);
       MRI.setRegBank(True, AMDGPU::SGPRRegBank);
 
-      // Extend to S16/S32, but keep it at S32 for S64 SelType.
-      Register SrcExt = B.buildZExt(SelType != S64 ? SelType : S32, SrcReg).getReg(0);
+      Register SrcExt = B.buildZExt(S32, SrcReg).getReg(0);
       MRI.setRegBank(SrcExt, AMDGPU::SGPRRegBank);
 
       B.buildSelect(DstReg, SrcExt, True, False);
