@@ -25,6 +25,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+using namespace llvm;
 
 namespace llvm {
 

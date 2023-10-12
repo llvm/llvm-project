@@ -217,6 +217,10 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       CurrentCluster++;
       continue;
     case 'p': { // Basic block cloning path specifier.
+      // Skip the profile when we the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
       SmallSet<unsigned, 5> BBsInPath;
       FI->second.ClonePaths.push_back({});
       for (size_t I = 0; I < Values.size(); ++I) {
