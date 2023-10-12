@@ -393,6 +393,7 @@ __OMP_RTL(__kmpc_cancellationpoint, false, Int32, IdentPtr, Int32, Int32)
 
 __OMP_RTL(__kmpc_fork_teams, true, Void, IdentPtr, Int32, ParallelTaskPtr)
 __OMP_RTL(__kmpc_push_num_teams, false, Void, IdentPtr, Int32, Int32, Int32)
+__OMP_RTL(__kmpc_push_num_teams_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32)
 __OMP_RTL(__kmpc_set_thread_limit, false, Void, IdentPtr, Int32, Int32)
 
 __OMP_RTL(__kmpc_copyprivate, false, Void, IdentPtr, Int32, SizeTy, VoidPtr,

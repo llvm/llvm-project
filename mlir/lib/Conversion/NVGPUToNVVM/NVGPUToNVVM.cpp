@@ -1546,6 +1546,35 @@ struct NVGPUWarpgroupMmaStoreOpLowering
   }
 };
 
+struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::WarpgroupMmaInitAccumulatorOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::WarpgroupMmaInitAccumulatorOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(nvgpu::WarpgroupMmaInitAccumulatorOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    SmallVector<Value> results;
+    for (OpResult m : op.getMatrixC()) {
+      nvgpu::WarpgroupAccumulatorType mType =
+          m.getType().cast<nvgpu::WarpgroupAccumulatorType>();
+      Type stype = getTypeConverter()->convertType(mType);
+      Value undefStruct = b.create<LLVM::UndefOp>(stype);
+      Type elemType = mType.getFragmented().getElementType();
+      int64_t elemSize = mType.getFragmented().getDimSize(0);
+      Value zero =
+          b.create<LLVM::ConstantOp>(elemType, rewriter.getZeroAttr(elemType));
+      for (int64_t i = 0; i < elemSize; ++i) {
+        undefStruct = b.create<LLVM::InsertValueOp>(stype, undefStruct, zero,
+                                                    ArrayRef<int64_t>({i}));
+      }
+      results.push_back(undefStruct);
+    }
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
@@ -1563,6 +1592,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
       NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
+      NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);
