@@ -1021,6 +1021,7 @@ void SparseTensorStorage<P, C, V>::sortInPlace() {
                 return coordinates[l][lhs] < coordinates[l][rhs];
               }
               assert(false && "duplicate coordinates");
+              return false;
             });
 
   applyPerm(sortedIdx);
