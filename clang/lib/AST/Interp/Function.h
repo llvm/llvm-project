@@ -15,8 +15,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_FUNCTION_H
 #define LLVM_CLANG_AST_INTERP_FUNCTION_H
 
-#include "Pointer.h"
 #include "Source.h"
+#include "Descriptor.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,6 +25,7 @@ namespace clang {
 namespace interp {
 class Program;
 class ByteCodeEmitter;
+class Pointer;
 enum PrimType : uint32_t;
 
 /// Describes a scope block.
