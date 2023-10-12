@@ -2,21 +2,27 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-try:
-    from typing import Union
-    from ..ir import *
-    from ._ods_common import get_default_loc_context as _get_default_loc_context
-except ImportError as e:
-    raise RuntimeError("Error loading imports from extension module") from e
+from typing import Union
 
 from ._ml_program_ops_gen import *
+from ._ml_program_ops_gen import _Dialect
+
+try:
+    from ..ir import *
+    from ._ods_common import (
+        get_default_loc_context as _get_default_loc_context,
+        _cext as _ods_cext,
+    )
+except ImportError as e:
+    raise RuntimeError("Error loading imports from extension module") from e
 
 
 ARGUMENT_ATTRIBUTE_NAME = "arg_attrs"
 RESULT_ATTRIBUTE_NAME = "res_attrs"
 
 
-class FuncOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class FuncOp(FuncOp):
     """Specialization for the func op class."""
 
     def __init__(

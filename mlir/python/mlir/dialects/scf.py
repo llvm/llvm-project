@@ -2,20 +2,29 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+
+from ._scf_ops_gen import *
+from ._scf_ops_gen import _Dialect
+from .arith import constant
+
 try:
     from ..ir import *
+    from ._ods_common import (
+        get_op_result_or_value as _get_op_result_or_value,
+        get_op_results_or_values as _get_op_results_or_values,
+        _cext as _ods_cext,
+    )
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 from typing import Optional, Sequence, Union
 
-from ._ods_common import (
-    get_op_result_or_value as _get_op_result_or_value,
-    get_op_results_or_values as _get_op_results_or_values,
-)
+
+_ForOp = ForOp
 
 
-class ForOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ForOp(_ForOp):
     """Specialization for the SCF for op class."""
 
     def __init__(
@@ -41,7 +50,7 @@ class ForOp:
         iter_args = _get_op_results_or_values(iter_args)
 
         results = [arg.type for arg in iter_args]
-        super().__init__(
+        super(_ForOp, self).__init__(
             self.build_generic(
                 regions=1,
                 results=results,
@@ -74,7 +83,11 @@ class ForOp:
         return self.body.arguments[1:]
 
 
-class IfOp:
+_IfOp = IfOp
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class IfOp(_IfOp):
     """Specialization for the SCF if op class."""
 
     def __init__(self, cond, results_=[], *, hasElse=False, loc=None, ip=None):
@@ -87,7 +100,7 @@ class IfOp:
         operands.append(cond)
         results = []
         results.extend(results_)
-        super().__init__(
+        super(_IfOp, self).__init__(
             self.build_generic(
                 regions=2, results=results, operands=operands, loc=loc, ip=ip
             )
@@ -105,3 +118,37 @@ class IfOp:
     def else_block(self):
         """Returns the else block of the if operation."""
         return self.regions[1].blocks[0]
+
+
+def for_(
+    start,
+    stop=None,
+    step=None,
+    iter_args: Optional[Sequence[Value]] = None,
+    *,
+    loc=None,
+    ip=None,
+):
+    if step is None:
+        step = 1
+    if stop is None:
+        stop = start
+        start = 0
+    params = [start, stop, step]
+    for i, p in enumerate(params):
+        if isinstance(p, int):
+            p = constant(p)
+        elif isinstance(p, float):
+            raise ValueError(f"{p=} must be int.")
+        params[i] = p
+
+    for_op = ForOp(start, stop, step, iter_args, loc=loc, ip=ip)
+    iv = for_op.induction_variable
+    iter_args = tuple(for_op.inner_iter_args)
+    with InsertionPoint(for_op.body):
+        if len(iter_args) > 1:
+            yield iv, iter_args
+        elif len(iter_args) == 1:
+            yield iv, iter_args[0]
+        else:
+            yield iv

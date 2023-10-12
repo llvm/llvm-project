@@ -2,9 +2,13 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from ._arith_ops_gen import *
+from ._arith_ops_gen import _Dialect
+from ._arith_enum_gen import *
+
 try:
     from ..ir import *
-    from ._ods_common import get_default_loc_context as _get_default_loc_context
+    from ._ods_common import get_default_loc_context as _get_default_loc_context, _cext as _ods_cext
 
     from typing import Any, List, Union
 except ImportError as e:
@@ -30,8 +34,8 @@ def _is_integer_like_type(type: Type):
 def _is_float_type(type: Type):
     return _is_any_of(type, [BF16Type, F16Type, F32Type, F64Type])
 
-
-class ConstantOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ConstantOp(ConstantOp):
     """Specialization for the constant op class."""
 
     def __init__(

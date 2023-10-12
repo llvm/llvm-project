@@ -80,7 +80,7 @@ public:
   /// Raises an exception if the mapping already exists.
   /// This is intended to be called by implementation code.
   void registerOperationImpl(const std::string &operationName,
-                             pybind11::object pyClass);
+                             pybind11::object pyClass, bool replace = false);
 
   /// Returns the custom Attribute builder for Attribute kind.
   std::optional<pybind11::function>

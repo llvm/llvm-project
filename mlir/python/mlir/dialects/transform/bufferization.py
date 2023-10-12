@@ -2,9 +2,13 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from .._bufferization_transform_ops_gen import *
+from .._bufferization_transform_ops_gen import _Dialect
+
 try:
-    from ..ir import *
-    from ..dialects import transform
+    from ...ir import *
+    from ...dialects import transform
+    from .._ods_common import _cext as _ods_cext
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
@@ -12,7 +16,8 @@ from enum import Enum
 from typing import Optional, overload, Union
 
 
-class EmptyTensorToAllocTensorOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class EmptyTensorToAllocTensorOp(EmptyTensorToAllocTensorOp):
     """Specialization for EmptyTensorToAllocTensorOp class."""
 
     @overload
@@ -22,7 +27,7 @@ class EmptyTensorToAllocTensorOp:
         target: Union[Operation, OpView, Value],
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         ...
 
@@ -36,7 +41,7 @@ class EmptyTensorToAllocTensorOp:
         target_or_none: Optional[Union[Operation, OpView, Value]] = None,
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         if isinstance(transformed_type_or_target, Type):
             transformed_type = transformed_type_or_target
@@ -53,7 +58,8 @@ class EmptyTensorToAllocTensorOp:
         )
 
 
-class OneShotBufferizeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class OneShotBufferizeOp(OneShotBufferizeOp):
     """Specialization for OneShotBufferizeOp class."""
 
     @overload
@@ -70,7 +76,7 @@ class OneShotBufferizeOp:
         print_conflicts: Optional[bool] = None,
         test_analysis_only: Optional[bool] = None,
         loc=None,
-        ip=None
+        ip=None,
     ):
         ...
 
@@ -87,7 +93,7 @@ class OneShotBufferizeOp:
         print_conflicts: Optional[bool] = None,
         test_analysis_only: Optional[bool] = None,
         loc=None,
-        ip=None
+        ip=None,
     ):
         ...
 
@@ -104,7 +110,7 @@ class OneShotBufferizeOp:
         print_conflicts: Optional[bool] = None,
         test_analysis_only: Optional[bool] = None,
         loc=None,
-        ip=None
+        ip=None,
     ):
         if isinstance(transformed_type_or_target, Type):
             transformed_type = transformed_type_or_target

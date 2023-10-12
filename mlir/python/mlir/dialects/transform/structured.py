@@ -2,9 +2,14 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from .._structured_transform_ops_gen import *
+from .._structured_transform_ops_gen import _Dialect
+from .._structured_transform_enum_gen import *
+
 try:
-    from ..ir import *
-    from ..dialects import transform
+    from ...ir import *
+    from ...dialects import transform
+    from .._ods_common import _cext as _ods_cext
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
@@ -163,7 +168,8 @@ def _get_int_array_array_attr(
     return ArrayAttr.get(values)
 
 
-class BufferizeToAllocationOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class BufferizeToAllocationOp(BufferizeToAllocationOp):
     """Specialization for BufferizeToAllocationOp class."""
 
     def __init__(
@@ -199,7 +205,8 @@ class BufferizeToAllocationOp:
         )
 
 
-class DecomposeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class DecomposeOp(DecomposeOp):
     """Specialization for DecomposeOp class."""
 
     def __init__(self, target: Union[Operation, Value], *, loc=None, ip=None):
@@ -207,7 +214,8 @@ class DecomposeOp:
         super().__init__(transformed_type, target, loc=loc, ip=ip)
 
 
-class FuseIntoContainingOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class FuseIntoContainingOp(FuseIntoContainingOp):
     """Specialization for FuseIntoContainingOp class."""
 
     @overload
@@ -271,7 +279,8 @@ class FuseIntoContainingOp:
         )
 
 
-class GeneralizeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class GeneralizeOp(GeneralizeOp):
     """Specialization for GeneralizeOp class."""
 
     def __init__(self, target: Union[Operation, Value], *, loc=None, ip=None):
@@ -279,7 +288,8 @@ class GeneralizeOp:
         super().__init__(transformed_type, target, loc=loc, ip=ip)
 
 
-class InterchangeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class InterchangeOp(InterchangeOp):
     """Specialization for InterchangeOp class."""
 
     def __init__(
@@ -300,7 +310,8 @@ class InterchangeOp:
         )
 
 
-class MapCopyToThreadsOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class MapCopyToThreadsOp(MapCopyToThreadsOp):
     """Specialization for MapCopyToThreadsOp class."""
 
     @overload
@@ -360,7 +371,8 @@ class MapCopyToThreadsOp:
         )
 
 
-class VectorizeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class VectorizeOp(VectorizeOp):
     """Specialization for VectorizeOp class."""
 
     def __init__(
@@ -405,7 +417,8 @@ class VectorizeOp:
         )
 
 
-class MatchOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class MatchOp(MatchOp):
     """Specialization for MatchOp class."""
 
     @overload
@@ -464,7 +477,8 @@ class MatchOp:
         )
 
 
-class MultiTileSizesOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class MultiTileSizesOp(MultiTileSizesOp):
     """Specialization for MultiTileSizesOp class."""
 
     def __init__(
@@ -491,7 +505,8 @@ class MultiTileSizesOp:
         )
 
 
-class PadOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class PadOp(PadOp):
     """Specialization for PadOp class."""
 
     def __init__(
@@ -528,7 +543,8 @@ class PadOp:
         )
 
 
-class ScalarizeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ScalarizeOp(ScalarizeOp):
     """Specialization for ScalarizeOp class."""
 
     def __init__(self, target: Union[Operation, Value], *, loc=None, ip=None):
@@ -536,7 +552,8 @@ class ScalarizeOp:
         super().__init__(result_type, target, loc=loc, ip=ip)
 
 
-class SplitOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class SplitOp(SplitOp):
     """Specialization for SplitOp class."""
 
     def __init__(
@@ -567,7 +584,8 @@ class SplitOp:
         )
 
 
-class TileUsingForOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class TileUsingForOp(TileUsingForOp):
     """Specialization for TileUsingForOp class."""
 
     @overload
@@ -640,7 +658,8 @@ class TileUsingForOp:
         )
 
 
-class TileUsingForallOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class TileUsingForallOp(TileUsingForallOp):
     """Specialization for TileUsingForallOp class."""
 
     @overload
@@ -732,7 +751,8 @@ class TileUsingForallOp:
         )
 
 
-class VectorizeChildrenAndApplyPatternsOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class VectorizeChildrenAndApplyPatternsOp(VectorizeChildrenAndApplyPatternsOp):
     """Specialization for VectorizeChildrenAndApplyPatternsOp class."""
 
     def __init__(

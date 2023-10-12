@@ -2,9 +2,15 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from ._func_ops_gen import *
+from ._func_ops_gen import _Dialect
+
 try:
     from ..ir import *
-    from ._ods_common import get_default_loc_context as _get_default_loc_context
+    from ._ods_common import (
+        get_default_loc_context as _get_default_loc_context,
+        _cext as _ods_cext,
+    )
 
     import inspect
 
@@ -16,7 +22,8 @@ ARGUMENT_ATTRIBUTE_NAME = "arg_attrs"
 RESULT_ATTRIBUTE_NAME = "res_attrs"
 
 
-class ConstantOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ConstantOp(ConstantOp):
     """Specialization for the constant op class."""
 
     def __init__(self, result: Type, value: Attribute, *, loc=None, ip=None):
@@ -27,7 +34,8 @@ class ConstantOp:
         return self.results[0].type
 
 
-class FuncOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class FuncOp(FuncOp):
     """Specialization for the func op class."""
 
     def __init__(
@@ -238,7 +246,8 @@ class FuncOp:
         return decorator
 
 
-class CallOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class CallOp(CallOp):
     """Specialization for the call op class."""
 
     def __init__(
