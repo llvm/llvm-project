@@ -1,0 +1,20 @@
+RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=source %p/Inputs/remark-count-by.yaml | FileCheck %s
+RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKFUNC
+RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=function-with-loc %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKFUNCLOC
+RUN: llvm-remarkutil count --parser=yaml --count-by=arg --group-by=total %p/Inputs/remark-count-by.yaml | FileCheck %s --check-prefix=CHECKTOTAL 
+
+; CHECK-LABEL: Source,count1,count2,count3,count4
+; CHECK: path/to/anno.c,3,4,6,4
+; CHECK: path/to/anno2.c,1,2,3,0
+
+; CHECKFUNC-LABEL: Function,count1,count2,count3,count4
+; CHECKFUNC: func1,3,4,6,4
+; CHECKFUNC: func2,1,2,3,0
+
+; CHECKFUNCLOC-LABEL: FuctionWithDebugLoc,count1,count2,count3,count4
+; CHECKFUNCLOC: path/to/anno.c:func1,2,2,3,4
+; CHECKFUNCLOC: path/to/anno.c:func2,1,2,3,0
+; CHECKFUNCLOC: path/to/anno2.c:func1,1,2,3,0
+
+; CHECKTOTAL-LABEL: Total,count1,count2,count3,count4
+; CHECKTOTAL: Total,4,6,9,4
