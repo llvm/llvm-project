@@ -1,8 +1,8 @@
 ! UNSUPPORTED: system-windows
 ! RUN: split-file %s %t
 ! RUN: %clang -c %t/cfile.c
-! RUN: %flang -flang-experimental-hlfir cfile.o %t/src.f90 -o ctofortran
-! RUN: ./ctofortran | FileCheck %s
+! RUN: %flang -flang-experimental-hlfir cfile.o %t/src.f90 -o %t/ctofortran
+! RUN: %t/ctofortran | FileCheck %s
 
 !--- src.f90
 subroutine foo(a) bind(c)
