@@ -82,7 +82,11 @@ def testEncodingAttr2D():
         print(f"crd_width: {casted.crd_width}")
 
         created = st.EncodingAttr.get(
-            casted.lvl_types, casted.dim_to_lvl, casted.lvl_to_dim, 8, 32,
+            casted.lvl_types,
+            casted.dim_to_lvl,
+            casted.lvl_to_dim,
+            8,
+            32,
         )
         # CHECK: #sparse_tensor.encoding<{ map = (d0, d1) -> (d1 : dense, d0 : compressed), posWidth = 8, crdWidth = 32 }>
         print(created)

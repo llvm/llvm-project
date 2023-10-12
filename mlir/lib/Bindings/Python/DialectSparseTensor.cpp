@@ -51,8 +51,8 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
                 crdWidth));
           },
           py::arg("cls"), py::arg("lvl_types"), py::arg("dim_to_lvl"),
-          py::arg("lvl_to_dim"), py::arg("pos_width"),
-          py::arg("crd_width"), py::arg("context") = py::none(),
+          py::arg("lvl_to_dim"), py::arg("pos_width"), py::arg("crd_width"),
+          py::arg("context") = py::none(),
           "Gets a sparse_tensor.encoding from parameters.")
       .def_property_readonly(
           "lvl_types",
