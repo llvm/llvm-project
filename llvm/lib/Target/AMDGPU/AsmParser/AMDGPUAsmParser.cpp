@@ -2243,8 +2243,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    if (isInt<32>(Val) || isUInt<32>(Val))
-      Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? Val << 32 : Lo_32(Val);
+    Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? Val << 32 : Lo_32(Val);
 
     Inst.addOperand(MCOperand::createImm(Val));
     setImmKindLiteral();
