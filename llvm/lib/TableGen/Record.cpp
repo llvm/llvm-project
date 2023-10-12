@@ -3125,7 +3125,7 @@ void Record::checkRecordDumps() {
 
   for (const auto &Dump : getDumps()) {
     Init *Message = Dump.Message->resolveReferences(R);
-    CheckDump(Dump.Loc, Message);
+    dumpMessage(Dump.Loc, Message);
   }
 }
 

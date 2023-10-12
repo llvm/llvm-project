@@ -170,7 +170,8 @@ void CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
   }
 }
 
-void CheckDump(SMLoc Loc, Init *Message) {
+// Dump a message to stderr.
+void dumpMessage(SMLoc Loc, Init *Message) {
   if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(MessageInit->getValue());
   else

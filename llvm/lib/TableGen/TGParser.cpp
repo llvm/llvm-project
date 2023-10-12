@@ -405,7 +405,7 @@ bool TGParser::addEntry(RecordsEntry E) {
   }
 
   if (E.Dump) {
-    CheckDump(E.Dump->Loc, E.Dump->Message);
+    dumpMessage(E.Dump->Loc, E.Dump->Message);
     return false;
   }
 
@@ -513,7 +513,7 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
         Dest->push_back(
             std::make_unique<Record::DumpInfo>(E.Dump->Loc, Message));
       else
-        CheckDump(E.Dump->Loc, Message);
+        dumpMessage(E.Dump->Loc, Message);
 
     } else {
       auto Rec = std::make_unique<Record>(*E.Rec);

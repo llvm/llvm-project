@@ -43,7 +43,7 @@ void PrintError(const RecordVal *RecVal, const Twine &Msg);
 [[noreturn]] void PrintFatalError(const RecordVal *RecVal, const Twine &Msg);
 
 void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
-void CheckDump(SMLoc Loc, Init *Message);
+void dumpMessage(SMLoc Loc, Init *Message);
 
 extern SourceMgr SrcMgr;
 extern unsigned ErrorsPrinted;
