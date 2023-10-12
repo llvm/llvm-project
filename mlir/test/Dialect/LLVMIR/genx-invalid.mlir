@@ -1,48 +1,80 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
-func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi8>, %b : vector<8xi8>) {
-  // expected-error @+1 {{'genx.matrix.dpas' op expecting repect count to be 1, 2, 4, or 8}}
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=6:i32} : (vector<8xi32>, vector<8xi8>, vector<8xi8>) -> vector<8xi32>
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<16xi8>, %b : vector<32xi8>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op expecting repeat count to be 1, 2, 4, or 8}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=6:i32} : (vector<8xi32>, vector<16xi8>, vector<32xi8>) -> vector<8xi32>
   llvm.return
 }
 
 // -----
 
-func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi8>, %b : vector<8xi8>) {
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<16xi8>, %b : vector<32xi8>) {
   // expected-error @+1 {{'genx.matrix.dpas' op expecting precision of matrix A and B to be the same}}
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<U8>, rc=1:i32} : (vector<8xi32>, vector<8xi8>, vector<8xi8>) -> vector<8xi32>
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<U8>, rc=8:i32} : (vector<8xi32>, vector<16xi8>, vector<32xi8>) -> vector<8xi32>
   llvm.return
 }
 
 // -----
 
-func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi8>, %b : vector<8xi32>) {
-  // expected-error @+1 {{'genx.matrix.dpas' op element type of 2nd (A) and 3rd (B) operands or 1st operand (C) and result (D) must match}}
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=1:i32} : (vector<8xi32>, vector<8xi8>, vector<8xi32>) -> vector<8xi32>
+func.func @genx.dpas(%c : vector<8xi8>, %a : vector<16xi8>, %b : vector<32xi8>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op 1st operand (C) and result (D) should have the same type}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi8>, vector<16xi8>, vector<32xi8>) -> vector<8xi32>
   llvm.return
 }
 
 // -----
 
-func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xsi8>, %b : vector<8xsi8>) {
+func.func @genx.dpas(%c : vector<16xi32>, %a : vector<16xi8>, %b : vector<32xi8>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op the dimension for 1st operand (C) and result (D) should match repeat count}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<16xi32>, vector<16xi8>, vector<32xi8>) -> vector<16xi32>
+  llvm.return
+}
+
+// -----
+
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<16xi8>, %b : vector<8xi32>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op element type of 2nd (A) and 3rd (B) operands must match}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi32>, vector<16xi8>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// -----
+
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi8>, %b : vector<8xi8>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op 2nd operand (A) bit-size should be repeat count times 16}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi32>, vector<8xi8>, vector<8xi8>) -> vector<8xi32>
+  llvm.return
+}
+
+// -----
+
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<16xi8>, %b : vector<16xi8>) {
+  // expected-error @+1 {{'genx.matrix.dpas' op 3rd operand (B) bit-size should be systolic depth (8) times 32}}
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi32>, vector<16xi8>, vector<16xi8>) -> vector<8xi32>
+  llvm.return
+}
+
+// -----
+
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<16xsi8>, %b : vector<32xsi8>) {
   // expected-error @+1 {{'genx.matrix.dpas' op precision should be S8 when 2nd (A) or 3rd (B) operand element type is signed i8}}
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<U8>, pb=#genx.precision_type<U8>, rc=1:i32} : (vector<8xi32>, vector<8xsi8>, vector<8xsi8>) -> vector<8xi32>
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<U8>, pb=#genx.precision_type<U8>, rc=8:i32} : (vector<8xi32>, vector<16xsi8>, vector<32xsi8>) -> vector<8xi32>
   llvm.return
 }
 
 // -----
 
-func.func @genx.dpas(%c : vector<8xi8>, %a : vector<8xi8>, %b : vector<8xi8>) {
+func.func @genx.dpas(%c : vector<8xi8>, %a : vector<16xi8>, %b : vector<32xi8>) {
   // expected-error @+1 {{'genx.matrix.dpas' op the element type for 1st operand (C) and the result should be i32}}
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=1:i32} : (vector<8xi8>, vector<8xi8>, vector<8xi8>) -> vector<8xi8>
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi8>, vector<16xi8>, vector<32xi8>) -> vector<8xi8>
   llvm.return
 }
 
 // -----
 
-func.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi32>, %b : vector<8xi32>) {
+func.func @genx.dpas(%c : vector<8xi32>, %a : vector<4xi32>, %b : vector<8xi32>) {
   // expected-error @+1 {{'genx.matrix.dpas' op expecting 2nd (A) or 3rd (B) operand element type to be f32, bf16, f16, or i8}}
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=1:i32} : (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi32>, vector<4xi32>, vector<8xi32>) -> vector<8xi32>
   llvm.return
 }
 

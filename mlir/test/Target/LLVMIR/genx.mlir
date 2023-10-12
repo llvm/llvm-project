@@ -135,9 +135,9 @@ llvm.func @genx.atomic.rmw(%ptr : !llvm.ptr<i32, 1>, %sptr : !llvm.ptr<i64, 3>, 
   llvm.return
 }
 
-llvm.func @genx.dpas(%c : vector<8xi32>, %a : vector<8xi8>, %b : vector<8xi8>) {
-  // CHECK: %4 = call <8 x i32> @llvm.genx.GenISA.sub.group.dpas.v8i32.v8i32.v8i8.v8i8(<8 x i32> %0, <8 x i8> %1, <8 x i8> %2, i32 4, i32 4, i32 8, i32 1, i1 false)
-  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=1:i32} : (vector<8xi32>, vector<8xi8>, vector<8xi8>) -> vector<8xi32>
+llvm.func @genx.dpas(%c : vector<8xi32>, %a : vector<16xi8>, %b : vector<32xi8>) {
+  // CHECK: %4 = call <8 x i32> @llvm.genx.GenISA.sub.group.dpas.v8i32.v8i32.v16i8.v32i8(<8 x i32> %0, <16 x i8> %1, <32 x i8> %2, i32 4, i32 4, i32 8, i32 8, i1 false)
+  %0 = genx.matrix.dpas %c, %a, %b {pa=#genx.precision_type<S8>, pb=#genx.precision_type<S8>, rc=8:i32} : (vector<8xi32>, vector<16xi8>, vector<32xi8>) -> vector<8xi32>
   llvm.return
 }
 

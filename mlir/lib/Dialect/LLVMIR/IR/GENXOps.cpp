@@ -23,20 +23,42 @@ using namespace mlir;
 
 LogicalResult GENX::MatrixDPASOp::verify() {
   if (getRc() != 1 && getRc() != 2 && getRc() != 4 && getRc() != 8)
-    return this->emitOpError("expecting repect count to be 1, 2, 4, or 8");
+    return this->emitOpError("expecting repeat count to be 1, 2, 4, or 8");
 
   GENX::PrecisionType precision = getPa();
   if (getPa() != getPb())
     return this->emitOpError(
         "expecting precision of matrix A and B to be the same");
 
-  Type AElemTy = getA().getType().getElementType();
-  Type BElemTy = getB().getType().getElementType();
-  Type CElemTy = getC().getType().getElementType();
-  Type DElemTy = getD().getType().getElementType();
-  if (AElemTy != BElemTy || CElemTy != DElemTy)
-    return this->emitOpError("element type of 2nd (A) and 3rd (B) operands or "
-                             "1st operand (C) and result (D) must match");
+  VectorType ATy = getA().getType();
+  VectorType BTy = getB().getType();
+  VectorType CTy = getC().getType();
+  VectorType DTy = getD().getType();
+  if (CTy != DTy)
+    return this->emitOpError(
+        "1st operand (C) and result (D) should have the same type");
+
+  if (CTy.getNumElements() != getRc() || DTy.getNumElements() != getRc())
+    return this->emitOpError("the dimension for 1st operand (C) and "
+                             "result (D) should match repeat count");
+
+  Type AElemTy = ATy.getElementType();
+  Type BElemTy = BTy.getElementType();
+  Type CElemTy = CTy.getElementType();
+  if (AElemTy != BElemTy)
+    return this->emitOpError(
+        "element type of 2nd (A) and 3rd (B) operands must match");
+
+  // ATy is required to be vector<RC x i16> as hard coded by IGC.
+  if (ATy.getNumElements() * AElemTy.getIntOrFloatBitWidth() != getRc() * 16)
+    return this->emitOpError(
+        "2nd operand (A) bit-size should be repeat count times 16");
+
+  // BTy is required to be vector<SD x i32> as hard coded by IGC.
+  constexpr unsigned SD = 8;
+  if (BTy.getNumElements() * BElemTy.getIntOrFloatBitWidth() != SD * 32)
+    return this->emitOpError(
+        "3rd operand (B) bit-size should be systolic depth (8) times 32");
 
   return TypeSwitch<Type, LogicalResult>(AElemTy)
       .Case<Float32Type>([&](auto ty) -> LogicalResult {
