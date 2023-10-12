@@ -175,7 +175,7 @@ void dumpMessage(SMLoc Loc, Init *Message) {
   if (auto *MessageInit = dyn_cast<StringInit>(Message))
     PrintNote(Loc, MessageInit->getValue());
   else
-    PrintNote("(dump message is not a string - use `!repr`)");
+    PrintNote(Loc, "dump message is not a string - use `!repr`");
 }
 
 } // end namespace llvm
