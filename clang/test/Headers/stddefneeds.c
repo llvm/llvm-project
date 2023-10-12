@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=c99 -std=c99 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=c23 -std=c23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=c23 -std=c2x %s
 
 // Use C99 to verify that __need_ can be used to get types that wouldn't normally be available.
 
