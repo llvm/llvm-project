@@ -2,16 +2,21 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from .._tensor_transform_ops_gen import *
+from .._tensor_transform_ops_gen import _Dialect
+
 try:
-    from ..ir import *
-    from ..dialects import transform
+    from ...ir import *
+    from ...dialects import transform
+    from .._ods_common import _cext as _ods_cext
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 from typing import Optional, overload, Union
 
 
-class MakeLoopIndependentOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class MakeLoopIndependentOp(MakeLoopIndependentOp):
     """Specialization for MakeLoopIndependentOp class."""
 
     @overload
@@ -22,7 +27,7 @@ class MakeLoopIndependentOp:
         num_loops: Union[int, IntegerAttr],
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         ...
 
@@ -33,7 +38,7 @@ class MakeLoopIndependentOp:
         num_loops: Union[int, IntegerAttr],
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         ...
 
@@ -44,7 +49,7 @@ class MakeLoopIndependentOp:
         num_loops_or_none: Optional[Union[int, IntegerAttr]] = None,
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         if isinstance(transformed_type_or_target, Type):
             transformed_type = transformed_type_or_target

@@ -2,11 +2,17 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from .._transform_enum_gen import *
+from .._transform_ops_gen import *
+from .._transform_ops_gen import _Dialect
+from ..._mlir_libs._mlirDialectsTransform import *
+
 try:
-    from ..ir import *
-    from ._ods_common import (
+    from ...ir import *
+    from .._ods_common import (
         get_op_result_or_value as _get_op_result_or_value,
         get_op_results_or_values as _get_op_results_or_values,
+        _cext as _ods_cext,
     )
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
@@ -14,7 +20,8 @@ except ImportError as e:
 from typing import Optional, Sequence, Union
 
 
-class CastOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class CastOp(CastOp):
     def __init__(
         self,
         result_type: Type,
@@ -26,7 +33,11 @@ class CastOp:
         super().__init__(result_type, _get_op_result_or_value(target), loc=loc, ip=ip)
 
 
-class ApplyPatternsOp:
+_ApplyPatternsOp = ApplyPatternsOp
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ApplyPatternsOp(_ApplyPatternsOp):
     def __init__(
         self,
         target: Union[Operation, Value, OpView],
@@ -36,7 +47,7 @@ class ApplyPatternsOp:
     ):
         operands = []
         operands.append(_get_op_result_or_value(target))
-        super().__init__(
+        super(_ApplyPatternsOp, self).__init__(
             self.build_generic(
                 attributes={},
                 results=[],
@@ -54,7 +65,8 @@ class ApplyPatternsOp:
         return self.regions[0].blocks[0]
 
 
-class testGetParentOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class GetParentOp(GetParentOp):
     def __init__(
         self,
         result_type: Type,
@@ -77,7 +89,8 @@ class testGetParentOp:
         )
 
 
-class MergeHandlesOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class MergeHandlesOp(MergeHandlesOp):
     def __init__(
         self,
         handles: Sequence[Union[Operation, Value]],
@@ -94,7 +107,8 @@ class MergeHandlesOp:
         )
 
 
-class ReplicateOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ReplicateOp(ReplicateOp):
     def __init__(
         self,
         pattern: Union[Operation, Value],
@@ -112,7 +126,8 @@ class ReplicateOp:
         )
 
 
-class SequenceOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class SequenceOp(SequenceOp):
     def __init__(
         self,
         failure_propagation_mode,
@@ -163,7 +178,8 @@ class SequenceOp:
         return self.body.arguments[1:]
 
 
-class YieldOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class YieldOp(YieldOp):
     def __init__(
         self,
         operands: Optional[Union[Operation, Sequence[Value]]] = None,

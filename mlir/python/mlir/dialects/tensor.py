@@ -2,19 +2,22 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from ._tensor_ops_gen import *
+from ._tensor_ops_gen import _Dialect
+
 try:
     from ..ir import *
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Any, Optional, Sequence, Union
-from ._ods_common import (
-    get_op_result_or_value as _get_op_result_or_value,
-    get_op_results_or_values as _get_op_results_or_values,
-)
+from typing import Sequence, Union
+from ._ods_common import _cext as _ods_cext
+
+_EmptyOp = EmptyOp
 
 
-class EmptyOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class EmptyOp(_EmptyOp):
     """Extends the tensor.empty op."""
 
     def __init__(
@@ -23,7 +26,7 @@ class EmptyOp:
         element_type: Type,
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         """Constructs an `empty` with mixed static/dynamic sizes."""
         # TODO: Refactor the EmptyOp to take an element type attribute and
@@ -38,7 +41,12 @@ class EmptyOp:
                 static_sizes.append(ShapedType.get_dynamic_size())
                 dynamic_sizes.append(s)
         result_type = RankedTensorType.get(static_sizes, element_type)
-        op = self.build_generic(
-            results=[result_type], operands=dynamic_sizes, attributes={}, loc=loc, ip=ip
+        super(_EmptyOp, self).__init__(
+            self.build_generic(
+                results=[result_type],
+                operands=dynamic_sizes,
+                attributes={},
+                loc=loc,
+                ip=ip,
+            )
         )
-        OpView.__init__(self, op)

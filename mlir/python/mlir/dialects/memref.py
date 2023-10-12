@@ -2,17 +2,24 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from ._memref_ops_gen import *
+from ._memref_ops_gen import _Dialect
+
 try:
     from ..ir import *
-    from ._ods_common import get_op_result_or_value as _get_op_result_or_value
-    from ._ods_common import get_op_results_or_values as _get_op_results_or_values
+    from ._ods_common import (
+        get_op_result_or_value as _get_op_result_or_value,
+        get_op_results_or_values as _get_op_results_or_values,
+        _cext as _ods_cext,
+    )
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 from typing import Optional, Sequence, Union
 
 
-class LoadOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class LoadOp(LoadOp):
     """Specialization for the MemRef load operation."""
 
     def __init__(
@@ -21,7 +28,7 @@ class LoadOp:
         indices: Optional[Union[Operation, OpView, Sequence[Value]]] = None,
         *,
         loc=None,
-        ip=None
+        ip=None,
     ):
         """Creates a memref load operation.
 

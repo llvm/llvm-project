@@ -2,16 +2,23 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from .._loop_transform_ops_gen import *
+from .._loop_transform_ops_gen import _Dialect
+
 try:
-    from ..ir import *
-    from ._ods_common import get_op_result_or_value as _get_op_result_or_value
+    from ...ir import *
+    from .._ods_common import (
+        get_op_result_or_value as _get_op_result_or_value,
+        _cext as _ods_cext,
+    )
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 from typing import Optional, Union
 
 
-class GetParentForOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class GetParentForOp(GetParentForOp):
     """Extension for GetParentForOp."""
 
     def __init__(
@@ -34,7 +41,8 @@ class GetParentForOp:
         )
 
 
-class LoopOutlineOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class LoopOutlineOp(LoopOutlineOp):
     """Extension for LoopOutlineOp."""
 
     def __init__(
@@ -61,7 +69,8 @@ class LoopOutlineOp:
         )
 
 
-class LoopPeelOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class LoopPeelOp(LoopPeelOp):
     """Extension for LoopPeelOp."""
 
     def __init__(
@@ -88,7 +97,8 @@ class LoopPeelOp:
         )
 
 
-class LoopPipelineOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class LoopPipelineOp(LoopPipelineOp):
     """Extension for LoopPipelineOp."""
 
     def __init__(
@@ -115,7 +125,8 @@ class LoopPipelineOp:
         )
 
 
-class LoopUnrollOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class LoopUnrollOp(LoopUnrollOp):
     """Extension for LoopUnrollOp."""
 
     def __init__(

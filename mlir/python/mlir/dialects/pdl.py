@@ -2,6 +2,11 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from ._pdl_ops_gen import *
+from ._pdl_ops_gen import _Dialect
+from .._mlir_libs._mlirDialectsPDL import *
+
+
 try:
     from ..ir import *
     from ..dialects import pdl
@@ -12,10 +17,12 @@ from typing import Union, Optional, Sequence, Mapping
 from ._ods_common import (
     get_op_result_or_value as _get_value,
     get_op_results_or_values as _get_values,
+    _cext as _ods_cext,
 )
 
 
-class ApplyNativeConstraintOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ApplyNativeConstraintOp(ApplyNativeConstraintOp):
     """Specialization for PDL apply native constraint op class."""
 
     def __init__(
@@ -32,7 +39,8 @@ class ApplyNativeConstraintOp:
         super().__init__(name, args, loc=loc, ip=ip)
 
 
-class ApplyNativeRewriteOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ApplyNativeRewriteOp(ApplyNativeRewriteOp):
     """Specialization for PDL apply native rewrite op class."""
 
     def __init__(
@@ -50,7 +58,8 @@ class ApplyNativeRewriteOp:
         super().__init__(results, name, args, loc=loc, ip=ip)
 
 
-class AttributeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class AttributeOp(AttributeOp):
     """Specialization for PDL attribute op class."""
 
     def __init__(
@@ -66,7 +75,8 @@ class AttributeOp:
         super().__init__(result, valueType=valueType, value=value, loc=loc, ip=ip)
 
 
-class EraseOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class EraseOp(EraseOp):
     """Specialization for PDL erase op class."""
 
     def __init__(
@@ -80,7 +90,8 @@ class EraseOp:
         super().__init__(operation, loc=loc, ip=ip)
 
 
-class OperandOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class OperandOp(OperandOp):
     """Specialization for PDL operand op class."""
 
     def __init__(
@@ -95,7 +106,8 @@ class OperandOp:
         super().__init__(result, valueType=type, loc=loc, ip=ip)
 
 
-class OperandsOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class OperandsOp(OperandsOp):
     """Specialization for PDL operands op class."""
 
     def __init__(
@@ -110,7 +122,8 @@ class OperandsOp:
         super().__init__(result, valueType=types, loc=loc, ip=ip)
 
 
-class OperationOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class OperationOp(OperationOp):
     """Specialization for PDL operand op class."""
 
     def __init__(
@@ -143,7 +156,8 @@ class OperationOp:
         )
 
 
-class PatternOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class PatternOp(PatternOp):
     """Specialization for PDL pattern op class."""
 
     def __init__(
@@ -164,7 +178,8 @@ class PatternOp:
         return self.regions[0].blocks[0]
 
 
-class ReplaceOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ReplaceOp(ReplaceOp):
     """Specialization for PDL replace op class."""
 
     def __init__(
@@ -184,7 +199,8 @@ class ReplaceOp:
         super().__init__(op, with_values, replOperation=with_op, loc=loc, ip=ip)
 
 
-class ResultOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ResultOp(ResultOp):
     """Specialization for PDL result op class."""
 
     def __init__(
@@ -200,7 +216,8 @@ class ResultOp:
         super().__init__(result, parent, index, loc=loc, ip=ip)
 
 
-class ResultsOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ResultsOp(ResultsOp):
     """Specialization for PDL results op class."""
 
     def __init__(
@@ -216,7 +233,8 @@ class ResultsOp:
         super().__init__(result, parent, index=index, loc=loc, ip=ip)
 
 
-class RewriteOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class RewriteOp(RewriteOp):
     """Specialization for PDL rewrite op class."""
 
     def __init__(
@@ -245,7 +263,8 @@ class RewriteOp:
         return self.regions[0].blocks[0]
 
 
-class TypeOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class TypeOp(TypeOp):
     """Specialization for PDL type op class."""
 
     def __init__(
@@ -255,7 +274,8 @@ class TypeOp:
         super().__init__(result, constantType=constantType, loc=loc, ip=ip)
 
 
-class TypesOp:
+@_ods_cext.register_operation(_Dialect, replace=True)
+class TypesOp(TypesOp):
     """Specialization for PDL types op class."""
 
     def __init__(
