@@ -57,7 +57,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <map>
 #include <utility>
 #include <vector>
 
@@ -139,7 +138,7 @@ namespace {
     DenseSet<Register> RegsToClearKillFlags;
 
     using AllSuccsCache =
-        std::map<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
+        DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
 
     /// DBG_VALUE pointer and flag. The flag is true if this DBG_VALUE is
     /// post-dominated by another DBG_VALUE of the same variable location.
@@ -160,14 +159,15 @@ namespace {
     /// current block.
     DenseSet<DebugVariable> SeenDbgVars;
 
-    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
+    DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
         HasStoreCache;
-    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
-             std::vector<MachineInstr *>>
+
+    DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
+             SmallVector<MachineInstr *>>
         StoreInstrCache;
 
     /// Cached BB's register pressure.
-    std::map<const MachineBasicBlock *, std::vector<unsigned>>
+    DenseMap<const MachineBasicBlock *, std::vector<unsigned>>
         CachedRegisterPressure;
 
     bool EnableSinkAndFold;
@@ -1429,11 +1429,11 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 
   // Does these two blocks pair be queried before and have a definite cached
   // result?
-  if (HasStoreCache.find(BlockPair) != HasStoreCache.end())
-    return HasStoreCache[BlockPair];
+  if (auto It = HasStoreCache.find(BlockPair); It != HasStoreCache.end())
+    return It->second;
 
-  if (StoreInstrCache.find(BlockPair) != StoreInstrCache.end())
-    return llvm::any_of(StoreInstrCache[BlockPair], [&](MachineInstr *I) {
+  if (auto It = StoreInstrCache.find(BlockPair); It != StoreInstrCache.end())
+    return llvm::any_of(It->second, [&](MachineInstr *I) {
       return I->mayAlias(AA, MI, false);
     });
 
