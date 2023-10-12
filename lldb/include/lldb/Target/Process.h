@@ -41,6 +41,8 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Target/WatchpointResource.h"
+#include "lldb/Target/WatchpointResourceList.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
@@ -2161,9 +2163,10 @@ public:
                                      lldb::BreakpointSiteSP &bp_site_sp);
 
   // Process Watchpoints (optional)
-  virtual Status EnableWatchpoint(Watchpoint *wp, bool notify = true);
+  virtual Status EnableWatchpoint(lldb::WatchpointSP wp_sp, bool notify = true);
 
-  virtual Status DisableWatchpoint(Watchpoint *wp, bool notify = true);
+  virtual Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
+                                   bool notify = true);
 
   // Thread Queries
 
@@ -3017,6 +3020,8 @@ protected:
       m_queue_list; ///< The list of libdispatch queues at a given stop point
   uint32_t m_queue_list_stop_id; ///< The natural stop id when queue list was
                                  ///last fetched
+  WatchpointResourceList
+      m_watchpoint_resource_list; ///< Watchpoint resources currently in use.
   std::vector<Notifications> m_notifications; ///< The list of notifications
                                               ///that this process can deliver.
   std::vector<lldb::addr_t> m_image_tokens;
@@ -3096,6 +3101,9 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
+
+  // Watchpoint hardware registers currently in use.
+  std::vector<lldb::WatchpointResourceSP> m_watchpoint_resources;
 
   /// Per process source file cache.
   SourceManager::SourceFileCache m_source_file_cache;

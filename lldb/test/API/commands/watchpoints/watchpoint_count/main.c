@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 int main() {
-  uint8_t x1 = 0;
-  uint16_t x2 = 0;
+  long x1 = 0;
+  long x2 = 0;
 
   printf("patatino\n");
 

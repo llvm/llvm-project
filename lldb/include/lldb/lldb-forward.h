@@ -289,6 +289,7 @@ class VariableList;
 class Watchpoint;
 class WatchpointList;
 class WatchpointOptions;
+class WatchpointResource;
 class WatchpointSetOptions;
 struct CompilerContext;
 struct LineEntry;
@@ -469,6 +470,7 @@ typedef std::shared_ptr<lldb_private::Variable> VariableSP;
 typedef std::shared_ptr<lldb_private::VariableList> VariableListSP;
 typedef std::shared_ptr<lldb_private::ValueObjectList> ValueObjectListSP;
 typedef std::shared_ptr<lldb_private::Watchpoint> WatchpointSP;
+typedef std::shared_ptr<lldb_private::WatchpointResource> WatchpointResourceSP;
 
 } // namespace lldb
 

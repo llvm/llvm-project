@@ -78,6 +78,8 @@ add_lldb_library(lldbTarget
   UnixSignals.cpp
   UnwindAssembly.cpp
   UnwindLLDB.cpp
+  WatchpointResource.cpp
+  WatchpointResourceList.cpp
 
   LINK_LIBS
     lldbBreakpoint

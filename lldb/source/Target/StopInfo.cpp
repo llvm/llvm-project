@@ -631,7 +631,7 @@ public:
       if (process_sp && watchpoint_sp) {
         const bool notify = false;
         watchpoint_sp->TurnOnEphemeralMode();
-        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->DisableWatchpoint(watchpoint_sp, notify);
         process_sp->AddPreResumeAction(SentryPreResumeAction, this);
       }
     }
@@ -642,9 +642,9 @@ public:
         watchpoint_sp->TurnOffEphemeralMode();
         const bool notify = false;
         if (was_disabled) {
-          process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
+          process_sp->DisableWatchpoint(watchpoint_sp, notify);
         } else {
-          process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
+          process_sp->EnableWatchpoint(watchpoint_sp, notify);
         }
       }
     }
@@ -707,7 +707,7 @@ protected:
         return true;
 
       if (!m_did_disable_wp) {
-        GetThread().GetProcess()->DisableWatchpoint(m_watch_sp.get(), false);
+        GetThread().GetProcess()->DisableWatchpoint(m_watch_sp, false);
         m_did_disable_wp = true;
       }
       return true;
@@ -991,9 +991,10 @@ protected:
 
           Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
           StreamSP output_sp = debugger.GetAsyncOutputStream();
-          wp_sp->DumpSnapshots(output_sp.get());
-          output_sp->EOL();
-          output_sp->Flush();
+          if (wp_sp->DumpSnapshots(output_sp.get())) {
+            output_sp->EOL();
+            output_sp->Flush();
+          }
         }
 
       } else {
@@ -1366,6 +1367,8 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
   return StopInfoSP(new StopInfoBreakpoint(thread, break_id, should_stop));
 }
 
+// LWP_TODO: We'll need a CreateStopReasonWithWatchpointResourceID akin
+// to CreateStopReasonWithBreakpointSiteID
 StopInfoSP StopInfo::CreateStopReasonWithWatchpointID(Thread &thread,
                                                       break_id_t watch_id,
                                                       bool silently_continue) {

@@ -436,7 +436,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
       m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_notifications(), m_image_tokens(),
+      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
       m_breakpoint_site_list(), m_dynamic_checkers_up(),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
@@ -547,6 +547,7 @@ void Process::Finalize() {
   m_extended_thread_list.Destroy();
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+  m_watchpoint_resource_list.Clear();
   std::vector<Notifications> empty_notifications;
   m_notifications.swap(empty_notifications);
   m_image_tokens.clear();
@@ -2408,13 +2409,13 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
   return true;
 }
 
-Status Process::EnableWatchpoint(Watchpoint *watchpoint, bool notify) {
+Status Process::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
 }
 
-Status Process::DisableWatchpoint(Watchpoint *watchpoint, bool notify) {
+Status Process::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
