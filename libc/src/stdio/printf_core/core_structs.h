@@ -53,7 +53,7 @@ struct FormatSection {
 
   // This operator is only used for testing and should be automatically
   // optimized out for release builds.
-  bool operator==(const FormatSection &other) {
+  bool operator==(const FormatSection &other) const {
     if (has_conv != other.has_conv)
       return false;
 
