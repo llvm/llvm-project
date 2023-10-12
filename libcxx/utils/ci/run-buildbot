@@ -367,6 +367,10 @@ bootstrapping-build)
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
+    ${NINJA} -vC "${BUILD_DIR}" install-clang install-clang-resource-headers
+    tar -cJvf install.tar.xz ${INSTALL_DIR}
+    buildkite-agent artifact upload --debug install.tar.xz
+
     echo "+++ Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
