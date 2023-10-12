@@ -117,7 +117,7 @@ struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
       auto extractOrInsertPosition = ArrayRef(index).drop_back();
       auto sourceVector = rewriter.create<vector::ExtractOp>(
           loc, source, extractOrInsertPosition);
-      auto convertedType =
+      VectorType convertedType =
           VectorType::Builder(llvm::cast<VectorType>(sourceVector.getType()))
               .setDim(0, resultType.getShape().back());
       auto convertedVector =
