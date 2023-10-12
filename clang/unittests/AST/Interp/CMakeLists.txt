@@ -6,6 +6,7 @@ clang_target_link_libraries(InterpTests
   PRIVATE
   clangAST
   clangBasic
+  clangTooling
   )
 
   target_link_libraries(InterpTests
