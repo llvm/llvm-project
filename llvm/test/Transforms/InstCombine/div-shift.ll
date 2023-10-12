@@ -1032,10 +1032,7 @@ define i8 @udiv_shl_no_overflow(i8 %x, i8 %y) {
 define i32 @sdiv_shl_pair_const(i32 %a) {
 ; CHECK-LABEL: @sdiv_shl_pair_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 2
 ;
 entry:
   %lhs = shl nsw i32 %a, 2
@@ -1047,10 +1044,7 @@ entry:
 define i32 @udiv_shl_pair_const(i32 %a) {
 ; CHECK-LABEL: @udiv_shl_pair_const(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i32 [[DIV]]
+; CHECK-NEXT:    ret i32 2
 ;
 entry:
   %lhs = shl nuw i32 %a, 2
@@ -1062,9 +1056,8 @@ entry:
 define i32 @sdiv_shl_pair1(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_shl_pair1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nuw nsw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1077,9 +1070,8 @@ entry:
 define i32 @sdiv_shl_pair2(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_shl_pair2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1092,9 +1084,8 @@ entry:
 define i32 @sdiv_shl_pair3(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_shl_pair3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1122,9 +1113,8 @@ entry:
 define i32 @udiv_shl_pair1(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_shl_pair1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1137,9 +1127,8 @@ entry:
 define i32 @udiv_shl_pair2(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_shl_pair2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1152,9 +1141,8 @@ entry:
 define i32 @udiv_shl_pair3(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_shl_pair3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nuw nsw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1244,8 +1232,8 @@ define i32 @sdiv_shl_pair_multiuse1(i32 %a, i32 %x, i32 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[LHS]])
-; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1259,10 +1247,10 @@ entry:
 define i32 @sdiv_shl_pair_multiuse2(i32 %a, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_shl_pair_multiuse2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[RHS]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -1280,7 +1268,8 @@ define i32 @sdiv_shl_pair_multiuse3(i32 %a, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[LHS]])
 ; CHECK-NEXT:    call void @use32(i32 [[RHS]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
