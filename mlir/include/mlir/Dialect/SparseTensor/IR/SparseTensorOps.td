@@ -12,6 +12,7 @@
 include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td"
+include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -153,7 +154,7 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [Pure]>,
+  [Pure, StageWithSortSparseOpInterface]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
@@ -197,9 +198,9 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   }];
 
   let extraClassDeclaration = [{
-     // Whether the convert can be done by a single step (either a sort or a foreach),
-     // or it would require a tmp buffer (sort, then foreach).
-     bool directConvertable();
+     // Whether the convert can be done by a single step or it would require
+     // an extra sort. Inherited from StageWithSortSparseOpInterface.
+     bool needExtraSort();
   }];
 
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
@@ -334,7 +335,8 @@ def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
-def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
+                                 [Pure, StageWithSortSparseOpInterface]>,
     Arguments<(ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
@@ -356,6 +358,12 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
        : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
      ```
    }];
+
+  let extraClassDeclaration = [{
+     // Whether the concatenate can be done by a single step or it would require
+     // an extra sort. Inherited from StageWithSortSparseOpInterface.
+     bool needExtraSort();
+  }];
 
   let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
   let hasVerifier = 1;
