@@ -2570,44 +2570,57 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     const RegisterBank *SrcBank =
       OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
 
-    LLT SelType = MRI.getType(MI.getOperand(0).getReg());
+    LLT SelType = MRI.getType(DstReg);
 
     // Extending SGPR S1 to S16/32/64.
     if (SrcBank == &AMDGPU::SGPRRegBank &&
-        MRI.getType(SrcReg) == LLT::scalar(1) &&
-        (SelType == S32 || SelType == S16 || SelType == S64)) {
-
-      Register False = B.buildConstant(S32, 0).getReg(0);
-      MRI.setRegBank(False, AMDGPU::SGPRRegBank);
-
-      Register True = Signed ? B.buildConstant(S32, -1).getReg(0)
-                             : B.buildConstant(S32, 1).getReg(0);
-      MRI.setRegBank(True, AMDGPU::SGPRRegBank);
-
+        MRI.getType(SrcReg) == LLT::scalar(1)) {
+      assert(SelType == S32 || SelType == S16 || SelType == S64);
       B.setInstrAndDebugLoc(MI);
-      Register NewReg = MRI.createGenericVirtualRegister(S32);
-      B.buildInstr(AMDGPU::G_ANYEXT, {NewReg}, {MI.getOperand(1).getReg()});
-      MRI.setRegBank(NewReg, AMDGPU::SGPRRegBank);
 
-      if (SelType == S32) {
-        B.buildSelect(DstReg, NewReg, True, False);
-      } else if (SelType == S16) {
-        Register TmpReg = B.buildSelect(S32, NewReg, True, False).getReg(0);
-        B.buildTrunc(DstReg, TmpReg);
-        MRI.setRegBank(TmpReg, AMDGPU::SGPRRegBank);
+      const auto BuildSelect = [&B, &MRI, Signed, &SrcReg](Register Dst,
+                                                           LLT Ty) {
+        Register False = B.buildConstant(Ty, 0).getReg(0);
+        MRI.setRegBank(False, AMDGPU::SGPRRegBank);
 
+        Register True = B.buildConstant(Ty, Signed ? -1 : 1).getReg(0);
+        MRI.setRegBank(True, AMDGPU::SGPRRegBank);
+
+        Register SrcExt = B.buildAnyExt(Ty, SrcReg).getReg(0);
+        MRI.setRegBank(SrcExt, AMDGPU::SGPRRegBank);
+
+        B.buildSelect(Dst, SrcExt, True, False);
+      };
+
+      if (SelType == S32 || SelType == S16) {
+        BuildSelect(DstReg, SelType);
       } else if (SelType == S64) {
-        Register TmpReg = B.buildSelect(S32, NewReg, True, False).getReg(0);
-        MRI.setRegBank(TmpReg, AMDGPU::SGPRRegBank);
+        Register LoPart = MRI.createGenericVirtualRegister(S32);
+        MRI.setRegBank(LoPart, AMDGPU::SGPRRegBank);
+        BuildSelect(LoPart, S32);
 
-        Register HiPart = Signed ? TmpReg : B.buildConstant(S32, 0).getReg(0);
-        MRI.setRegBank(HiPart, AMDGPU::SGPRRegBank);
+        Register HiPart;
+        switch (Opc) {
+        case AMDGPU::G_ANYEXT:
+          HiPart = B.buildUndef(S32).getReg(0);
+          MRI.setRegBank(HiPart, AMDGPU::SGPRRegBank);
+          break;
+        case AMDGPU::G_ZEXT:
+          HiPart = B.buildConstant(S32, 0).getReg(0);
+          MRI.setRegBank(HiPart, AMDGPU::SGPRRegBank);
+          break;
+        case AMDGPU::G_SEXT:
+          HiPart = LoPart;
+          break;
+        default:
+          llvm_unreachable("Unexpected Opcode");
+        }
 
-        B.buildMergeLikeInstr(DstReg, {TmpReg, HiPart});
+        B.buildMergeLikeInstr(DstReg, {LoPart, HiPart});
       } else
         llvm_unreachable("bad type");
 
-      MRI.setRegBank(DstReg, *SrcBank); // FIXME: Correct?
+      MRI.setRegBank(DstReg, *SrcBank);
       MI.eraseFromParent();
       return;
     }

@@ -133,15 +133,6 @@ def expand_promoted_fmed3 : GICombineRule<
 
 } // End Predicates = [NotHasMed3_16]
 
-// Form G_AMDGPU_SGPR_S1_TO_VCC_COPY from (copy (trunc)) with the right regbanks.
-def fold_sgpr_s1_to_vcc_copy : GICombineRule<
-  (defs root:$dst),
-  (match (COPY $dst, $tmp),
-         (G_TRUNC $tmp, $src),
-    [{ return Helper.matchExpandPromotedF16FMed3(*${fptrunc}, ${src0}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }]),
-  (apply [{ Helper.applyExpandPromotedF16FMed3(*${fptrunc}, ${src0}.getReg(), ${src1}.getReg(), ${src2}.getReg()); }])
->;
-
 // Combines which should only apply on SI/CI
 def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 
