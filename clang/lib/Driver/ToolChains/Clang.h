@@ -69,7 +69,8 @@ private:
                           llvm::opt::ArgStringList &CmdArgs) const;
   void AddSparcTargetArgs(const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs) const;
-  void AddSystemZTargetArgs(const llvm::opt::ArgList &Args,
+  void AddSystemZTargetArgs(const llvm::Triple &Triple,
+                            const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs) const;
   void AddX86TargetArgs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const;
