@@ -156,14 +156,12 @@ void ilist_traits<MachineInstr>::addNodeToList(MachineInstr *N) {
   MachineFunction *MF = Parent->getParent();
   N->addRegOperandsToUseLists(MF->getRegInfo());
   MF->handleInsertion(*N);
-  Parent->noteInsertion(*N);
 }
 
 /// When we remove an instruction from a basic block list, we update its parent
 /// pointer and remove its operands from reg use/def lists if appropriate.
 void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
   assert(N->getParent() && "machine instruction not in a basic block");
-  N->getParent()->noteRemoval(*N);
 
   // Remove from the use/def lists.
   if (MachineFunction *MF = N->getMF()) {
@@ -1099,26 +1097,26 @@ static bool jumpTableHasOtherUses(const MachineFunction &MF,
   return false;
 }
 
-class MBBSplitCriticalEdgeDelegate : public MachineBasicBlock::Delegate {
+class MBBSplitCriticalEdgeDelegate : public MachineFunction::Delegate {
 private:
-  MachineBasicBlock *MBB;
+  MachineFunction *MF;
   SlotIndexes *Indexes;
 
 public:
-  MBBSplitCriticalEdgeDelegate(MachineBasicBlock *Block,
+  MBBSplitCriticalEdgeDelegate(MachineBasicBlock *MBB,
                                SlotIndexes *IndexesToUpdate)
-      : MBB(Block), Indexes(IndexesToUpdate) {
-    MBB->addDelegate(this);
+      : MF(MBB->getParent()), Indexes(IndexesToUpdate) {
+    MF->setDelegate(this);
   }
 
-  ~MBBSplitCriticalEdgeDelegate() { MBB->resetDelegate(this); }
+  ~MBBSplitCriticalEdgeDelegate() { MF->resetDelegate(this); }
 
-  void MBB_NoteInsertion(MachineInstr &MI) override {
+  void MF_HandleInsertion(MachineInstr &MI) override {
     if (Indexes)
       Indexes->insertMachineInstrInMaps(MI);
   }
 
-  void MBB_NoteRemoval(MachineInstr &MI) override {
+  void MF_HandleRemoval(MachineInstr &MI) override {
     if (Indexes)
       Indexes->removeMachineInstrFromMaps(MI);
   }
@@ -1742,5 +1740,3 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
 const MBBSectionID
     MBBSectionID::ExceptionSectionID(MBBSectionID::SectionType::Exception);
-
-void MachineBasicBlock::Delegate::anchor() {}
