@@ -30,7 +30,6 @@ class TestCase(TestBase):
         self.assertIn(' = ""', self.getFormatted("c-string", "void_empty_cstring"))
         self.assertIn(' = ""', self.getFormatted("c-string", "empty_cstring"))
 
-
     # TODO: Move as many asserts as possible within this function to `testAllPlatforms`.
     # Currently `arm` is being skipped even though many asserts would effectively
     # pass.
