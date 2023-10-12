@@ -190,8 +190,8 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  Args.AddAllArgs(CmdArgs, options::OPT_u);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
   Args.addAllArgs(CmdArgs,
                   {options::OPT_T_Group, options::OPT_s, options::OPT_t,

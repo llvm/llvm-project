@@ -192,9 +192,6 @@ public:
   static constexpr uint64_t COUNT_NO_PROFILE =
       BinaryBasicBlock::COUNT_NO_PROFILE;
 
-  /// We have to use at least 2-byte alignment for functions because of C++ ABI.
-  static constexpr unsigned MinAlign = 2;
-
   static const char TimerGroupName[];
   static const char TimerGroupDesc[];
 
@@ -1720,8 +1717,24 @@ public:
     return *this;
   }
 
-  Align getAlign() const { return Align(Alignment); }
+  uint16_t getMinAlignment() const {
+    // Align data in code BFs minimum to CI alignment
+    if (!size() && hasIslandsInfo())
+      return getConstantIslandAlignment();
+
+    // Minimal code alignment on AArch64 and RISCV is 4
+    if (BC.isAArch64() || BC.isRISCV())
+      return 4;
+
+    // We have to use at least 2-byte alignment for functions because
+    // of C++ ABI.
+    return 2;
+  }
+
+  Align getMinAlign() const { return Align(getMinAlignment()); }
+
   uint16_t getAlignment() const { return Alignment; }
+  Align getAlign() const { return Align(getAlignment()); }
 
   BinaryFunction &setMaxAlignmentBytes(uint16_t MaxAlignBytes) {
     MaxAlignmentBytes = MaxAlignBytes;
