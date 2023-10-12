@@ -19,7 +19,7 @@ jobs:
           clangformat: 17.0.1
 
       - name: Install Ninja
-        uses: llvm/actions/install-ninja
+        run: sudo apt-get install -y ninja-build
 
       - name: Check generated files
         run: libcxx/utils/ci/run-buildbot check-generated-output
