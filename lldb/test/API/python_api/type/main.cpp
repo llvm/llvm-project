@@ -8,6 +8,8 @@ public:
         TASK_TYPE_1,
         TASK_TYPE_2
     } type;
+    enum E {} e;
+    union U {} u;
     // This struct is anonymous b/c it does not have a name
     // and it is not unnamed class.
     // Anonymous classes are a GNU extension.

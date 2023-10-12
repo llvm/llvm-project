@@ -124,6 +124,14 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(name_type)
         self.DebugSBType(name_type)
 
+        enum_type = task_type.FindNestedType("E")
+        self.assertTrue(enum_type)
+        self.DebugSBType(enum_type)
+
+        union_type = task_type.FindNestedType("U")
+        self.assertTrue(union_type)
+        self.DebugSBType(union_type)
+
         task_ptr_type = task_type.GetPointerType()
         invalid_type = task_ptr_type.FindNestedType("name")
         self.assertFalse(invalid_type)
