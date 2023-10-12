@@ -833,6 +833,22 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   if (!Target->handleTargetFeatures(Opts->Features, Diags))
     return nullptr;
 
+  // If TuneCPU is set, check if it contains all instruction sets needed by
+  // current feature map.
+  if (!Opts->TuneCPU.empty() && Opts->TuneCPU != Opts->CPU) {
+    llvm::StringMap<bool> TuneFeatureMap;
+    Target->initFeatureMap(TuneFeatureMap, Diags, Opts->TuneCPU, {});
+    if (std::any_of(Opts->FeatureMap.begin(), Opts->FeatureMap.end(),
+                    [&](const llvm::StringMapEntry<bool> &F) {
+                      return F.getValue() &&
+                             Target->isFeatureConsumedByTuneCPU(F.getKey()) &&
+                             (!TuneFeatureMap.contains(F.getKey()) ||
+                              !TuneFeatureMap[F.getKey()]);
+                    })) {
+      Diags.Report(diag::warn_tune_cpu_feature_unavailable) << Opts->TuneCPU;
+    }
+  }
+
   Target->setSupportedOpenCLOpts();
   Target->setCommandLineOpenCLOpts();
   Target->setMaxAtomicWidth();

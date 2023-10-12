@@ -278,6 +278,9 @@ def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
+def warn_tune_cpu_feature_unavailable : Warning<
+  "instructions of current target may not be supported by tune CPU '%0'">,
+  InGroup<UnsupportedTargetOpt>;
 
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "

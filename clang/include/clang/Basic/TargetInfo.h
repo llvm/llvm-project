@@ -976,6 +976,12 @@ public:
   /// with this target.
   virtual BuiltinVaListKind getBuiltinVaListKind() const = 0;
 
+  /// Return whether a feature matters for tune CPU. If true, present in
+  /// current target but missing in tune CPU triggers a warning.
+  virtual bool isFeatureConsumedByTuneCPU(StringRef Feature) const {
+    return false;
+  }
+
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }

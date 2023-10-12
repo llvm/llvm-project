@@ -187,6 +187,14 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
 
+  bool isFeatureConsumedByTuneCPU(StringRef Feature) const override {
+    // FIXME: Ignore htm to avoid unnecessary warning on cpu=pwr8/tune=pwr10,
+    // once clang can analyze function features with granularity, remove it.
+    return Feature != "aix-small-local-exec-tls" && Feature != "rop-protect" &&
+           Feature != "pcrelative-memops" && Feature != "quadword-atomics" &&
+           Feature != "htm";
+  }
+
   void addP10SpecificFeatures(llvm::StringMap<bool> &Features) const;
   void addFutureSpecificFeatures(llvm::StringMap<bool> &Features) const;
 
