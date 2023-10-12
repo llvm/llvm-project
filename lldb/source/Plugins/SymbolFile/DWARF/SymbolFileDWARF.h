@@ -30,6 +30,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/RangeMap.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include "DWARFContext.h"
@@ -284,6 +285,10 @@ public:
   void Dump(lldb_private::Stream &s) override;
 
   void DumpClangAST(lldb_private::Stream &s) override;
+
+  /// List separate dwo files.
+  bool
+  GetSeparateDebugInfo(lldb_private::StructuredData::Dictionary &d) override;
 
   lldb_private::DWARFContext &GetDWARFContext() { return m_context; }
 

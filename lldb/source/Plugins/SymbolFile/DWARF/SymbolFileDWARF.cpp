@@ -10,6 +10,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Core/Module.h"
@@ -24,6 +25,7 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
@@ -1752,11 +1754,10 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   // it. Or it's absolute.
   found = FileSystem::Instance().Exists(dwo_file);
 
+  const char *comp_dir =
+      cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
   if (!found) {
     // It could be a relative path that also uses DW_AT_COMP_DIR.
-    const char *comp_dir =
-        cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
-
     if (comp_dir) {
       dwo_file.SetFile(comp_dir, FileSpec::Style::native);
       if (!dwo_file.IsRelative()) {
@@ -4224,6 +4225,70 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
   if (!clang)
     return;
   clang->Dump(s.AsRawOstream());
+}
+
+bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d) {
+  StructuredData::Array separate_debug_info_files;
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  for (size_t cu_idx = 0; cu_idx < num_cus; cu_idx++) {
+    DWARFUnit *unit = info.GetUnitAtIndex(cu_idx);
+    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(unit);
+    if (dwarf_cu == nullptr)
+      continue;
+
+    // Check if this is a DWO unit by checking if it has a DWO ID.
+    // NOTE: it seems that `DWARFUnit::IsDWOUnit` is always false?
+    if (!dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    StructuredData::DictionarySP dwo_data =
+        std::make_shared<StructuredData::Dictionary>();
+    const uint64_t dwo_id = dwarf_cu->GetDWOId().value();
+    dwo_data->AddIntegerItem("dwo_id", dwo_id);
+
+    if (const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly()) {
+      const char *dwo_name = GetDWOName(*dwarf_cu, *die.GetDIE());
+      if (dwo_name) {
+        dwo_data->AddStringItem("dwo_name", dwo_name);
+      } else {
+        dwo_data->AddStringItem("error", "missing dwo name");
+      }
+
+      const char *comp_dir = die.GetDIE()->GetAttributeValueAsString(
+          dwarf_cu, DW_AT_comp_dir, nullptr);
+      if (comp_dir) {
+        dwo_data->AddStringItem("comp_dir", comp_dir);
+      }
+    } else {
+      dwo_data->AddStringItem(
+          "error",
+          llvm::formatv("unable to get unit DIE for DWARFUnit at {0:x}",
+                        dwarf_cu->GetOffset())
+              .str());
+    }
+
+    // If we have a DWO symbol file, that means we were able to successfully
+    // load it.
+    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
+    if (dwo_symfile) {
+      dwo_data->AddStringItem(
+          "resolved_dwo_path",
+          dwo_symfile->GetObjectFile()->GetFileSpec().GetPath());
+    } else {
+      dwo_data->AddStringItem("error",
+                              dwarf_cu->GetDwoError().AsCString("unknown"));
+    }
+    dwo_data->AddBooleanItem("loaded", dwo_symfile != nullptr);
+    separate_debug_info_files.AddItem(dwo_data);
+  }
+
+  d.AddStringItem("type", "dwo");
+  d.AddStringItem("symfile", GetMainObjectFile()->GetFileSpec().GetPath());
+  d.AddItem("separate-debug-info-files",
+            std::make_shared<StructuredData::Array>(
+                std::move(separate_debug_info_files)));
+  return true;
 }
 
 SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
