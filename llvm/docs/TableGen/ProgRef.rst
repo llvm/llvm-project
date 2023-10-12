@@ -1290,7 +1290,7 @@ the values passed to a multiclass:
 .. code-block:: text
 
   multiclass MC<dag s> {
-    dump "s = " # !repl(s);
+    dump "s = " # !repr(s);
   }
 
 ``if`` --- select statements based on a test
