@@ -2446,9 +2446,10 @@ unsigned CGOpenMPRuntime::getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind) {
 void CGOpenMPRuntime::getDefaultScheduleAndChunk(
     CodeGenFunction &CGF, const OMPLoopDirective &S,
     OpenMPScheduleClauseKind &ScheduleKind, const Expr *&ChunkExpr) const {
-  // Check if the loop directive is actually a doacross loop directive. In this
-  // case choose static, 1 schedule.
-  if (llvm::any_of(
+  // Check if the loop directive is actually a doacross loop directive or
+  // ThreadSanitizer is enabled. In these cases choose static, 1 schedule.
+  if (CGF.SanOpts.has(SanitizerKind::Thread) ||
+      llvm::any_of(
           S.getClausesOfKind<OMPOrderedClause>(),
           [](const OMPOrderedClause *C) { return C->getNumForLoops(); })) {
     ScheduleKind = OMPC_SCHEDULE_static;
