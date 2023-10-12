@@ -378,13 +378,8 @@ public:
     assert(lvlCoords && "Received nullptr for level-coordinates");
     // TODO: get rid of this! canonicalize all-dense "sparse" array into dense
     // tensors.
-    bool allDense = true;
-    for (DimLevelType lt : getLvlTypes()) {
-      if (!isDenseDLT(lt)) {
-        allDense = false;
-        break;
-      }
-    }
+    bool allDense = std::all_of(getLvlTypes().begin(), getLvlTypes().end(),
+                                [](DimLevelType lt) { return isDenseDLT(lt); });
     if (allDense) {
       uint64_t lvlRank = getLvlRank();
       uint64_t valIdx = 0;
