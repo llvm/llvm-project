@@ -148,7 +148,8 @@ def pedantic_Group : OptionGroup<"<pedantic group>">, Group<f_Group>,
                      DocFlatten;
 
 def offload_Group : OptionGroup<"<offload group>">, Group<f_Group>,
-                   DocName<"Common Offloading options">;
+                   DocName<"Common Offloading options">,
+                   Visibility<[ClangOption, CLOption]>;
 
 def opencl_Group : OptionGroup<"<opencl group>">, Group<f_Group>,
                    DocName<"OpenCL options">;
@@ -157,13 +158,16 @@ def sycl_Group : OptionGroup<"<SYCL group>">, Group<f_Group>,
                  DocName<"SYCL options">;
 
 def cuda_Group : OptionGroup<"<CUDA group>">, Group<f_Group>,
-                   DocName<"CUDA options">;
+                   DocName<"CUDA options">,
+                   Visibility<[ClangOption, CLOption]>;
 
 def hip_Group : OptionGroup<"<HIP group>">, Group<f_Group>,
-                   DocName<"HIP options">;
+                   DocName<"HIP options">,
+                   Visibility<[ClangOption, CLOption]>;
 
 def m_Group : OptionGroup<"<m group>">, Group<CompileOnly_Group>,
-              DocName<"Target-dependent compilation options">;
+              DocName<"Target-dependent compilation options">,
+              Visibility<[ClangOption, CLOption]>;
 
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
@@ -5164,14 +5168,16 @@ def prebind__all__twolevel__modules : Flag<["-"], "prebind_all_twolevel_modules"
 def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
 def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
-  HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">;
+  HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">,
+  Visibility<[ClangOption, CLOption]>;
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">,
   MarshallingInfoFlag<LangOpts<"ObjCGCBitmapPrint">>;
 def print_libgcc_file_name : Flag<["-", "--"], "print-libgcc-file-name">,
   HelpText<"Print the library path for the currently used compiler runtime "
-           "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">;
+           "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">,
+  Visibility<[ClangOption, CLOption]>;
 def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_flags : Flag<["-", "--"], "print-multi-flags-experimental">,
@@ -5180,27 +5186,34 @@ def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,
   Flags<[Unsupported]>;
 def print_target_triple : Flag<["-", "--"], "print-target-triple">,
   HelpText<"Print the normalized target triple">,
-  Visibility<[ClangOption, FlangOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 def print_effective_triple : Flag<["-", "--"], "print-effective-triple">,
   HelpText<"Print the effective target triple">,
-  Visibility<[ClangOption, FlangOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 // GCC --disable-multiarch, GCC --enable-multiarch (upstream and Debian
 // specific) have different behaviors. We choose not to support the option.
 def : Flag<["-", "--"], "print-multiarch">, Flags<[Unsupported]>;
 def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
-  HelpText<"Print the full program path of <name>">, MetaVarName<"<name>">;
+  HelpText<"Print the full program path of <name>">, MetaVarName<"<name>">,
+  Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
-  HelpText<"Print the resource directory pathname">;
+  HelpText<"Print the resource directory pathname">,
+  Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
-  HelpText<"Print the paths used for finding libraries and programs">;
+  HelpText<"Print the paths used for finding libraries and programs">,
+  Visibility<[ClangOption, CLOption]>;
 def print_targets : Flag<["-", "--"], "print-targets">,
-  HelpText<"Print the registered targets">;
+  HelpText<"Print the registered targets">,
+  Visibility<[ClangOption, CLOption]>;
 def print_rocm_search_dirs : Flag<["-", "--"], "print-rocm-search-dirs">,
-  HelpText<"Print the paths used for finding ROCm installation">;
+  HelpText<"Print the paths used for finding ROCm installation">,
+  Visibility<[ClangOption, CLOption]>;
 def print_runtime_dir : Flag<["-", "--"], "print-runtime-dir">,
-  HelpText<"Print the directory pathname containing clangs runtime libraries">;
+  HelpText<"Print the directory pathname containing clangs runtime libraries">,
+  Visibility<[ClangOption, CLOption]>;
 def print_diagnostic_options : Flag<["-", "--"], "print-diagnostic-options">,
-  HelpText<"Print all of Clang's warning options">;
+  HelpText<"Print all of Clang's warning options">,
+  Visibility<[ClangOption, CLOption]>;
 def private__bundle : Flag<["-"], "private_bundle">;
 def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
@@ -5227,7 +5240,7 @@ def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>;
-def rtlib_EQ : Joined<["-", "--"], "rtlib=">,
+def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption]>,
   HelpText<"Compiler runtime library to use">;
 def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
   HelpText<"Add -rpath with architecture-specific resource directory to the linker flags. "
@@ -5393,7 +5406,7 @@ def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
 def x : JoinedOrSeparate<["-"], "x">,
 Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option, CLOption]>,
   HelpText<"Treat subsequent input files as having type <language>">,
   MetaVarName<"<language>">;
 def y : Joined<["-"], "y">;
