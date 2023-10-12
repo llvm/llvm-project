@@ -10,10 +10,24 @@ set(core_files
   module.modulemap
   stdalign.h
   stdarg.h
+  __stdarg___gnuc_va_list.h
+  __stdarg___va_copy.h
+  __stdarg_va_arg.h
+  __stdarg_va_copy.h
+  __stdarg_va_list.h
   stdatomic.h
   stdbool.h
   stddef.h
   __stddef_max_align_t.h
+  __stddef_null.h
+  __stddef_nullptr_t.h
+  __stddef_offsetof.h
+  __stddef_ptrdiff_t.h
+  __stddef_rsize_t.h
+  __stddef_size_t.h
+  __stddef_unreachable.h
+  __stddef_wchar_t.h
+  __stddef_wint_t.h
   stdint.h
   stdnoreturn.h
   tgmath.h
