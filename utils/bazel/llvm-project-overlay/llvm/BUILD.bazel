@@ -1664,6 +1664,23 @@ cc_library(
 )
 
 cc_library(
+    name = "HipStdPar",
+    srcs = glob([
+        "lib/Transforms/HipStdPar/*.cpp",
+        "lib/Transforms/HipStdPar/*.h",
+    ]),
+    hdrs = ["include/llvm/Transforms/HipStdPar/HipStdPar.h"],
+    copts = llvm_copts,
+    deps = [
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":Analysis",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "Coroutines",
     srcs = glob([
         "lib/Transforms/Coroutines/*.cpp",
@@ -2514,6 +2531,7 @@ cc_library(
         ":Support",
         ":Target",
         ":TransformUtils",
+        ":HipStdPar",
         ":Vectorize",
         ":common_transforms",
         ":config",
