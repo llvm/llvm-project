@@ -53,7 +53,7 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
 }
 
 static bool isBackedgeNode(const CFGBlock &B) {
- return B.getLoopTarget() != nullptr;
+  return B.getLoopTarget() != nullptr;
 }
 
 namespace {
