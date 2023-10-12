@@ -2143,6 +2143,66 @@ static bool checkFPMathBuiltinElementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
+/// SemaBuiltinCpuSupports - Handle __builtin_cpu_supports(char *).
+/// This checks that the target supports __builtin_cpu_supports and
+/// that the string argument is constant and valid.
+static bool SemaBuiltinCpuSupports(Sema &S, const TargetInfo &TI,
+                                   const TargetInfo *AuxTI, CallExpr *TheCall) {
+  Expr *Arg = TheCall->getArg(0);
+
+  const TargetInfo *TheTI = nullptr;
+  if (TI.supportsCpuSupports())
+    TheTI = &TI;
+  else if (AuxTI && AuxTI->supportsCpuSupports())
+    TheTI = AuxTI;
+  else
+    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+
+  // Check if the argument is a string literal.
+  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+           << Arg->getSourceRange();
+
+  // Check the contents of the string.
+  StringRef Feature =
+      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
+  if (!TheTI->validateCpuSupports(Feature))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
+           << Arg->getSourceRange();
+  return false;
+}
+
+/// SemaBuiltinCpuIs - Handle __builtin_cpu_is(char *).
+/// This checks that the target supports __builtin_cpu_is and
+/// that the string argument is constant and valid.
+static bool SemaBuiltinCpuIs(Sema &S, const TargetInfo &TI,
+                             const TargetInfo *AuxTI, CallExpr *TheCall) {
+  Expr *Arg = TheCall->getArg(0);
+
+  const TargetInfo *TheTI = nullptr;
+  if (TI.supportsCpuIs())
+    TheTI = &TI;
+  else if (AuxTI && AuxTI->supportsCpuIs())
+    TheTI = AuxTI;
+  else
+    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+
+  // Check if the argument is a string literal.
+  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+           << Arg->getSourceRange();
+
+  // Check the contents of the string.
+  StringRef Feature =
+      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
+  if (!TheTI->validateCpuIs(Feature))
+    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
+           << Arg->getSourceRange();
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -2171,6 +2231,23 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   FPOptions FPO;
   switch (BuiltinID) {
+  case Builtin::BI__builtin_cpu_supports:
+    if (SemaBuiltinCpuSupports(*this, Context.getTargetInfo(),
+                               Context.getAuxTargetInfo(), TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_cpu_is:
+    if (SemaBuiltinCpuIs(*this, Context.getTargetInfo(),
+                         Context.getAuxTargetInfo(), TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_cpu_init:
+    if (!Context.getTargetInfo().supportsCpuInit()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+          << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+      return ExprError();
+    }
+    break;
   case Builtin::BI__builtin___CFStringMakeConstantString:
     // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
     // on z/OS) and for XCOFF (i.e., on AIX). Emit unsupported
@@ -6256,47 +6333,6 @@ bool Sema::CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI,
   return false;
 }
 
-/// SemaBuiltinCpuSupports - Handle __builtin_cpu_supports(char *).
-/// This checks that the target supports __builtin_cpu_supports and
-/// that the string argument is constant and valid.
-static bool SemaBuiltinCpuSupports(Sema &S, const TargetInfo &TI,
-                                   CallExpr *TheCall) {
-  Expr *Arg = TheCall->getArg(0);
-
-  // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-           << Arg->getSourceRange();
-
-  // Check the contents of the string.
-  StringRef Feature =
-      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
-  if (!TI.validateCpuSupports(Feature))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
-           << Arg->getSourceRange();
-  return false;
-}
-
-/// SemaBuiltinCpuIs - Handle __builtin_cpu_is(char *).
-/// This checks that the target supports __builtin_cpu_is and
-/// that the string argument is constant and valid.
-static bool SemaBuiltinCpuIs(Sema &S, const TargetInfo &TI, CallExpr *TheCall) {
-  Expr *Arg = TheCall->getArg(0);
-
-  // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-           << Arg->getSourceRange();
-
-  // Check the contents of the string.
-  StringRef Feature =
-      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
-  if (!TI.validateCpuIs(Feature))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
-           << Arg->getSourceRange();
-  return false;
-}
-
 // Check if the rounding mode is legal.
 bool Sema::CheckX86BuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   // Indicates if this instruction has rounding control or just SAE.
@@ -6771,12 +6807,6 @@ static bool isX86_32Builtin(unsigned BuiltinID) {
 
 bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                        CallExpr *TheCall) {
-  if (BuiltinID == X86::BI__builtin_cpu_supports)
-    return SemaBuiltinCpuSupports(*this, TI, TheCall);
-
-  if (BuiltinID == X86::BI__builtin_cpu_is)
-    return SemaBuiltinCpuIs(*this, TI, TheCall);
-
   // Check for 32-bit only builtins on a 64-bit target.
   const llvm::Triple &TT = TI.getTriple();
   if (TT.getArch() != llvm::Triple::x86 && isX86_32Builtin(BuiltinID))

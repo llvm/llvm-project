@@ -1821,6 +1821,10 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
+  if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
+    OutStreamer->emitSymbolValue(
+        GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
+        MAI->getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {

@@ -215,6 +215,12 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
             [llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_vararg_ty],
             [IntrNoMem]>;
+  // Load of a value provided by the system library at a fixed address. Used for
+  // accessing things like HWCAP word provided by GLIBC.
+  def int_ppc_fixed_addr_ld
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty],
+                              [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+
 }
 
 let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".

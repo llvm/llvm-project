@@ -1432,6 +1432,12 @@ public:
             getTriple().isOSFreeBSD());
   }
 
+  // Identify whether this target supports __builtin_cpu_supports and
+  // __builtin_cpu_is.
+  virtual bool supportsCpuSupports() const { return false; }
+  virtual bool supportsCpuIs() const { return false; }
+  virtual bool supportsCpuInit() const { return false; }
+
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.
   virtual bool validateCpuSupports(StringRef Name) const { return false; }

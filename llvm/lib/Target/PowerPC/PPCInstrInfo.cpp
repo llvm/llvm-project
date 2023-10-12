@@ -1079,6 +1079,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::ADDIStocHA8:
   case PPC::ADDItocL:
   case PPC::LOAD_STACK_GUARD:
+  case PPC::PPCLdFixedAddr:
   case PPC::XXLXORz:
   case PPC::XXLXORspz:
   case PPC::XXLXORdpz:
@@ -3098,6 +3099,38 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addImm(Offset)
         .addReg(Reg);
     return true;
+  }
+  case PPC::PPCLdFixedAddr: {
+    assert(Subtarget.isTargetLinux() &&
+           "Only Linux target is expected to contain PPCLdFixedAddr");
+    int64_t Offset = 0;
+    const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
+    MI.setDesc(get(PPC::LWZ));
+    uint64_t FAType = MI.getOperand(1).getImm();
+#undef PPC_FEATURE
+#undef PPC_CPU
+#include "llvm/TargetParser/PPCTargetParser.def"
+    // The HWCAP and HWCAP2 word offsets are reversed on big endian Linux.
+    if ((FAType == PPC_FAWORD_HWCAP && Subtarget.isLittleEndian()) ||
+        (FAType == PPC_FAWORD_HWCAP2 && !Subtarget.isLittleEndian()))
+      Offset = Subtarget.isPPC64() ? -0x7064 : -0x703C;
+    else if ((FAType == PPC_FAWORD_HWCAP2 &&
+              Subtarget.isLittleEndian()) ||
+             (FAType == PPC_FAWORD_HWCAP &&
+              !Subtarget.isLittleEndian()))
+      Offset = Subtarget.isPPC64() ? -0x7068 : -0x7040;
+    else if (FAType == PPC_FAWORD_CPUID)
+      Offset = Subtarget.isPPC64() ? -0x705C : -0x7034;
+    assert(Offset && "Do not know the offset for this fixed addr load");
+    MI.removeOperand(1);
+    Subtarget.getTargetMachine().setGlibcHWCAPAccess();
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+        .addImm(Offset)
+        .addReg(Reg);
+    return true;
+#undef PPC_FAWORD_HWCAP
+#undef PPC_FAWORD_HWCAP2
+#undef PPC_FAWORD_CPUID
   }
   case PPC::DFLOADf32:
   case PPC::DFLOADf64:
