@@ -568,20 +568,13 @@ class TypesMatchWith<string summary, string lhsArg, string rhsArg,
   string transformer = transform;
 }
 
-// Helper which makes the first letter of a string uppercase.
-// e.g. cat -> Cat
-class first_char_to_upper<string str>
-{
-  string ret = !toupper(!substr(str, 0, 1)) # !substr(str, 1);
-}
-
 // The same as TypesMatchWith but if either `lhsArg` or `rhsArg` are optional
 // and not present returns success.
 class OptionalTypesMatchWith<string summary, string lhsArg, string rhsArg,
                      string transform, string comparator = "std::equal_to<>()">
   : TypesMatchWith<summary, lhsArg, rhsArg, transform,
-     "!get" # first_char_to_upper<lhsArg>.ret # "()"
-     # " || !get" # first_char_to_upper<rhsArg>.ret # "() || " # comparator>;
+     "!get" # snakeCaseToCamelCase<lhsArg>.ret # "()"
+     # " || !get" # snakeCaseToCamelCase<rhsArg>.ret # "() || " # comparator>;
 
 // Special variant of `TypesMatchWith` that provides a comparator suitable for
 // ranged arguments.
