@@ -133,7 +133,7 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
     // Pattern match for a few useful cases: a[0], p->f, *p etc.
     else if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       // This handles the case when the dereferencing of a member reference
-      // happens. This is needed, because the ast for dereferencing of a
+      // happens. This is needed, because the AST for dereferencing a
       // member reference looks like the following:
       // |-MemberExpr
       //  `-DeclRefExpr
