@@ -101,7 +101,7 @@ static bool checkSystemForAMDGPU(const ArgList &Args, const AMDGPUToolChain &TC,
 
 static void addOptLevelArg(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs, bool IsLlc) {
-  StringRef OOpt = "0";
+  StringRef OOpt = "2"; // Default if no user command line specification
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O4) ||
         A->getOption().matches(options::OPT_Ofast))
