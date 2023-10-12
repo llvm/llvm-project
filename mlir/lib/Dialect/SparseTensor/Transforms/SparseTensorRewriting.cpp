@@ -971,7 +971,10 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
         Value tmpCoo = dst;
         Type dstCooTp = getCOOType(dstRTT, true);
         // TODO: this should be a sort_coo operation.
-        dst = rewriter.create<ConvertOp>(loc, dstCooTp, tmpCoo).getResult();
+        dst = rewriter
+                  .create<ReorderCOOOp>(loc, dstCooTp, tmpCoo,
+                                        SparseTensorSortKind::HybridQuickSort)
+                  .getResult();
         dst = rewriter.create<ConvertOp>(loc, dstRTT, dst).getResult();
         rewriter.create<DeallocTensorOp>(loc, tmpCoo);
       }
@@ -1028,11 +1031,8 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op.directConvertable() && !op.isSortCOOConvert())
-      return op.emitError("ConvertOp not in conanical form.");
-
-    if (op.isSortCOOConvert())
-      return failure();
+    if (!op.directConvertable())
+      return op.emitError("ConvertOp not staged.");
 
     // TODO: Maybe we want a different operation for this too.
     auto encDst = getSparseTensorEncoding(op.getType());
@@ -1338,12 +1338,8 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
                TensorReshapeRewriter>(patterns.getContext());
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());
-
-  if (!enableRT) {
+  if (enableConvert)
+    patterns.add<DirectConvertRewriter>(patterns.getContext());
+  if (!enableRT)
     patterns.add<NewRewriter, OutRewriter>(patterns.getContext());
-    // TODO: Move this to a common path for both lib/codegen when libgen support
-    // lowering sort_coo.
-    if (enableConvert)
-      patterns.add<DirectConvertRewriter>(patterns.getContext());
-  }
 }
