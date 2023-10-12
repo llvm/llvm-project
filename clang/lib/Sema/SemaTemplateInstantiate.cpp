@@ -1325,6 +1325,11 @@ namespace {
     /// declaration.
     NamedDecl *TransformFirstQualifierInScope(NamedDecl *D, SourceLocation Loc);
 
+    bool TransformExceptionSpec(SourceLocation Loc,
+                                FunctionProtoType::ExceptionSpecInfo &ESI,
+                                SmallVectorImpl<QualType> &Exceptions,
+                                bool &Changed);
+
     /// Rebuild the exception declaration and register the declaration
     /// as an instantiated local.
     VarDecl *RebuildExceptionDecl(VarDecl *ExceptionDecl,
@@ -1605,6 +1610,18 @@ Decl *TemplateInstantiator::TransformDefinition(SourceLocation Loc, Decl *D) {
 
   getSema().CurrentInstantiationScope->InstantiatedLocal(D, Inst);
   return Inst;
+}
+
+bool TemplateInstantiator::TransformExceptionSpec(
+    SourceLocation Loc, FunctionProtoType::ExceptionSpecInfo &ESI,
+    SmallVectorImpl<QualType> &Exceptions, bool &Changed) {
+  if (ESI.Type == EST_Uninstantiated) {
+    ESI.NoexceptExpr = cast<FunctionProtoType>(ESI.SourceTemplate->getType())
+                           ->getNoexceptExpr();
+    ESI.Type = EST_DependentNoexcept;
+    Changed = true;
+  }
+  return inherited::TransformExceptionSpec(Loc, ESI, Exceptions, Changed);
 }
 
 NamedDecl *
@@ -2672,8 +2689,6 @@ bool Sema::SubstExceptionSpec(SourceLocation Loc,
                               FunctionProtoType::ExceptionSpecInfo &ESI,
                               SmallVectorImpl<QualType> &ExceptionStorage,
                               const MultiLevelTemplateArgumentList &Args) {
-  assert(ESI.Type != EST_Uninstantiated);
-
   bool Changed = false;
   TemplateInstantiator Instantiator(*this, Args, Loc, DeclarationName());
   return Instantiator.TransformExceptionSpec(Loc, ESI, ExceptionStorage,

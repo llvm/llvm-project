@@ -377,6 +377,8 @@ Bug Fixes in This Version
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 - Fix crash in evaluating ``constexpr`` value for invalid template function.
   Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
+- Clang will correctly evaluate ``noexcept`` expression with template in template
+  method of template record.
 
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
