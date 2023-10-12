@@ -1272,6 +1272,11 @@ inline uint32_t hashGnu(StringRef Name) {
   return H;
 }
 
+extern template class LLVM_CLASS_ABI llvm::object::ELFFile<ELF32LE>;
+extern template class LLVM_CLASS_ABI llvm::object::ELFFile<ELF32BE>;
+extern template class LLVM_CLASS_ABI llvm::object::ELFFile<ELF64LE>;
+extern template class LLVM_CLASS_ABI llvm::object::ELFFile<ELF64BE>;
+
 } // end namespace object
 } // end namespace llvm
 
