@@ -1284,7 +1284,7 @@ output. It is intended for debugging purpose.
 .. productionlist::
    Dump: "dump"  `string` ";"
 
-For example, it can be used in combination with `!repl` to investigate
+For example, it can be used in combination with `!repr` to investigate
 the values passed to a multiclass:
 
 .. code-block:: text
