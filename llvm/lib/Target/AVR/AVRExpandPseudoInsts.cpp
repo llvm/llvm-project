@@ -2498,6 +2498,7 @@ template <> bool AVRExpandPseudo::expand<AVR::ZEXT>(Block &MBB, BlockIt MBBI) {
 
 template <>
 bool AVRExpandPseudo::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
@@ -2514,10 +2515,17 @@ bool AVRExpandPseudo::expand<AVR::SPREAD>(Block &MBB, BlockIt MBBI) {
       .setMIFlags(Flags);
 
   // High part
-  buildMI(MBB, MBBI, OpHi)
-      .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
-      .addImm(0x3e)
-      .setMIFlags(Flags);
+  if (!STI.hasSmallStack()) {
+    buildMI(MBB, MBBI, OpHi)
+        .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+        .addImm(0x3e)
+        .setMIFlags(Flags);
+  } else {
+    buildMI(MBB, MBBI, AVR::LDIRdK)
+        .addReg(DstHiReg, RegState::Define | getDeadRegState(DstIsDead))
+        .addImm(0)
+        .setMIFlags(Flags);
+  }
 
   MI.eraseFromParent();
   return true;
@@ -2533,17 +2541,19 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   unsigned Flags = MI.getFlags();
   TRI->splitReg(SrcReg, SrcLoReg, SrcHiReg);
 
-  buildMI(MBB, MBBI, AVR::INRdA)
-      .addReg(STI.getTmpRegister(), RegState::Define)
-      .addImm(STI.getIORegSREG())
-      .setMIFlags(Flags);
+  if (!STI.hasSmallStack()) {
+    buildMI(MBB, MBBI, AVR::INRdA)
+        .addReg(STI.getTmpRegister(), RegState::Define)
+        .addImm(STI.getIORegSREG())
+        .setMIFlags(Flags);
 
-  buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
+    buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
 
-  buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3e)
-      .addReg(SrcHiReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+    buildMI(MBB, MBBI, AVR::OUTARr)
+        .addImm(0x3e)
+        .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
+  }
 
   buildMI(MBB, MBBI, AVR::OUTARr)
       .addImm(STI.getIORegSREG())

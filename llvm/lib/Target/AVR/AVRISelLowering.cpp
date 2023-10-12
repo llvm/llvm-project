@@ -992,6 +992,45 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   return New;
 }
 
+SDValue AVRTargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
+  int ReturnAddrIndex = FuncInfo->getRAIndex();
+  MVT PtrVT = getFrameIndexTy(MF.getDataLayout());
+
+  if (ReturnAddrIndex == 0) {
+    // Set up a frame object for the return address.
+    unsigned SlotSize = PtrVT.getStoreSize();
+    ReturnAddrIndex = MF.getFrameInfo().CreateFixedObject(
+        SlotSize, -(int64_t)SlotSize, false);
+    FuncInfo->setRAIndex(ReturnAddrIndex);
+  }
+
+  return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy(DAG.getDataLayout()));
+}
+
+SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  MFI.setReturnAddressIsTaken(true);
+
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  assert(Depth == 0 && "AVR RETURNADDR depth must be 0!");
+  // Just load the return address off the stack.
+  SDValue RetAddrFI = getReturnAddressFrameIndex(DAG);
+  return DAG.getLoad(VT, DL, DAG.getEntryNode(), RetAddrFI,
+                     MachinePointerInfo());
+}
+SDValue AVRTargetLowering::LowerADDROFRETURNADDR(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  DAG.getMachineFunction().getFrameInfo().setReturnAddressIsTaken(true);
+  return getReturnAddressFrameIndex(DAG);
+}
+
 SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
@@ -1019,6 +1058,10 @@ SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerDivRem(Op, DAG);
   case ISD::INLINEASM:
     return LowerINLINEASM(Op, DAG);
+  case ISD::RETURNADDR:
+    return LowerRETURNADDR(Op, DAG);
+  case ISD::ADDROFRETURNADDR:
+    return LowerADDROFRETURNADDR(Op, DAG);
   }
 
   return SDValue();

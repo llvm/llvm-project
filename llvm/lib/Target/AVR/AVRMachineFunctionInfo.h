@@ -44,10 +44,13 @@ class AVRMachineFunctionInfo : public MachineFunctionInfo {
   /// FrameIndex for start of varargs area.
   int VarArgsFrameIndex;
 
+  /// FrameIndex for return slot.
+  int ReturnAddrIndex;
+
 public:
   AVRMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
       : HasSpills(false), HasAllocas(false), HasStackArgs(false),
-        CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {
+        CalleeSavedFrameSize(0), VarArgsFrameIndex(0), ReturnAddrIndex(0) {
     CallingConv::ID CallConv = F.getCallingConv();
 
     this->IsInterruptHandler =
@@ -85,6 +88,9 @@ public:
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Idx) { VarArgsFrameIndex = Idx; }
+
+  int getRAIndex() const { return ReturnAddrIndex; }
+  void setRAIndex(int Index) { ReturnAddrIndex = Index; }
 };
 
 } // namespace llvm

@@ -155,6 +155,7 @@ public:
   }
 
 private:
+  SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
   SDValue getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &AVRcc,
                     SelectionDAG &DAG, SDLoc dl) const;
   SDValue getAVRCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
@@ -190,6 +191,8 @@ private:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &dl, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
+  SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
   const AVRSubtarget &Subtarget;
