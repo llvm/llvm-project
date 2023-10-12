@@ -17,6 +17,13 @@
 
 namespace mlir {
 class RewriterBase;
+
+/// A function that returns the additional yielded values during
+/// `replaceWithAdditionalYields`. `newBbArgs` are the newly added region
+/// iter_args. This function should return as many values as there are block
+/// arguments in `newBbArgs`.
+using NewYieldValuesFn = std::function<SmallVector<Value>(
+    OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs)>;
 } // namespace mlir
 
 /// Include the generated interface declarations.

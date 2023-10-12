@@ -645,18 +645,29 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                            instruction_control_flow_kind));
   }
 
+  bool show_color = false;
+  if (exe_ctx) {
+    if (TargetSP target_sp = exe_ctx->GetTargetSP()) {
+      show_color = target_sp->GetDebugger().GetUseColor();
+    }
+  }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
+  const std::string &opcode_name =
+      show_color ? m_markup_opcode_name : m_opcode_name;
+  const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
-  // consistent column spacing in these cases, unfortunately.
+  // consistent column spacing in these cases, unfortunately. Also note that we
+  // need to directly use m_opcode_name here (instead of opcode_name) so we
+  // don't include color codes as characters.
   if (m_opcode_name.length() >= opcode_column_width) {
     opcode_column_width = m_opcode_name.length() + 1;
   }
 
-  ss.PutCString(m_opcode_name);
+  ss.PutCString(opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
-  ss.PutCString(m_mnemonics);
+  ss.PutCString(mnemonics);
 
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(

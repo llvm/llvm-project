@@ -53,9 +53,9 @@ MATCHER_P(named, N, "") {
 }
 
 MATCHER_P(FileNamed, N, "") {
-  if (arg->tryGetRealPathName() == N)
+  if (arg.getFileEntry().tryGetRealPathName() == N)
     return true;
-  *result_listener << arg->tryGetRealPathName().str();
+  *result_listener << arg.getFileEntry().tryGetRealPathName().str();
   return false;
 }
 
@@ -320,7 +320,7 @@ protected:
 
   void createEmptyFiles(llvm::ArrayRef<StringRef> FileNames) {
     for (llvm::StringRef File : FileNames)
-      Inputs.ExtraFiles[File] = "";
+      Inputs.ExtraFiles[File] = "#pragma once";
   }
 };
 

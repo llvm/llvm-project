@@ -1593,7 +1593,7 @@ static void __kmp_stg_parse_debug(char const *name, char const *value,
 static void __kmp_stg_parse_debug_buf(char const *name, char const *value,
                                       void *data) {
   __kmp_stg_parse_bool(name, value, &__kmp_debug_buf);
-  // !!! TODO: Move buffer initialization of of this file! It may works
+  // !!! TODO: Move buffer initialization of this file! It may works
   // incorrectly if KMP_DEBUG_BUF is parsed before KMP_DEBUG_BUF_LINES or
   // KMP_DEBUG_BUF_CHARS.
   if (__kmp_debug_buf) {

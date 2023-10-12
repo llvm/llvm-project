@@ -519,6 +519,33 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   return UpdateSymbolContextScopeForType(sc, die, type_sp);
 }
 
+static std::optional<uint32_t>
+ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
+                          ModuleSP module_sp) {
+  // With DWARF 3 and later, if the value is an integer constant,
+  // this form value is the offset in bytes from the beginning of
+  // the containing entity.
+  if (!form_value.BlockData())
+    return form_value.Unsigned();
+
+  Value initialValue(0);
+  Value memberOffset(0);
+  const DWARFDataExtractor &debug_info_data = die.GetData();
+  uint32_t block_length = form_value.Unsigned();
+  uint32_t block_offset =
+      form_value.BlockData() - debug_info_data.GetDataStart();
+  if (!DWARFExpression::Evaluate(
+          nullptr, // ExecutionContext *
+          nullptr, // RegisterContext *
+          module_sp, DataExtractor(debug_info_data, block_offset, block_length),
+          die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr, memberOffset,
+          nullptr)) {
+    return {};
+  }
+
+  return memberOffset.ResolveValue(nullptr).UInt();
+}
+
 lldb::TypeSP
 DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                                        const DWARFDIE &die,
@@ -1023,7 +1050,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           }
         }
       } else if (is_cxx_method) {
-        // Look at the parent of this DIE and see if is is a class or
+        // Look at the parent of this DIE and see if it is a class or
         // struct and see if this is actually a C++ method
         Type *class_type = dwarf->ResolveType(decl_ctx_die);
         if (class_type) {
@@ -1406,26 +1433,9 @@ void DWARFASTParserClang::ParseInheritance(
         encoding_form = form_value;
         break;
       case DW_AT_data_member_location:
-        if (form_value.BlockData()) {
-          Value initialValue(0);
-          Value memberOffset(0);
-          const DWARFDataExtractor &debug_info_data = die.GetData();
-          uint32_t block_length = form_value.Unsigned();
-          uint32_t block_offset =
-              form_value.BlockData() - debug_info_data.GetDataStart();
-          if (DWARFExpression::Evaluate(
-                  nullptr, nullptr, module_sp,
-                  DataExtractor(debug_info_data, block_offset, block_length),
-                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
-                  memberOffset, nullptr)) {
-            member_byte_offset = memberOffset.ResolveValue(nullptr).UInt();
-          }
-        } else {
-          // With DWARF 3 and later, if the value is an integer constant,
-          // this form value is the offset in bytes from the beginning of
-          // the containing entity.
-          member_byte_offset = form_value.Unsigned();
-        }
+        if (auto maybe_offset =
+                ExtractDataMemberLocation(die, form_value, module_sp))
+          member_byte_offset = *maybe_offset;
         break;
 
       case DW_AT_accessibility:
@@ -2482,8 +2492,9 @@ struct MemberAttributes {
   DWARFFormValue encoding_form;
   /// Indicates the byte offset of the word from the base address of the
   /// structure.
-  uint32_t member_byte_offset;
+  uint32_t member_byte_offset = UINT32_MAX;
   bool is_artificial = false;
+  bool is_declaration = false;
 };
 
 /// Parsed form of all attributes that are relevant for parsing Objective-C
@@ -2557,29 +2568,9 @@ VariantMember::VariantMember(DWARFDIE &die, lldb::ModuleSP module_sp) {
             break;
 
           case DW_AT_data_member_location:
-            if (form_value.BlockData()) {
-              Value initialValue(0);
-              Value memberOffset(0);
-              const DWARFDataExtractor &debug_info_data = die.GetData();
-              uint32_t block_length = form_value.Unsigned();
-              uint32_t block_offset =
-                  form_value.BlockData() - debug_info_data.GetDataStart();
-              if (DWARFExpression::Evaluate(
-                      nullptr, // ExecutionContext *
-                      nullptr, // RegisterContext *
-                      module_sp,
-                      DataExtractor(debug_info_data, block_offset,
-                                    block_length),
-                      die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
-                      memberOffset, nullptr)) {
-                byte_offset = memberOffset.ResolveValue(nullptr).UInt();
-              }
-            } else {
-              // With DWARF 3 and later, if the value is an integer constant,
-              // this form value is the offset in bytes from the beginning of
-              // the containing entity.
-              byte_offset = form_value.Unsigned();
-            }
+            if (auto maybe_offset =
+                    ExtractDataMemberLocation(die, form_value, module_sp))
+              byte_offset = *maybe_offset;
             break;
 
           default:
@@ -2608,28 +2599,9 @@ DiscriminantValue::DiscriminantValue(const DWARFDIE &die, ModuleSP module_sp) {
         type_ref = form_value;
         break;
       case DW_AT_data_member_location:
-        if (form_value.BlockData()) {
-          Value initialValue(0);
-          Value memberOffset(0);
-          const DWARFDataExtractor &debug_info_data = die.GetData();
-          uint32_t block_length = form_value.Unsigned();
-          uint32_t block_offset =
-              form_value.BlockData() - debug_info_data.GetDataStart();
-          if (DWARFExpression::Evaluate(
-                  nullptr, // ExecutionContext *
-                  nullptr, // RegisterContext *
-                  module_sp,
-                  DataExtractor(debug_info_data, block_offset, block_length),
-                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
-                  memberOffset, nullptr)) {
-            byte_offset = memberOffset.ResolveValue(nullptr).UInt();
-          }
-        } else {
-          // With DWARF 3 and later, if the value is an integer constant,
-          // this form value is the offset in bytes from the beginning of
-          // the containing entity.
-          byte_offset = form_value.Unsigned();
-        }
+        if (auto maybe_offset =
+                ExtractDataMemberLocation(die, form_value, module_sp))
+          byte_offset = *maybe_offset;
         break;
       default:
         break;
@@ -2656,8 +2628,6 @@ DiscriminantValue &VariantPart::discriminant() { return this->_discriminant; }
 MemberAttributes::MemberAttributes(const DWARFDIE &die,
                                    const DWARFDIE &parent_die,
                                    ModuleSP module_sp) {
-  member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
-
   DWARFAttributes attributes = die.GetAttributes();
   for (size_t i = 0; i < attributes.Size(); ++i) {
     const dw_attr_t attr = attributes.AttributeAtIndex(i);
@@ -2686,28 +2656,9 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
         data_bit_offset = form_value.Unsigned();
         break;
       case DW_AT_data_member_location:
-        if (form_value.BlockData()) {
-          Value initialValue(0);
-          Value memberOffset(0);
-          const DWARFDataExtractor &debug_info_data = die.GetData();
-          uint32_t block_length = form_value.Unsigned();
-          uint32_t block_offset =
-              form_value.BlockData() - debug_info_data.GetDataStart();
-          if (DWARFExpression::Evaluate(
-                  nullptr, // ExecutionContext *
-                  nullptr, // RegisterContext *
-                  module_sp,
-                  DataExtractor(debug_info_data, block_offset, block_length),
-                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
-                  memberOffset, nullptr)) {
-            member_byte_offset = memberOffset.ResolveValue(nullptr).UInt();
-          }
-        } else {
-          // With DWARF 3 and later, if the value is an integer constant,
-          // this form value is the offset in bytes from the beginning of
-          // the containing entity.
-          member_byte_offset = form_value.Unsigned();
-        }
+        if (auto maybe_offset =
+                ExtractDataMemberLocation(die, form_value, module_sp))
+          member_byte_offset = *maybe_offset;
         break;
 
       case DW_AT_accessibility:
@@ -2716,6 +2667,9 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
         break;
       case DW_AT_artificial:
         is_artificial = form_value.Boolean();
+        break;
+      case DW_AT_declaration:
+        is_declaration = form_value.Boolean();
         break;
       default:
         break;
@@ -2923,10 +2877,18 @@ void DWARFASTParserClang::ParseSingleMember(
   if (class_is_objc_object_or_interface)
     attrs.accessibility = eAccessNone;
 
-  // Handle static members, which is any member that doesn't have a bit or a
-  // byte member offset.
+  // Handle static members, which are typically members without
+  // locations. However, GCC doesn't emit DW_AT_data_member_location
+  // for any union members (regardless of linkage).
+  // Non-normative text pre-DWARFv5 recommends marking static
+  // data members with an DW_AT_external flag. Clang emits this consistently
+  // whereas GCC emits it only for static data members if not part of an
+  // anonymous namespace. The flag that is consistently emitted for static
+  // data members is DW_AT_declaration, so we check it instead.
+  // FIXME: Since DWARFv5, static data members are marked DW_AT_variable so we
+  // can consistently detect them on both GCC and Clang without below heuristic.
   if (attrs.member_byte_offset == UINT32_MAX &&
-      attrs.data_bit_offset == UINT64_MAX) {
+      attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
     Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
 
     if (var_type) {
@@ -3093,7 +3055,7 @@ void DWARFASTParserClang::ParseSingleMember(
   // in our AST. Clang will re-create those articial members and they would
   // otherwise just overlap in the layout with the FieldDecls we add here.
   // This needs to be done after updating FieldInfo which keeps track of where
-  // field start/end so we don't later try to fill the the space of this
+  // field start/end so we don't later try to fill the space of this
   // artificial member with (unnamed bitfield) padding.
   // FIXME: This check should verify that this is indeed an artificial member
   // we are supposed to ignore.
@@ -3727,7 +3689,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     // Make sure this is a declaration and not a concrete instance by looking
     // for DW_AT_declaration set to 1. Sometimes concrete function instances are
     // placed inside the class definitions and shouldn't be included in the list
-    // of things are are tracking here.
+    // of things that are tracking here.
     if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) != 1)
       return;
 

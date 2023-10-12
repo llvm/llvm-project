@@ -142,3 +142,78 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
 
 // CHECK-LABEL: func.func @testhostdataop
 // CHECK: acc.host_data dataOperands(%{{.*}} : memref<f32>) {
+
+// -----
+
+func.func @update_no_op(%x : memref<i32>) {
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval : i32):
+    acc.yield %xval : i32
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @update_no_op
+// CHECK-NOT: acc.atomic.update
+
+// -----
+
+func.func @update_write_op(%x : memref<i32>, %value: i32) {
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval : i32):
+    acc.yield %value : i32
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @update_write_op
+// CHECK-SAME:            (%[[X:.+]]: memref<i32>, %[[VALUE:.+]]: i32)
+// CHECK: acc.atomic.write %[[X]] = %[[VALUE]] : memref<i32>, i32
+// CHECK-NOT: acc.atomic.update
+
+// -----
+
+func.func @update_normal(%x : memref<i32>, %value: i32) {
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval : i32):
+    %newval = arith.addi %xval, %value : i32
+    acc.yield %newval : i32
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @update_normal
+// CHECK: acc.atomic.update
+// CHECK: arith.addi
+// CHECK: acc.yield
+
+// -----
+
+func.func @update_unnecessary_computations(%x: memref<i32>) {
+  %c0 = arith.constant 0 : i32
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = arith.addi %xval, %c0 : i32
+    acc.yield %newval: i32
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @update_unnecessary_computations
+// CHECK-NOT: acc.atomic.update
+
+// -----
+
+func.func @update_unnecessary_computations(%x: memref<i32>) {
+  %c0 = arith.constant 0 : i32
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = arith.muli %xval, %c0 : i32
+    acc.yield %newval: i32
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @update_unnecessary_computations
+// CHECK-NOT: acc.atomic.update
+// CHECK: acc.atomic.write

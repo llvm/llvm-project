@@ -41,3 +41,11 @@ int x = -1 + __INT_MAX__ + 2 + 3;
 // CHECK:      :{[[@LINE+1]]:9-[[@LINE+1]]:19}:
 int a = -(1 << 31) + 1;
 }
+
+
+constexpr int uninit() {
+  int aaa;
+  // CHECK: :{[[@LINE+1]]:10-[[@LINE+1]]:13}:
+  return aaa;
+}
+static_assert(uninit() == 0, "");

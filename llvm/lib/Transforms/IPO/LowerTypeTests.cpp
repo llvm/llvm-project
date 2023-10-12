@@ -759,9 +759,9 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // also conveniently gives us a bit offset to use during the load from
   // the bitset.
   Value *OffsetSHR =
-      B.CreateLShr(PtrOffset, ConstantExpr::getZExt(TIL.AlignLog2, IntPtrTy));
+      B.CreateLShr(PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy));
   Value *OffsetSHL = B.CreateShl(
-      PtrOffset, ConstantExpr::getZExt(
+      PtrOffset, B.CreateZExt(
                      ConstantExpr::getSub(
                          ConstantInt::get(Int8Ty, DL.getPointerSizeInBits(0)),
                          TIL.AlignLog2),
@@ -1104,7 +1104,7 @@ void LowerTypeTestsModule::importFunction(
     replaceCfiUses(F, FDecl, isJumpTableCanonical);
 
   // Set visibility late because it's used in replaceCfiUses() to determine
-  // whether uses need to to be replaced.
+  // whether uses need to be replaced.
   F->setVisibility(Visibility);
 }
 
@@ -1200,6 +1200,7 @@ static const unsigned kARMJumpTableEntrySize = 4;
 static const unsigned kARMBTIJumpTableEntrySize = 8;
 static const unsigned kARMv6MJumpTableEntrySize = 16;
 static const unsigned kRISCVJumpTableEntrySize = 8;
+static const unsigned kLOONGARCH64JumpTableEntrySize = 8;
 
 bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
   if (HasBranchTargetEnforcement == -1) {
@@ -1240,6 +1241,8 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   case Triple::riscv32:
   case Triple::riscv64:
     return kRISCVJumpTableEntrySize;
+  case Triple::loongarch64:
+    return kLOONGARCH64JumpTableEntrySize;
   default:
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1304,6 +1307,9 @@ void LowerTypeTestsModule::createJumpTableEntry(
   } else if (JumpTableArch == Triple::riscv32 ||
              JumpTableArch == Triple::riscv64) {
     AsmOS << "tail $" << ArgIndex << "@plt\n";
+  } else if (JumpTableArch == Triple::loongarch64) {
+    AsmOS << "pcalau12i $$t0, %pc_hi20($" << ArgIndex << ")\n"
+          << "jirl $$r0, $$t0, %pc_lo12($" << ArgIndex << ")\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1322,7 +1328,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctions(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalTypeMember *> Functions) {
   if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
       Arch == Triple::thumb || Arch == Triple::aarch64 ||
-      Arch == Triple::riscv32 || Arch == Triple::riscv64)
+      Arch == Triple::riscv32 || Arch == Triple::riscv64 ||
+      Arch == Triple::loongarch64)
     buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);

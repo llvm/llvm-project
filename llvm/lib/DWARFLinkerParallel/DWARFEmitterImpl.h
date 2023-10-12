@@ -35,9 +35,11 @@ namespace llvm {
 
 template <typename DataT> class AccelTable;
 class MCCodeEmitter;
-class DWARFDebugMacro;
 
 namespace dwarflinker_parallel {
+
+using DebugNamesUnitsOffsets = std::vector<std::variant<MCSymbol *, uint64_t>>;
+using CompUnitIDToIdx = DenseMap<unsigned, size_t>;
 
 /// This class emits DWARF data to the output stream. It emits already
 /// generated section data and specific data, which could not be generated
@@ -71,9 +73,6 @@ public:
   /// Emit specified section data.
   void emitSectionContents(StringRef SecData, StringRef SecName) override;
 
-  /// Emit temporary symbol.
-  MCSymbol *emitTempSym(StringRef SecName, StringRef SymName) override;
-
   /// Emit abbreviations.
   void emitAbbrevs(const SmallVector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
                    unsigned DwarfVersion);
@@ -86,6 +85,23 @@ public:
 
   /// Returns size of generated .debug_info section.
   uint64_t getDebugInfoSectionSize() const { return DebugInfoSectionSize; }
+
+  /// Emits .debug_names section according to the specified \p Table.
+  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table,
+                      DebugNamesUnitsOffsets &CUOffsets,
+                      CompUnitIDToIdx &UnitIDToIdxMap);
+
+  /// Emits .apple_names section according to the specified \p Table.
+  void emitAppleNames(AccelTable<AppleAccelTableStaticOffsetData> &Table);
+
+  /// Emits .apple_namespaces section according to the specified \p Table.
+  void emitAppleNamespaces(AccelTable<AppleAccelTableStaticOffsetData> &Table);
+
+  /// Emits .apple_objc section according to the specified \p Table.
+  void emitAppleObjc(AccelTable<AppleAccelTableStaticOffsetData> &Table);
+
+  /// Emits .apple_types section according to the specified \p Table.
+  void emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table);
 
 private:
   // Enumerate all string patches and write them into the destination section.

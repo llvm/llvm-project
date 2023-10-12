@@ -487,6 +487,16 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "int";
        }},
+      {R"cpp(
+        template <class T> concept F = true;
+        [[^F]] auto x = 1;
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "F";
+         HI.Kind = index::SymbolKind::Concept;
+         HI.Definition = "template <class T>\nconcept F = true";
+       }},
       // auto on lambda
       {R"cpp(
         void foo() {
@@ -535,7 +545,7 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::Concept;
          HI.Definition = "template <class T>\nconcept Fooable = true";
        }},
-       {R"cpp(
+      {R"cpp(
         template<class T> concept Fooable = true;
         template<Fooable [[T^T]]>
         void bar(TT t) {}
@@ -548,6 +558,28 @@ class Foo final {})cpp";
          HI.LocalScope = "bar::";
          HI.Kind = index::SymbolKind::TemplateTypeParm;
          HI.Definition = "Fooable TT";
+       }},
+      {R"cpp(
+        template<class T> concept Fooable = true;
+        void bar([[Foo^able]] auto t) {}
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Fooable";
+         HI.Kind = index::SymbolKind::Concept;
+         HI.Definition = "template <class T>\nconcept Fooable = true";
+       }},
+      // concept reference
+      {R"cpp(
+        template<class T> concept Fooable = true;
+        auto X = [[Fooa^ble]]<int>;
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "Fooable";
+         HI.Kind = index::SymbolKind::Concept;
+         HI.Definition = "template <class T>\nconcept Fooable = true";
+         HI.Value = "true";
        }},
 
       // empty macro

@@ -1,9 +1,10 @@
 // Purpose:
 //      Check that defining duplicate labels gives a useful error message.
 //
-// RUN: not %dexter_regression_test -v -- %s | FileCheck %s --match-full-lines
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s --match-full-lines
 //
-// CHECK: parser error:{{.*}}err_duplicate_label.cpp(11): Found duplicate line label: 'oops'
+// CHECK: parser error:{{.*}}err_duplicate_label.cpp(12): Found duplicate line label: 'oops'
 // CHECK-NEXT: {{Dex}}Label('oops')
 
 int main() {

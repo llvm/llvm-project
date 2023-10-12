@@ -425,7 +425,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     BasicBlock *StartBlock = SI->getParent();
     BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI));
     BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
-    BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
+    BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
@@ -439,7 +439,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       DIt++;
     }
     for (auto *DI : DebugPseudoINS) {
-      DI->moveBefore(&*EndBlock->getFirstInsertionPt());
+      DI->moveBeforePreserving(&*EndBlock->getFirstInsertionPt());
     }
 
     // These are the new basic blocks for the conditional branch.
@@ -505,7 +505,8 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     for (auto It = ASI.rbegin(); It != ASI.rend(); ++It) {
       SelectInst *SI = *It;
       // The select itself is replaced with a PHI Node.
-      PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());
+      PHINode *PN = PHINode::Create(SI->getType(), 2, "");
+      PN->insertBefore(EndBlock->begin());
       PN->takeName(SI);
       PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
       PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);

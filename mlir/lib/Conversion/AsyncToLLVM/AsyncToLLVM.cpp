@@ -421,7 +421,7 @@ public:
     // Constants for initializing coroutine frame.
     auto constZero =
         rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
-    auto nullPtr = rewriter.create<LLVM::NullOp>(loc, ptrType);
+    auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, ptrType);
 
     // Get coroutine id: @llvm.coro.id.
     rewriter.replaceOpWithNewOp<LLVM::CoroIdOp>(
@@ -534,11 +534,12 @@ public:
     // We are not in the block that is part of the unwind sequence.
     auto constFalse = rewriter.create<LLVM::ConstantOp>(
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
+    auto noneToken = rewriter.create<LLVM::NoneTokenOp>(op->getLoc());
 
     // Mark the end of a coroutine: @llvm.coro.end.
     auto coroHdl = adaptor.getHandle();
     rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
-                                     ValueRange({coroHdl, constFalse}));
+                                     ValueRange({coroHdl, constFalse, noneToken}));
     rewriter.eraseOp(op);
 
     return success();
@@ -676,7 +677,7 @@ public:
 
         // %Size = getelementptr %T* null, int 1
         // %SizeI = ptrtoint %T* %Size to i64
-        auto nullPtr = rewriter.create<LLVM::NullOp>(loc, storagePtrType);
+        auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, storagePtrType);
         auto gep =
             rewriter.create<LLVM::GEPOp>(loc, storagePtrType, storedType,
                                          nullPtr, ArrayRef<LLVM::GEPArg>{1});

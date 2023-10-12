@@ -10,6 +10,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "FunctionPointer.h"
+#include "IntegralAP.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -182,6 +183,10 @@ static BlockCtorFn getCtorPrim(PrimType Type) {
   // constructor called.
   if (Type == PT_Float)
     return ctorTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return ctorTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return ctorTy<PrimConv<PT_IntAPS>::T>;
 
   COMPOSITE_TYPE_SWITCH(Type, return ctorTy<T>, return nullptr);
 }
@@ -191,6 +196,10 @@ static BlockDtorFn getDtorPrim(PrimType Type) {
   // destructor called, since they might allocate memory.
   if (Type == PT_Float)
     return dtorTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return dtorTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return dtorTy<PrimConv<PT_IntAPS>::T>;
 
   COMPOSITE_TYPE_SWITCH(Type, return dtorTy<T>, return nullptr);
 }
@@ -283,6 +292,12 @@ QualType Descriptor::getType() const {
   if (auto *T = dyn_cast<TypeDecl>(asDecl()))
     return QualType(T->getTypeForDecl(), 0);
   llvm_unreachable("Invalid descriptor type");
+}
+
+QualType Descriptor::getElemQualType() const {
+  assert(isArray());
+  const auto *AT = cast<ArrayType>(getType());
+  return AT->getElementType();
 }
 
 SourceLocation Descriptor::getLocation() const {

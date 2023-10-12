@@ -33,16 +33,33 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
 
         If serialization fails then the method should return `std::nullopt`.
 
-        The `module` argument must be a GPU Module Op. The `options` argument is
-        meant to be used for passing additional options that are not in the
+        The `module` parameter must be a GPU Module Op. The `options` parameter
+        is meant to be used for passing additional options that are not in the
         attribute.
       }],
       "std::optional<SmallVector<char, 0>>", "serializeToObject",
-      (ins "Operation*":$module, "const gpu::TargetOptions&":$options)>
+      (ins "Operation*":$module, "const gpu::TargetOptions&":$options)>,
+    InterfaceMethod<[{
+        Creates a GPU object attribute from a binary string.
+
+        The `object` parameter is a binary string. The `options` parameter is
+        meant to be used for passing additional options that are not in the
+        attribute.
+      }], "Attribute", "createObject",
+        (ins "const SmallVector<char, 0>&":$object,
+             "const gpu::TargetOptions&":$options)>
   ];
 }
 
-def GPUTargetArrayAttr : TypedArrayAttrBase<GPUTargetAttrInterface,
+def GPUTargetAttr :
+    ConfinedAttr<AnyAttr, [PromisedAttrInterface<GPUTargetAttrInterface>]> {
+  let description = [{
+    Generic GPU target attribute. These attributes must implement or promise
+    the `GPUTargetAttrInterface` interface.
+  }];
+}
+
+def GPUTargetArrayAttr : TypedArrayAttrBase<GPUTargetAttr,
   "array of GPU target attributes">;
 
 def GPUNonEmptyTargetArrayAttr :
@@ -51,6 +68,7 @@ def GPUNonEmptyTargetArrayAttr :
 //===----------------------------------------------------------------------===//
 // GPU offloading translation attribute trait.
 //===----------------------------------------------------------------------===//
+
 def OffloadingTranslationAttrTrait :
    NativeTrait<"OffloadingTranslationAttrTrait", ""> {
   let cppNamespace = "::mlir::gpu";
@@ -65,7 +83,7 @@ def OffloadingTranslationAttr :
     ConfinedAttr<AnyAttr, [HasOffloadingTranslationAttrTrait]> {
   let description = [{
     Generic GPU offloading translation attribute. These attributes must
-    implement an interface for handling the translation of PU offloading
+    implement an interface for handling the translation of GPU offloading
     operations like `gpu.binary` & `gpu.launch_func`. An example of such
     interface is the `OffloadingLLVMTranslationAttrInterface` interface.
   }];

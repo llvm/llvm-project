@@ -19,6 +19,13 @@ namespace dwarflinker_parallel {
 
 using OffsetToUnitTy = function_ref<CompileUnit *(uint64_t Offset)>;
 
+struct AttributesInfo;
+
+enum ResolveInterCUReferencesMode : bool {
+  Resolve = true,
+  AvoidResolving = false,
+};
+
 /// Stores all information related to a compile unit, be it in its original
 /// instance of the object file or its brand new cloned and generated DIE tree.
 class CompileUnit : public DwarfUnit {
@@ -47,15 +54,18 @@ public:
 
   CompileUnit(LinkingGlobalData &GlobalData, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
-              OffsetToUnitTy UnitFromOffset)
+              OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
+              llvm::endianness Endianess)
       : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
         getUnitFromOffset(UnitFromOffset), Stage(Stage::CreatedNotLoaded) {
     UnitName = File.FileName;
+    setOutputFormat(Format, Endianess);
   }
 
   CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
-              OffsetToUnitTy UnitFromOffset)
+              OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
+              llvm::endianness Endianess)
       : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
         OrigUnit(&OrigUnit), getUnitFromOffset(UnitFromOffset),
         Stage(Stage::CreatedNotLoaded) {
@@ -63,7 +73,7 @@ public:
     if (!CUDie)
       return;
 
-    setOutputFormat(OrigUnit);
+    setOutputFormat(Format, Endianess);
 
     Language = dwarf::toUnsigned(CUDie.find(dwarf::DW_AT_language), 0);
     if (const char *CUName = CUDie.getName(DINameKind::ShortName))
@@ -290,7 +300,8 @@ public:
   /// \returns referenced die and corresponding compilation unit.
   ///          compilation unit is null if reference could not be resolved.
   std::optional<std::pair<CompileUnit *, uint32_t>>
-  resolveDIEReference(const DWARFFormValue &RefValue);
+  resolveDIEReference(const DWARFFormValue &RefValue,
+                      ResolveInterCUReferencesMode CanResolveInterCUReferences);
   /// @}
 
   /// Add a function range [\p LowPC, \p HighPC) that is relocated by applying
@@ -510,6 +521,14 @@ private:
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
                           uint64_t OffsetToMacroTable, bool hasDWARFv5Header);
 
+  /// Store accelerator information for the \p InputDieEntry.
+  void rememberAcceleratorEntries(const DWARFDebugInfoEntry *InputDieEntry,
+                                  uint64_t OutOffset, AttributesInfo &AttrInfo);
+
+  /// Store ObjC accelerator information for the \p InputDieEntry.
+  void rememberObjCAccelerator(const DWARFDebugInfoEntry *InputDieEntry,
+                               uint64_t OutOffset, AttributesInfo &AttrInfo);
+
   /// DWARFFile containing this compile unit.
   DWARFFile &File;
 
@@ -524,10 +543,6 @@ private:
   using ResolvedPathsMap = DenseMap<unsigned, StringEntry *>;
   ResolvedPathsMap ResolvedFullPaths;
   StringMap<StringEntry *> ResolvedParentPaths;
-
-  /// This field instructs compile unit to store DIE name with stripped
-  /// template parameters into the accelerator table.
-  bool CanStripTemplateName = false;
 
   /// Maps an address into the index inside .debug_addr section.
   IndexedValuesMap<uint64_t> DebugAddrIndexMap;

@@ -30,8 +30,10 @@ set(LLDB_ENABLE_CURSES OFF CACHE BOOL "")
 set(LLDB_ENABLE_LIBEDIT OFF CACHE BOOL "")
 
 if(WIN32)
-  set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
-else()
+  set(FUCHSIA_DISABLE_DRIVER_BUILD ON)
+endif()
+
+if (NOT FUCHSIA_DISABLE_DRIVER_BUILD)
   set(LLVM_TOOL_LLVM_DRIVER_BUILD ON CACHE BOOL "")
   set(LLVM_DRIVER_TARGET llvm-driver)
 endif()
@@ -47,6 +49,12 @@ set(CLANG_PLUGIN_SUPPORT OFF CACHE BOOL "")
 
 set(ENABLE_LINKER_BUILD_ID ON CACHE BOOL "")
 set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL "")
+
+# TODO(#67176): relative-vtables doesn't play well with different default
+# visibilities. Making everything hidden visibility causes other complications
+# let's choose default visibility for our entire toolchain.
+set(CMAKE_C_VISIBILITY_PRESET default CACHE STRING "")
+set(CMAKE_CXX_VISIBILITY_PRESET default CACHE STRING "")
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 if (APPLE)
@@ -129,7 +137,7 @@ if(WIN32 OR LLVM_WINSYSROOT)
   set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
 endif()
 
-foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;x86_64-unknown-linux-gnu)
+foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;riscv64-unknown-linux-gnu;x86_64-unknown-linux-gnu)
   if(LINUX_${target}_SYSROOT)
     # Set the per-target builtins options.
     list(APPEND BUILTIN_TARGETS "${target}")

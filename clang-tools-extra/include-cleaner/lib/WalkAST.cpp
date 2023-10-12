@@ -138,10 +138,13 @@ public:
     // If the ref is without a qualifier, and is a member, ignore it. As it is
     // available in current context due to some other construct (e.g. base
     // specifiers, using decls) that has to spell the name explicitly.
+    //
     // If it's an enum constant, it must be due to prior decl. Report references
-    // to it instead.
-    if (llvm::isa<EnumConstantDecl>(FD) && !DRE->hasQualifier())
-      report(DRE->getLocation(), FD);
+    // to it when qualifier isn't a type.
+    if (llvm::isa<EnumConstantDecl>(FD)) {
+      if (!DRE->getQualifier() || DRE->getQualifier()->getAsNamespace())
+        report(DRE->getLocation(), FD);
+    }
     return true;
   }
 
@@ -173,9 +176,8 @@ public:
 
   bool VisitOverloadExpr(OverloadExpr *E) {
     // Since we can't prove which overloads are used, report all of them.
-    llvm::for_each(E->decls(), [this, E](NamedDecl *D) {
+    for (NamedDecl *D : E->decls())
       report(E->getNameLoc(), D, RefType::Ambiguous);
-    });
     return true;
   }
 

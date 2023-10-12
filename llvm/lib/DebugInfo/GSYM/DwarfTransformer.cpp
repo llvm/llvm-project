@@ -347,7 +347,7 @@ static void convertFunctionLineTable(raw_ostream *Log, CUInfo &CUI,
     LineEntry LE(RowAddress, FileIdx, Row.Line);
     if (RowIndex != RowVector[0] && Row.Address < PrevRow.Address) {
       // We have seen full duplicate line tables for functions in some
-      // DWARF files. Watch for those here by checking the the last
+      // DWARF files. Watch for those here by checking the last
       // row was the function's end address (HighPC) and that the
       // current line table entry's address is the same as the first
       // line entry we already have in our "function_info.Lines". If

@@ -290,10 +290,10 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
     Cmd.resize(DashDashIndex);
   }
   llvm::sort(IndicesToDrop);
-  llvm::for_each(llvm::reverse(IndicesToDrop),
-                 // +1 to account for the executable name in Cmd[0] that
-                 // doesn't exist in ArgList.
-                 [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
+  for (unsigned Idx : llvm::reverse(IndicesToDrop))
+    // +1 to account for the executable name in Cmd[0] that
+    // doesn't exist in ArgList.
+    Cmd.erase(Cmd.begin() + Idx + 1);
   // All the inputs are stripped, append the name for the requested file. Rest
   // of the modifications should respect `--`.
   Cmd.push_back("--");

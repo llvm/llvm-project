@@ -7,13 +7,13 @@
 // 4 calls to modf(f), all translated to __nv_modf calls:
 
 // CHECK-NOT: _Z.modf
-// CHECK: call double @__nv_modf(double
+// CHECK: call noundef double @__nv_modf(double
 // CHECK-NOT: _Z.modf
-// CHECK: call float @__nv_modff(float
+// CHECK: call noundef float @__nv_modff(float
 // CHECK-NOT: _Z.modf
-// CHECK: call double @__nv_modf(double
+// CHECK: call noundef double @__nv_modf(double
 // CHECK-NOT: _Z.modf
-// CHECK: call float @__nv_modff(float
+// CHECK: call noundef float @__nv_modff(float
 // CHECK-NOT: _Z.modf
 
 template<typename T>

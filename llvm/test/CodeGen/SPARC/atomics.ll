@@ -144,7 +144,6 @@ entry:
 }
 
 ; SPARC-LABEL: test_cmpxchg_i16
-
 ; SPARC:       and %o1, -4, %o2
 ; SPARC:       and %o1, 3, %o1
 ; SPARC:       xor %o1, 2, %o1
@@ -176,6 +175,7 @@ entry:
 ; SPARC:      [[LABEL2]]:
 ; SPARC:       retl
 ; SPARC:       srl %g2, %o1, %o0
+; SPARC64-LABEL: test_cmpxchg_i16
 ; SPARC64:       and %o1, -4, %o2
 ; SPARC64:       and %o1, 3, %o1
 ; SPARC64:       xor %o1, 2, %o1

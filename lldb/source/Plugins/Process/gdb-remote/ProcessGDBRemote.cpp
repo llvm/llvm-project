@@ -1660,17 +1660,18 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
   }
 
-  // AArch64 SVE specific code below calls AArch64SVEReconfigure to update
-  // SVE register sizes and offsets if value of VG register has changed
-  // since last stop.
+  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
+  // offsets if value of VG or SVG registers has changed since last stop.
   const ArchSpec &arch = GetTarget().GetArchitecture();
   if (arch.IsValid() && arch.GetTriple().isAArch64()) {
     GDBRemoteRegisterContext *reg_ctx_sp =
         static_cast<GDBRemoteRegisterContext *>(
             gdb_thread->GetRegisterContext().get());
 
-    if (reg_ctx_sp)
-      reg_ctx_sp->AArch64SVEReconfigure();
+    if (reg_ctx_sp) {
+      reg_ctx_sp->AArch64Reconfigure();
+      reg_ctx_sp->InvalidateAllRegisters();
+    }
   }
 
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());
@@ -1926,24 +1927,23 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
 lldb::ThreadSP
 ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
-  static ConstString g_key_tid("tid");
-  static ConstString g_key_name("name");
-  static ConstString g_key_reason("reason");
-  static ConstString g_key_metype("metype");
-  static ConstString g_key_medata("medata");
-  static ConstString g_key_qaddr("qaddr");
-  static ConstString g_key_dispatch_queue_t("dispatch_queue_t");
-  static ConstString g_key_associated_with_dispatch_queue(
+  static constexpr llvm::StringLiteral g_key_tid("tid");
+  static constexpr llvm::StringLiteral g_key_name("name");
+  static constexpr llvm::StringLiteral g_key_reason("reason");
+  static constexpr llvm::StringLiteral g_key_metype("metype");
+  static constexpr llvm::StringLiteral g_key_medata("medata");
+  static constexpr llvm::StringLiteral g_key_qaddr("qaddr");
+  static constexpr llvm::StringLiteral g_key_dispatch_queue_t(
+      "dispatch_queue_t");
+  static constexpr llvm::StringLiteral g_key_associated_with_dispatch_queue(
       "associated_with_dispatch_queue");
-  static ConstString g_key_queue_name("qname");
-  static ConstString g_key_queue_kind("qkind");
-  static ConstString g_key_queue_serial_number("qserialnum");
-  static ConstString g_key_registers("registers");
-  static ConstString g_key_memory("memory");
-  static ConstString g_key_address("address");
-  static ConstString g_key_bytes("bytes");
-  static ConstString g_key_description("description");
-  static ConstString g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_queue_name("qname");
+  static constexpr llvm::StringLiteral g_key_queue_kind("qkind");
+  static constexpr llvm::StringLiteral g_key_queue_serial_number("qserialnum");
+  static constexpr llvm::StringLiteral g_key_registers("registers");
+  static constexpr llvm::StringLiteral g_key_memory("memory");
+  static constexpr llvm::StringLiteral g_key_description("description");
+  static constexpr llvm::StringLiteral g_key_signal("signal");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
@@ -1971,7 +1971,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                         &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
                         &queue_name, &queue_kind, &queue_serial_number](
-                           ConstString key,
+                           llvm::StringRef key,
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
       // thread in big endian hex
@@ -2029,10 +2029,10 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
 
       if (registers_dict) {
         registers_dict->ForEach(
-            [&expedited_register_map](ConstString key,
+            [&expedited_register_map](llvm::StringRef key,
                                       StructuredData::Object *object) -> bool {
               uint32_t reg;
-              if (llvm::to_integer(key.AsCString(), reg))
+              if (llvm::to_integer(key, reg))
                 expedited_register_map[reg] =
                     std::string(object->GetStringValue());
               return true; // Keep iterating through all array items
@@ -2089,7 +2089,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
   switch (stop_type) {
   case 'T':
   case 'S': {
-    // This is a bit of a hack, but is is required. If we did exec, we need to
+    // This is a bit of a hack, but it is required. If we did exec, we need to
     // clear our thread lists and also know to rebuild our dynamic register
     // info before we lookup and threads and populate the expedited register
     // values so we need to know this right away so we can cleanup and update
@@ -3109,14 +3109,16 @@ static GDBStoppointType GetGDBStoppointType(Watchpoint *wp) {
   assert(wp);
   bool watch_read = wp->WatchpointRead();
   bool watch_write = wp->WatchpointWrite();
+  bool watch_modify = wp->WatchpointModify();
 
-  // watch_read and watch_write cannot both be false.
-  assert(watch_read || watch_write);
-  if (watch_read && watch_write)
+  // watch_read, watch_write, watch_modify cannot all be false.
+  assert((watch_read || watch_write || watch_modify) &&
+         "watch_read, watch_write, watch_modify cannot all be false.");
+  if (watch_read && (watch_write || watch_modify))
     return eWatchpointReadWrite;
   else if (watch_read)
     return eWatchpointRead;
-  else // Must be watch_write, then.
+  else // Must be watch_write or watch_modify, then.
     return eWatchpointWrite;
 }
 

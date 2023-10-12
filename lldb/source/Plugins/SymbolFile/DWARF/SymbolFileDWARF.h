@@ -30,6 +30,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/RangeMap.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include "DWARFContext.h"
@@ -41,7 +42,6 @@
 // Forward Declarations for this DWARF plugin
 class DebugMapModule;
 class DWARFCompileUnit;
-class DWARFDebugAbbrev;
 class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
@@ -54,6 +54,10 @@ class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
 class UserID;
+
+namespace llvm {
+class DWARFDebugAbbrev;
+}
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -224,7 +228,7 @@ public:
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  DWARFDebugAbbrev *DebugAbbrev();
+  llvm::DWARFDebugAbbrev *DebugAbbrev();
 
   DWARFDebugInfo &DebugInfo();
 
@@ -281,6 +285,10 @@ public:
   void Dump(lldb_private::Stream &s) override;
 
   void DumpClangAST(lldb_private::Stream &s) override;
+
+  /// List separate dwo files.
+  bool
+  GetSeparateDebugInfo(lldb_private::StructuredData::Dictionary &d) override;
 
   lldb_private::DWARFContext &GetDWARFContext() { return m_context; }
 
@@ -536,7 +544,7 @@ protected:
   llvm::once_flag m_info_once_flag;
   std::unique_ptr<DWARFDebugInfo> m_info;
 
-  std::unique_ptr<DWARFDebugAbbrev> m_abbr;
+  std::unique_ptr<llvm::DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>

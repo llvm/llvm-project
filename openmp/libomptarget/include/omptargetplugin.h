@@ -218,6 +218,10 @@ int32_t __tgt_rtl_data_notify_mapped(int32_t ID, void *HstPtr, int64_t Size);
 // host address \p HstPtr and \p Size bytes.
 int32_t __tgt_rtl_data_notify_unmapped(int32_t ID, void *HstPtr);
 
+// Set the global device identifier offset, such that the plugin may determine a
+// unique device number.
+int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset);
+
 #ifdef __cplusplus
 }
 #endif

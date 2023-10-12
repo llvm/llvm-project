@@ -2259,3 +2259,26 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
   store <2 x half> %tmp7, ptr %arg2, align 8
   ret void
 }
+
+; Check that an extracted bool element comparison is correctly extended when
+; the bool vector is bitcasted instead.
+define void @test_extractelement_v64i1_cmp0(<64 x i1> %0) nounwind {
+; KNL-LABEL: test_extractelement_v64i1_cmp0:
+; KNL:       ## %bb.0: ## %entry
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_extractelement_v64i1_cmp0:
+; SKX:       ## %bb.0: ## %entry
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+entry:
+  %1 = extractelement <64 x i1> %0, i64 0
+  br i1 %1, label %common.ret, label %2
+
+common.ret:                                       ; preds = %2, %entry
+  ret void
+
+2:                                                ; preds = %entry
+  %3 = extractelement <64 x i1> zeroinitializer, i64 0
+  br label %common.ret
+}

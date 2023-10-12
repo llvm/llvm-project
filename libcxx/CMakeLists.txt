@@ -48,6 +48,10 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Basic options ---------------------------------------------------------------
+option(LIBCXX_ENABLE_ASSERTIONS
+  "Enable assertions inside the compiled library, and at the same time make it the
+   default when compiling user code. Note that assertions can be enabled or disabled
+   by users in their own code regardless of this option." OFF)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
@@ -55,7 +59,7 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened debug)
+set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened safe debug)
 set(LIBCXX_HARDENING_MODE "unchecked" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
    compiled library and will be the default when compiling user code. Note that
@@ -87,6 +91,24 @@ option(LIBCXX_ENABLE_WIDE_CHARACTERS
    support the C functionality for wide characters. When wide characters are
    not supported, several parts of the library will be disabled, notably the
    wide character specializations of std::basic_string." ON)
+
+# To use time zone support in libc++ the platform needs to have the IANA
+# database installed. Libc++ will fail to build if this is enabled on a
+# platform that does not provide the IANA database. The default is set to the
+# current implementation state on the different platforms.
+#
+# TODO TZDB make the default always ON when most platforms ship with the IANA
+# database.
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(ENABLE_TIME_ZONE_DATABASE_DEFAULT ON)
+else()
+  set(ENABLE_TIME_ZONE_DATABASE_DEFAULT OFF)
+endif()
+option(LIBCXX_ENABLE_TIME_ZONE_DATABASE
+  "Whether to include support for time zones in the library. Disabling
+  time zone support can be useful when porting to platforms that don't
+  ship the IANA time zone database. When time zones are not supported,
+  time zone support in <chrono> will be disabled." ${ENABLE_TIME_ZONE_DATABASE_DEFAULT})
 option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
   "Whether to turn on vendor availability annotations on declarations that depend
    on definitions in a shared library. By default, we assume that we're not building
@@ -284,7 +306,6 @@ endif()
 # about #include_next which is used everywhere.
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
-option(LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS "Disable #warnings about conflicting macros." OFF)
 
 option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
 set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
@@ -334,21 +355,21 @@ endif()
 if (LIBCXX_HAS_EXTERNAL_THREAD_API)
   if (LIBCXX_HAS_PTHREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
-                        "and LIBCXX_HAS_PTHREAD_API cannot be both"
-                        "set to ON at the same time.")
+                        " and LIBCXX_HAS_PTHREAD_API cannot be both"
+                        " set to ON at the same time.")
   endif()
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
-                        "and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
-                        "set to ON at the same time.")
+                        " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
   endif()
 endif()
 
 if (LIBCXX_HAS_PTHREAD_API)
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_PTHREAD_API"
-                        "and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
-                        "set to ON at the same time.")
+                        " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
   endif()
 endif()
 
@@ -642,24 +663,22 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
   endif()
 
-  if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PRIVATE System)
-  endif()
+  if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
+    if (LIBCXX_HAS_PTHREAD_LIB)
+      target_link_libraries(${target} PRIVATE pthread)
+    endif()
 
-  if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PRIVATE pthread)
-  endif()
+    if (LIBCXX_HAS_C_LIB)
+      target_link_libraries(${target} PRIVATE c)
+    endif()
 
-  if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PRIVATE c)
-  endif()
+    if (LIBCXX_HAS_M_LIB)
+      target_link_libraries(${target} PRIVATE m)
+    endif()
 
-  if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PRIVATE m)
-  endif()
-
-  if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PRIVATE rt)
+    if (LIBCXX_HAS_RT_LIB)
+      target_link_libraries(${target} PRIVATE rt)
+    endif()
   endif()
 
   if (LIBCXX_USE_COMPILER_RT)
@@ -756,21 +775,29 @@ config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_STD_MODULES _LIBCPP_HAS_NO_STD_MODULES)
+config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
+
+# TODO(LLVM 19): Produce a deprecation warning.
+if (LIBCXX_ENABLE_ASSERTIONS)
+  set(LIBCXX_HARDENING_MODE "safe")
+endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "hardened")
   config_define(1 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "safe")
+  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(1 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(1 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
   config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-endif()
-# TODO(LLVM 18): Remove this after branching for LLVM 17, this is a simple
-# courtesy for vendors to be notified about this change.
-if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been replaced by LIBCXX_HARDENING_MODE=hardened")
 endif()
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")

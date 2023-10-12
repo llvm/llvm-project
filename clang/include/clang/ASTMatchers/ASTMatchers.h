@@ -300,7 +300,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
     return false;
   }
   auto FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(ExpansionLoc));
   if (!FileEntry) {
     return false;
   }
@@ -6938,7 +6938,7 @@ AST_POLYMORPHIC_MATCHER_P(hasSize,
 ///     T data[Size];
 ///   };
 /// \endcode
-/// dependentSizedArrayType
+/// dependentSizedArrayType()
 ///   matches "T data[Size]"
 extern const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
 
@@ -6952,7 +6952,7 @@ extern const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
 ///     typedef T __attribute__((ext_vector_type(Size))) type;
 ///   };
 /// \endcode
-/// dependentSizedExtVectorType
+/// dependentSizedExtVectorType()
 ///   matches "T __attribute__((ext_vector_type(Size)))"
 extern const AstTypeMatcher<DependentSizedExtVectorType>
     dependentSizedExtVectorType;

@@ -45,7 +45,7 @@ public:
   virtual ~HasDestructor() = 0;
 };
 
-int i = sizeof(HasDestructor<int>); // FIXME: forces instantiation, but 
+int i = sizeof(HasDestructor<int>); // FIXME: forces instantiation, but
                 // the code below should probably instantiate by itself.
 int abstract_destructor[__is_abstract(HasDestructor<int>)? 1 : -1];
 
@@ -94,7 +94,7 @@ struct X0 : X0Base {
 
 template<typename U>
 struct X1 : X0<U> {
-  int &f2() { 
+  int &f2() {
     return X0Base::f();
   }
 };
@@ -129,19 +129,19 @@ namespace test1 {
 }
 
 namespace PR6947 {
-  template< class T > 
+  template< class T >
   struct X {
-    int f0( )      
+    int f0( )
     {
       typedef void ( X::*impl_fun_ptr )( );
       impl_fun_ptr pImpl = &X::template
         f0_impl1<int>;
     }
-  private:                  
+  private:
     int f1() {
     }
-    template< class Processor>                  
-    void f0_impl1( )                 
+    template< class Processor>
+    void f0_impl1( )
     {
     }
   };
@@ -154,7 +154,7 @@ namespace PR6947 {
 }
 
 namespace PR7022 {
-  template <typename > 
+  template <typename >
   struct X1
   {
     typedef int state_t( );
@@ -185,13 +185,12 @@ namespace SameSignatureAfterInstantiation {
 
 namespace PR22040 {
   template <typename T> struct Foobar {
-    template <> void bazqux(typename T::type) {}  // expected-error 2{{cannot be used prior to '::' because it has no members}}
+    template <> void bazqux(typename T::type) {}  // expected-error {{no candidate function template was found for dependent member function template specialization}}
   };
 
   void test() {
-    // FIXME: we should suppress the "no member" errors
-    Foobar<void>::bazqux();  // expected-error{{no member named 'bazqux' in }}  expected-note{{in instantiation of template class }}
-    Foobar<int>::bazqux();  // expected-error{{no member named 'bazqux' in }}  expected-note{{in instantiation of template class }}
+    Foobar<void>::bazqux();
+    Foobar<int>::bazqux();
     Foobar<int>::bazqux(3);  // expected-error{{no member named 'bazqux' in }}
   }
 }

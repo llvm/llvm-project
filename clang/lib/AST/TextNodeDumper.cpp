@@ -16,6 +16,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
@@ -369,6 +370,20 @@ void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
 
   if (A.isSelected())
     OS << " selected";
+}
+
+void TextNodeDumper::Visit(const ConceptReference *R) {
+  if (!R) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>> ConceptReference";
+    return;
+  }
+
+  OS << "ConceptReference";
+  dumpPointer(R);
+  dumpSourceRange(R->getSourceRange());
+  OS << ' ';
+  dumpBareDeclRef(R->getNamedConcept());
 }
 
 void TextNodeDumper::Visit(const concepts::Requirement *R) {
@@ -778,11 +793,11 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " '" << NNS->getAsIdentifier()->getName() << "'";
       break;
     case NestedNameSpecifier::Namespace:
-      OS << " Namespace";
+      OS << " "; // "Namespace" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespace());
       break;
     case NestedNameSpecifier::NamespaceAlias:
-      OS << " NamespaceAlias";
+      OS << " "; // "NamespaceAlias" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespaceAlias());
       break;
     case NestedNameSpecifier::TypeSpec:
@@ -1886,8 +1901,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
         auto Overrides = MD->overridden_methods();
         OS << "Overrides: [ ";
         dumpOverride(*Overrides.begin());
-        for (const auto *Override :
-             llvm::make_range(Overrides.begin() + 1, Overrides.end())) {
+        for (const auto *Override : llvm::drop_begin(Overrides)) {
           OS << ", ";
           dumpOverride(Override);
         }
@@ -1935,6 +1949,10 @@ void TextNodeDumper::VisitFieldDecl(const FieldDecl *D) {
 void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   dumpNestedNameSpecifier(D->getQualifier());
   dumpName(D);
+  if (const auto *P = dyn_cast<ParmVarDecl>(D);
+      P && P->isExplicitObjectParameter())
+    OS << " this";
+
   dumpType(D->getType());
   dumpTemplateSpecializationKind(D->getTemplateSpecializationKind());
   StorageClass SC = D->getStorageClass();

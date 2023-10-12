@@ -298,11 +298,13 @@ protected:
       llvm::function_ref<void(const Elf_Relr &)> RelrFn);
 
   virtual void printSymtabMessage(const Elf_Shdr *Symtab, size_t Offset,
-                                  bool NonVisibilityBitsUsed) const {};
+                                  bool NonVisibilityBitsUsed,
+                                  bool ExtraSymInfo) const {};
   virtual void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                            DataRegion<Elf_Word> ShndxTable,
                            std::optional<StringRef> StrTable, bool IsDynamic,
-                           bool NonVisibilityBitsUsed) const = 0;
+                           bool NonVisibilityBitsUsed,
+                           bool ExtraSymInfo) const = 0;
 
   virtual void printMipsABIFlags() = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
@@ -361,7 +363,7 @@ protected:
   }
 
   void printAttributes(unsigned, std::unique_ptr<ELFAttributeParser>,
-                       support::endianness);
+                       llvm::endianness);
   void printMipsReginfo();
   void printMipsOptions();
 
@@ -406,7 +408,7 @@ protected:
   std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
 
-  void printSymbolsHelper(bool IsDynamic) const;
+  void printSymbolsHelper(bool IsDynamic, bool ExtraSymInfo) const;
   std::string getDynamicEntry(uint64_t Type, uint64_t Value) const;
 
   Expected<RelSymbol<ELFT>> getRelocationTarget(const Relocation<ELFT> &R,
@@ -508,7 +510,8 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
 }
 
 template <class ELFT>
-void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
+void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
+                                         bool ExtraSymInfo) const {
   std::optional<StringRef> StrTable;
   size_t Entries = 0;
   Elf_Sym_Range Syms(nullptr, nullptr);
@@ -549,10 +552,10 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
                       this->getElfObject().getELFFile().end())
                 : DataRegion<Elf_Word>(this->getShndxTable(SymtabSec));
 
-  printSymtabMessage(SymtabSec, Entries, NonVisibilityBitsUsed);
+  printSymtabMessage(SymtabSec, Entries, NonVisibilityBitsUsed, ExtraSymInfo);
   for (const Elf_Sym &Sym : Syms)
     printSymbol(Sym, &Sym - Syms.begin(), ShndxTable, StrTable, IsDynamic,
-                NonVisibilityBitsUsed);
+                NonVisibilityBitsUsed, ExtraSymInfo);
 }
 
 template <typename ELFT> class GNUELFDumper : public ELFDumper<ELFT> {
@@ -574,14 +577,16 @@ public:
   void printGroupSections() override;
   void printRelocations() override;
   void printSectionHeaders() override;
-  void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) override;
+  void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols,
+                    bool ExtraSymInfo) override;
   void printHashSymbols() override;
   void printSectionDetails() override;
   void printDependentLibs() override;
   void printDynamicTable() override;
   void printDynamicRelocations() override;
   void printSymtabMessage(const Elf_Shdr *Symtab, size_t Offset,
-                          bool NonVisibilityBitsUsed) const override;
+                          bool NonVisibilityBitsUsed,
+                          bool ExtraSymInfo) const override;
   void printProgramHeaders(bool PrintProgramHeaders,
                            cl::boolOrDefault PrintSectionMapping) override;
   void printVersionSymbolSection(const Elf_Shdr *Sec) override;
@@ -656,12 +661,14 @@ private:
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                    DataRegion<Elf_Word> ShndxTable,
                    std::optional<StringRef> StrTable, bool IsDynamic,
-                   bool NonVisibilityBitsUsed) const override;
+                   bool NonVisibilityBitsUsed,
+                   bool ExtraSymInfo) const override;
   void printDynamicRelocHeader(unsigned Type, StringRef Name,
                                const DynRegionInfo &Reg) override;
 
   std::string getSymbolSectionNdx(const Elf_Sym &Symbol, unsigned SymIndex,
-                                  DataRegion<Elf_Word> ShndxTable) const;
+                                  DataRegion<Elf_Word> ShndxTable,
+                                  bool ExtraSymInfo = false) const;
   void printProgramHeaders() override;
   void printSectionMapping() override;
   void printGNUVersionSectionProlog(const typename ELFT::Shdr &Sec,
@@ -686,7 +693,8 @@ public:
   void printGroupSections() override;
   void printRelocations() override;
   void printSectionHeaders() override;
-  void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) override;
+  void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols,
+                    bool ExtraSymInfo) override;
   void printDependentLibs() override;
   void printDynamicTable() override;
   void printDynamicRelocations() override;
@@ -719,7 +727,8 @@ private:
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                    DataRegion<Elf_Word> ShndxTable,
                    std::optional<StringRef> StrTable, bool IsDynamic,
-                   bool /*NonVisibilityBitsUsed*/) const override;
+                   bool /*NonVisibilityBitsUsed*/,
+                   bool /*ExtraSymInfo*/) const override;
   void printProgramHeaders() override;
   void printSectionMapping() override {}
   void printStackSizeEntry(uint64_t Size,
@@ -1467,6 +1476,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_MUTABLE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_RANDOMIZE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_WXNEEDED);
+    LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_NOBTCFI);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_BOOTDATA);
   default:
     return "";
@@ -2741,7 +2751,7 @@ void ELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) const {
     return;
 
   std::vector<size_t> ChainLen(NBucket, 0);
-  // Go over all buckets and and note chain lengths of each bucket (total
+  // Go over all buckets and note chain lengths of each bucket (total
   // unique chain lengths).
   for (size_t B = 0; B < NBucket; ++B) {
     BitVector Visited(NChain);
@@ -2875,7 +2885,7 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
 template <class ELFT>
 void ELFDumper<ELFT>::printAttributes(
     unsigned AttrShType, std::unique_ptr<ELFAttributeParser> AttrParser,
-    support::endianness Endianness) {
+    llvm::endianness Endianness) {
   assert((AttrShType != ELF::SHT_NULL) && AttrParser &&
          "Incomplete ELF attribute implementation");
   DictScope BA(W, "BuildAttributes");
@@ -3998,7 +4008,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionHeaders() {
 template <class ELFT>
 void GNUELFDumper<ELFT>::printSymtabMessage(const Elf_Shdr *Symtab,
                                             size_t Entries,
-                                            bool NonVisibilityBitsUsed) const {
+                                            bool NonVisibilityBitsUsed,
+                                            bool ExtraSymInfo) const {
   StringRef Name;
   if (Symtab)
     Name = this->getPrintableSectionName(*Symtab);
@@ -4008,21 +4019,27 @@ void GNUELFDumper<ELFT>::printSymtabMessage(const Elf_Shdr *Symtab,
     OS << "\nSymbol table for image";
   OS << " contains " << Entries << " entries:\n";
 
-  if (ELFT::Is64Bits)
+  if (ELFT::Is64Bits) {
     OS << "   Num:    Value          Size Type    Bind   Vis";
-  else
+    if (ExtraSymInfo)
+      OS << "+Other";
+  } else {
     OS << "   Num:    Value  Size Type    Bind   Vis";
+    if (ExtraSymInfo)
+      OS << "+Other";
+  }
 
-  if (NonVisibilityBitsUsed)
-    OS << "             ";
-  OS << "       Ndx Name\n";
+  OS.PadToColumn((ELFT::Is64Bits ? 56 : 48) + (NonVisibilityBitsUsed ? 13 : 0));
+  if (ExtraSymInfo)
+    OS << "Ndx(SecName) Name [+ Version Info]\n";
+  else
+    OS << "Ndx Name\n";
 }
 
 template <class ELFT>
-std::string
-GNUELFDumper<ELFT>::getSymbolSectionNdx(const Elf_Sym &Symbol,
-                                        unsigned SymIndex,
-                                        DataRegion<Elf_Word> ShndxTable) const {
+std::string GNUELFDumper<ELFT>::getSymbolSectionNdx(
+    const Elf_Sym &Symbol, unsigned SymIndex, DataRegion<Elf_Word> ShndxTable,
+    bool ExtraSymInfo) const {
   unsigned SectionIndex = Symbol.st_shndx;
   switch (SectionIndex) {
   case ELF::SHN_UNDEF:
@@ -4041,7 +4058,8 @@ GNUELFDumper<ELFT>::getSymbolSectionNdx(const Elf_Sym &Symbol,
       this->reportUniqueWarning(IndexOrErr.takeError());
       return "RSV[0xffff]";
     }
-    return to_string(format_decimal(*IndexOrErr, 3));
+    SectionIndex = *IndexOrErr;
+    break;
   }
   default:
     // Find if:
@@ -4058,17 +4076,31 @@ GNUELFDumper<ELFT>::getSymbolSectionNdx(const Elf_Sym &Symbol,
         SectionIndex <= ELF::SHN_HIRESERVE)
       return std::string("RSV[0x") +
              to_string(format_hex_no_prefix(SectionIndex, 4)) + "]";
-    // A normal section with an index
-    return to_string(format_decimal(SectionIndex, 3));
+    break;
   }
+
+  std::string Extra;
+  if (ExtraSymInfo) {
+    auto Sec = this->Obj.getSection(SectionIndex);
+    if (!Sec) {
+      this->reportUniqueWarning(Sec.takeError());
+    } else {
+      auto SecName = this->Obj.getSectionName(**Sec);
+      if (!SecName)
+        this->reportUniqueWarning(SecName.takeError());
+      else
+        Extra = Twine(" (" + *SecName + ")").str();
+    }
+  }
+  return to_string(format_decimal(SectionIndex, 3)) + Extra;
 }
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                                      DataRegion<Elf_Word> ShndxTable,
                                      std::optional<StringRef> StrTable,
-                                     bool IsDynamic,
-                                     bool NonVisibilityBitsUsed) const {
+                                     bool IsDynamic, bool NonVisibilityBitsUsed,
+                                     bool ExtraSymInfo) const {
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   Field Fields[8] = {0,         8,         17 + Bias, 23 + Bias,
                      31 + Bias, 38 + Bias, 48 + Bias, 51 + Bias};
@@ -4115,8 +4147,10 @@ void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
   }
 
   Fields[6].Column += NonVisibilityBitsUsed ? 13 : 0;
-  Fields[6].Str = getSymbolSectionNdx(Symbol, SymIndex, ShndxTable);
+  Fields[6].Str =
+      getSymbolSectionNdx(Symbol, SymIndex, ShndxTable, ExtraSymInfo);
 
+  Fields[7].Column += ExtraSymInfo ? 10 : 0;
   Fields[7].Str = this->getFullSymbolName(Symbol, SymIndex, ShndxTable,
                                           StrTable, IsDynamic);
   for (const Field &Entry : Fields)
@@ -4162,13 +4196,14 @@ void GNUELFDumper<ELFT>::printHashedSymbol(const Elf_Sym *Symbol,
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printSymbols(bool PrintSymbols,
-                                      bool PrintDynamicSymbols) {
+                                      bool PrintDynamicSymbols,
+                                      bool ExtraSymInfo) {
   if (!PrintSymbols && !PrintDynamicSymbols)
     return;
   // GNU readelf prints both the .dynsym and .symtab with --symbols.
-  this->printSymbolsHelper(true);
+  this->printSymbolsHelper(true, ExtraSymInfo);
   if (PrintSymbols)
-    this->printSymbolsHelper(false);
+    this->printSymbolsHelper(false, ExtraSymInfo);
 }
 
 template <class ELFT>
@@ -7011,7 +7046,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printSectionHeaders() {
               this->Obj.getSection(Sym, this->DotSymtabSec, ShndxTable));
           if (SymSec == &Sec)
             printSymbol(Sym, &Sym - &Symbols[0], ShndxTable, StrTable, false,
-                        false);
+                        /*NonVisibilityBitsUsed=*/false,
+                        /*ExtraSymInfo=*/false);
         }
       }
     }
@@ -7098,7 +7134,8 @@ void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                                       DataRegion<Elf_Word> ShndxTable,
                                       std::optional<StringRef> StrTable,
                                       bool IsDynamic,
-                                      bool /*NonVisibilityBitsUsed*/) const {
+                                      bool /*NonVisibilityBitsUsed*/,
+                                      bool /*ExtraSymInfo*/) const {
   std::string FullSymbolName = this->getFullSymbolName(
       Symbol, SymIndex, ShndxTable, StrTable, IsDynamic);
   unsigned char SymbolType = Symbol.getType();
@@ -7122,14 +7159,15 @@ void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
 
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printSymbols(bool PrintSymbols,
-                                       bool PrintDynamicSymbols) {
+                                       bool PrintDynamicSymbols,
+                                       bool ExtraSymInfo) {
   if (PrintSymbols) {
     ListScope Group(W, "Symbols");
-    this->printSymbolsHelper(false);
+    this->printSymbolsHelper(false, ExtraSymInfo);
   }
   if (PrintDynamicSymbols) {
     ListScope Group(W, "DynamicSymbols");
-    this->printSymbolsHelper(true);
+    this->printSymbolsHelper(true, ExtraSymInfo);
   }
 }
 

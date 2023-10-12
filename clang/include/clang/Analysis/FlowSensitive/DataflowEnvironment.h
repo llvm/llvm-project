@@ -242,7 +242,7 @@ public:
   /// Creates a storage location for `D`. Does not assign the returned storage
   /// location to `D` in the environment. Does not assign a value to the
   /// returned storage location in the environment.
-  StorageLocation &createStorageLocation(const VarDecl &D);
+  StorageLocation &createStorageLocation(const ValueDecl &D);
 
   /// Creates a storage location for `E`. Does not assign the returned storage
   /// location to `E` in the environment. Does not assign a value to the
@@ -259,6 +259,13 @@ public:
   /// Returns the storage location assigned to `D` in the environment, or null
   /// if `D` isn't assigned a storage location in the environment.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
+
+  /// Removes the location assigned to `D` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must have a storage location assigned in the environment.
+  void removeDecl(const ValueDecl &D);
 
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
   /// environment.
@@ -401,7 +408,7 @@ public:
   /// this value. Otherwise, initializes the object with a value created using
   /// `createValue()`.  Uses the storage location returned by
   /// `DataflowAnalysisContext::getStableStorageLocation(D)`.
-  StorageLocation &createObject(const VarDecl &D, const Expr *InitExpr) {
+  StorageLocation &createObject(const ValueDecl &D, const Expr *InitExpr) {
     return createObjectInternal(&D, D.getType(), InitExpr);
   }
 
@@ -607,7 +614,7 @@ private:
 
   /// Shared implementation of `createObject()` overloads.
   /// `D` and `InitExpr` may be null.
-  StorageLocation &createObjectInternal(const VarDecl *D, QualType Ty,
+  StorageLocation &createObjectInternal(const ValueDecl *D, QualType Ty,
                                         const Expr *InitExpr);
 
   /// Shared implementation of `pushCall` overloads. Note that unlike
@@ -689,15 +696,6 @@ RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 /// Associates a new `RecordValue` with `Expr` and returns the new value.
 /// See also documentation for the overload above.
 RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
-
-/// Deprecated synonym for `refreshRecordValue()`.
-inline RecordValue &refreshStructValue(RecordStorageLocation &Loc,
-                                       Environment &Env) {
-  return refreshRecordValue(Loc, Env);
-}
-inline RecordValue &refreshStructValue(const Expr &Expr, Environment &Env) {
-  return refreshRecordValue(Expr, Env);
-}
 
 } // namespace dataflow
 } // namespace clang

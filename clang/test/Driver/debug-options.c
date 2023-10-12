@@ -83,6 +83,11 @@
 // RUN:             | FileCheck -check-prefix=G_GDB \
 // RUN:                         -check-prefix=G_DWARF4 %s
 
+// Haiku.
+// RUN: %clang -### -c -g %s --target=x86_64-unknown-haiku 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
+
 // Windows.
 // RUN: %clang -### -c -g %s -target x86_64-w64-windows-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB %s
@@ -193,8 +198,8 @@
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-tables-only -g %s -target i386-pc-solaris 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
+// RUN: %clang -### -c -gline-tables-only -g %s --target=i386-pc-solaris 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-tables-only -g0 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_NO %s
 //
@@ -212,8 +217,8 @@
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-directives-only -g %s -target i386-pc-solaris 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
+// RUN: %clang -### -c -gline-directives-only -g %s --target=i386-pc-solaris 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-directives-only -g0 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLIO_NO %s
 

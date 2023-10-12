@@ -22,6 +22,13 @@
 #include <map>
 #include <sstream>
 
+template <typename T>
+static Fortran::semantics::Scope *GetScope(
+    Fortran::semantics::SemanticsContext &context, const T &x) {
+  std::optional<Fortran::parser::CharBlock> source{GetSource(x)};
+  return source ? &context.FindScope(*source) : nullptr;
+}
+
 namespace Fortran::semantics {
 
 template <typename T> class DirectiveAttributeVisitor {
@@ -324,11 +331,6 @@ public:
     return true;
   }
 
-  bool Pre(const parser::SpecificationPart &x) {
-    Walk(std::get<std::list<parser::OpenMPDeclarativeConstruct>>(x.t));
-    return true;
-  }
-
   bool Pre(const parser::StmtFunctionStmt &x) {
     const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(x.t)};
     if (const auto *expr{GetExpr(context_, parsedExpr)}) {
@@ -375,7 +377,38 @@ public:
   void Post(const parser::OpenMPDeclareSimdConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
+    using Flags = WithOmpDeclarative::RequiresFlags;
+    using Requires = WithOmpDeclarative::RequiresFlag;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
+
+    // Gather information from the clauses.
+    Flags flags;
+    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder;
+    for (const auto &clause : std::get<parser::OmpClauseList>(x.t).v) {
+      flags |= common::visit(
+          common::visitors{
+              [&memOrder](
+                  const parser::OmpClause::AtomicDefaultMemOrder &atomic) {
+                memOrder = atomic.v.v;
+                return Flags{};
+              },
+              [](const parser::OmpClause::ReverseOffload &) {
+                return Flags{Requires::ReverseOffload};
+              },
+              [](const parser::OmpClause::UnifiedAddress &) {
+                return Flags{Requires::UnifiedAddress};
+              },
+              [](const parser::OmpClause::UnifiedSharedMemory &) {
+                return Flags{Requires::UnifiedSharedMemory};
+              },
+              [](const parser::OmpClause::DynamicAllocators &) {
+                return Flags{Requires::DynamicAllocators};
+              },
+              [](const auto &) { return Flags{}; }},
+          clause.u);
+    }
+    // Merge clauses into parents' symbols details.
+    AddOmpRequiresToScope(currScope(), flags, memOrder);
     return true;
   }
   void Post(const parser::OpenMPRequiresConstruct &) { PopContext(); }
@@ -502,6 +535,16 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpClause::IsDevicePtr &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpIsDevicePtr);
+    return false;
+  }
+
+  bool Pre(const parser::OmpClause::HasDeviceAddr &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpHasDeviceAddr);
+    return false;
+  }
+
   void Post(const parser::Name &);
 
   // Keep track of labels in the statements that causes jumps to target labels
@@ -529,6 +572,31 @@ public:
   void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
   void Post(const parser::OmpMapClause &x) {
+    Symbol::Flag ompFlag = Symbol::Flag::OmpMapToFrom;
+    if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
+      using Type = parser::OmpMapType::Type;
+      const Type &type{std::get<Type>(maptype->t)};
+      switch (type) {
+      case Type::To:
+        ompFlag = Symbol::Flag::OmpMapTo;
+        break;
+      case Type::From:
+        ompFlag = Symbol::Flag::OmpMapFrom;
+        break;
+      case Type::Tofrom:
+        ompFlag = Symbol::Flag::OmpMapToFrom;
+        break;
+      case Type::Alloc:
+        ompFlag = Symbol::Flag::OmpMapAlloc;
+        break;
+      case Type::Release:
+        ompFlag = Symbol::Flag::OmpMapRelease;
+        break;
+      case Type::Delete:
+        ompFlag = Symbol::Flag::OmpMapDelete;
+        break;
+      }
+    }
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
     for (const auto &ompObj : ompObjList.v) {
       common::visit(
@@ -536,6 +604,10 @@ public:
               [&](const parser::Designator &designator) {
                 if (const auto *name{
                         semantics::getDesignatorNameIfDataRef(designator)}) {
+                  if (name->symbol) {
+                    name->symbol->set(ompFlag);
+                    AddToContextObjectWithDSA(*name->symbol, ompFlag);
+                  }
                   if (name->symbol &&
                       semantics::IsAssumedSizeArray(*name->symbol)) {
                     context_.Say(designator.source,
@@ -572,7 +644,8 @@ private:
       Symbol::Flag::OmpLinear, Symbol::Flag::OmpFirstPrivate,
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
       Symbol::Flag::OmpCriticalLock, Symbol::Flag::OmpCopyIn,
-      Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr};
+      Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
+      Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
   Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
@@ -643,6 +716,9 @@ private:
 
   bool HasSymbolInEnclosingScope(const Symbol &, Scope &);
   std::int64_t ordCollapseLevel{0};
+
+  void AddOmpRequiresToScope(Scope &, WithOmpDeclarative::RequiresFlags,
+      std::optional<common::OmpAtomicDefaultMemOrderType>);
 };
 
 template <typename T>
@@ -1088,8 +1164,8 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
     return nullptr;
   };
 
-  const auto &outer{std::get<parser::DoConstruct>(x.t)};
-  for (const parser::DoConstruct *loop{&outer}; loop && level > 0; --level) {
+  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
+  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
     // go through all the nested do-loops and resolve index variables
     const parser::Name *iv{GetLoopIndex(*loop)};
     if (iv) {
@@ -1466,7 +1542,10 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   }
   if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
     targetIt++;
-    symbol->set(Symbol::Flag::OmpPreDetermined);
+    // If this object already had a DSA then it is not predetermined
+    if (!IsObjectWithDSA(*symbol)) {
+      symbol->set(Symbol::Flag::OmpPreDetermined);
+    }
     iv.symbol = symbol; // adjust the symbol within region
     for (auto it{dirContext_.rbegin()}; it != targetIt; ++it) {
       AddToContextObjectWithDSA(*symbol, Symbol::Flag::OmpPrivate, *it);
@@ -1732,6 +1811,21 @@ void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
         "ALLOCATE directives that appear in a TARGET region "
         "must specify an allocator clause"_err_en_US);
   }
+
+  const auto &allocateStmt =
+      std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement;
+  if (const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+    CheckAllNamesInAllocateStmt(
+        std::get<parser::Verbatim>(x.t).source, *list, allocateStmt);
+  }
+  if (const auto &subDirs{
+          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
+              x.t)}) {
+    for (const auto &dalloc : *subDirs) {
+      CheckAllNamesInAllocateStmt(std::get<parser::Verbatim>(dalloc.t).source,
+          std::get<parser::OmpObjectList>(dalloc.t), allocateStmt);
+    }
+  }
   PopContext();
 }
 
@@ -1908,6 +2002,27 @@ void OmpAttributeVisitor::ResolveOmpObject(
             if (const auto *name{
                     semantics::getDesignatorNameIfDataRef(designator)}) {
               if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
+                auto checkExclusivelists =
+                    [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
+                        Symbol *symbol2, Symbol::Flag secondOmpFlag) {
+                      if ((symbol1->test(firstOmpFlag) &&
+                              symbol2->test(secondOmpFlag)) ||
+                          (symbol1->test(secondOmpFlag) &&
+                              symbol2->test(firstOmpFlag))) {
+                        context_.Say(designator.source,
+                            "Variable '%s' may not "
+                            "appear on both %s and %s "
+                            "clauses on a %s construct"_err_en_US,
+                            symbol2->name(),
+                            const_cast<Symbol *>(symbol1)->OmpFlagToClauseName(
+                                firstOmpFlag),
+                            symbol2->OmpFlagToClauseName(secondOmpFlag),
+                            parser::ToUpperCaseLetters(
+                                llvm::omp::getOpenMPDirectiveName(
+                                    GetContext().directive)
+                                    .str()));
+                      }
+                    };
                 if (dataCopyingAttributeFlags.test(ompFlag)) {
                   CheckDataCopyingClause(*name, *symbol, ompFlag);
                 } else {
@@ -1943,28 +2058,44 @@ void OmpAttributeVisitor::ResolveOmpObject(
                               GetContext().directive)
                               .str()));
                 }
-                if ((GetContext().directive ==
-                        llvm::omp::Directive::OMPD_target_data) &&
-                    (((ompFlag == Symbol::Flag::OmpUseDevicePtr) &&
-                         symbol->test(Symbol::Flag::OmpUseDeviceAddr)) ||
-                        ((ompFlag == Symbol::Flag::OmpUseDeviceAddr) &&
-                            symbol->test(Symbol::Flag::OmpUseDevicePtr)))) {
-                  context_.Say(designator.source,
-                      "Variable '%s' may not "
-                      "appear on both USE_DEVICE_PTR and USE_DEVICE_ADDR "
-                      "clauses on a TARGET DATA construct"_err_en_US,
-                      symbol->name());
+                if (GetContext().directive ==
+                    llvm::omp::Directive::OMPD_target_data) {
+                  checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr,
+                      symbol, Symbol::Flag::OmpUseDeviceAddr);
                 }
-                if (llvm::omp::allDistributeSet.test(GetContext().directive) &&
-                    (((ompFlag == Symbol::Flag::OmpFirstPrivate) &&
-                         symbol->test(Symbol::Flag::OmpLastPrivate)) ||
-                        ((ompFlag == Symbol::Flag::OmpLastPrivate) &&
-                            symbol->test(Symbol::Flag::OmpFirstPrivate)))) {
-                  context_.Say(designator.source,
-                      "Variable '%s' may not "
-                      "appear on both FIRSTPRIVATE and LASTPRIVATE "
-                      "clauses on a DISTRIBUTE construct"_err_en_US,
-                      symbol->name());
+                if (llvm::omp::allDistributeSet.test(GetContext().directive)) {
+                  checkExclusivelists(symbol, Symbol::Flag::OmpFirstPrivate,
+                      symbol, Symbol::Flag::OmpLastPrivate);
+                }
+                if (llvm::omp::allTargetSet.test(GetContext().directive)) {
+                  checkExclusivelists(symbol, Symbol::Flag::OmpIsDevicePtr,
+                      symbol, Symbol::Flag::OmpHasDeviceAddr);
+                  const auto *hostAssocSym{symbol};
+                  if (!(symbol->test(Symbol::Flag::OmpIsDevicePtr) ||
+                          symbol->test(Symbol::Flag::OmpHasDeviceAddr))) {
+                    if (const auto *details{
+                            symbol->detailsIf<HostAssocDetails>()}) {
+                      hostAssocSym = &details->symbol();
+                    }
+                  }
+                  Symbol::Flag dataMappingAttributeFlags[] = {
+                      Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
+                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapAlloc,
+                      Symbol::Flag::OmpMapRelease, Symbol::Flag::OmpMapDelete,
+                      Symbol::Flag::OmpIsDevicePtr,
+                      Symbol::Flag::OmpHasDeviceAddr};
+
+                  Symbol::Flag dataSharingAttributeFlags[] = {
+                      Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
+                      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
+                      Symbol::Flag::OmpLinear};
+
+                  for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
+                    for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
+                      checkExclusivelists(
+                          hostAssocSym, ompFlag1, symbol, ompFlag2);
+                    }
+                  }
                 }
               }
             } else {
@@ -2099,6 +2230,84 @@ void ResolveOmpParts(
       OmpAttributeVisitor{context}.Walk(node);
     }
   }
+}
+
+void ResolveOmpTopLevelParts(
+    SemanticsContext &context, const parser::Program &program) {
+  if (!context.IsEnabled(common::LanguageFeature::OpenMP)) {
+    return;
+  }
+
+  // Gather REQUIRES clauses from all non-module top-level program unit symbols,
+  // combine them together ensuring compatibility and apply them to all these
+  // program units. Modules are skipped because their REQUIRES clauses should be
+  // propagated via USE statements instead.
+  WithOmpDeclarative::RequiresFlags combinedFlags;
+  std::optional<common::OmpAtomicDefaultMemOrderType> combinedMemOrder;
+
+  // Function to go through non-module top level program units and extract
+  // REQUIRES information to be processed by a function-like argument.
+  auto processProgramUnits{[&](auto processFn) {
+    for (const parser::ProgramUnit &unit : program.v) {
+      if (!std::holds_alternative<common::Indirection<parser::Module>>(
+              unit.u) &&
+          !std::holds_alternative<common::Indirection<parser::Submodule>>(
+              unit.u)) {
+        Symbol *symbol{common::visit(
+            [&context](auto &x) {
+              Scope *scope = GetScope(context, x.value());
+              return scope ? scope->symbol() : nullptr;
+            },
+            unit.u)};
+        // FIXME There is no symbol defined for MainProgram units in certain
+        // circumstances, so REQUIRES information has no place to be stored in
+        // these cases.
+        if (!symbol) {
+          continue;
+        }
+        common::visit(
+            [&](auto &details) {
+              if constexpr (std::is_convertible_v<decltype(&details),
+                                WithOmpDeclarative *>) {
+                processFn(*symbol, details);
+              }
+            },
+            symbol->details());
+      }
+    }
+  }};
+
+  // Combine global REQUIRES information from all program units except modules
+  // and submodules.
+  processProgramUnits([&](Symbol &symbol, WithOmpDeclarative &details) {
+    if (const WithOmpDeclarative::RequiresFlags *
+        flags{details.ompRequires()}) {
+      combinedFlags |= *flags;
+    }
+    if (const common::OmpAtomicDefaultMemOrderType *
+        memOrder{details.ompAtomicDefaultMemOrder()}) {
+      if (combinedMemOrder && *combinedMemOrder != *memOrder) {
+        context.Say(symbol.scope()->sourceRange(),
+            "Conflicting '%s' REQUIRES clauses found in compilation "
+            "unit"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
+                llvm::omp::Clause::OMPC_atomic_default_mem_order)
+                                           .str()));
+      }
+      combinedMemOrder = *memOrder;
+    }
+  });
+
+  // Update all program units except modules and submodules with the combined
+  // global REQUIRES information.
+  processProgramUnits([&](Symbol &, WithOmpDeclarative &details) {
+    if (combinedFlags.any()) {
+      details.set_ompRequires(combinedFlags);
+    }
+    if (combinedMemOrder) {
+      details.set_ompAtomicDefaultMemOrder(*combinedMemOrder);
+    }
+  });
 }
 
 void OmpAttributeVisitor::CheckDataCopyingClause(
@@ -2248,4 +2457,44 @@ void OmpAttributeVisitor::CheckNameInAllocateStmt(
       parser::ToUpperCaseLetters(
           llvm::omp::getOpenMPDirectiveName(GetContext().directive).str()));
 }
+
+void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
+    WithOmpDeclarative::RequiresFlags flags,
+    std::optional<common::OmpAtomicDefaultMemOrderType> memOrder) {
+  Scope *scopeIter = &scope;
+  do {
+    if (Symbol * symbol{scopeIter->symbol()}) {
+      common::visit(
+          [&](auto &details) {
+            // Store clauses information into the symbol for the parent and
+            // enclosing modules, programs, functions and subroutines.
+            if constexpr (std::is_convertible_v<decltype(&details),
+                              WithOmpDeclarative *>) {
+              if (flags.any()) {
+                if (const WithOmpDeclarative::RequiresFlags *
+                    otherFlags{details.ompRequires()}) {
+                  flags |= *otherFlags;
+                }
+                details.set_ompRequires(flags);
+              }
+              if (memOrder) {
+                if (details.has_ompAtomicDefaultMemOrder() &&
+                    *details.ompAtomicDefaultMemOrder() != *memOrder) {
+                  context_.Say(scopeIter->sourceRange(),
+                      "Conflicting '%s' REQUIRES clauses found in compilation "
+                      "unit"_err_en_US,
+                      parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
+                          llvm::omp::Clause::OMPC_atomic_default_mem_order)
+                                                     .str()));
+                }
+                details.set_ompAtomicDefaultMemOrder(*memOrder);
+              }
+            }
+          },
+          symbol->details());
+    }
+    scopeIter = &scopeIter->parent();
+  } while (!scopeIter->IsGlobal());
+}
+
 } // namespace Fortran::semantics

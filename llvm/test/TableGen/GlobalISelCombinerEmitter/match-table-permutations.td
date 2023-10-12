@@ -26,7 +26,7 @@ def Test0 : GICombineRule<
   ),
   (apply (COPY $dst, (i32 0)), "APPLY ${cst0}")>;
 
-def MyCombiner: GICombinerHelper<"GenMyCombiner", [
+def MyCombiner: GICombiner<"GenMyCombiner", [
   Test0
 ]>;
 
@@ -161,185 +161,120 @@ def MyCombiner: GICombinerHelper<"GenMyCombiner", [
 // CHECK-NEXT:   constexpr static int64_t MatchTable0[] = {
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ 746,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_AND,
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 1*/ 111, // Rule ID 0 //
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 1*/ 84, // Rule ID 7 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] cst0
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[1] a.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[2] a.x
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[1] a.z
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[3] cst1
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[2] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[3] b.z
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         // MIs[2] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/2, /*OpIdx*/2, // MIs[4]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[4] c.z
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner21,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner22,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner23,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
+// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
+// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[1]]
+// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
+// CHECK-NEXT:         GIR_Done,
+// CHECK-NEXT:       // Label 1: @84
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ 172, // Rule ID 6 //
+// CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
+// CHECK-NEXT:         // MIs[0] dst
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         // MIs[0] cst0
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[1] a.z
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         // MIs[0] tmp
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[2] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[3] b.z
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         // MIs[2] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/2, /*OpIdx*/2, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[4] b.b
+// CHECK-NEXT:         // MIs[4] c.b
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/4, /*OpIdx*/1, // MIs[5]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[5] b.x
+// CHECK-NEXT:         // MIs[5] c.x
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[3] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/6, /*MI*/3, /*OpIdx*/2, // MIs[6]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/6, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[6] c.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/7, /*MI*/6, /*OpIdx*/1, // MIs[7]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/7, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[7] c.x
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner0,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner1,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner2,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner18,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner19,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner20,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/7,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[0]]
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[0]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 1: @111
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ 208, // Rule ID 1 //
+// CHECK-NEXT:       // Label 2: @172
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 3*/ 260, // Rule ID 5 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] cst0
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[1] a.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[2] a.x
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[1] a.z
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[3] cst1
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[4] b.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/4, /*OpIdx*/1, // MIs[5]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[5] b.x
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[3] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/6, /*MI*/3, /*OpIdx*/2, // MIs[6]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/6, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[6] c.z
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner3,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner4,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner5,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
-// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[1]]
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
-// CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
-// CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 2: @208
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 3*/ 305, // Rule ID 2 //
-// CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
-// CHECK-NEXT:         // MIs[0] dst
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[0] cst0
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[1] a.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[2] a.x
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[3] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[2] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[3] b.b
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[4] b.z
+// CHECK-NEXT:         // MIs[4] b.x
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[3] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/3, /*OpIdx*/2, // MIs[5]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[5] c.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/6, /*MI*/5, /*OpIdx*/1, // MIs[6]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/6, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[6] c.x
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner6,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner7,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner8,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
-// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
-// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[0]]
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
-// CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
-// CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 3: @305
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 4*/ 393, // Rule ID 3 //
-// CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
-// CHECK-NEXT:         // MIs[0] dst
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[0] cst0
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[1] a.b
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[2] a.x
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[3] cst1
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[4] b.z
-// CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[3] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/3, /*OpIdx*/2, // MIs[5]
+// CHECK-NEXT:         // MIs[2] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/2, /*OpIdx*/2, // MIs[5]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_TRUNC,
 // CHECK-NEXT:         // MIs[5] c.z
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner9,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner10,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner11,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner15,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner16,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner17,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
@@ -349,15 +284,15 @@ def MyCombiner: GICombinerHelper<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[1]]
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[0], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 4: @393
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 5*/ 490, // Rule ID 4 //
+// CHECK-NEXT:       // Label 3: @260
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 4*/ 357, // Rule ID 4 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -405,35 +340,35 @@ def MyCombiner: GICombinerHelper<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 5: @490
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 6*/ 578, // Rule ID 5 //
+// CHECK-NEXT:       // Label 4: @357
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 5*/ 445, // Rule ID 3 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] cst0
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[1] a.z
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[1] a.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[2] a.x
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[2] cst1
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[3] b.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[3] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[4] b.x
+// CHECK-NEXT:         // MIs[4] b.z
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[2] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/2, /*OpIdx*/2, // MIs[5]
+// CHECK-NEXT:         // MIs[3] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/3, /*OpIdx*/2, // MIs[5]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_TRUNC,
 // CHECK-NEXT:         // MIs[5] c.z
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner15,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner16,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner17,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner9,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner10,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner11,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
@@ -443,93 +378,158 @@ def MyCombiner: GICombinerHelper<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[0], c[1]]
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 6: @578
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 7*/ 666, // Rule ID 6 //
+// CHECK-NEXT:       // Label 5: @445
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 6*/ 542, // Rule ID 2 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] cst0
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[1] a.z
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[1] a.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[2] a.x
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[2] cst1
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[3] b.z
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[3] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[4] b.z
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[2] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/2, /*OpIdx*/2, // MIs[4]
+// CHECK-NEXT:         // MIs[3] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/3, /*OpIdx*/2, // MIs[5]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[5] c.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/6, /*MI*/5, /*OpIdx*/1, // MIs[6]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/6, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[6] c.x
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner6,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner7,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner8,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
+// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
+// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[0]]
+// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
+// CHECK-NEXT:         GIR_Done,
+// CHECK-NEXT:       // Label 6: @542
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 7*/ 639, // Rule ID 1 //
+// CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
+// CHECK-NEXT:         // MIs[0] dst
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         // MIs[0] cst0
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[1] a.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[2] a.x
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         // MIs[0] tmp
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[3] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_ZEXT,
-// CHECK-NEXT:         // MIs[4] c.b
+// CHECK-NEXT:         // MIs[4] b.b
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/4, /*OpIdx*/1, // MIs[5]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[5] c.x
+// CHECK-NEXT:         // MIs[5] b.x
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner18,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner19,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner20,
+// CHECK-NEXT:         // MIs[3] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/6, /*MI*/3, /*OpIdx*/2, // MIs[6]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/6, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[6] c.z
+// CHECK-NEXT:         // No operand predicates
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner3,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner4,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner5,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[0]]
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 7: @666
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 8*/ 745, // Rule ID 7 //
+// CHECK-NEXT:       // Label 7: @639
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 8*/ 745, // Rule ID 0 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] cst0
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[1] a.z
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/1, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[1] a.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/1, // MIs[2]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[2] a.x
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, TargetOpcode::G_AND,
-// CHECK-NEXT:         // MIs[2] cst1
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[3] b.z
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, TargetOpcode::G_AND,
+// CHECK-NEXT:         // MIs[3] cst1
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[4] b.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/5, /*MI*/4, /*OpIdx*/1, // MIs[5]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/5, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[5] b.x
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         // MIs[2] cst2
-// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/2, /*OpIdx*/2, // MIs[4]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, TargetOpcode::G_TRUNC,
-// CHECK-NEXT:         // MIs[4] c.z
+// CHECK-NEXT:         // MIs[3] cst2
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/6, /*MI*/3, /*OpIdx*/2, // MIs[6]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/6, TargetOpcode::G_ZEXT,
+// CHECK-NEXT:         // MIs[6] c.b
+// CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/7, /*MI*/6, /*OpIdx*/1, // MIs[7]
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/7, TargetOpcode::G_TRUNC,
+// CHECK-NEXT:         // MIs[7] c.x
 // CHECK-NEXT:         // No operand predicates
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner21,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner22,
-// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner23,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner0,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner1,
+// CHECK-NEXT:         GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_GICombiner2,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
+// CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/7,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
-// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[1]]
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[0]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,

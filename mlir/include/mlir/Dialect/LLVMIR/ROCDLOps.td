@@ -71,6 +71,14 @@ class ROCDL_IntrPure1Op<string mnemonic> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
   "amdgcn_" # !subst(".", "_", mnemonic), [], [], [Pure], 1>;
 
+class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
+  list<int> overloadedOperands, list<Trait> traits, int numResults,
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0> :
+  LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
+    "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
+    overloadedOperands, traits, numResults, requiresAccessGroup,
+    requiresAliasAnalysis>;
+
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
 //===----------------------------------------------------------------------===//
@@ -108,7 +116,7 @@ class ROCDL_MbcntOp<string mnemonic> :
 def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
 def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
 
-def ROCDL_DsSwizzleOp : 
+def ROCDL_DsSwizzleOp :
 ROCDL_Op<"ds_swizzle">,
 Results<(outs I32:$res)>,
 Arguments<(ins I32:$src,
@@ -122,7 +130,7 @@ Arguments<(ins I32:$src,
    }];
 }
 
-def ROCDL_DsBpermuteOp : 
+def ROCDL_DsBpermuteOp :
 ROCDL_Op<"ds_bpermute">,
 Results<(outs I32:$res)>,
 Arguments<(ins I32:$index,
@@ -262,7 +270,96 @@ def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16">
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8">;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
 
+//===---------------------------------------------------------------------===//
+// Operations on raw buffer resources (stride of 0, bounds checks either off or in
+// raw buffer mode).
+//===---------------------------------------------------------------------===//
 
+def ROCDLBufferRsrc : LLVM_OpaquePointerInAddressSpace<8>;
+
+def ROCDL_MakeBufferRsrcOp :
+  ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
+  Arguments<(ins LLVM_AnyPointer:$base,
+                 I16:$stride,
+                 I32:$numRecords,
+                 I32:$flags)> {
+  let results = (outs ROCDLBufferRsrc:$res);
+  let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
+}
+
+def ROCDL_RawPtrBufferLoadOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load", [0], [], [], 1, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRes()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferStoreOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.store", [], [0], [], 0, 0, 1> {
+  dag args = (ins LLVM_Type:$vdata,
+                  Arg<ROCDLBufferRsrc, "", [MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+
+}
+
+def ROCDL_RawPtrBufferAtomicCmpSwap :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic.cmpswap",
+    [0], [], [AllTypesMatch<["res", "src", "cmp"]>], 1, 0, 1> {
+  dag args = (ins LLVM_Type:$src,
+                  LLVM_Type:$cmp,
+                  Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+class ROCDL_RawPtrBufferAtomicNoRet<string op> :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic." # op, [], [0], [], 0, 0, 1> {
+  dag args = (ins LLVM_Type:$vdata,
+                  Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
+                  I32:$offset,
+                  I32:$soffset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferAtomicFmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"fmax">;
+def ROCDL_RawPtrBufferAtomicSmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"smax">;
+def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicNoRet<"umin">;
+// Note: not supported on all architectures
+def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
+
+/// LEGACY BUFFER OPERATIONS. DO NOT USE IN NEW CODE. KEPT FOR IR COMPATIBILITY.
 //===---------------------------------------------------------------------===//
 // Vector buffer load/store intrinsics
 
@@ -428,6 +525,85 @@ def ROCDL_RawBufferAtomicUMinOp :
   let hasCustomAssemblyFormat = 1;
 }
 
+//===---------------------------------------------------------------------===//
+// 8-bit float intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtF32Bf8Op :
+    ROCDL_IntrOp<"cvt.f32.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$srcA, I32:$byteSel)> {
+  let summary = "Convert bf8 to f32";
+  let description = [{
+    Convert 8-bit bf8 value from the `byteSel`th bit of `srcA` to fp32.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtF32Fp8Op :
+    ROCDL_IntrOp<"cvt.f32.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$srcA, I32:$byteSel)> {
+  let summary = "Convert fp8 to f32";
+  let description = [{
+    Convert 8-bit fp8 value from the `byteSel`th bit of `srcA` to fp32.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtPkBf8F32Op :
+    ROCDL_IntrOp<"cvt.pk.bf8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1:$wordSel)> {
+  let summary = "Convert two f32's to bf8";
+  let description = [{
+    Convert `srcA` and `srcB` to bf8 and store into the low/high word of
+    `old`, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtPkFp8F32Op :
+    ROCDL_IntrOp<"cvt.pk.fp8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB, I32:$old, I1:$wordSel)> {
+  let summary = "Convert two f32's to fp8";
+  let description = [{
+    Convert `srcA` and `srcB` to fp8 and store into the low/high word of
+    `old`, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtSrBf8F32Op :
+    ROCDL_IntrOp<"cvt.sr.bf8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32:$byteSel)> {
+  let summary = "Convert f32 to bf8, stochiastic rounding";
+  let description = [{
+    Convert `srcA` to bf8, adding the rounding factor from `srcB`,
+    and store into the `byteSel`th byte of `old`, preserving the others.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtSrFp8F32Op :
+    ROCDL_IntrOp<"cvt.sr.fp8.f32", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, I32:$srcB, I32:$old, I32:$byteSel)> {
+  let summary = "Convert f32 to fp8, stochiastic rounding";
+  let description = [{
+    Convert `srcA` to fp8, adding the rounding factor from `srcB`,
+    and store into the `byteSel`th byte of `old`, preserving the others.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
@@ -515,5 +691,4 @@ def ROCDL_TargettAttr :
     }
   }];
 }
-
 #endif // ROCDLIR_OPS

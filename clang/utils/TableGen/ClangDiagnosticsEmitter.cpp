@@ -132,11 +132,11 @@ namespace {
     llvm::StringRef GroupName;
     std::vector<const Record*> DiagsInGroup;
     std::vector<std::string> SubGroups;
-    unsigned IDNo;
+    unsigned IDNo = 0;
 
     llvm::SmallVector<const Record *, 1> Defs;
 
-    GroupInfo() : IDNo(0) {}
+    GroupInfo() = default;
   };
 } // end anonymous namespace.
 

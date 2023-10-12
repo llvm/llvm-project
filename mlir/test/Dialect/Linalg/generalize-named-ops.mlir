@@ -560,5 +560,5 @@ func.func @generalize_max(%lhs: memref<7x14x21xf32>, %rhs: memref<7x14x21xf32>,
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32, %[[BBARG2:.+]]: f32)
-// CHECK-NEXT:      %[[max:.+]] = arith.maxf %[[BBARG0]], %[[BBARG1]] : f32
+// CHECK-NEXT:      %[[max:.+]] = arith.maximumf %[[BBARG0]], %[[BBARG1]] : f32
 // CHECK-NEXT:      linalg.yield %[[max]] : f32

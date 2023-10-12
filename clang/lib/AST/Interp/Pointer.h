@@ -78,6 +78,15 @@ public:
   void operator=(const Pointer &P);
   void operator=(Pointer &&P);
 
+  /// Equality operators are just for tests.
+  bool operator==(const Pointer &P) const {
+    return Pointee == P.Pointee && Base == P.Base && Offset == P.Offset;
+  }
+
+  bool operator!=(const Pointer &P) const {
+    return Pointee != P.Pointee || Base != P.Base || Offset != P.Offset;
+  }
+
   /// Converts the pointer to an APValue.
   APValue toAPValue() const;
 
@@ -92,7 +101,7 @@ public:
   APValue toRValue(const Context &Ctx) const;
 
   /// Offsets a pointer inside an array.
-  Pointer atIndex(unsigned Idx) const {
+  [[nodiscard]] Pointer atIndex(unsigned Idx) const {
     if (Base == RootPtrMark)
       return Pointer(Pointee, RootPtrMark, getDeclDesc()->getSize());
     unsigned Off = Idx * elemSize();
@@ -104,13 +113,21 @@ public:
   }
 
   /// Creates a pointer to a field.
-  Pointer atField(unsigned Off) const {
+  [[nodiscard]] Pointer atField(unsigned Off) const {
     unsigned Field = Offset + Off;
     return Pointer(Pointee, Field, Field);
   }
 
+  /// Subtract the given offset from the current Base and Offset
+  /// of the pointer.
+  [[nodiscard]]  Pointer atFieldSub(unsigned Off) const {
+    assert(Offset >= Off);
+    unsigned O = Offset - Off;
+    return Pointer(Pointee, O, O);
+  }
+
   /// Restricts the scope of an array element pointer.
-  Pointer narrow() const {
+  [[nodiscard]] Pointer narrow() const {
     // Null pointers cannot be narrowed.
     if (isZero() || isUnknownSizeArray())
       return *this;
@@ -146,7 +163,7 @@ public:
   }
 
   /// Expands a pointer to the containing array, undoing narrowing.
-  Pointer expand() const {
+  [[nodiscard]] Pointer expand() const {
     if (isElementPastEnd()) {
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
@@ -185,7 +202,7 @@ public:
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns a pointer to the object of which this pointer is a field.
-  Pointer getBase() const {
+  [[nodiscard]] Pointer getBase() const {
     if (Base == RootPtrMark) {
       assert(Offset == PastEndMark && "cannot get base of a block");
       return Pointer(Pointee, Base, 0);
@@ -195,7 +212,7 @@ public:
     return Pointer(Pointee, NewBase, NewBase);
   }
   /// Returns the parent array.
-  Pointer getArray() const {
+  [[nodiscard]] Pointer getArray() const {
     if (Base == RootPtrMark) {
       assert(Offset != 0 && Offset != PastEndMark && "not an array element");
       return Pointer(Pointee, Base, 0);
@@ -212,9 +229,13 @@ public:
   }
 
   /// Returns the type of the innermost field.
-  QualType getType() const { return getFieldDesc()->getType(); }
+  QualType getType() const {
+    if (inPrimitiveArray() && Offset != Base)
+      return getFieldDesc()->getType()->getAsArrayTypeUnsafe()->getElementType();
+    return getFieldDesc()->getType();
+  }
 
-  Pointer getDeclPtr() const { return Pointer(Pointee); }
+  [[nodiscard]] Pointer getDeclPtr() const { return Pointer(Pointee); }
 
   /// Returns the element size of the innermost field.
   size_t elemSize() const {
@@ -264,7 +285,8 @@ public:
   const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
   /// Returns the element record type, if this is a non-primive array.
   const Record *getElemRecord() const {
-    return getFieldDesc()->ElemDesc->ElemRecord;
+    const Descriptor *ElemDesc = getFieldDesc()->ElemDesc;
+    return ElemDesc ? ElemDesc->ElemRecord : nullptr;
   }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
@@ -314,6 +336,11 @@ public:
   int64_t getIndex() const {
     if (isElementPastEnd())
       return 1;
+
+    // narrow()ed element in a composite array.
+    if (Base > 0 && Base == Offset)
+      return 0;
+
     if (auto ElemSize = elemSize())
       return getOffset() / ElemSize;
     return 0;
@@ -349,6 +376,19 @@ public:
   void activate() const;
   /// Deactivates an entire strurcutre.
   void deactivate() const;
+
+  /// Compare two pointers.
+  ComparisonCategoryResult compare(const Pointer &Other) const {
+    if (!hasSameBase(*this, Other))
+      return ComparisonCategoryResult::Unordered;
+
+    if (Offset < Other.Offset)
+      return ComparisonCategoryResult::Less;
+    else if (Offset > Other.Offset)
+      return ComparisonCategoryResult::Greater;
+
+    return ComparisonCategoryResult::Equal;
+  }
 
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);

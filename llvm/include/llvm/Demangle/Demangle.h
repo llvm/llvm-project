@@ -67,7 +67,8 @@ char *dlangDemangle(std::string_view MangledName);
 /// demangling occurred.
 std::string demangle(std::string_view MangledName);
 
-bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result);
+bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result,
+                          bool CanHaveLeadingDot = true);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
@@ -102,7 +103,7 @@ struct ItaniumPartialDemangler {
   char *getFunctionParameters(char *Buf, size_t *N) const;
   char *getFunctionReturnType(char *Buf, size_t *N) const;
 
-  /// If this function has any any cv or reference qualifiers. These imply that
+  /// If this function has any cv or reference qualifiers. These imply that
   /// the function is a non-static member function.
   bool hasFunctionQualifiers() const;
 

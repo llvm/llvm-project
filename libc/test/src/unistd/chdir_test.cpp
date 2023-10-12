@@ -20,27 +20,27 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
   // without changing the directory to make sure it exists. Next, we change
   // directory and open the same file to make sure that the "chdir" operation
   // succeeded.
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_DIR = "testdata";
   constexpr const char *TEST_FILE = "testdata/chdir.test";
   constexpr const char *TEST_FILE_BASE = "chdir.test";
   libc_errno = 0;
 
-  int fd = __llvm_libc::open(TEST_FILE, O_PATH);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_PATH);
   ASSERT_GT(fd, 0);
   ASSERT_EQ(libc_errno, 0);
-  ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
-  ASSERT_THAT(__llvm_libc::chdir(TEST_DIR), Succeeds(0));
-  fd = __llvm_libc::open(TEST_FILE_BASE, O_PATH);
+  ASSERT_THAT(LIBC_NAMESPACE::chdir(TEST_DIR), Succeeds(0));
+  fd = LIBC_NAMESPACE::open(TEST_FILE_BASE, O_PATH);
   ASSERT_GT(fd, 0);
   ASSERT_EQ(libc_errno, 0);
-  ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
 TEST(LlvmLibcChdirTest, ChangeToNonExistentDir) {
   libc_errno = 0;
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_THAT(__llvm_libc::chdir("non-existent-dir"), Fails(ENOENT));
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  ASSERT_THAT(LIBC_NAMESPACE::chdir("non-existent-dir"), Fails(ENOENT));
   libc_errno = 0;
 }

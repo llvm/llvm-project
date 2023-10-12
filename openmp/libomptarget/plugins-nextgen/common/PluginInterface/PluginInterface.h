@@ -611,7 +611,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit();
+  Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table.
@@ -781,6 +781,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
+  /// Get the total amount of hardware parallelism supported by the target
+  /// device. This is the total amount of warps or wavefronts that can be
+  /// resident on the device simultaneously.
+  virtual uint64_t getHardwareParallelism() const { return 0; }
+
   /// Get the RPC server running on this device.
   RPCServerTy *getRPCServer() const { return RPCServer; }
 
@@ -941,6 +946,12 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
+  /// Get the plugin-specific device identifier offset.
+  int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
+
+  /// Set the plugin-specific device identifier offset.
+  void setDeviceIdStartIndex(int32_t Offset) { DeviceIdStartIndex = Offset; }
+
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
@@ -1004,6 +1015,11 @@ protected:
 private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
+
+  /// Index offset, which when added to a DeviceId, will yield a unique
+  /// user-observable device identifier. This is especially important when
+  /// DeviceIds of multiple plugins / RTLs need to be distinguishable.
+  int32_t DeviceIdStartIndex = 0;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
@@ -1207,7 +1223,7 @@ public:
   }
 
   /// Get a resource from the pool or create new ones. If the function
-  /// succeeeds, the handle to the resource is saved in \p Handle.
+  /// succeeds, the handle to the resource is saved in \p Handle.
   virtual Error getResource(ResourceHandleTy &Handle) {
     // Get a resource with an empty resource processor.
     return getResourcesImpl(1, &Handle,
@@ -1215,7 +1231,7 @@ public:
   }
 
   /// Get multiple resources from the pool or create new ones. If the function
-  /// succeeeds, the handles to the resources are saved in \p Handles.
+  /// succeeds, the handles to the resources are saved in \p Handles.
   virtual Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
     // Get resources with an empty resource processor.
     return getResourcesImpl(Num, Handles,
@@ -1231,7 +1247,7 @@ public:
 
 protected:
   /// Get multiple resources from the pool or create new ones. If the function
-  /// succeeeds, the handles to the resources are saved in \p Handles. Also
+  /// succeeds, the handles to the resources are saved in \p Handles. Also
   /// process each of the obtained resources with \p Processor.
   template <typename FuncTy>
   Error getResourcesImpl(uint32_t Num, ResourceHandleTy *Handles,

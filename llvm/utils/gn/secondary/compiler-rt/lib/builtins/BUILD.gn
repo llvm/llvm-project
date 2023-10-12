@@ -321,10 +321,7 @@ static_library("builtins") {
       "i386/umoddi3.S",
     ]
     if (current_os == "win") {
-      sources += [
-        "i386/chkstk.S",
-        "i386/chkstk2.S",
-      ]
+      sources += [ "i386/chkstk.S" ]
     }
   } else if (current_cpu == "x64") {
     sources -= [
@@ -344,10 +341,7 @@ static_library("builtins") {
       "x86_64/floatundixf.S",
     ]
     if (current_os == "win") {
-      sources += [
-        "x86_64/chkstk.S",
-        "x86_64/chkstk2.S",
-      ]
+      sources += [ "x86_64/chkstk.S" ]
     }
   }
 
@@ -479,6 +473,8 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "aarch64/fp_mode.c",
+      "aarch64/sme-abi-init.c",
+      "aarch64/sme-abi.S",
       "cpu_model.c",
     ]
     if (current_os == "mingw") {

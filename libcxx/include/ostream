@@ -1074,10 +1074,9 @@ struct __is_ostreamable<_Stream, _Tp, decltype(
     std::declval<_Stream>() << std::declval<_Tp>(), void()
 )> : true_type { };
 
-template <class _Stream, class _Tp, class = typename enable_if<
-    _And<is_base_of<ios_base, _Stream>,
-         __is_ostreamable<_Stream&, const _Tp&> >::value
->::type>
+template <class _Stream,
+          class _Tp,
+          __enable_if_t<_And<is_base_of<ios_base, _Stream>, __is_ostreamable<_Stream&, const _Tp&> >::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
 _Stream&& operator<<(_Stream&& __os, const _Tp& __x)
 {

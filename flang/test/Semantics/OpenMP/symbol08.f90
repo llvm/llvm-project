@@ -67,7 +67,7 @@ subroutine test_pardo
     do j=6,10
    !REF: /test_pardo/a
    a(1,1,1) = 0.
-   !DEF: /test_pardo/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_pardo/OtherConstruct1/k (OmpPrivate) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_pardo/a
     !REF: /test_pardo/OtherConstruct1/k
@@ -91,7 +91,7 @@ subroutine test_taskloop
 !$omp taskloop  private(j)
  !DEF: /test_taskloop/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate) HostAssoc INTEGER(4)
   !REF: /test_taskloop/OtherConstruct1/i
   do j=1,i
    !REF: /test_taskloop/a
@@ -106,8 +106,8 @@ end subroutine test_taskloop
 ! Rule a); OpenMP 4.5 Examples teams.2.f90
 ! TODO: reduction; data-mapping attributes
 !DEF: /dotprod (Subroutine) Subprogram
-!DEF: /dotprod/b ObjectEntity REAL(4)
-!DEF: /dotprod/c ObjectEntity REAL(4)
+!DEF: /dotprod/b (OmpMapTo) ObjectEntity REAL(4)
+!DEF: /dotprod/c (OmpMapTo) ObjectEntity REAL(4)
 !DEF: /dotprod/n ObjectEntity INTEGER(4)
 !DEF: /dotprod/block_size ObjectEntity INTEGER(4)
 !DEF: /dotprod/num_teams ObjectEntity INTEGER(4)
@@ -119,7 +119,7 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
  !REF: /dotprod/b
  !REF: /dotprod/n
  !REF: /dotprod/c
- !DEF: /dotprod/sum ObjectEntity REAL(4)
+ !DEF: /dotprod/sum (OmpMapToFrom) ObjectEntity REAL(4)
  real b(n), c(n), sum
  !REF: /dotprod/block_size
  !REF: /dotprod/num_teams

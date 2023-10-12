@@ -233,7 +233,7 @@ public:
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
 
-  /// Test whether this block is used as as something other than the target
+  /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
@@ -792,6 +792,15 @@ public:
   MachineBasicBlock *getSingleSuccessor() {
     return const_cast<MachineBasicBlock *>(
         static_cast<const MachineBasicBlock *>(this)->getSingleSuccessor());
+  }
+
+  /// Return the predecessor of this block if it has a single predecessor.
+  /// Otherwise return a null pointer.
+  ///
+  const MachineBasicBlock *getSinglePredecessor() const;
+  MachineBasicBlock *getSinglePredecessor() {
+    return const_cast<MachineBasicBlock *>(
+        static_cast<const MachineBasicBlock *>(this)->getSinglePredecessor());
   }
 
   /// Return the fallthrough block if the block can implicitly

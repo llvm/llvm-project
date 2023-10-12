@@ -17,15 +17,15 @@ define double @nonstreaming_caller_streaming_callee(double %x) nounwind noinline
 ; CHECK-FISEL-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-FISEL-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-FISEL-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-FISEL-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-FISEL-NEXT:    str d0, [sp] // 8-byte Folded Spill
 ; CHECK-FISEL-NEXT:    smstart sm
-; CHECK-FISEL-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-FISEL-NEXT:    ldr d0, [sp] // 8-byte Folded Reload
 ; CHECK-FISEL-NEXT:    bl streaming_callee
-; CHECK-FISEL-NEXT:    str d0, [sp, #88] // 8-byte Folded Spill
+; CHECK-FISEL-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-FISEL-NEXT:    smstop sm
 ; CHECK-FISEL-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-FISEL-NEXT:    ldr d0, [x8, :lo12:.LCPI0_0]
-; CHECK-FISEL-NEXT:    ldr d1, [sp, #88] // 8-byte Folded Reload
+; CHECK-FISEL-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-FISEL-NEXT:    fadd d0, d1, d0
 ; CHECK-FISEL-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-FISEL-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
@@ -43,15 +43,15 @@ define double @nonstreaming_caller_streaming_callee(double %x) nounwind noinline
 ; CHECK-GISEL-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-GISEL-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-GISEL-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-GISEL-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-GISEL-NEXT:    str d0, [sp] // 8-byte Folded Spill
 ; CHECK-GISEL-NEXT:    smstart sm
-; CHECK-GISEL-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-GISEL-NEXT:    ldr d0, [sp] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    bl streaming_callee
-; CHECK-GISEL-NEXT:    str d0, [sp, #88] // 8-byte Folded Spill
+; CHECK-GISEL-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-GISEL-NEXT:    smstop sm
 ; CHECK-GISEL-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-GISEL-NEXT:    fmov d0, x8
-; CHECK-GISEL-NEXT:    ldr d1, [sp, #88] // 8-byte Folded Reload
+; CHECK-GISEL-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    fadd d0, d1, d0
 ; CHECK-GISEL-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-GISEL-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
@@ -76,15 +76,15 @@ define double @streaming_caller_nonstreaming_callee(double %x) nounwind noinline
 ; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str d0, [sp] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr d0, [sp] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl normal_callee
-; CHECK-COMMON-NEXT:    str d0, [sp, #88] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d0, x8
-; CHECK-COMMON-NEXT:    ldr d1, [sp, #88] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    fadd d0, d1, d0
 ; CHECK-COMMON-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
@@ -102,32 +102,32 @@ entry:
 define double @locally_streaming_caller_normal_callee(double %x) nounwind noinline optnone "aarch64_pstate_sm_body" {
 ; CHECK-COMMON-LABEL: locally_streaming_caller_normal_callee:
 ; CHECK-COMMON:       // %bb.0:
-; CHECK-COMMON-NEXT:    sub sp, sp, #96
-; CHECK-COMMON-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    str d0, [sp, #88] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    sub sp, sp, #112
+; CHECK-COMMON-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str d0, [sp, #24] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldr d0, [sp, #88] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr d0, [sp, #24] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl normal_callee
-; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str d0, [sp, #16] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d0, x8
-; CHECK-COMMON-NEXT:    ldr d1, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr d1, [sp, #16] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    fadd d0, d1, d0
-; CHECK-COMMON-NEXT:    str d0, [sp] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldr d0, [sp] // 8-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    add sp, sp, #96
+; CHECK-COMMON-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    add sp, sp, #112
 ; CHECK-COMMON-NEXT:    ret
   %call = call double  @normal_callee(double %x);
   %add = fadd double %call, 4.200000e+01
@@ -220,6 +220,8 @@ define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline o
 ; CHECK-COMMON-NEXT:    msub x8, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x8
 ; CHECK-COMMON-NEXT:    stur x8, [x29, #-16]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-COMMON-NEXT:    cbz x8, .LBB6_2
 ; CHECK-COMMON-NEXT:    b .LBB6_1
@@ -229,6 +231,7 @@ define double  @za_new_caller_to_za_shared_callee(double %x) nounwind noinline o
 ; CHECK-COMMON-NEXT:    b .LBB6_2
 ; CHECK-COMMON-NEXT:  .LBB6_2: // %entry
 ; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    zero {za}
 ; CHECK-COMMON-NEXT:    bl za_shared_callee
 ; CHECK-COMMON-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-COMMON-NEXT:    fmov d1, x8
@@ -250,11 +253,12 @@ define double  @za_shared_caller_to_za_none_callee(double %x) nounwind noinline 
 ; CHECK-COMMON-NEXT:    mov x29, sp
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
 ; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    subs x9, x9, x8
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-COMMON-NEXT:    sub x8, x29, #16
 ; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x8
@@ -290,13 +294,14 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwi
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
 ; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
-; CHECK-COMMON-NEXT:    sub x9, x9, x8
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
+; CHECK-COMMON-NEXT:    sub x10, x29, #16
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sub x9, x29, #16
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
@@ -351,13 +356,14 @@ define double @frem_call_za(double %a, double %b) "aarch64_pstate_za_shared" nou
 ; CHECK-COMMON-NEXT:    sub sp, sp, #16
 ; CHECK-COMMON-NEXT:    rdsvl x8, #1
 ; CHECK-COMMON-NEXT:    mov x9, sp
-; CHECK-COMMON-NEXT:    mul x8, x8, x8
-; CHECK-COMMON-NEXT:    sub x9, x9, x8
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
 ; CHECK-COMMON-NEXT:    mov sp, x9
+; CHECK-COMMON-NEXT:    sub x10, x29, #16
+; CHECK-COMMON-NEXT:    stur wzr, [x29, #-4]
+; CHECK-COMMON-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-COMMON-NEXT:    stur x9, [x29, #-16]
-; CHECK-COMMON-NEXT:    sub x9, x29, #16
 ; CHECK-COMMON-NEXT:    sturh w8, [x29, #-8]
-; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-COMMON-NEXT:    bl fmod
 ; CHECK-COMMON-NEXT:    smstart za
 ; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
@@ -378,23 +384,25 @@ define double @frem_call_za(double %a, double %b) "aarch64_pstate_za_shared" nou
 define float @frem_call_sm(float %a, float %b) "aarch64_pstate_sm_enabled" nounwind {
 ; CHECK-COMMON-LABEL: frem_call_sm:
 ; CHECK-COMMON:       // %bb.0:
-; CHECK-COMMON-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-COMMON-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #72] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    sub sp, sp, #96
+; CHECK-COMMON-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #72] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl fmodf
-; CHECK-COMMON-NEXT:    str s0, [sp, #76] // 4-byte Folded Spill
+; CHECK-COMMON-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
-; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr s0, [sp, #76] // 4-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-COMMON-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    add sp, sp, #96
 ; CHECK-COMMON-NEXT:    ret
   %res = frem float %a, %b
   ret float %res
@@ -413,14 +421,14 @@ define float @frem_call_sm_compat(float %a, float %b) "aarch64_pstate_sm_compati
 ; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    bl __arm_sme_state
 ; CHECK-COMMON-NEXT:    and x19, x0, #0x1
-; CHECK-COMMON-NEXT:    tbz x19, #0, .LBB12_2
+; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_2
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    smstop sm
 ; CHECK-COMMON-NEXT:  .LBB12_2:
 ; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl fmodf
 ; CHECK-COMMON-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
-; CHECK-COMMON-NEXT:    tbz x19, #0, .LBB12_4
+; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_4
 ; CHECK-COMMON-NEXT:  // %bb.3:
 ; CHECK-COMMON-NEXT:    smstart sm
 ; CHECK-COMMON-NEXT:  .LBB12_4:

@@ -1677,7 +1677,6 @@
 {'is_defined': True, 'name': '__ZNSt3__16gslice6__initEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale14__install_ctorERKS0_PNS0_5facetEl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale2id5__getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__16locale2id6__initEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale2id9__next_idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale3allE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale4noneE', 'size': 0, 'type': 'OBJECT'}

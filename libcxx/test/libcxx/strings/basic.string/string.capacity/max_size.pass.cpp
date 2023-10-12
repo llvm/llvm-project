@@ -53,7 +53,8 @@ TEST_CONSTEXPR_CXX20 void half_size() {
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   std::wstring wstr;
-  assert(wstr.max_size() == std::numeric_limits<std::size_t>::max() / std::max<size_t>(2ul, sizeof(wchar_t)) - alignment);
+  assert(wstr.max_size() ==
+         std::numeric_limits<std::size_t>::max() / std::max<size_t>(2ul, sizeof(wchar_t)) - alignment);
 #endif
 
   std::u16string u16str;
@@ -63,44 +64,45 @@ TEST_CONSTEXPR_CXX20 void half_size() {
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
-
 #if _LIBCPP_ABI_VERSION == 1
 
-# if defined(__x86_64__) || defined(__i386__)
+#  if defined(__x86_64__) || defined(__i386__)
   full_size();
-# elif defined(__APPLE__) && defined(__aarch64__)
+#  elif defined(__APPLE__) && defined(__aarch64__)
   half_size();
-# elif defined(__arm__) || defined(__aarch64__)
-#   ifdef __BIG_ENDIAN__
+#  elif defined(__arm__) || defined(__aarch64__)
+#    ifdef __BIG_ENDIAN__
   half_size();
-#   else
+#    else
   full_size();
-#   endif
-# elif defined(__powerpc__) || defined(__powerpc64__)
-#   ifdef __BIG_ENDIAN__
+#    endif
+#  elif defined(__powerpc__) || defined(__powerpc64__)
+#    ifdef __BIG_ENDIAN__
   half_size();
-#   else
+#    else
   full_size();
-#   endif
-# elif defined(__sparc64__)
+#    endif
+#  elif defined(__sparc64__)
   half_size();
-# elif defined(_WIN32)
+#  elif defined(__riscv)
   full_size();
-# else
-#   error "Your target system seems to be unsupported."
-# endif
+#  elif defined(_WIN32)
+  full_size();
+#  else
+#    error "Your target system seems to be unsupported."
+#  endif
 
 #else
 
-# if defined(__arm__) || defined(__aarch64__)
-#   ifdef __BIG_ENDIAN__
+#  if defined(__arm__) || defined(__aarch64__)
+#    ifdef __BIG_ENDIAN__
   full_size();
-#   else
+#    else
   half_size();
-#   endif
-# else
+#    endif
+#  else
   half_size();
-# endif
+#  endif
 
 #endif
 

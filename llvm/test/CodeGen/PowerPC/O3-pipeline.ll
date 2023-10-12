@@ -71,6 +71,9 @@
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
+; CHECK-NEXT:       PPC Merge String Pool
+; CHECK-NEXT:       FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Prepare loop for ppc preferred instruction forms
@@ -124,6 +127,8 @@
 ; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       PowerPC Reduce CR logical Operation
+; CHECK-NEXT:       Remove unreachable machine basic blocks
+; CHECK-NEXT:       Live Variable Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction

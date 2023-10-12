@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, __llvm_libc::nearbyintf, ::nearbyintf,
+SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, LIBC_NAMESPACE::nearbyintf, ::nearbyintf,
                                 "nearbyintf_diff.log")

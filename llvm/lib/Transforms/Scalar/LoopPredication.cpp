@@ -282,7 +282,7 @@ class LoopPredication {
   Instruction *findInsertPt(Instruction *User, ArrayRef<Value*> Ops);
   /// Same as above, *except* that this uses the SCEV definition of invariant
   /// which is that an expression *can be made* invariant via SCEVExpander.
-  /// Thus, this version is only suitable for finding an insert point to be be
+  /// Thus, this version is only suitable for finding an insert point to be
   /// passed to SCEVExpander!
   Instruction *findInsertPt(const SCEVExpander &Expander, Instruction *User,
                             ArrayRef<const SCEV *> Ops);
@@ -967,6 +967,9 @@ bool LoopPredication::isLoopProfitableToPredicate() {
           Numerator += Weight;
         Denominator += Weight;
       }
+      // If all weights are zero act as if there was no profile data
+      if (Denominator == 0)
+        return BranchProbability::getBranchProbability(1, NumSucc);
       return BranchProbability::getBranchProbability(Numerator, Denominator);
     } else {
       assert(LatchBlock != ExitingBlock &&

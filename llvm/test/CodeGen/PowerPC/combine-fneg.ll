@@ -5,12 +5,12 @@
 define <4 x double> @fneg_fdiv_splat(double %a0, <4 x double> %a1) {
 ; CHECK-LABEL: fneg_fdiv_splat:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxspltd 0, 1, 0
-; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NEXT:    lxvd2x 2, 0, 3
 ; CHECK-NEXT:    xvredp 1, 0
+; CHECK-NEXT:    lxvd2x 2, 0, 3
 ; CHECK-NEXT:    xxlor 3, 2, 2
 ; CHECK-NEXT:    xvmaddadp 3, 0, 1
 ; CHECK-NEXT:    xvnmsubadp 1, 1, 3

@@ -139,7 +139,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     if (Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-Bshareable");
+      CmdArgs.push_back("-shared");
     } else if (!Args.hasArg(options::OPT_r)) {
       Args.AddAllArgs(CmdArgs, options::OPT_pie);
       CmdArgs.push_back("-dynamic-linker");
@@ -216,6 +216,16 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("elf64ppc");
     break;
 
+  case llvm::Triple::riscv32:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf32lriscv");
+    break;
+
+  case llvm::Triple::riscv64:
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back("elf64lriscv");
+    break;
+
   case llvm::Triple::sparc:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf32_sparc");
@@ -230,11 +240,13 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
+  if (Triple.isRISCV())
+    CmdArgs.push_back("-X");
+
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
@@ -254,12 +266,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
-  Args.AddAllArgs(CmdArgs, options::OPT_s);
-  Args.AddAllArgs(CmdArgs, options::OPT_t);
-  Args.AddAllArgs(CmdArgs, options::OPT_Z_Flag);
-  Args.AddAllArgs(CmdArgs, options::OPT_r);
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_T_Group, options::OPT_s,
+                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
@@ -282,6 +291,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcv9:
   case llvm::Triple::x86:
@@ -360,7 +371,7 @@ NetBSD::NetBSD(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     // what all logic is needed to emulate the '=' prefix here.
     switch (Triple.getArch()) {
     case llvm::Triple::x86:
-      getFilePaths().push_back("=/usr/lib/i386");
+      getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/i386"));
       break;
     case llvm::Triple::arm:
     case llvm::Triple::armeb:
@@ -369,35 +380,35 @@ NetBSD::NetBSD(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       switch (Triple.getEnvironment()) {
       case llvm::Triple::EABI:
       case llvm::Triple::GNUEABI:
-        getFilePaths().push_back("=/usr/lib/eabi");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/eabi"));
         break;
       case llvm::Triple::EABIHF:
       case llvm::Triple::GNUEABIHF:
-        getFilePaths().push_back("=/usr/lib/eabihf");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/eabihf"));
         break;
       default:
-        getFilePaths().push_back("=/usr/lib/oabi");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/oabi"));
         break;
       }
       break;
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
       if (tools::mips::hasMipsAbiArg(Args, "o32"))
-        getFilePaths().push_back("=/usr/lib/o32");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/o32"));
       else if (tools::mips::hasMipsAbiArg(Args, "64"))
-        getFilePaths().push_back("=/usr/lib/64");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/64"));
       break;
     case llvm::Triple::ppc:
-      getFilePaths().push_back("=/usr/lib/powerpc");
+      getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/powerpc"));
       break;
     case llvm::Triple::sparc:
-      getFilePaths().push_back("=/usr/lib/sparc");
+      getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/sparc"));
       break;
     default:
       break;
     }
 
-    getFilePaths().push_back("=/usr/lib");
+    getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
   }
 }
 
@@ -418,6 +429,8 @@ ToolChain::CXXStdlibType NetBSD::GetDefaultCXXStdlibType() const {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcv9:
   case llvm::Triple::x86:
@@ -467,11 +480,11 @@ void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const std::string Candidates[] = {
     // directory relative to build tree
-    getDriver().Dir + "/../include/c++/v1",
+    concat(getDriver().Dir, "/../include/c++/v1"),
     // system install with full upstream path
-    getDriver().SysRoot + "/usr/include/c++/v1",
+    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
     // system install from src
-    getDriver().SysRoot + "/usr/include/c++",
+    concat(getDriver().SysRoot, "/usr/include/c++"),
   };
 
   for (const auto &IncludePath : Candidates) {
@@ -486,7 +499,7 @@ void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(getDriver().SysRoot + "/usr/include/g++", "", "",
+  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/g++"), "", "",
                            DriverArgs, CC1Args);
 }
 
@@ -539,7 +552,9 @@ void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
       getTriple().getArch() == llvm::Triple::aarch64 ||
       getTriple().getArch() == llvm::Triple::aarch64_be ||
       getTriple().getArch() == llvm::Triple::arm ||
-      getTriple().getArch() == llvm::Triple::armeb;
+      getTriple().getArch() == llvm::Triple::armeb ||
+      getTriple().getArch() == llvm::Triple::riscv32 ||
+      getTriple().getArch() == llvm::Triple::riscv64;
 
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, UseInitArrayDefault))

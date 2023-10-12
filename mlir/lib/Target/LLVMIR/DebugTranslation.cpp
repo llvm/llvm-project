@@ -42,8 +42,8 @@ DebugTranslation::DebugTranslation(Operation *module, llvm::Module &llvmModule)
     llvmModule.addModuleFlag(llvm::Module::Warning, debugVersionKey,
                              llvm::DEBUG_METADATA_VERSION);
 
-  if (auto targetTripleAttr =
-          module->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName())) {
+  if (auto targetTripleAttr = module->getDiscardableAttr(
+          LLVM::LLVMDialect::getTargetTripleAttrName())) {
     auto targetTriple =
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue());
     if (targetTriple.isKnownWindowsMSVCEnvironment()) {
@@ -84,7 +84,7 @@ llvm::DIType *DebugTranslation::translateImpl(DINullTypeAttr attr) {
 }
 
 llvm::MDString *DebugTranslation::getMDStringOrNull(StringAttr stringAttr) {
-  if (!stringAttr || stringAttr.getValue().empty())
+  if (!stringAttr || stringAttr.empty())
     return nullptr;
   return llvm::MDString::get(llvmCtx, stringAttr);
 }

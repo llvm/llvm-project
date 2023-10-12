@@ -1782,3 +1782,44 @@ define i64 @shl_31_sh3add(ptr %0, i32 signext %1) {
   %6 = load i64, ptr %5, align 8
   ret i64 %6
 }
+
+define i64 @pack_i64(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: pack_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: pack_i64:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a1, 32
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %shl = and i64 %a, 4294967295
+  %shl1 = shl i64 %b, 32
+  %or = or i64 %shl1, %shl
+  ret i64 %or
+}
+
+define i64 @pack_i64_2(i32 signext %a, i32 signext %b) nounwind {
+; RV64I-LABEL: pack_i64_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: pack_i64_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a1, 32
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %zexta = zext i32 %a to i64
+  %zextb = zext i32 %b to i64
+  %shl1 = shl i64 %zextb, 32
+  %or = or i64 %shl1, %zexta
+  ret i64 %or
+}

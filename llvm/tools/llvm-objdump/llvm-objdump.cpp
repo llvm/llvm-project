@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -177,6 +178,13 @@ public:
 
 #define DEBUG_TYPE "objdump"
 
+enum class ColorOutput {
+  Auto,
+  Enable,
+  Disable,
+  Invalid,
+};
+
 static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
@@ -189,6 +197,7 @@ bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
 static std::vector<std::string> DisassemblerOptions;
+static ColorOutput DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -527,6 +536,22 @@ static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
   OS << Name << "\t" << Val;
 }
 
+static void printBTFRelocation(formatted_raw_ostream &FOS, llvm::BTFParser &BTF,
+                               object::SectionedAddress Address,
+                               LiveVariablePrinter &LVP) {
+  const llvm::BTF::BPFFieldReloc *Reloc = BTF.findFieldReloc(Address);
+  if (!Reloc)
+    return;
+
+  SmallString<64> Val;
+  BTF.symbolize(Reloc, Val);
+  FOS << "\t\t";
+  if (LeadingAddr)
+    FOS << format("%016" PRIx64 ":  ", Address.Address + AdjustVMA);
+  FOS << "CO-RE " << Val;
+  LVP.printAfterOtherLine(FOS, true);
+}
+
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
@@ -758,12 +783,12 @@ public:
       OS << "\t<unknown>";
   }
 
-  void setInstructionEndianness(llvm::support::endianness Endianness) {
+  void setInstructionEndianness(llvm::endianness Endianness) {
     InstructionEndianness = Endianness;
   }
 
 private:
-  llvm::support::endianness InstructionEndianness = llvm::support::little;
+  llvm::endianness InstructionEndianness = llvm::endianness::little;
 };
 ARMPrettyPrinter ARMPrettyPrinterInst;
 
@@ -786,8 +811,8 @@ public:
       for (; Pos + 4 <= End; Pos += 4)
         OS << ' '
            << format_hex_no_prefix(
-                  llvm::support::endian::read<uint32_t>(Bytes.data() + Pos,
-                                                        llvm::support::little),
+                  llvm::support::endian::read<uint32_t>(
+                      Bytes.data() + Pos, llvm::endianness::little),
                   8);
       if (Pos < End) {
         OS << ' ';
@@ -900,6 +925,19 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   InstPrinter->setPrintBranchImmAsAddress(true);
   InstPrinter->setSymbolizeOperands(SymbolizeOperands);
   InstPrinter->setMCInstrAnalysis(InstrAnalysis.get());
+
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    InstPrinter->setUseColor(true);
+    break;
+  case ColorOutput::Auto:
+    InstPrinter->setUseColor(outs().has_colors());
+    break;
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    InstPrinter->setUseColor(false);
+    break;
+  };
 }
 
 DisassemblerTarget::DisassemblerTarget(DisassemblerTarget &Other,
@@ -1129,7 +1167,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
                                const MCSubtargetInfo &STI, raw_ostream &OS) {
-  support::endianness Endian =
+  llvm::endianness Endian =
       Obj.isLittleEndian() ? support::little : support::big;
   size_t Start = OS.tell();
   OS << format("%8" PRIx64 ": ", SectionAddr + Index);
@@ -1605,6 +1643,16 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   if (SymbolizeOperands && !Obj.isRelocatableObject())
     ReadBBAddrMap();
 
+  std::optional<llvm::BTFParser> BTF;
+  if (InlineRelocs && BTFParser::hasBTFSections(Obj)) {
+    BTF.emplace();
+    BTFParser::ParseOptions Opts = {};
+    Opts.LoadTypes = true;
+    Opts.LoadRelocs = true;
+    if (Error E = BTF->parse(Obj, Opts))
+      WithColor::defaultErrorHandler(std::move(E));
+  }
+
   for (const SectionRef &Section : ToolSectionFilter(Obj)) {
     if (FilterSections.empty() && !DisassembleAll &&
         (!Section.isText() || Section.isVirtual()))
@@ -1900,6 +1948,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       formatted_raw_ostream FOS(outs());
 
+      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
+      // are (incorrectly) written directly to the unbuffered raw_ostream
+      // wrapped by the formatted_raw_ostream.
+      if (DisassemblyColor == ColorOutput::Enable ||
+          DisassemblyColor == ColorOutput::Auto)
+        FOS.SetUnbuffered();
+
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
       if (SymbolizeOperands) {
@@ -2135,6 +2190,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                                 *DT->SubtargetInfo, CommentStream.str(), LVP);
         Comments.clear();
 
+        if (BTF)
+          printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
+
         // Hexagon does this in pretty printer
         if (Obj.getArch() != Triple::hexagon) {
           // Print relocation for instruction and data.
@@ -2231,9 +2289,9 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
     if (Elf32BE && (Elf32BE->isRelocatableObject() ||
                     !(Elf32BE->getPlatformFlags() & ELF::EF_ARM_BE8))) {
       Features.AddFeature("+big-endian-instructions");
-      ARMPrettyPrinterInst.setInstructionEndianness(llvm::support::big);
+      ARMPrettyPrinterInst.setInstructionEndianness(llvm::endianness::big);
     } else {
-      ARMPrettyPrinterInst.setInstructionEndianness(llvm::support::little);
+      ARMPrettyPrinterInst.setInstructionEndianness(llvm::endianness::little);
     }
   }
 
@@ -2527,6 +2585,9 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
     return;
   }
   uint64_t Address = *AddrOrErr;
+  section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
+  if (SecI != O.section_end() && shouldAdjustVA(*SecI))
+    Address += AdjustVMA;
   if ((Address < StartAddress) || (Address > StopAddress))
     return;
   SymbolRef::Type Type =
@@ -3193,6 +3254,16 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     if (DbgVariables == DVInvalid)
       invalidArgValue(A);
   }
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_disassembler_color_EQ)) {
+    DisassemblyColor = StringSwitch<ColorOutput>(A->getValue())
+                           .Case("on", ColorOutput::Enable)
+                           .Case("off", ColorOutput::Disable)
+                           .Case("terminal", ColorOutput::Auto)
+                           .Default(ColorOutput::Invalid);
+    if (DisassemblyColor == ColorOutput::Invalid)
+      invalidArgValue(A);
+  }
+
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
 
   parseMachOOptions(InputArgs);

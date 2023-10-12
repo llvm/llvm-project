@@ -7,7 +7,15 @@
  *===-----------------------------------------------------------------------===
  */
 
+#if !defined(NULL) || !__has_feature(modules)
+
+/* linux/stddef.h will define NULL to 0. glibc (and other) headers then define
+ * __need_NULL and rely on stddef.h to redefine NULL to the correct value again.
+ * Modules don't support redefining macros like that, but support that pattern
+ * in the non-modules case.
+ */
 #undef NULL
+
 #ifdef __cplusplus
 #if !defined(__MINGW32__) && !defined(_MSC_VER)
 #define NULL __null
@@ -15,9 +23,7 @@
 #define NULL 0
 #endif
 #else
-// Don't add any whitespaces in ((void*)0) below!
-// musl (https://www.musl-libc.org/) redefines `NULL` as such and redefinition
-// with a different expression, even in terms of a single whitespace, causes a
-// warning.
 #define NULL ((void*)0)
+#endif
+
 #endif

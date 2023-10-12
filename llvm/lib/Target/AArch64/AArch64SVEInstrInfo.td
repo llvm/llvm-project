@@ -2477,7 +2477,7 @@ let Predicates = [HasSVEorSME] in {
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
-  // type, and and reloaded as another type.
+  // type, and reloaded as another type.
   let Predicates = [IsLE] in {
     def : Pat<(nxv16i8 (bitconvert (nxv8i16 ZPR:$src))), (nxv16i8 ZPR:$src)>;
     def : Pat<(nxv16i8 (bitconvert (nxv4i32 ZPR:$src))), (nxv16i8 ZPR:$src)>;
@@ -2544,8 +2544,8 @@ let Predicates = [HasSVEorSME] in {
     def : Pat<(nxv4f32 (bitconvert (nxv8bf16 ZPR:$src))), (nxv4f32 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv8bf16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
 
-    def : Pat<(nxv16i1 (bitconvert (aarch64svcount PPR:$src))), (nxv16i1 PPR:$src)>;
-    def : Pat<(aarch64svcount (bitconvert (nxv16i1 PPR:$src))), (aarch64svcount PPR:$src)>;
+    def : Pat<(nxv16i1 (bitconvert (aarch64svcount PNR:$src))), (nxv16i1 PPR:$src)>;
+    def : Pat<(aarch64svcount (bitconvert (nxv16i1 PPR:$src))), (aarch64svcount PNR:$src)>;
   }
 
   // These allow casting from/to unpacked predicate types.
@@ -3852,9 +3852,9 @@ defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
 multiclass store_pn_x2<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
   def : Pat<(Store (Ty ZPR:$vec0), (Ty ZPR:$vec1),
-                   (aarch64svcount PPR:$PNg), GPR64:$base),
+                   (aarch64svcount PNR:$PNg), GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR2Mul2, Ty:$vec0, zsub0, Ty:$vec1, zsub1),
-                         PPR:$PNg, GPR64:$base, (i64 0))>;
+                         PNR:$PNg, GPR64:$base, (i64 0))>;
 }
 
 // Stores of 2 consecutive vectors
@@ -3878,10 +3878,10 @@ defm : store_pn_x2<nxv2f64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM>;
 multiclass store_pn_x4<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
   def : Pat<(Store (Ty ZPR:$vec0), (Ty ZPR:$vec1), (Ty ZPR:$vec2), (Ty ZPR:$vec3),
-                   (aarch64svcount PPR:$PNg), GPR64:$base),
+                   (aarch64svcount PNR:$PNg), GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR4Mul4, Ty:$vec0, zsub0, Ty:$vec1, zsub1,
                                                 Ty:$vec2, zsub2, Ty:$vec3, zsub3),
-                        PPR:$PNg, GPR64:$base, (i64 0))>;
+                        PNR:$PNg, GPR64:$base, (i64 0))>;
 }
 
 // Stores of 4 consecutive vectors
@@ -3923,19 +3923,19 @@ defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
 // Aliases for existing SVE instructions for which predicate-as-counter are
 // accepted as an operand to the instruction
 def : InstAlias<"ldr $Pt, [$Rn, $imm9, mul vl]",
-               (LDR_PXI PNRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
+               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
 def : InstAlias<"ldr $Pt, [$Rn]",
-               (LDR_PXI PNRAny:$Pt, GPR64sp:$Rn, 0), 0>;
+               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
 
 def : InstAlias<"str $Pt, [$Rn, $imm9, mul vl]",
-               (STR_PXI PNRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
+               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
 def : InstAlias<"str $Pt, [$Rn]",
-               (STR_PXI PNRAny:$Pt, GPR64sp:$Rn, 0), 0>;
+               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
 
 def : InstAlias<"mov $Pd, $Pn",
-               (ORR_PPzPP PNR8:$Pd, PNR8:$Pn, PNR8:$Pn, PNR8:$Pn), 0>;
+               (ORR_PPzPP PNRasPPR8:$Pd, PNRasPPR8:$Pn, PNRasPPR8:$Pn, PNRasPPR8:$Pn), 0>;
 
-def : InstAlias<"pfalse\t$Pd", (PFALSE PNR8:$Pd), 0>;
+def : InstAlias<"pfalse\t$Pd", (PFALSE PNRasPPR8:$Pd), 0>;
 
 } // End HasSVE2p1_or_HasSME2
 

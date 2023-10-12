@@ -920,7 +920,7 @@ enum NodeType {
   FP_TO_BF16,
 
   /// Perform various unary floating-point operations inspired by libm. For
-  /// FPOWI, the result is undefined if if the integer operand doesn't fit into
+  /// FPOWI, the result is undefined if the integer operand doesn't fit into
   /// sizeof(int).
   FNEG,
   FABS,
@@ -943,6 +943,7 @@ enum NodeType {
   FLOG10,
   FEXP,
   FEXP2,
+  FEXP10,
   FCEIL,
   FTRUNC,
   FRINT,

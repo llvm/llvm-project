@@ -5800,7 +5800,7 @@ llvm/lib/CodeGen/MIRPrintingPass.cpp
 llvm/lib/CodeGen/MIRSampleProfile.cpp
 llvm/lib/CodeGen/MIRVRegNamerUtils.cpp
 llvm/lib/CodeGen/MIRYamlMapping.cpp
-llvm/lib/CodeGen/MLRegallocEvictAdvisor.cpp
+llvm/lib/CodeGen/MLRegAllocEvictAdvisor.cpp
 llvm/lib/CodeGen/MultiHazardRecognizer.cpp
 llvm/lib/CodeGen/NonRelocatableStringpool.cpp
 llvm/lib/CodeGen/ParallelCG.cpp

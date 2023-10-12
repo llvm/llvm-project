@@ -166,10 +166,10 @@ public:
         F_IsEHCleanupKind = 0x4,
         F_HasExitSwitch = 0x8,
       };
-      unsigned flags;
+      unsigned flags = 0;
 
     public:
-      Flags() : flags(0) {}
+      Flags() = default;
 
       /// isForEH - true if the current emission is for an EH cleanup.
       bool isForEHCleanup() const { return flags & F_IsForEH; }

@@ -397,6 +397,18 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
+  size_t posNoEVEX512 = FS.rfind("-evex512");
+  // Make sure we won't be cheated by "-avx512fp16".
+  size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
+                                                : FS.rfind("-avx512f,");
+  size_t posEVEX512 = FS.rfind("+evex512");
+  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
+
+  if (posAVX512F != StringRef::npos &&
+      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
+    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
+      ArchFS += ",+evex512";
+
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 

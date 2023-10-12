@@ -19,6 +19,8 @@ program openacc_cache_validity
   type(atype), dimension(10) :: ta
   real(8), dimension(N) :: a
 
+  do i = 1, N
+
   !$acc cache(a(i))
   !$acc cache(a(1:2,3:4))
   !$acc cache(a)
@@ -39,5 +41,10 @@ program openacc_cache_validity
 
   !ERROR: Only array element or subarray are allowed in CACHE directive
   !$acc cache(/i/)
+
+  end do
+
+  !ERROR: The CACHE directive must be inside a loop
+  !$acc cache(a)
 
 end program openacc_cache_validity

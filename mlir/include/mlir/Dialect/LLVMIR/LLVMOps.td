@@ -139,6 +139,7 @@ def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
   // Set the $predicate index to -1 to indicate there is no matching operand
   // and decrement the following indices.
   list<int> llvmArgIndices = [-1, 0, 1];
+  let hasFolder = 1;
 }
 
 // Other floating-point operations.
@@ -325,9 +326,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 }
 
 def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
-    [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
-  dag args = (ins Arg<LLVM_PointerTo<LLVM_LoadableType>, "", [MemRead]>:$addr,
+  dag args = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -398,10 +400,11 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
 }
 
 def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
-    [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
   dag args = (ins LLVM_LoadableType:$value,
-              Arg<LLVM_PointerTo<LLVM_LoadableType>,"",[MemWrite]>:$addr,
+              LLVM_PointerTo<LLVM_LoadableType>:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -539,7 +542,9 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       DeclareOpInterfaceMethods<CallOpInterface>,
                       DeclareOpInterfaceMethods<BranchWeightOpInterface>,
                       Terminator]> {
-  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+  let arguments = (ins
+                   OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+                   OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
@@ -549,21 +554,21 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [
                               AnySuccessor:$unwindDest);
 
   let builders = [
+    OpBuilder<(ins "LLVMFuncOp":$func,
+      "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
+      "Block*":$unwind, "ValueRange":$unwindOps)>,
     OpBuilder<(ins "TypeRange":$tys, "FlatSymbolRefAttr":$callee,
       "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
-      "Block*":$unwind, "ValueRange":$unwindOps),
-    [{
-      $_state.addAttribute("callee", callee);
-      build($_builder, $_state, tys, ops, normal, normalOps, unwind, unwindOps);
-    }]>,
-    OpBuilder<(ins "TypeRange":$tys, "ValueRange":$ops, "Block*":$normal,
-      "ValueRange":$normalOps, "Block*":$unwind, "ValueRange":$unwindOps),
-    [{
-      build($_builder, $_state, tys, /*callee=*/FlatSymbolRefAttr(), ops, normalOps,
-            unwindOps, nullptr, normal, unwind);
-    }]>];
+      "Block*":$unwind, "ValueRange":$unwindOps)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$ops, "Block*":$normal, "ValueRange":$normalOps,
+      "Block*":$unwind, "ValueRange":$unwindOps)>];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Returns the callee function type.
+    LLVMFunctionType getCalleeFunctionType();
+  }];
 }
 
 def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
@@ -578,9 +583,6 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Add a type attribute that carries the LLVM function type to support
-// indirect calls to variadic functions. The type attribute is necessary to
-// distinguish normal and variadic arguments.
 def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                     [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                      DeclareOpInterfaceMethods<CallOpInterface>,
@@ -596,10 +598,11 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
     The `call` instruction supports both direct and indirect calls. Direct calls
     start with a function name (`@`-prefixed) and indirect calls start with an
     SSA value (`%`-prefixed). The direct callee, if present, is stored as a
-    function attribute `callee`. The trailing type list contains the optional
-    indirect callee type and the MLIR function type, which differs from the
-    LLVM function type that uses a explicit void type to model functions that do
-    not return a value.
+    function attribute `callee`. If the callee is a variadic function, then the
+    `callee_type` attribute must carry the function type. The trailing type list
+    contains the optional indirect callee type and the MLIR function type, which
+    differs from the LLVM function type that uses a explicit void type to model
+    functions that do not return a value.
 
     Examples:
 
@@ -612,10 +615,17 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
 
     // Indirect call with an argument and without a result.
     llvm.call %1(%0) : !llvm.ptr, (f32) -> ()
+
+    // Direct variadic call.
+    llvm.call @printf(%0, %1) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i32) -> i32
+
+    // Indirect variadic call
+    llvm.call %1(%0) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
     ```
   }];
 
-  dag args = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+  dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$callee_type,
+                  OptionalAttr<FlatSymbolRefAttr>:$callee,
                   Variadic<LLVM_Type>:$callee_operands,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
@@ -625,14 +635,26 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
   let results = (outs Optional<LLVM_Type>:$result);
   let builders = [
     OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,
                    CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
-                   CArg<"ValueRange", "{}">:$args)>
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringAttr":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "FlatSymbolRefAttr":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "LLVMFunctionType":$calleeType, "StringRef":$callee,
+                   CArg<"ValueRange", "{}">:$args)>,
+    OpBuilder<(ins "Value":$callee, "ValueRange":$args)>
   ];
   let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// Returns the callee function type.
+    LLVMFunctionType getCalleeFunctionType();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1373,6 +1395,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 
   let arguments = (ins
     StrAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     TypeAttrOf<LLVM_FunctionType>:$function_type,
     DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
     UnitAttr:$dso_local,
@@ -1390,7 +1413,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
-    OptionalAttr<I64Attr>:$alignment
+    OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range
   );
 
   let regions = (region AnyRegion:$body);
@@ -1435,31 +1459,29 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
   let hasRegionVerifier = 1;
 }
 
-def LLVM_NullOp
-    : LLVM_Op<"mlir.null", [Pure]>,
-      LLVM_Builder<"$res = llvm::ConstantPointerNull::get("
-                   "    cast<llvm::PointerType>($_resultType));"> {
-  let summary = "Defines a value containing a null pointer to LLVM type.";
+def LLVM_NoneTokenOp
+    : LLVM_Op<"mlir.none", [Pure]> {
+  let summary = "Defines a value containing an empty token to LLVM type.";
   let description = [{
-    Unlike LLVM IR, MLIR does not have first-class null pointers. They must be
-    explicitly created as SSA values using `llvm.mlir.null`. This operation has
-    no operands or attributes, and returns a null value of a wrapped LLVM IR
+    Unlike LLVM IR, MLIR does not have first-class token values. They must be
+    explicitly created as SSA values using `llvm.mlir.none`. This operation has
+    no operands or attributes, and returns a none token value of a wrapped LLVM IR
     pointer type.
 
     Examples:
 
     ```mlir
-    // Null pointer to i8.
-    %0 = llvm.mlir.null : !llvm.ptr<i8>
-
-    // Null pointer to a function with signature void().
-    %1 = llvm.mlir.null : !llvm.ptr<func<void ()>>
+    %0 = llvm.mlir.none : !llvm.token
     ```
   }];
 
-  let results = (outs LLVM_AnyPointer:$res);
+  string llvmBuilder = [{
+    $res = llvm::ConstantTokenNone::get(builder.getContext());
+  }];
+
+  let results = (outs LLVM_TokenType:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "attr-dict `:` qualified(type($res))";
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,
@@ -1503,6 +1525,31 @@ def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure]>,
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_ZeroOp
+    : LLVM_Op<"mlir.zero", [Pure]>,
+      LLVM_Builder<"$res = llvm::Constant::getNullValue($_resultType);">
+{
+  let summary = "Creates a zero-initialized value of LLVM dialect type.";
+  let description = [{
+    Unlike LLVM IR, MLIR does not have first-class zero-initialized values.
+    Such values must be created as SSA values using `llvm.mlir.zero`. This
+    operation has no operands or attributes. It creates a zero-initialized
+    value of the specified LLVM IR dialect type.
+
+    Example:
+
+    ```mlir
+    // Create a zero-initialized value for a structure with a 32-bit integer
+    // followed by a float.
+    %0 = llvm.mlir.zero : !llvm.struct<(i32, f32)>
+    ```
+  }];
+  let results = (outs LLVM_Type:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 def LLVM_ConstantOp
@@ -1560,6 +1607,17 @@ def LLVM_ConstantOp
       build($_builder, $_state, value.getType(), value);
     }]>
   ];
+
+  let extraClassDeclaration = [{
+    /// Whether the constant op can be constructed with a particular value and
+    /// type.
+    static bool isBuildableWith(Attribute value, Type type);
+
+    /// Build the constant op with `value` and `type` if possible, otherwise
+    /// returns null.
+    static ConstantOp materialize(OpBuilder &builder, Attribute value,
+                                  Type type, Location loc);
+  }];
 
   let hasFolder = 1;
   let hasVerifier = 1;

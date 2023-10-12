@@ -3969,7 +3969,7 @@ struct ILPOrder {
       if (ScheduledTrees->test(SchedTreeA) != ScheduledTrees->test(SchedTreeB))
         return ScheduledTrees->test(SchedTreeB);
 
-      // Trees with shallower connections have have lower priority.
+      // Trees with shallower connections have lower priority.
       if (DFSResult->getSubtreeLevel(SchedTreeA)
           != DFSResult->getSubtreeLevel(SchedTreeB)) {
         return DFSResult->getSubtreeLevel(SchedTreeA)

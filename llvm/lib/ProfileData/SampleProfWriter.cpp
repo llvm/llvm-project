@@ -83,11 +83,9 @@ void DefaultFunctionPruningStrategy::Erase(size_t CurrentOutputSize) {
     NumToRemove = 1;
 
   assert(NumToRemove <= SortedFunctions.size());
-  llvm::for_each(
-      llvm::make_range(SortedFunctions.begin() + SortedFunctions.size() -
-                           NumToRemove,
-                       SortedFunctions.end()),
-      [&](const NameFunctionSamples &E) { ProfileMap.erase(E.first); });
+  for (const NameFunctionSamples &E :
+       llvm::drop_begin(SortedFunctions, SortedFunctions.size() - NumToRemove))
+    ProfileMap.erase(E.first);
   SortedFunctions.resize(SortedFunctions.size() - NumToRemove);
 }
 

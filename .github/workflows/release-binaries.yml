@@ -34,7 +34,7 @@ jobs:
 
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Validate and parse tag
       id: validate-tag
@@ -48,7 +48,7 @@ jobs:
       # | X.Y.Z     | -final
       run: |
         tag="${{ github.ref_name }}"
-        trimmed=`echo ${{ inputs.tag }} | xargs`
+        trimmed=$(echo ${{ inputs.tag }} | xargs)
         [[ "$trimmed" != "" ]] && tag="$trimmed"
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
@@ -68,7 +68,7 @@ jobs:
       matrix:
         target:
           - triple: x86_64-linux-gnu-ubuntu-22.04
-            runs-on: ubuntu-22.04-8x32
+            runs-on: ubuntu-22.04-16x64
             debian-build-deps: >
               chrpath
               gcc-multilib
@@ -76,7 +76,7 @@ jobs:
 
     steps:
     - name: Checkout LLVM
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: ${{ needs.prepare.outputs.ref }}
         path: ${{ needs.prepare.outputs.build-dir }}/llvm-project
@@ -92,7 +92,7 @@ jobs:
     - name: Set macOS build env variables
       if: runner.os == 'macOS'
       run: |
-        echo "MACOSX_DEPLOYMENT_TARGET=10.9" >> $GITHUB_ENV
+        echo "MACOSX_DEPLOYMENT_TARGET=10.9" >> "$GITHUB_ENV"
 
     - name: Build and test release
       run: |

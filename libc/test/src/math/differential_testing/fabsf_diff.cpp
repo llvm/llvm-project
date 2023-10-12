@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, __llvm_libc::fabsf, ::fabsf,
+SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, LIBC_NAMESPACE::fabsf, ::fabsf,
                                 "fabsf_diff.log")

@@ -45,13 +45,17 @@ class VPBuilder {
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
+  /// Insert \p VPI in BB at InsertPt if BB is set.
+  VPInstruction *tryInsertInstruction(VPInstruction *VPI) {
+    if (BB)
+      BB->insert(VPI, InsertPt);
+    return VPI;
+  }
+
   VPInstruction *createInstruction(unsigned Opcode,
                                    ArrayRef<VPValue *> Operands, DebugLoc DL,
                                    const Twine &Name = "") {
-    VPInstruction *Instr = new VPInstruction(Opcode, Operands, DL, Name);
-    if (BB)
-      BB->insert(Instr, InsertPt);
-    return Instr;
+    return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
@@ -62,6 +66,7 @@ class VPBuilder {
 
 public:
   VPBuilder() = default;
+  VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -116,6 +121,13 @@ public:
     InsertPt = IP;
   }
 
+  /// This specifies that created instructions should be inserted at the
+  /// specified point.
+  void setInsertPoint(VPRecipeBase *IP) {
+    BB = IP->getParent();
+    InsertPt = IP->getIterator();
+  }
+
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
@@ -132,6 +144,13 @@ public:
     return createInstruction(Opcode, Operands, DL, Name);
   }
 
+  VPInstruction *createOverflowingOp(unsigned Opcode,
+                                     std::initializer_list<VPValue *> Operands,
+                                     VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
+                                     DebugLoc DL, const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
+  }
   VPValue *createNot(VPValue *Operand, DebugLoc DL, const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
@@ -151,6 +170,12 @@ public:
     return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
                         Name);
   }
+
+  /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
+  /// and \p B.
+  /// TODO: add createFCmp when needed.
+  VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                      DebugLoc DL = {}, const Twine &Name = "");
 
   //===--------------------------------------------------------------------===//
   // RAII helpers.

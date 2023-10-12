@@ -1919,7 +1919,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
     //    on the profile to favor more inlining. This is only a problem with CS
     //    profile.
     // 3. Transitive indirect call edges due to inlining. When a callee function
-    //    (say B) is inlined into into a caller function (say A) in LTO prelink,
+    //    (say B) is inlined into a caller function (say A) in LTO prelink,
     //    every call edge originated from the callee B will be transferred to
     //    the caller A. If any transferred edge (say A->C) is indirect, the
     //    original profiled indirect edge B->C, even if considered, would not

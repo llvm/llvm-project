@@ -38,9 +38,9 @@ define i32 @pattern2(i32 %x, i32 %y){
 define i32 @pattern3(i1 %cond, i32 %x) {
 ; CHECK-LABEL: pattern3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, -1
 ; CHECK-NEXT:    andi. 3, 3, 1
-; CHECK-NEXT:    rldic 3, 5, 0, 32
+; CHECK-NEXT:    li 3, -1
+; CHECK-NEXT:    rldic 3, 3, 0, 32
 ; CHECK-NEXT:    iselgt 3, 0, 3
 ; CHECK-NEXT:    and 3, 3, 4
 ; CHECK-NEXT:    blr
@@ -53,10 +53,10 @@ define i32 @pattern3(i1 %cond, i32 %x) {
 define i32 @pattern4(i1 %cond, i32 %x) {
 ; CHECK-LABEL: pattern4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, -1
 ; CHECK-NEXT:    andi. 3, 3, 1
-; CHECK-NEXT:    rldic 3, 5, 0, 32
+; CHECK-NEXT:    li 3, -1
 ; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    rldic 3, 3, 0, 32
 ; CHECK-NEXT:    iselgt 3, 3, 5
 ; CHECK-NEXT:    or 3, 4, 3
 ; CHECK-NEXT:    blr

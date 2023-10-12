@@ -1834,6 +1834,30 @@ Either the comparison is useless or there is division by zero.
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
 
+.. _alpha-cplusplus-ArrayDelete:
+
+alpha.cplusplus.ArrayDelete (C++)
+"""""""""""""""""""""""""""""""""
+Reports destructions of arrays of polymorphic objects that are destructed as their base class.
+This checker corresponds to the CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
+
+.. code-block:: cpp
+
+ class Base {
+   virtual ~Base() {}
+ };
+ class Derived : public Base {}
+
+ Base *create() {
+   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+   return x;
+ }
+
+ void foo() {
+   Base *x = create();
+   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
+
 .. _alpha-cplusplus-DeleteWithNonVirtualDtor:
 
 alpha.cplusplus.DeleteWithNonVirtualDtor (C++)
@@ -1842,13 +1866,17 @@ Reports destructions of polymorphic objects with a non-virtual destructor in the
 
 .. code-block:: cpp
 
+ class NonVirtual {};
+ class NVDerived : public NonVirtual {};
+
  NonVirtual *create() {
-   NonVirtual *x = new NVDerived(); // note: conversion from derived to base
-                                    //       happened here
+   NonVirtual *x = new NVDerived(); // note: Casting from 'NVDerived' to
+                                    //       'NonVirtual' here
    return x;
  }
 
- void sink(NonVirtual *x) {
+ void foo() {
+   NonVirtual *x = create();
    delete x; // warn: destruction of a polymorphic object with no virtual
              //       destructor
  }
@@ -2481,13 +2509,13 @@ input refers to a valid file and removing any invalid user input.
     if (!filename[0])
       return -1;
     strcat(cmd, filename);
-    system(cmd); // Superflous Warning: Untrusted data is passed to a system call
+    system(cmd); // Superfluous Warning: Untrusted data is passed to a system call
   }
 
 Unfortunately, the checker cannot discover automatically that the programmer
 have performed data sanitation, so it still emits the warning.
 
-One can get rid of this superflous warning by telling by specifying the
+One can get rid of this superfluous warning by telling by specifying the
 sanitation functions in the taint configuration file (see
 :doc:`user-docs/TaintAnalysisConfiguration`).
 
@@ -2599,8 +2627,8 @@ Default propagations rules:
  ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``,
  ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``,
  ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``,
- ``strcspn``, ``strlen``, ``strncasecmp``, ``strncmp``, ``strndup``,
- ``strndupa``, ``strnlen``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
+ ``strcspn``, ``strncasecmp``, ``strncmp``, ``strndup``,
+ ``strndupa``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
  ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``,
  ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
 

@@ -1603,42 +1603,6 @@ public:
   static CallInst *Create(CallInst *CI, ArrayRef<OperandBundleDef> Bundles,
                           Instruction *InsertPt = nullptr);
 
-  /// Generate the IR for a call to malloc:
-  /// 1. Compute the malloc call's argument as the specified type's size,
-  ///    possibly multiplied by the array size if the array size is not
-  ///    constant 1.
-  /// 2. Call malloc with that argument.
-  /// 3. Bitcast the result of the malloc call to the specified type.
-  static Instruction *CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                   Type *AllocTy, Value *AllocSize,
-                                   Value *ArraySize = nullptr,
-                                   Function *MallocF = nullptr,
-                                   const Twine &Name = "");
-  static Instruction *
-  CreateMalloc(Instruction *InsertBefore, Type *IntPtrTy, Type *AllocTy,
-               Value *AllocSize, Value *ArraySize = nullptr,
-               ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-               Function *MallocF = nullptr, const Twine &Name = "");
-  static Instruction *
-  CreateMalloc(BasicBlock *InsertAtEnd, Type *IntPtrTy, Type *AllocTy,
-               Value *AllocSize, Value *ArraySize = nullptr,
-               ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-               Function *MallocF = nullptr, const Twine &Name = "");
-  /// Generate the IR for a call to the builtin free function.
-  static Instruction *CreateFree(Value *Source, Instruction *InsertBefore);
-  static Instruction *CreateFree(Value *Source, BasicBlock *InsertAtEnd);
-  static Instruction *CreateFree(Value *Source,
-                                 ArrayRef<OperandBundleDef> Bundles,
-                                 Instruction *InsertBefore);
-  static Instruction *CreateFree(Value *Source,
-                                 ArrayRef<OperandBundleDef> Bundles,
-                                 BasicBlock *InsertAtEnd);
-
   // Note that 'musttail' implies 'tail'.
   enum TailCallKind : unsigned {
     TCK_None = 0,
@@ -2104,13 +2068,14 @@ public:
   /// Return true if this shuffle mask chooses elements from exactly one source
   /// vector.
   /// Example: <7,5,undef,7>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isSingleSourceMask(ArrayRef<int> Mask);
-  static bool isSingleSourceMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSingleSourceMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isSingleSourceMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSingleSourceMask(MaskAsInts);
+    return isSingleSourceMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from exactly one source
@@ -2118,7 +2083,8 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,0,undef,3>
   /// TODO: Optionally allow length-changing shuffles.
   bool isSingleSource() const {
-    return !changesLength() && isSingleSourceMask(ShuffleMask);
+    return !changesLength() &&
+           isSingleSourceMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask chooses elements from exactly one source
@@ -2126,8 +2092,8 @@ public:
   /// necessarily a no-op because it may change the number of elements from its
   /// input vectors or it may provide demanded bits knowledge via undef lanes.
   /// Example: <undef,undef,2,3>
-  static bool isIdentityMask(ArrayRef<int> Mask);
-  static bool isIdentityMask(const Constant *Mask) {
+  static bool isIdentityMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isIdentityMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
 
     // Not possible to express a shuffle mask for a scalable vector for this
@@ -2137,7 +2103,7 @@ public:
 
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isIdentityMask(MaskAsInts);
+    return isIdentityMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from exactly one source
@@ -2150,7 +2116,7 @@ public:
     if (isa<ScalableVectorType>(getType()))
       return false;
 
-    return !changesLength() && isIdentityMask(ShuffleMask);
+    return !changesLength() && isIdentityMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle lengthens exactly one source vector with
@@ -2174,12 +2140,12 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// This assumes that vector operands are the same length as the mask
   /// (a length-changing shuffle can never be equivalent to a vector select).
-  static bool isSelectMask(ArrayRef<int> Mask);
-  static bool isSelectMask(const Constant *Mask) {
+  static bool isSelectMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isSelectMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSelectMask(MaskAsInts);
+    return isSelectMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle chooses elements from its source vectors
@@ -2191,19 +2157,20 @@ public:
   /// In that case, the shuffle is better classified as an identity shuffle.
   /// TODO: Optionally allow length-changing shuffles.
   bool isSelect() const {
-    return !changesLength() && isSelectMask(ShuffleMask);
+    return !changesLength() && isSelectMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask swaps the order of elements from exactly
   /// one source vector.
   /// Example: <7,6,undef,4>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isReverseMask(ArrayRef<int> Mask);
-  static bool isReverseMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isReverseMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isReverseMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isReverseMask(MaskAsInts);
+    return isReverseMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle swaps the order of elements from exactly
@@ -2211,19 +2178,20 @@ public:
   /// Example: shufflevector <4 x n> A, <4 x n> B, <3,undef,1,undef>
   /// TODO: Optionally allow length-changing shuffles.
   bool isReverse() const {
-    return !changesLength() && isReverseMask(ShuffleMask);
+    return !changesLength() && isReverseMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask chooses all elements with the same value
   /// as the first element of exactly one source vector.
   /// Example: <4,undef,undef,4>
-  /// This assumes that vector operands are the same length as the mask.
-  static bool isZeroEltSplatMask(ArrayRef<int> Mask);
-  static bool isZeroEltSplatMask(const Constant *Mask) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isZeroEltSplatMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isZeroEltSplatMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isZeroEltSplatMask(MaskAsInts);
+    return isZeroEltSplatMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if all elements of this shuffle are the same value as the
@@ -2233,7 +2201,8 @@ public:
   /// TODO: Optionally allow length-changing shuffles.
   /// TODO: Optionally allow splats from other elements.
   bool isZeroEltSplat() const {
-    return !changesLength() && isZeroEltSplatMask(ShuffleMask);
+    return !changesLength() &&
+           isZeroEltSplatMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask is a transpose mask.
@@ -2268,12 +2237,12 @@ public:
   ///   ; Transposed matrix
   ///   t0 = < a, e, c, g > = shufflevector m0, m1 < 0, 4, 2, 6 >
   ///   t1 = < b, f, d, h > = shufflevector m0, m1 < 1, 5, 3, 7 >
-  static bool isTransposeMask(ArrayRef<int> Mask);
-  static bool isTransposeMask(const Constant *Mask) {
+  static bool isTransposeMask(ArrayRef<int> Mask, int NumSrcElts);
+  static bool isTransposeMask(const Constant *Mask, int NumSrcElts) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isTransposeMask(MaskAsInts);
+    return isTransposeMask(MaskAsInts, NumSrcElts);
   }
 
   /// Return true if this shuffle transposes the elements of its inputs without
@@ -2282,19 +2251,21 @@ public:
   /// exact specification.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <0,4,2,6>
   bool isTranspose() const {
-    return !changesLength() && isTransposeMask(ShuffleMask);
+    return !changesLength() && isTransposeMask(ShuffleMask, ShuffleMask.size());
   }
 
   /// Return true if this shuffle mask is a splice mask, concatenating the two
   /// inputs together and then extracts an original width vector starting from
   /// the splice index.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
-  static bool isSpliceMask(ArrayRef<int> Mask, int &Index);
-  static bool isSpliceMask(const Constant *Mask, int &Index) {
+  /// This assumes that vector operands (of length \p NumSrcElts) are the same
+  /// length as the mask.
+  static bool isSpliceMask(ArrayRef<int> Mask, int NumSrcElts, int &Index);
+  static bool isSpliceMask(const Constant *Mask, int NumSrcElts, int &Index) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
     SmallVector<int, 16> MaskAsInts;
     getShuffleMask(Mask, MaskAsInts);
-    return isSpliceMask(MaskAsInts, Index);
+    return isSpliceMask(MaskAsInts, NumSrcElts, Index);
   }
 
   /// Return true if this shuffle splices two inputs without changing the length
@@ -2302,7 +2273,8 @@ public:
   /// then extracts an original width vector starting from the splice index.
   /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
   bool isSplice(int &Index) const {
-    return !changesLength() && isSpliceMask(ShuffleMask, Index);
+    return !changesLength() &&
+           isSpliceMask(ShuffleMask, ShuffleMask.size(), Index);
   }
 
   /// Return true if this shuffle mask is an extract subvector mask.
@@ -2336,7 +2308,7 @@ public:
 
   /// Return true if this shuffle mask is an insert subvector mask.
   /// A valid insert subvector mask inserts the lowest elements of a second
-  /// source operand into an in-place first source operand operand.
+  /// source operand into an in-place first source operand.
   /// Both the sub vector width and the insertion index is returned.
   static bool isInsertSubvectorMask(ArrayRef<int> Mask, int NumSrcElts,
                                     int &NumSubElts, int &Index);

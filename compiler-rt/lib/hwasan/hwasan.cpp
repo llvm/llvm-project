@@ -172,7 +172,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
   auto sds = StackDepotGetStats();
   AllocatorStatCounters asc;
   GetAllocatorStats(asc);
-  s.append(
+  s.AppendF(
       "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
       " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
       " heap: %zd",

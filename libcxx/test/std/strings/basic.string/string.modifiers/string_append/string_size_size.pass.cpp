@@ -20,54 +20,40 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected)
-{
-    if (pos <= str.size())
-    {
-        s.append(str, pos, n);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+TEST_CONSTEXPR_CXX20 void test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected) {
+  if (pos <= str.size()) {
+    s.append(str, pos, n);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.append(str, pos, n);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > str.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.append(str, pos, n);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > str.size());
     }
+  }
 #endif
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test_npos(S s, S str, typename S::size_type pos, S expected)
-{
-    if (pos <= str.size())
-    {
-        s.append(str, pos);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+TEST_CONSTEXPR_CXX20 void test_npos(S s, S str, typename S::size_type pos, S expected) {
+  if (pos <= str.size()) {
+    s.append(str, pos);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.append(str, pos);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > str.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.append(str, pos);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > str.size());
     }
+  }
 #endif
 }
 
@@ -92,8 +78,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 
   test(S("12345678901234567890"), S(), 0, 0, S("12345678901234567890"));
   test(S("12345678901234567890"), S("12345"), 1, 3, S("12345678901234567890234"));
-  test(S("12345678901234567890"), S("12345678901234567890"), 5, 10,
-        S("123456789012345678906789012345"));
+  test(S("12345678901234567890"), S("12345678901234567890"), 5, 10, S("123456789012345678906789012345"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -116,8 +101,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

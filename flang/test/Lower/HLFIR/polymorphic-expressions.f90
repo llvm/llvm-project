@@ -29,5 +29,5 @@ end subroutine test1
 ! CHECK:           %[[VAL_27:.*]]:3 = hlfir.associate %[[VAL_23]](%[[VAL_26]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>?>, !fir.shape<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>, i1)
 ! CHECK:           %[[VAL_28:.*]] = fir.rebox %[[VAL_27]]#0 : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>) -> !fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>
 ! CHECK:           fir.call @_QPcallee(%[[VAL_28]]) fastmath<contract> : (!fir.class<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_27]]#1, %[[VAL_27]]#2 : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>, i1
+! CHECK:           hlfir.end_associate %[[VAL_27]]#0, %[[VAL_27]]#2 : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>>>>, i1
 ! CHECK:           hlfir.destroy %[[VAL_23]] : !hlfir.expr<?x!fir.type<_QMpolymorphic_expressions_typesTt{c:i32}>?>

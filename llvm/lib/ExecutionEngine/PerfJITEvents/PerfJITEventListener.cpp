@@ -447,7 +447,7 @@ void PerfJITEventListener::NotifyDebug(uint64_t CodeAddr,
   rec.CodeAddr = CodeAddr;
   rec.NrEntry = Lines.size();
 
-  // compute total size size of record (variable due to filenames)
+  // compute total size of record (variable due to filenames)
   DILineInfoTable::iterator Begin = Lines.begin();
   DILineInfoTable::iterator End = Lines.end();
   for (DILineInfoTable::iterator It = Begin; It != End; ++It) {

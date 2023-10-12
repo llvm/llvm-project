@@ -188,10 +188,9 @@ private:
 public:
   ScheduleDAGRRList(MachineFunction &mf, bool needlatency,
                     SchedulingPriorityQueue *availqueue,
-                    CodeGenOpt::Level OptLevel)
-    : ScheduleDAGSDNodes(mf),
-      NeedLatency(needlatency), AvailableQueue(availqueue),
-      Topo(SUnits, nullptr) {
+                    CodeGenOptLevel OptLevel)
+      : ScheduleDAGSDNodes(mf), NeedLatency(needlatency),
+        AvailableQueue(availqueue), Topo(SUnits, nullptr) {
     const TargetSubtargetInfo &STI = mf.getSubtarget();
     if (DisableSchedCycles || !NeedLatency)
       HazardRec = new ScheduleHazardRecognizer();
@@ -987,11 +986,6 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
   if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
     return nullptr;
 
-  // unfolding an x86 DEC64m operation results in store, dec, load which
-  // can't be handled here so quit
-  if (NewNodes.size() == 3)
-    return nullptr;
-
   assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
   N = NewNodes[1];
@@ -1377,12 +1371,12 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
         unsigned Flags =
           cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
-        unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+        const InlineAsm::Flag F(Flags);
+        unsigned NumVals = F.getNumOperandRegisters();
 
         ++i; // Skip the ID value.
-        if (InlineAsm::isRegDefKind(Flags) ||
-            InlineAsm::isRegDefEarlyClobberKind(Flags) ||
-            InlineAsm::isClobberKind(Flags)) {
+        if (F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
+            F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
             Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
@@ -3150,9 +3144,8 @@ void RegReductionPQBase::AddPseudoTwoAddrDeps() {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-ScheduleDAGSDNodes *
-llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
-                                 CodeGenOpt::Level OptLevel) {
+ScheduleDAGSDNodes *llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
+                                                     CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3166,7 +3159,7 @@ llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
 
 ScheduleDAGSDNodes *
 llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3180,7 +3173,7 @@ llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
 
 ScheduleDAGSDNodes *
 llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3194,9 +3187,8 @@ llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
   return SD;
 }
 
-ScheduleDAGSDNodes *
-llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
-                                CodeGenOpt::Level OptLevel) {
+ScheduleDAGSDNodes *llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
+                                                    CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();

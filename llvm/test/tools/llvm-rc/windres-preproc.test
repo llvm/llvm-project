@@ -4,6 +4,7 @@
 ; REQUIRES: shell
 
 ; RUN: llvm-windres -### --include-dir %p/incdir1 --include %p/incdir2 "-DFOO1=\\\"foo bar\\\"" -UFOO2 -D FOO3 --preprocessor-arg "-DFOO4=\\\"baz baz\\\"" -DFOO5=\"bar\" %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK1
+; RUN: llvm-windres -### --include-dir %p/incdir1 --include %p/incdir2 "-DFOO1=\"foo bar\"" -UFOO2 -D FOO3 --preprocessor-arg "-DFOO4=\"baz baz\"" "-DFOO5=bar" %p/Inputs/empty.rc %t.res --use-temp-file | FileCheck %s --check-prefix=CHECK1
 ; CHECK1: {{^}} "clang" "--driver-mode=gcc" "-target" "{{.*}}-{{.*}}{{mingw32|windows-gnu}}" "-E" "-xc" "-DRC_INVOKED" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc" "-I" "{{.*}}incdir1" "-I" "{{.*}}incdir2" "-D" "FOO1=\"foo bar\"" "-U" "FOO2" "-D" "FOO3" "-DFOO4=\"baz baz\"" "-D" "FOO5=bar"{{$}}
 ; RUN: llvm-windres -### --preprocessor "i686-w64-mingw32-gcc -E -DFOO=\\\"foo\\ bar\\\"" %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK2
 ; CHECK2: {{^}} "i686-w64-mingw32-gcc" "-E" "-DFOO=\"foo bar\"" "{{.*}}empty.rc" "-o" "{{.*}}preproc-{{.*}}.rc"{{$}}

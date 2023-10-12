@@ -40,6 +40,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -359,9 +360,10 @@ collectEffects(Operation *op,
 /// set. Returns `true` if the memory effects added to `effects` are exact,
 /// `false` if they are a conservative over-approximation. The latter means that
 /// `effects` contain instances not associated with a specific value.
-bool getEffectsBefore(Operation *op,
-                      SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-                      bool stopAtBarrier) {
+static bool
+getEffectsBefore(Operation *op,
+                 SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+                 bool stopAtBarrier) {
   if (!op->getBlock())
     return true;
 
@@ -438,9 +440,10 @@ bool getEffectsBefore(Operation *op,
 /// set. Returns `true` if the memory effects added to `effects` are exact,
 /// `false` if they are a conservative over-approximation. The latter means that
 /// `effects` contain instances not associated with a specific value.
-bool getEffectsAfter(Operation *op,
-                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-                     bool stopAtBarrier) {
+static bool
+getEffectsAfter(Operation *op,
+                SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+                bool stopAtBarrier) {
   if (!op->getBlock())
     return true;
 
@@ -583,7 +586,7 @@ static std::optional<bool> getKnownCapturingStatus(Operation *op, Value v) {
 /// the user may be storing this value into memory. This makes aliasing analysis
 /// more conservative as it cannot assume the pointer-like value is only passed
 /// around through SSA use-def.
-bool maybeCaptured(Value v) {
+static bool maybeCaptured(Value v) {
   SmallVector<Value> todo = {v};
   while (!todo.empty()) {
     Value v = todo.pop_back_val();
@@ -703,7 +706,7 @@ static bool mayAlias(Value first, Value second) {
 /// Returns `true` if the effect may be affecting memory aliasing the value. If
 /// the effect is not associated with any value, it is assumed to affect all
 /// memory and therefore aliases with everything.
-bool mayAlias(MemoryEffects::EffectInstance a, Value v2) {
+static bool mayAlias(MemoryEffects::EffectInstance a, Value v2) {
   if (Value v = a.getValue()) {
     return mayAlias(v, v2);
   }
@@ -714,8 +717,8 @@ bool mayAlias(MemoryEffects::EffectInstance a, Value v2) {
 /// an effect is not associated with any value, it is assumed to affect all
 /// memory and therefore aliases with everything. Effects on different resources
 /// cannot alias.
-bool mayAlias(MemoryEffects::EffectInstance a,
-              MemoryEffects::EffectInstance b) {
+static bool mayAlias(MemoryEffects::EffectInstance a,
+                     MemoryEffects::EffectInstance b) {
   if (a.getResource()->getResourceID() != b.getResource()->getResourceID())
     return false;
   if (Value v2 = b.getValue()) {
@@ -835,6 +838,13 @@ void EliminateBarriersOp::populatePatterns(RewritePatternSet &patterns) {
 // Block and thread mapping utilities.
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// Local types used for mapping verification.
+struct MappingKind {};
+struct BlockMappingKind : MappingKind {};
+struct ThreadMappingKind : MappingKind {};
+} // namespace
+
 static DiagnosedSilenceableFailure
 definiteFailureHelper(std::optional<TransformOpInterface> transformOp,
                       Operation *target, const Twine &message) {
@@ -844,12 +854,14 @@ definiteFailureHelper(std::optional<TransformOpInterface> transformOp,
 }
 
 /// Check if given mapping attributes are one of the desired attributes
+template <typename MappingKindType>
 static DiagnosedSilenceableFailure
 checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
                            scf::ForallOp forallOp) {
-  if (!forallOp.getMapping().has_value())
+  if (!forallOp.getMapping().has_value()) {
     return definiteFailureHelper(transformOp, forallOp,
-                                 "mapping must be present");
+                                 "scf.forall op requires a mapping attribute");
+  }
 
   bool hasBlockMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
@@ -877,6 +889,18 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
         transformOp, forallOp,
         "cannot mix different mapping types, use nesting");
   }
+  if (std::is_same<MappingKindType, BlockMappingKind>::value &&
+      !hasBlockMapping) {
+    return definiteFailureHelper(
+        transformOp, forallOp,
+        "scf.forall op requires a mapping attribute of kind 'block'");
+  }
+  if (std::is_same<MappingKindType, ThreadMappingKind>::value &&
+      !hasThreadMapping && !hasWarpMapping && !hasWarpgroupMapping) {
+    return definiteFailureHelper(transformOp, forallOp,
+                                 "scf.forall op requires a mapping attribute "
+                                 "of kind 'thread' or 'warp'");
+  }
 
   DenseSet<Attribute> seen;
   for (Attribute map : forallOp.getMapping()->getValue()) {
@@ -902,12 +926,13 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
   return DiagnosedSilenceableFailure::success();
 }
 
+template <typename MappingKindType>
 static DiagnosedSilenceableFailure
 verifyGpuMapping(std::optional<TransformOpInterface> transformOp,
                  scf::ForallOp forallOp) {
   // Check the types of the mapping attributes match.
   DiagnosedSilenceableFailure typeRes =
-      checkMappingAttributeTypes(transformOp, forallOp);
+      checkMappingAttributeTypes<MappingKindType>(transformOp, forallOp);
   if (!typeRes.succeeded())
     return typeRes;
 
@@ -966,13 +991,6 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     scf::ForallOp forallOp, ArrayRef<int64_t> availableMappingSizes,
     ForallRewriteResult &result, const GpuIdBuilder &gpuIdBuilder) {
   LDBG("--start rewriteOneForallCommonImpl");
-
-  // Step 0. GPU-specific verifications. There is no better place to anchor
-  // those right now: the ForallOp is target-independent and the transform
-  // op does not apply to individual ForallOp.
-  DiagnosedSilenceableFailure diag = verifyGpuMapping(transformOp, forallOp);
-  if (!diag.succeeded())
-    return diag;
 
   // Step 1. Complete the mapping to a full mapping (with 1s) if necessary.
   auto numParallelIterations =
@@ -1143,6 +1161,16 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForallToBlocksImpl(
     const GpuIdBuilder &gpuIdBuilder) {
   LDBG("Start mapForallToBlocksImpl");
 
+  {
+    // GPU-specific verifications. There is no better place to anchor
+    // those right now: the ForallOp is target-independent and the transform
+    // op does not apply to individual ForallOp.
+    DiagnosedSilenceableFailure diag =
+        verifyGpuMapping<BlockMappingKind>(transformOp, forallOp);
+    if (!diag.succeeded())
+      return diag;
+  }
+
   Location loc = forallOp.getLoc();
   Block *parentBlock = forallOp->getBlock();
   Value zero;
@@ -1194,7 +1222,7 @@ mlir::transform::gpu::findTopLevelForallOp(Operation *target,
     return WalkResult::advance();
   });
 
-  if (walkResult.wasInterrupted())
+  if (walkResult.wasInterrupted() || !topLevelForallOp)
     return transformOp.emitSilenceableError()
            << "could not find a unique topLevel scf.forall";
   return DiagnosedSilenceableFailure::success();
@@ -1222,6 +1250,7 @@ DiagnosedSilenceableFailure transform::MapForallToBlocks::applyToOne(
     diag.attachNote(target->getLoc()) << "when applied to this payload op";
     return diag;
   }
+  assert(topLevelForallOp && "expect an scf.forall");
 
   SmallVector<int64_t> gridDims{getGridDims()};
   if (!getGenerateGpuLaunch() && gridDims.size() != 3)
@@ -1244,9 +1273,12 @@ DiagnosedSilenceableFailure transform::MapForallToBlocks::applyToOne(
   }
 
   // The BlockIdBuilder adapts to whatever is thrown at it.
-  auto mappingAttr = cast<DeviceMappingAttrInterface>(
-      topLevelForallOp.getMapping()->getValue().front());
-  bool useLinearMapping = mappingAttr.isLinearMapping();
+  bool useLinearMapping = false;
+  if (topLevelForallOp.getMapping()) {
+    auto mappingAttr = cast<DeviceMappingAttrInterface>(
+        topLevelForallOp.getMapping()->getValue().front());
+    useLinearMapping = mappingAttr.isLinearMapping();
+  }
   GpuBlockIdBuilder gpuBlockIdBuilder(getContext(), useLinearMapping);
 
   diag = mlir::transform::gpu::mapForallToBlocksImpl(
@@ -1262,6 +1294,13 @@ DiagnosedSilenceableFailure transform::MapForallToBlocks::applyToOne(
 
   results.push_back(gpuLaunch);
   return diag;
+}
+
+LogicalResult transform::MapForallToBlocks::verify() {
+  if (!getGridDims().empty() && getGridDims().size() != 3) {
+    return emitOpError() << "transform requires empty or size-3 grid_dims";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1283,8 +1322,8 @@ static DiagnosedSilenceableFailure checkMappingSpec(
       computeProduct(blockOrGridSizes)) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
-        Twine(
-            "the number of required parallel resources (blocks or threads) ") +
+        Twine("the number of required parallel resources (blocks or "
+              "threads) ") +
             std::to_string(computeProduct(numParallelIterations) * factor) +
             std::string(" overflows the number of available resources ") +
             std::to_string(computeProduct(blockOrGridSizes)));
@@ -1344,6 +1383,16 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapOneForallToThreadsImpl(
     RewriterBase &rewriter, std::optional<TransformOpInterface> transformOp,
     scf::ForallOp forallOp, ArrayRef<int64_t> blockSizes, int64_t warpSize,
     bool syncAfterDistribute) {
+
+  {
+    // GPU-specific verifications. There is no better place to anchor
+    // those right now: the ForallOp is target-independent and the transform
+    // op does not apply to individual ForallOp.
+    DiagnosedSilenceableFailure diag =
+        verifyGpuMapping<ThreadMappingKind>(transformOp, forallOp);
+    if (!diag.succeeded())
+      return diag;
+  }
 
   GpuIdBuilder gpuIdBuilder;
   {

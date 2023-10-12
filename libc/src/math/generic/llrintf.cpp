@@ -10,7 +10,7 @@
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long long, llrintf, (float x)) {
   return fputil::round_to_signed_integer_using_current_rounding_mode<float,
@@ -18,4 +18,4 @@ LLVM_LIBC_FUNCTION(long long, llrintf, (float x)) {
       x);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

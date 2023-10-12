@@ -13,9 +13,6 @@
 //   Zbc - 1.0
 //   Zbs - 1.0
 //
-// The experimental extensions appeared in an earlier draft of the Bitmanip
-// extensions. They are not ratified and subject to change.
-//
 // This file also describes RISC-V instructions from the Zbk* extensions in
 // Cryptography Extensions Volume I: Scalar & Entropy Source Instructions,
 // versions:
@@ -48,7 +45,7 @@ def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let DiagnosticType = "InvalidUImmLog2XLenHalf";
 }
 
-def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+def shfl_uimm : RISCVOp, ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return isUInt<5>(Imm);
   return isUInt<4>(Imm);
@@ -56,7 +53,6 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   let ParserMatchClass = UImmLog2XLenHalfAsmOperand;
   let DecoderMethod = "decodeUImmOperand<5>";
   let OperandType = "OPERAND_UIMM_SHFL";
-  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -738,6 +734,9 @@ def : Pat<(i64 (and GPR:$rs1, Shifted32OnesMask:$mask)),
 def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFF), non_imm12:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, (XLenVT X0))>;
+
+def : Pat<(i64 (or_is_add (and GPR:$rs1, 0xFFFFFFFF), non_imm12:$rs2)),
+          (ADD_UW GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(i64 (add (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 1)), non_imm12:$rs2)),
           (SH1ADD_UW GPR:$rs1, GPR:$rs2)>;

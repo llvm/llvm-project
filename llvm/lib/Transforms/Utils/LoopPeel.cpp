@@ -624,7 +624,7 @@ struct WeightInfo {
 /// F/(F+E) is a probability to go to loop and E/(F+E) is a probability to
 /// go to exit.
 /// Then, Estimated ExitCount = F / E.
-/// For I-th (counting from 0) peeled off iteration we set the the weights for
+/// For I-th (counting from 0) peeled off iteration we set the weights for
 /// the peeled exit as (EC - I, 1). It gives us reasonable distribution,
 /// The probability to go to exit 1/(EC-I) increases. At the same time
 /// the estimated exit count in the remainder loop reduces by I.

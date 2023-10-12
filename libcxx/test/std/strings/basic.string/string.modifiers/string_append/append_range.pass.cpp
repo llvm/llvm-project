@@ -43,9 +43,7 @@ int main(int, char**) {
 
   { // Check that `append_range` returns a reference to the string.
     std::string c;
-    static_assert(std::is_lvalue_reference_v<decltype(
-        c.append_range(FullContainer_Begin_EmptyRange<char>.input)
-    )>);
+    static_assert(std::is_lvalue_reference_v<decltype(c.append_range(FullContainer_Begin_EmptyRange<char>.input))>);
     assert(&c.append_range(FullContainer_Begin_EmptyRange<char>.input) == &c);
     assert(&c.append_range(FullContainer_Begin_OneElementRange<char>.input) == &c);
     assert(&c.append_range(FullContainer_Begin_MidRange<char>.input) == &c);

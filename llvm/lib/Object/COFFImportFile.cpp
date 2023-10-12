@@ -140,7 +140,7 @@ class ObjectFactory {
 
 public:
   ObjectFactory(StringRef S, MachineTypes M)
-      : Machine(M), ImportName(S), Library(S.drop_back(4)),
+      : Machine(M), ImportName(S), Library(llvm::sys::path::stem(S)),
         ImportDescriptorSymbolName(("__IMPORT_DESCRIPTOR_" + Library).str()),
         NullThunkSymbolName(("\x7f" + Library + "_NULL_THUNK_DATA").str()) {}
 
@@ -578,7 +578,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
   std::vector<uint8_t> NullThunk;
   Members.push_back(OF.createNullThunk(NullThunk));
 
-  for (COFFShortExport E : Exports) {
+  for (const COFFShortExport &E : Exports) {
     if (E.Private)
       continue;
 
@@ -612,7 +612,8 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
 
   return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
                       MinGW ? object::Archive::K_GNU : object::Archive::K_COFF,
-                      /*Deterministic*/ true, /*Thin*/ false);
+                      /*Deterministic*/ true, /*Thin*/ false,
+                      /*OldArchiveBuf*/ nullptr, isArm64EC(Machine));
 }
 
 } // namespace object

@@ -102,14 +102,28 @@ namespace dialect_extension_detail {
 /// Checks if the given interface, which is attempting to be used, is a
 /// promised interface of this dialect that has yet to be implemented. If so,
 /// emits a fatal error.
-void handleUseOfUndefinedPromisedInterface(Dialect &dialect, TypeID interfaceID,
+void handleUseOfUndefinedPromisedInterface(Dialect &dialect,
+                                           TypeID interfaceRequestorID,
+                                           TypeID interfaceID,
                                            StringRef interfaceName);
 
 /// Checks if the given interface, which is attempting to be attached, is a
 /// promised interface of this dialect that has yet to be implemented. If so,
 /// the promised interface is marked as resolved.
 void handleAdditionOfUndefinedPromisedInterface(Dialect &dialect,
+                                                TypeID interfaceRequestorID,
                                                 TypeID interfaceID);
+
+/// Checks if a promise has been made for the interface/requestor pair.
+bool hasPromisedInterface(Dialect &dialect, TypeID interfaceRequestorID,
+                          TypeID interfaceID);
+
+/// Checks if a promise has been made for the interface/requestor pair.
+template <typename ConcreteT, typename InterfaceT>
+bool hasPromisedInterface(Dialect &dialect) {
+  return hasPromisedInterface(dialect, TypeID::get<ConcreteT>(),
+                              InterfaceT::getInterfaceID());
+}
 
 } // namespace dialect_extension_detail
 

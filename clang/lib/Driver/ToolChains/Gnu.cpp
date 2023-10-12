@@ -117,11 +117,11 @@ void tools::gcc::Common::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
   } else {
-    assert(Output.isNothing() && "Unexpected output");
     CmdArgs.push_back("-fsyntax-only");
   }
 
@@ -530,8 +530,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     ToolChain.addFastMathRuntimeIfAvailable(Args, CmdArgs);
   }
 
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  Args.AddAllArgs(CmdArgs, options::OPT_u);
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
@@ -700,6 +699,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   unsigned PICLevel;
   bool IsPIE;
   const char *DefaultAssembler = "as";
+  // Enforce GNU as on Solaris; the native assembler's input syntax isn't fully
+  // compatible.
+  if (getToolChain().getTriple().isOSSolaris())
+    DefaultAssembler = "gas";
   std::tie(RelocationModel, PICLevel, IsPIE) =
       ParsePICArgs(getToolChain(), Args);
 
@@ -1838,7 +1841,7 @@ static bool findBiarchMultilibs(const Driver &D,
 
   StringRef Suff64 = "/64";
   // Solaris uses platform-specific suffixes instead of /64.
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     switch (TargetTriple.getArch()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -2220,7 +2223,13 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
 void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     const llvm::Triple &TargetTriple, SmallVectorImpl<std::string> &Prefixes,
     StringRef SysRoot) {
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+
+  if (TargetTriple.isOSHaiku()) {
+    Prefixes.push_back(concat(SysRoot, "/boot/system/develop/tools"));
+    return;
+  }
+
+  if (TargetTriple.isOSSolaris()) {
     // Solaris is a special case.
     // The GCC installation is under
     //   /usr/gcc/<major>.<minor>/lib/gcc/<triple>/<major>.<minor>.<patch>/
@@ -2422,7 +2431,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   using std::begin;
   using std::end;
 
-  if (TargetTriple.getOS() == llvm::Triple::Solaris) {
+  if (TargetTriple.isOSSolaris()) {
     static const char *const SolarisLibDirs[] = {"/lib"};
     static const char *const SolarisSparcV8Triples[] = {
         "sparc-sun-solaris2.11"};
@@ -3096,34 +3105,53 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
-  std::string Target = getTripleString();
+  if (SysRoot.empty())
+    SysRoot = llvm::sys::path::get_separator();
 
-  auto AddIncludePath = [&](std::string Path) {
+  auto AddIncludePath = [&](StringRef Path, bool TargetDirRequired = false) {
     std::string Version = detectLibcxxVersion(Path);
     if (Version.empty())
       return false;
 
     // First add the per-target include path if it exists.
-    std::string TargetDir = Path + "/" + Target + "/c++/" + Version;
-    if (D.getVFS().exists(TargetDir))
-      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+    bool TargetDirExists = false;
+    std::optional<std::string> TargetIncludeDir = getTargetSubDirPath(Path);
+    if (TargetIncludeDir) {
+      SmallString<128> TargetDir(*TargetIncludeDir);
+      llvm::sys::path::append(TargetDir, "c++", Version);
+      if (D.getVFS().exists(TargetDir)) {
+        addSystemInclude(DriverArgs, CC1Args, TargetDir);
+        TargetDirExists = true;
+      }
+    }
+    if (TargetDirRequired && !TargetDirExists)
+      return false;
 
     // Second add the generic one.
-    addSystemInclude(DriverArgs, CC1Args, Path + "/c++/" + Version);
+    SmallString<128> GenericDir(Path);
+    llvm::sys::path::append(GenericDir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, GenericDir);
     return true;
   };
 
-  // Android never uses the libc++ headers installed alongside the toolchain,
-  // which are generally incompatible with the NDK libraries anyway.
-  if (!getTriple().isAndroid())
-    if (AddIncludePath(getDriver().Dir + "/../include"))
-      return;
+  // Android only uses the libc++ headers installed alongside the toolchain if
+  // they contain an Android-specific target include path, otherwise they're
+  // incompatible with the NDK libraries.
+  SmallString<128> DriverIncludeDir(getDriver().Dir);
+  llvm::sys::path::append(DriverIncludeDir, "..", "include");
+  if (AddIncludePath(DriverIncludeDir,
+                     /*TargetDirRequired=*/getTriple().isAndroid()))
+    return;
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
-  if (AddIncludePath(concat(SysRoot, "/usr/local/include")))
+  SmallString<128> UsrLocalIncludeDir(SysRoot);
+  llvm::sys::path::append(UsrLocalIncludeDir, "usr", "local", "include");
+  if (AddIncludePath(UsrLocalIncludeDir))
     return;
-  if (AddIncludePath(concat(SysRoot, "/usr/include")))
+  SmallString<128> UsrIncludeDir(SysRoot);
+  llvm::sys::path::append(UsrIncludeDir, "usr", "include");
+  if (AddIncludePath(UsrIncludeDir))
     return;
 }
 

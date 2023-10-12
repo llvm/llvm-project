@@ -128,6 +128,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1460,6 +1461,10 @@ struct AttributorConfig {
   IPOAmendableCBTy IPOAmendableCB;
 };
 
+/// A debug counter to limit the number of AAs created.
+DEBUG_COUNTER(NumAbstractAttributes, "num-abstract-attributes",
+              "How many AAs should be initialized");
+
 /// The fixpoint analysis framework that orchestrates the attribute deduction.
 ///
 /// The Attributor provides a general abstract analysis framework (guided
@@ -1570,6 +1575,9 @@ struct Attributor {
 
     bool ShouldUpdateAA;
     if (!shouldInitialize<AAType>(IRP, ShouldUpdateAA))
+      return nullptr;
+
+    if (!DebugCounter::shouldExecute(NumAbstractAttributes))
       return nullptr;
 
     // No matching attribute found, create one.
@@ -1734,10 +1742,16 @@ struct Attributor {
 
     Function *AssociatedFn = IRP.getAssociatedFunction();
 
-    // Check if we require a callee but there is none.
-    if (!AssociatedFn && AAType::requiresCalleeForCallBase() &&
-        IRP.isAnyCallSitePosition())
-      return false;
+    if (IRP.isAnyCallSitePosition()) {
+      // Check if we require a callee but there is none.
+      if (!AssociatedFn && AAType::requiresCalleeForCallBase())
+        return false;
+
+      // Check if we require non-asm but it is inline asm.
+      if (AAType::requiresNonAsmForCallBase() &&
+          cast<CallBase>(IRP.getAnchorValue()).isInlineAsm())
+        return false;
+    }
 
     // Check if we require a calles but we can't see all.
     if (AAType::requiresCallersForArgOrFunction())
@@ -2110,6 +2124,15 @@ public:
   bool isAssumedDead(const BasicBlock &BB, const AbstractAttribute *QueryingAA,
                      const AAIsDead *FnLivenessAA,
                      DepClassTy DepClass = DepClassTy::OPTIONAL);
+
+  /// Check \p Pred on all potential Callees of \p CB.
+  ///
+  /// This method will evaluate \p Pred with all potential callees of \p CB as
+  /// input and return true if \p Pred does. If some callees might be unknown
+  /// this function will return false.
+  bool checkForAllCallees(
+      function_ref<bool(ArrayRef<const Function *> Callees)> Pred,
+      const AbstractAttribute &QueryingAA, const CallBase &CB);
 
   /// Check \p Pred on all (transitive) uses of \p V.
   ///
@@ -3264,6 +3287,9 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Virtual destructor.
   virtual ~AbstractAttribute() = default;
 
+  /// Compile time access to the IR attribute kind.
+  static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
+
   /// This function is used to identify if an \p DGN is of type
   /// AbstractAttribute so that the dyn_cast and cast can use such information
   /// to cast an AADepGraphNode to an AbstractAttribute.
@@ -3278,7 +3304,10 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Return true if this AA requires a "callee" (or an associted function) for
   /// a call site positon. Default is optimistic to minimize AAs.
-  static bool requiresCalleeForCallBase() { return true; }
+  static bool requiresCalleeForCallBase() { return false; }
+
+  /// Return true if this AA requires non-asm "callee" for a call site positon.
+  static bool requiresNonAsmForCallBase() { return true; }
 
   /// Return true if this AA requires all callees for an argument or function
   /// positon.
@@ -3831,9 +3860,6 @@ struct AANoAlias
   static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
                             Attribute::AttrKind ImpliedAttributeKind,
                             bool IgnoreSubsumingPositions = false);
-
-  /// See AbstractAttribute::requiresCalleeForCallBase
-  static bool requiresCalleeForCallBase() { return false; }
 
   /// See AbstractAttribute::requiresCallersForArgOrFunction
   static bool requiresCallersForArgOrFunction() { return true; }
@@ -4597,7 +4623,7 @@ struct AAPrivatizablePtr
 /// (readnone/readonly/writeonly).
 struct AAMemoryBehavior
     : public IRAttribute<
-          Attribute::ReadNone,
+          Attribute::None,
           StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>,
           AAMemoryBehavior> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -4672,12 +4698,15 @@ struct AAMemoryBehavior
 /// (readnone/argmemonly/inaccessiblememonly/inaccessibleorargmemonly).
 struct AAMemoryLocation
     : public IRAttribute<
-          Attribute::ReadNone,
+          Attribute::None,
           StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>,
           AAMemoryLocation> {
   using MemoryLocationsKind = StateType::base_t;
 
   AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::requiresCalleeForCallBase.
+  static bool requiresCalleeForCallBase() { return true; }
 
   /// See AbstractAttribute::hasTrivialInitializer.
   static bool hasTrivialInitializer() { return false; }
@@ -5461,9 +5490,8 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
   AACallEdges(const IRPosition &IRP, Attributor &A)
       : Base(IRP), AACallGraphNode(A) {}
 
-  /// The callee value is tracked beyond a simple stripPointerCasts, so we allow
-  /// unknown callees.
-  static bool requiresCalleeForCallBase() { return false; }
+  /// See AbstractAttribute::requiresNonAsmForCallBase.
+  static bool requiresNonAsmForCallBase() { return false; }
 
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
@@ -6286,9 +6314,6 @@ struct AAIndirectCallInfo
     : public StateWrapper<BooleanState, AbstractAttribute> {
   AAIndirectCallInfo(const IRPosition &IRP, Attributor &A)
       : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
-
-  /// The point is to derive callees, after all.
-  static bool requiresCalleeForCallBase() { return false; }
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {

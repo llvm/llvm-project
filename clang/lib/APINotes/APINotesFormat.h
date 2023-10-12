@@ -24,7 +24,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 24; // EnumExtensibility + FlagEnum
+const uint16_t VERSION_MINOR = 25; // SwiftImportAs
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = llvm::BCVBR<16>;
@@ -268,7 +268,8 @@ struct ContextTableKey {
 
   ContextTableKey(std::optional<Context> context, IdentifierID nameID)
       : parentContextID(context ? context->id.Value : (uint32_t)-1),
-        contextKind(context ? (uint8_t)context->kind : (uint8_t)-1),
+        contextKind(context ? static_cast<uint8_t>(context->kind)
+                            : static_cast<uint8_t>(-1)),
         contextID(nameID) {}
 
   llvm::hash_code hashValue() const {

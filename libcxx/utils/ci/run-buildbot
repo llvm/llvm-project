@@ -44,11 +44,6 @@ CMAKE               The CMake binary to use. This variable is optional.
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
 
-GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
-                    When the value is omitted, it defaults to
-                    'git-clang-format'. This variable or its fallback must work
-                    when running the 'format' builder.
-
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
                     is optional.
 
@@ -162,9 +157,6 @@ function generate-cmake-libcxx-win() {
 }
 
 function check-runtimes() {
-    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
-
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
@@ -173,6 +165,19 @@ function check-runtimes() {
 
     echo "+++ Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}" check-unwind
+
+    # TODO: On macOS 13.5, the linker seems to have an issue where it will pick up
+    #       a library if it exists inside a -L search path, even if we don't link
+    #       against that library. This happens with libunwind.dylib if it is built
+    #       at the point when we run the libc++ tests, which causes issues cause we
+    #       are also linking against the system unwinder.
+    #
+    #       I believe this is a linker regression and I reported it as rdar://115842730.
+    #       It should be possible to move this installation step back to the top once
+    #       that issue has been resolved, but in the meantime it doesn't really hurt to
+    #       have it here.
+    echo "--- Installing libc++, libc++abi and libunwind to a fake location"
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi install-unwind
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
@@ -198,27 +203,13 @@ ${NINJA} --version
 if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
 
 case "${BUILDER}" in
-check-format)
-    clean
-    echo "+++ Checking formatting"
-    # We need to set --extensions so that clang-format checks extensionless files.
-    mkdir -p ${BUILD_DIR}
-    if [ -z "${GIT_CLANG_FORMAT}" ]; then
-       GIT_CLANG_FORMAT=git-clang-format
-    fi
-    ${GIT_CLANG_FORMAT} \
-        --diff \
-        --extensions ',h,hpp,c,cpp,cppm,inc,ipp' HEAD~1 \
-        -- $(find libcxx/{benchmarks,include,modules,src} -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
-        | tee ${BUILD_DIR}/clang-format.patch
-    # Check if the diff is empty, fail otherwise.
-    ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
-;;
 check-generated-output)
     # `! foo` doesn't work properly with `set -e`, use `! foo || false` instead.
     # https://stackoverflow.com/questions/57681955/set-e-does-not-respect-logical-not
     clean
     generate-cmake
+
+    set +x # Printing all the commands below just creates extremely confusing output
 
     # Reject patches that forgot to re-run the generator scripts.
     echo "+++ Making sure the generator scripts were run"
@@ -233,20 +224,23 @@ check-generated-output)
         false
     fi
 
+    echo "+++ Making sure libcxx/utils/data/ignore_format.txt was updated appropriately"
+    cp ${MONOREPO_ROOT}/libcxx/utils/data/ignore_format.txt ${BUILD_DIR}/before.txt
     ${MONOREPO_ROOT}/libcxx/utils/generate_ignore_format.sh
-    git diff | tee ${BUILD_DIR}/generated_output.patch
-    git ls-files -o --exclude-standard | tee ${BUILD_DIR}/generated_output.status
-    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
-    if [ -s ${BUILD_DIR}/generated_output.status ]; then
+    diff ${BUILD_DIR}/before.txt ${MONOREPO_ROOT}/libcxx/utils/data/ignore_format.txt | tee ${BUILD_DIR}/ignore_format.diff || true
+    if [ -s ${BUILD_DIR}/ignore_format.diff ]; then
         echo "It looks like the list of not formatted files has changed."
         echo "If a file is now properly formatted with clang-format, remove the file name from "
         echo "libcxx/utils/data/ignore_format.txt. Otherwise you have to fix the"
-        echo "formatting of some of the changed files."
+        echo "formatting of some of the changed files. The diff above represents the "
+        echo "changes that would be needed to ignore_format.txt to keep it representative "
+        echo "of which files are mis-formatted in the project."
         false
     fi
 
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
+    set -x
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
            --exclude '*.dat' \
            --exclude '*unicode*.cpp' \
@@ -370,13 +364,14 @@ bootstrapping-build)
           -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
-          -DLLVM_ENABLE_ASSERTIONS=ON
+          -DLLVM_ENABLE_ASSERTIONS=ON \
+          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the libc++ and libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}" check-runtimes
+    ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
     echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -C "${BUILD_DIR}" install-runtimes
+    ${NINJA} -vC "${BUILD_DIR}" install-runtimes
 
     ccache -s
 ;;
@@ -396,6 +391,12 @@ generic-merged)
 generic-hardened-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-safe-mode)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-safe-mode.cmake"
     check-runtimes
     check-abi-list
 ;;
@@ -456,6 +457,11 @@ generic-no-unicode)
 generic-no-wide-characters)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-wide-characters.cmake"
+    check-runtimes
+;;
+generic-no-tzdb)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-tzdb.cmake"
     check-runtimes
 ;;
 generic-no-experimental)

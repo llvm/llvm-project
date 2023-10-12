@@ -139,6 +139,42 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   IO.mapRequired("SigInputElements", PSV.SigInputElements);
   IO.mapRequired("SigOutputElements", PSV.SigOutputElements);
   IO.mapRequired("SigPatchOrPrimElements", PSV.SigPatchOrPrimElements);
+
+  Triple::EnvironmentType Stage = dxbc::getShaderStage(PSV.Info.ShaderStage);
+  if (PSV.Info.UsesViewID) {
+    MutableArrayRef<SmallVector<llvm::yaml::Hex32>> MutableOutMasks(
+        PSV.OutputVectorMasks);
+    IO.mapRequired("OutputVectorMasks", MutableOutMasks);
+    if (Stage == Triple::EnvironmentType::Hull)
+      IO.mapRequired("PatchOrPrimMasks", PSV.PatchOrPrimMasks);
+  }
+  MutableArrayRef<SmallVector<llvm::yaml::Hex32>> MutableIOMap(
+      PSV.InputOutputMap);
+  IO.mapRequired("InputOutputMap", MutableIOMap);
+
+  if (Stage == Triple::EnvironmentType::Hull)
+    IO.mapRequired("InputPatchMap", PSV.InputPatchMap);
+
+  if (Stage == Triple::EnvironmentType::Domain)
+    IO.mapRequired("PatchOutputMap", PSV.PatchOutputMap);
+}
+
+void MappingTraits<DXContainerYAML::SignatureParameter>::mapping(
+    IO &IO, DXContainerYAML::SignatureParameter &S) {
+  IO.mapRequired("Stream", S.Stream);
+  IO.mapRequired("Name", S.Name);
+  IO.mapRequired("Index", S.Index);
+  IO.mapRequired("SystemValue", S.SystemValue);
+  IO.mapRequired("CompType", S.CompType);
+  IO.mapRequired("Register", S.Register);
+  IO.mapRequired("Mask", S.Mask);
+  IO.mapRequired("ExclusiveMask", S.ExclusiveMask);
+  IO.mapRequired("MinPrecision", S.MinPrecision);
+}
+
+void MappingTraits<DXContainerYAML::Signature>::mapping(
+    IO &IO, DXContainerYAML::Signature &S) {
+  IO.mapRequired("Parameters", S.Parameters);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
@@ -149,6 +185,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Flags", P.Flags);
   IO.mapOptional("Hash", P.Hash);
   IO.mapOptional("PSVInfo", P.Info);
+  IO.mapOptional("Signature", P.Signature);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -203,6 +240,24 @@ void ScalarEnumerationTraits<dxbc::PSV::ComponentType>::enumeration(
 void ScalarEnumerationTraits<dxbc::PSV::InterpolationMode>::enumeration(
     IO &IO, dxbc::PSV::InterpolationMode &Value) {
   for (const auto &E : dxbc::PSV::getInterpolationModes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::D3DSystemValue>::enumeration(
+    IO &IO, dxbc::D3DSystemValue &Value) {
+  for (const auto &E : dxbc::getD3DSystemValues())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
+    IO &IO, dxbc::SigMinPrecision &Value) {
+  for (const auto &E : dxbc::getSigMinPrecisions())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
+    IO &IO, dxbc::SigComponentType &Value) {
+  for (const auto &E : dxbc::getSigComponentTypes())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

@@ -1947,7 +1947,7 @@ public:
     Walk(std::get<AccBeginLoopDirective>(x.t));
     Put("\n");
     EndOpenACC();
-    Walk(std::get<DoConstruct>(x.t));
+    Walk(std::get<std::optional<DoConstruct>>(x.t));
   }
   void Unparse(const AccBeginLoopDirective &x) {
     Walk(std::get<AccLoopDirective>(x.t));
@@ -2307,17 +2307,7 @@ public:
   }
 
   void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
-    switch (x.v) {
-    case OmpAtomicDefaultMemOrderClause::Type::SeqCst:
-      Word("SEQ_CST");
-      break;
-    case OmpAtomicDefaultMemOrderClause::Type::AcqRel:
-      Word("ACQ_REL");
-      break;
-    case OmpAtomicDefaultMemOrderClause::Type::Relaxed:
-      Word("RELAXED");
-      break;
-    }
+    Word(ToUpperCaseLetters(common::EnumToString(x.v)));
   }
 
   void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }

@@ -14,18 +14,18 @@ declare i8 @llvm.experimental.deoptimize.i8(...)
 define i8 @callee(ptr %c) alwaysinline {
   %c0 = load volatile i1, ptr %c
   br i1 %c0, label %lleft, label %lright
-; NO-FLAGS: label="{lleft:|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
-; DEOPT-NOT: label="{lleft:|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
-; UNREACH: label="{lleft:|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
-; BOTH-FLAGS-NOT: label="{lleft:|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32 1)\l... ]\l  ret i8 %v0\l}"
+; NO-FLAGS: label="{lleft:\l|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32\l... 1) ]\l  ret i8 %v0\l}"
+; DEOPT-NOT: label="{lleft:\l|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32\l... 1) ]\l  ret i8 %v0\l}"
+; UNREACH: label="{lleft:\l|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32\l... 1) ]\l  ret i8 %v0\l}"
+; BOTH-FLAGS-NOT: label="{lleft:\l|  %v0 = call i8 (...) @llvm.experimental.deoptimize.i8(i32 1) [ \"deopt\"(i32\l... 1) ]\l  ret i8 %v0\l}"
 lleft:
   %v0 = call i8(...) @llvm.experimental.deoptimize.i8(i32 1) [ "deopt"(i32 1) ]
   ret i8 %v0
 
-; NO-FLAGS: label="{lright:|  unreachable\l}"
-; DEOPT: label="{lright:|  unreachable\l}"
-; UNREACH-NOT: label="{lright:|  unreachable\l}"
-; BOTH-FLAGS-NOT: label="{lright:|  unreachable\l}"
+; NO-FLAGS: label="{lright:\l|  unreachable\l}"
+; DEOPT: label="{lright:\l|  unreachable\l}"
+; UNREACH-NOT: label="{lright:\l|  unreachable\l}"
+; BOTH-FLAGS-NOT: label="{lright:\l|  unreachable\l}"
 lright:
   unreachable
 }

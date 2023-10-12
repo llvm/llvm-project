@@ -265,7 +265,7 @@ void ScheduleDAGVLIW::listScheduleTopDown() {
 //===----------------------------------------------------------------------===//
 
 /// createVLIWDAGScheduler - This creates a top-down list scheduler.
-ScheduleDAGSDNodes *
-llvm::createVLIWDAGScheduler(SelectionDAGISel *IS, CodeGenOpt::Level) {
+ScheduleDAGSDNodes *llvm::createVLIWDAGScheduler(SelectionDAGISel *IS,
+                                                 CodeGenOptLevel) {
   return new ScheduleDAGVLIW(*IS->MF, IS->AA, new ResourcePriorityQueue(IS));
 }

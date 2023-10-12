@@ -141,7 +141,7 @@ void SparcTargetInfo::getTargetDefines(const LangOptions &Opts,
 void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   SparcTargetInfo::getTargetDefines(Opts, Builder);
-  if (getTriple().getOS() == llvm::Triple::Solaris)
+  if (getTriple().isOSSolaris())
     Builder.defineMacro("__sparcv8");
   else {
     switch (getCPUGeneration(CPU)) {
@@ -168,7 +168,7 @@ void SparcV9TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__sparcv9");
   Builder.defineMacro("__arch64__");
   // Solaris doesn't need these variants, but the BSDs do.
-  if (getTriple().getOS() != llvm::Triple::Solaris) {
+  if (!getTriple().isOSSolaris()) {
     Builder.defineMacro("__sparc64__");
     Builder.defineMacro("__sparc_v9__");
     Builder.defineMacro("__sparcv9__");

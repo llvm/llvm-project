@@ -301,7 +301,7 @@ protected:
   // won't be interleaved between modules.  It is also used in mapSectionAddress
   // and resolveRelocations to protect write access to internal data structures.
   //
-  // loadObject may be called on the same thread during the handling of of
+  // loadObject may be called on the same thread during the handling of
   // processRelocations, and that's OK.  The handling of the relocation lists
   // is written in such a way as to work correctly if new elements are added to
   // the end of the list while the list is being processed.
@@ -318,17 +318,17 @@ protected:
   std::string ErrorStr;
 
   void writeInt16BE(uint8_t *Addr, uint16_t Value) {
-    llvm::support::endian::write<uint16_t, llvm::support::unaligned>(
+    llvm::support::endian::write<uint16_t>(
         Addr, Value, IsTargetLittleEndian ? support::little : support::big);
   }
 
   void writeInt32BE(uint8_t *Addr, uint32_t Value) {
-    llvm::support::endian::write<uint32_t, llvm::support::unaligned>(
+    llvm::support::endian::write<uint32_t>(
         Addr, Value, IsTargetLittleEndian ? support::little : support::big);
   }
 
   void writeInt64BE(uint8_t *Addr, uint64_t Value) {
-    llvm::support::endian::write<uint64_t, llvm::support::unaligned>(
+    llvm::support::endian::write<uint64_t>(
         Addr, Value, IsTargetLittleEndian ? support::little : support::big);
   }
 

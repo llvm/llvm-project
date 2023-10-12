@@ -16,6 +16,7 @@ set(LIBUNWIND_C_SOURCES
     UnwindLevel1.c
     UnwindLevel1-gcc-ext.c
     Unwind-sjlj.c
+    Unwind-wasm.c
     )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
@@ -65,16 +66,23 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
 if (LIBUNWIND_USE_COMPILER_RT)
   add_library_flags("${LIBUNWIND_BUILTINS_LIBRARY}")
 else()
   add_library_flags_if(LIBUNWIND_HAS_GCC_S_LIB gcc_s)
   add_library_flags_if(LIBUNWIND_HAS_GCC_LIB gcc)
 endif()
-add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
+if (NOT APPLE) # On Apple platforms, we don't need to link explicitly against system libraries
+  add_library_flags_if(LIBUNWIND_HAS_C_LIB c)
+  add_library_flags_if(LIBUNWIND_HAS_DL_LIB dl)
+
+  if (LIBUNWIND_ENABLE_THREADS)
+    add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
+    add_compile_flags_if(LIBUNWIND_WEAK_PTHREAD_LIB -DLIBUNWIND_USE_WEAK_PTHREAD=1)
+  endif()
+endif()
+
 if (LIBUNWIND_ENABLE_THREADS)
-  add_library_flags_if(LIBUNWIND_HAS_PTHREAD_LIB pthread)
   add_compile_flags_if(LIBUNWIND_WEAK_PTHREAD_LIB -DLIBUNWIND_USE_WEAK_PTHREAD=1)
 endif()
 
@@ -100,6 +108,16 @@ if (APPLE)
   if (CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6")
     add_link_flags("-current_version ${LIBUNWIND_VERSION}" "/usr/lib/libSystem.B.dylib")
   endif ()
+endif ()
+
+if (HAIKU)
+  add_library_flags_if(LIBUNWIND_HAS_ROOT_LIB root)
+
+  add_library_flags_if(LIBUNWIND_HAS_BSD_LIB bsd)
+  add_compile_flags_if(LIBUNWIND_HAS_BSD_LIB -D_LIBUNWIND_USE_HAIKU_BSD_LIB=1)
+
+  add_compile_flags("-D_DEFAULT_SOURCE")
+  add_compile_flags("-DPT_GNU_EH_FRAME=PT_EH_FRAME")
 endif ()
 
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")

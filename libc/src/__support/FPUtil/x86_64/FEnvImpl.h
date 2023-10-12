@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
@@ -21,7 +21,7 @@
 
 #include "src/__support/macros/sanitizer.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 namespace internal {
@@ -244,7 +244,7 @@ LIBC_INLINE int raise_except(int excepts) {
   // We set the status flag for exception one at a time and call the
   // fwait instruction to actually get the processor to raise the
   // exception by calling the exception handler. This scheme is per
-  // the description in in "8.6 X87 FPU EXCEPTION SYNCHRONIZATION"
+  // the description in "8.6 X87 FPU EXCEPTION SYNCHRONIZATION"
   // of the "Intel 64 and IA-32 Architectures Software Developer's
   // Manual, Vol 1".
 
@@ -642,6 +642,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 #endif
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_FENVIMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H

@@ -1358,7 +1358,7 @@ func.func @graph_region_kind() -> () {
 // CHECK: [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
 // CHECK: [[VAL3]] = "baz"([[VAL2]]#0) : (i1) -> i64
   test.graph_region {
-    // %1 OK here in in graph region.
+    // %1 OK here in graph region.
     %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
     %1 = "baz"(%2#0) : (i1) -> (i64)
   }

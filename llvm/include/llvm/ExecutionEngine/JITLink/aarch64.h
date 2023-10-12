@@ -176,7 +176,7 @@ enum EdgeKind_aarch64 : Edge::Kind {
   /// Errors:
   ///   - The result of the unshifted part of the fixup expression must be
   ///     32-bit aligned otherwise an alignment error will be returned.
-  ///   - The result of the fixup expression must fit into an an int19 or an
+  ///   - The result of the fixup expression must fit into an int19 or an
   ///     out-of-range error will be returned.
   LDRLiteral19,
 

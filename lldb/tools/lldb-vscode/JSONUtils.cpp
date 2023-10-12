@@ -132,6 +132,82 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+/// Create a short summary for a container that contains the summary of its
+/// first children, so that the user can get a glimpse of its contents at a
+/// glance.
+static std::optional<std::string>
+TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
+  // We gate this feature because it performs GetNumChildren(), which can
+  // cause performance issues because LLDB needs to complete possibly huge
+  // types.
+  if (!g_vsc.enable_auto_variable_summaries)
+    return std::nullopt;
+
+  if (!v.MightHaveChildren())
+    return std::nullopt;
+  /// As this operation can be potentially slow, we limit the total time spent
+  /// fetching children to a few ms.
+  const auto max_evaluation_time = std::chrono::milliseconds(10);
+  /// We don't want to generate a extremely long summary string, so we limit its
+  /// length.
+  const size_t max_length = 32;
+
+  auto start = std::chrono::steady_clock::now();
+  std::string summary;
+  llvm::raw_string_ostream os(summary);
+  os << "{";
+
+  llvm::StringRef separator = "";
+
+  for (size_t i = 0, e = v.GetNumChildren(); i < e; ++i) {
+    // If we reached the time limit or exceeded the number of characters, we
+    // dump `...` to signal that there are more elements in the collection.
+    if (summary.size() > max_length ||
+        (std::chrono::steady_clock::now() - start) > max_evaluation_time) {
+      os << separator << "...";
+      break;
+    }
+    lldb::SBValue child = v.GetChildAtIndex(i);
+
+    if (llvm::StringRef name = child.GetName(); !name.empty()) {
+      llvm::StringRef value;
+      if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
+        value = summary;
+      else
+        value = child.GetValue();
+
+      if (!value.empty()) {
+        // If the child is an indexed entry, we don't show its index to save
+        // characters.
+        if (name.starts_with("["))
+          os << separator << value;
+        else
+          os << separator << name << ":" << value;
+        separator = ", ";
+      }
+    }
+  }
+  os << "}";
+
+  if (summary == "{...}" || summary == "{}")
+    return std::nullopt;
+  return summary;
+}
+
+/// Try to create a summary string for the given value that doesn't have a
+/// summary of its own.
+static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
+  if (!g_vsc.enable_auto_variable_summaries)
+    return std::nullopt;
+
+  // We use the dereferenced value for generating the summary.
+  if (value.GetType().IsPointerType() || value.GetType().IsReferenceType())
+    value = value.Dereference();
+
+  // We only support auto summaries for containers.
+  return TryCreateAutoSummaryForContainer(value);
+}
+
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
                     llvm::StringRef key) {
   std::string result;
@@ -142,22 +218,28 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
     strm << "<error: " << error.GetCString() << ">";
   } else {
     llvm::StringRef value = v.GetValue();
-    llvm::StringRef summary = v.GetSummary();
-    llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+    llvm::StringRef nonAutoSummary = v.GetSummary();
+    std::optional<std::string> summary = !nonAutoSummary.empty()
+                                             ? nonAutoSummary.str()
+                                             : TryCreateAutoSummary(v);
     if (!value.empty()) {
       strm << value;
-      if (!summary.empty())
-        strm << ' ' << summary;
-    } else if (!summary.empty()) {
-      strm << ' ' << summary;
-    } else if (!type_name.empty()) {
-      strm << type_name;
-      lldb::addr_t address = v.GetLoadAddress();
-      if (address != LLDB_INVALID_ADDRESS)
-        strm << " @ " << llvm::format_hex(address, 0);
+      if (summary)
+        strm << ' ' << *summary;
+    } else if (summary) {
+      strm << *summary;
+
+      // As last resort, we print its type and address if available.
+    } else {
+      if (llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+          !type_name.empty()) {
+        strm << type_name;
+        lldb::addr_t address = v.GetLoadAddress();
+        if (address != LLDB_INVALID_ADDRESS)
+          strm << " @ " << llvm::format_hex(address, 0);
+      }
     }
   }
-  strm.flush();
   EmplaceSafeString(object, key, result);
 }
 
@@ -1003,17 +1085,20 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 // }
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex,
-                                 bool is_name_duplicated) {
+                                 bool is_name_duplicated,
+                                 std::optional<std::string> custom_name) {
   llvm::json::Object object;
-  EmplaceSafeString(object, "name",
-                    CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
+  EmplaceSafeString(
+      object, "name",
+      custom_name ? *custom_name
+                  : CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
 
   if (format_hex)
     v.SetFormat(lldb::eFormatHex);
   SetValueForKey(v, object, "value");
   auto type_obj = v.GetType();
   auto type_cstr = type_obj.GetDisplayTypeName();
-  // If we have a type with many many children, we would like to be able to
+  // If we have a type with many children, we would like to be able to
   // give a hint to the IDE that the type has indexed children so that the
   // request can be broken up in grabbing only a few children at a time. We want
   // to be careful and only call "v.GetNumChildren()" if we have an array type
@@ -1031,15 +1116,20 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   const bool is_synthetic = v.IsSynthetic();
   if (is_array || is_synthetic) {
     const auto num_children = v.GetNumChildren();
+    // We create a "[raw]" fake child for each synthetic type, so we have to
+    // account for it when returning indexed variables. We don't need to do this
+    // for non-indexed ones.
+    bool has_raw_child = is_synthetic && g_vsc.enable_synthetic_child_debugging;
+    int actual_num_children = num_children + (has_raw_child ? 1 : 0);
     if (is_array) {
-      object.try_emplace("indexedVariables", num_children);
-    } else {
+      object.try_emplace("indexedVariables", actual_num_children);
+    } else if (num_children > 0) {
       // If a type has a synthetic child provider, then the SBType of "v" won't
       // tell us anything about what might be displayed. So we can check if the
       // first child's name is "[0]" and then we can say it is indexed.
       const char *first_child_name = v.GetChildAtIndex(0).GetName();
       if (first_child_name && strcmp(first_child_name, "[0]") == 0)
-        object.try_emplace("indexedVariables", num_children);
+        object.try_emplace("indexedVariables", actual_num_children);
     }
   }
   EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);

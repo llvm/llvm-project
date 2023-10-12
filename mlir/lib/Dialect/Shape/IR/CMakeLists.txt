@@ -23,4 +23,5 @@ add_mlir_dialect_library(MLIRShapeDialect
   MLIRIR
   MLIRSideEffectInterfaces
   MLIRTensorDialect
+  MLIRUBDialect
   )

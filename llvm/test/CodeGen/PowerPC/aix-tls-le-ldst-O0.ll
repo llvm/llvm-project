@@ -11,6 +11,13 @@
 ; RUN: llc  -O0 -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
 ; RUN:      -mtriple powerpc-ibm-aix-xcoff --code-model=large < %s \
 ; RUN:      | FileCheck %s --check-prefix=LARGE32-O0
+; RUN: llc  -O0 -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
+; RUN:      -mtriple powerpc64-ibm-aix-xcoff -mattr=+aix-small-local-exec-tls < %s \
+; RUN:      | FileCheck %s --check-prefix=SMALL-LOCAL-EXEC-SMALLCM64
+; RUN: llc  -O0 -verify-machineinstrs -mcpu=pwr7 -ppc-asm-full-reg-names \
+; RUN:      -mtriple powerpc64-ibm-aix-xcoff --code-model=large \
+; RUN:      -mattr=+aix-small-local-exec-tls < %s | FileCheck %s \
+; RUN:      --check-prefix=SMALL-LOCAL-EXEC-LARGECM64
 
 @TLInt = internal thread_local(localexec) global i32 0, align 4
 @TLLongLong = internal thread_local(localexec) global i64 0, align 8
@@ -70,6 +77,20 @@ define void @storeInt(i32 noundef %x) {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: storeInt:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, TLInt[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r3, 0(r4)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: storeInt:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, TLInt[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r3, 0(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLInt)
   store i32 %x, ptr %0, align 4
@@ -132,6 +153,18 @@ define void @storeLongLong(i64 noundef %x) {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: storeLongLong:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, TLLongLong[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    std r3, 0(r4)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: storeLongLong:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, TLLongLong[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    std r3, 0(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @TLLongLong)
   store i64 %x, ptr %0, align 8
@@ -182,6 +215,18 @@ define void @storeDouble(double noundef %x) {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: storeDouble:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLDouble[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stxsdx f1, 0, r3
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: storeDouble:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLDouble[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stxsdx f1, 0, r3
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @TLDouble)
   store double %x, ptr %0, align 8
@@ -232,6 +277,18 @@ define void @storeFloat(float noundef %x) {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: storeFloat:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLFloat[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stfs f1, 0(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: storeFloat:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLFloat[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stfs f1, 0(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLFloat)
   store float %x, ptr %0, align 4
@@ -282,6 +339,18 @@ define i32 @loadInt() {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: loadInt:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLInt[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    lwz r3, 0(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: loadInt:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLInt[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    lwz r3, 0(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLInt)
   %1 = load i32, ptr %0, align 4
@@ -336,6 +405,22 @@ define i32 @loadLongLong() {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: loadLongLong:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLLongLong[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, 0(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    clrldi r3, r3, 32
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: loadLongLong:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLLongLong[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, 0(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    clrldi r3, r3, 32
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @TLLongLong)
   %1 = load i64, ptr %0, align 8
@@ -407,6 +492,30 @@ define i32 @loadDouble() {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: loadDouble:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLDouble[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    lfd f0, 0(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    # kill: def $f1 killed $f0
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    xscvdpsxws f0, f0
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    addi r3, r1, -12
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stfiwx f0, 0, r3
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    lwz r3, -12(r1)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    clrldi r3, r3, 32
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: loadDouble:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLDouble[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    lfd f0, 0(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    # kill: def $f1 killed $f0
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    xscvdpsxws f0, f0
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addi r3, r1, -12
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stfiwx f0, 0, r3
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    lwz r3, -12(r1)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    clrldi r3, r3, 32
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @TLDouble)
   %1 = load double, ptr %0, align 8
@@ -474,6 +583,26 @@ define i32 @loadFloat() {
 ; LARGE32-O0-NEXT:    lwz r0, 8(r1)
 ; LARGE32-O0-NEXT:    mtlr r0
 ; LARGE32-O0-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: loadFloat:
+; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, TLFloat[UL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    lfs f0, 0(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    fctiwz f0, f0
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stfd f0, -8(r1)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    lwa r3, -4(r1)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    clrldi r3, r3, 32
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
+;
+; SMALL-LOCAL-EXEC-LARGECM64-LABEL: loadFloat:
+; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, TLFloat[UL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    lfs f0, 0(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    fctiwz f0, f0
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stfd f0, -8(r1)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    lwa r3, -4(r1)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    clrldi r3, r3, 32
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @TLFloat)
   %1 = load float, ptr %0, align 4

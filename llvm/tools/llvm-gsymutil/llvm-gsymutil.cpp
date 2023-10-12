@@ -213,14 +213,14 @@ static bool filterArch(MachOObjectFile &Obj) {
   Triple ObjTriple(Obj.getArchTriple());
   StringRef ObjArch = ObjTriple.getArchName();
 
-  for (auto Arch : ArchFilters) {
+  for (StringRef Arch : ArchFilters) {
     // Match name.
     if (Arch == ObjArch)
       return true;
 
     // Match architecture number.
     unsigned Value;
-    if (!StringRef(Arch).getAsInteger(0, Value))
+    if (!Arch.getAsInteger(0, Value))
       if (Value == getCPUType(Obj))
         return true;
   }
@@ -230,7 +230,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 /// Determine the virtual address that is considered the base address of an ELF
 /// object file.
 ///
-/// The base address of an ELF file is the the "p_vaddr" of the first program
+/// The base address of an ELF file is the "p_vaddr" of the first program
 /// header whose "p_type" is PT_LOAD.
 ///
 /// \param ELFFile An ELF object file we will search.
@@ -337,7 +337,14 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   }
 
   // Make sure there is DWARF to convert first.
-  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(Obj);
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
+      Obj,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
+      nullptr,
+      /*DWPName=*/"",
+      /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
+      /*WarningHandler=*/WithColor::defaultWarningHandler,
+      /*ThreadSafe*/true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
@@ -363,7 +370,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
     return Err;
 
   // Save the GSYM file to disk.
-  support::endianness Endian =
+  llvm::endianness Endian =
       Obj.makeTriple().isLittleEndian() ? support::little : support::big;
 
   std::optional<uint64_t> OptSegmentSize;
@@ -462,10 +469,9 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
     error(DsymObjectsOrErr.takeError());
   }
 
-  for (auto Object : Objects) {
-    if (auto Err = handleFileConversionToGSYM(Object, OutFile))
+  for (StringRef Object : Objects)
+    if (Error Err = handleFileConversionToGSYM(Object, OutFile))
       return Err;
-  }
   return Error::success();
 }
 

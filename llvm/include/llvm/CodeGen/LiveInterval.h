@@ -857,7 +857,7 @@ namespace llvm {
     /// V2: sub0 sub1 sub2 sub3
     /// V1: <offset>  sub0 sub1
     ///
-    /// This offset will look like a composed subregidx in the the class:
+    /// This offset will look like a composed subregidx in the class:
     ///     V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
     /// =>  V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
     ///

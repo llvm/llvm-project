@@ -898,12 +898,17 @@ struct linker_option_command {
   uint32_t count;
 };
 
+union lc_str {
+  uint32_t offset;
+};
+
 struct fileset_entry_command {
   uint32_t cmd;
   uint32_t cmdsize;
   uint64_t vmaddr;
   uint64_t fileoff;
-  uint32_t entry_id;
+  union lc_str entry_id;
+  uint32_t reserved;
 };
 
 // The symseg_command is obsolete and no longer supported.
@@ -1073,7 +1078,7 @@ struct dyld_chained_fixups_header {
 };
 
 /// dyld_chained_starts_in_image is embedded in LC_DYLD_CHAINED_FIXUPS payload.
-/// Each each seg_info_offset entry is the offset into this struct for that
+/// Each seg_info_offset entry is the offset into this struct for that
 /// segment followed by pool of dyld_chain_starts_in_segment data.
 struct dyld_chained_starts_in_image {
   uint32_t seg_count;
@@ -1434,7 +1439,8 @@ inline void swapStruct(fileset_entry_command &C) {
   sys::swapByteOrder(C.cmdsize);
   sys::swapByteOrder(C.vmaddr);
   sys::swapByteOrder(C.fileoff);
-  sys::swapByteOrder(C.entry_id);
+  sys::swapByteOrder(C.entry_id.offset);
+  sys::swapByteOrder(C.reserved);
 }
 
 inline void swapStruct(version_min_command &C) {

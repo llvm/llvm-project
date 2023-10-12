@@ -308,7 +308,7 @@ class __tuple_leaf
 
     template <class _Tp>
     static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
-#if __has_builtin(__reference_binds_to_temporary)
+#if __has_keyword(__reference_binds_to_temporary)
       return !__reference_binds_to_temporary(_Hp, _Tp);
 #else
       return true;
@@ -883,13 +883,13 @@ public:
     template <class... _Up, enable_if_t<
         _EnableCtorFromUTypesTuple<tuple<_Up...>&>::value>* = nullptr>
     _LIBCPP_HIDE_FROM_ABI constexpr
-        explicit(!(is_convertible_v<_Up&, _Tp> && ...))
+        explicit(!_Lazy<_And, is_convertible<_Up&, _Tp>...>::value)
     tuple(tuple<_Up...>& __t) : __base_(__t) {}
 
     template <class _Alloc, class... _Up, enable_if_t<
         _EnableCtorFromUTypesTuple<tuple<_Up...>&>::value>* = nullptr>
     _LIBCPP_HIDE_FROM_ABI constexpr
-        explicit(!(is_convertible_v<_Up&, _Tp> && ...))
+        explicit(!_Lazy<_And, is_convertible<_Up&, _Tp>...>::value)
     tuple(allocator_arg_t, const _Alloc& __alloc, tuple<_Up...>& __t) : __base_(allocator_arg_t(), __alloc, __t) {}
 #endif // _LIBCPP_STD_VER >= 23
 
@@ -947,13 +947,13 @@ public:
     template <class... _Up, enable_if_t<
         _EnableCtorFromUTypesTuple<const tuple<_Up...>&&>::value>* = nullptr>
     _LIBCPP_HIDE_FROM_ABI constexpr
-        explicit(!(is_convertible_v<const _Up&&, _Tp> && ...))
+        explicit(!_Lazy<_And, is_convertible<const _Up&&, _Tp>...>::value)
     tuple(const tuple<_Up...>&& __t) : __base_(std::move(__t)) {}
 
     template <class _Alloc, class... _Up, enable_if_t<
         _EnableCtorFromUTypesTuple<const tuple<_Up...>&&>::value>* = nullptr>
     _LIBCPP_HIDE_FROM_ABI constexpr
-        explicit(!(is_convertible_v<const _Up&&, _Tp> && ...))
+        explicit(!_Lazy<_And, is_convertible<const _Up&&, _Tp>...>::value)
     tuple(allocator_arg_t, const _Alloc& __alloc, const tuple<_Up...>&& __t)
         : __base_(allocator_arg_t(), __alloc, std::move(__t)) {}
 #endif // _LIBCPP_STD_VER >= 23
@@ -1367,9 +1367,9 @@ template <class _Alloc, class ..._Tp>
 tuple(allocator_arg_t, _Alloc, tuple<_Tp...>) -> tuple<_Tp...>;
 #endif
 
-template <class ..._Tp>
+template <class ..._Tp, __enable_if_t<__all<__is_swappable<_Tp>::value...>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-__enable_if_t<__all<__is_swappable<_Tp>::value...>::value, void>
+void
 swap(tuple<_Tp...>& __t, tuple<_Tp...>& __u)
                  _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value)
     {__t.swap(__u);}

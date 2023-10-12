@@ -75,6 +75,11 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
+  if (FE->getDir() == AST.getPreprocessor()
+                  .getHeaderSearchInfo()
+                  .getModuleMap()
+                  .getBuiltinDir()) 
+    return false;
   if (PI && PI->shouldKeep(*FE))
     return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
@@ -97,7 +102,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
-          &FE->getFileEntry())) {
+          *FE)) {
     dlog("{0} doesn't have header guard and will not be considered unused",
          FE->getName());
     return false;
@@ -385,13 +390,17 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
   include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
-  auto *PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
+  auto PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
 
   std::vector<include_cleaner::SymbolReference> Macros =
       collectMacroReferences(AST);
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
+  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
+                                .getHeaderSearchInfo()
+                                .getModuleMap()
+                                .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
       AST.getPragmaIncludes().get(), AST.getPreprocessor(),
@@ -400,7 +409,8 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
         bool Satisfied = false;
         for (const auto &H : Providers) {
           if (H.kind() == include_cleaner::Header::Physical &&
-              (H.physical() == MainFile || H.physical() == PreamblePatch)) {
+              (H.physical() == MainFile || H.physical() == PreamblePatch ||
+               H.physical().getDir() == ResourceDir)) {
             Satisfied = true;
             continue;
           }

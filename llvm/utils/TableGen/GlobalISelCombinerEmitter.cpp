@@ -72,6 +72,7 @@ cl::opt<bool> DebugCXXPreds(
 constexpr StringLiteral CXXApplyPrefix = "GICXXCustomAction_CombineApply";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
 constexpr StringLiteral PatFragClassName = "GICombinePatFrag";
+constexpr StringLiteral BuiltinInstClassName = "GIBuiltinInst";
 
 std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
   return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
@@ -311,6 +312,7 @@ public:
 
     K_CodeGenInstruction,
     K_PatFrag,
+    K_Builtin,
   };
 
   virtual ~Pattern() = default;
@@ -348,6 +350,8 @@ const char *Pattern::getKindName() const {
     return "CodeGenInstructionPattern";
   case K_PatFrag:
     return "PatFragPattern";
+  case K_Builtin:
+    return "BuiltinPattern";
   }
 
   llvm_unreachable("unknown pattern kind!");
@@ -574,7 +578,8 @@ public:
   virtual ~InstructionPattern() = default;
 
   static bool classof(const Pattern *P) {
-    return P->getKind() == K_CodeGenInstruction || P->getKind() == K_PatFrag;
+    return P->getKind() == K_CodeGenInstruction || P->getKind() == K_PatFrag ||
+           P->getKind() == K_Builtin;
   }
 
   template <typename... Ty> void addOperand(Ty &&...Init) {
@@ -591,11 +596,13 @@ public:
   /// operands that must be redefined in the 'apply' pattern for the rule to be
   /// valid.
   ///
-  /// For CodeGenInstructionPatterns, this just returns the defs of the CGI.
+  /// For most patterns, this just returns the defs.
   /// For PatFrag this only returns the root of the PF.
   ///
   /// Returns an empty array on error.
-  virtual ArrayRef<InstructionOperand> getApplyDefsNeeded() const = 0;
+  virtual ArrayRef<InstructionOperand> getApplyDefsNeeded() const {
+    return {operands().begin(), getNumInstDefs()};
+  }
 
   auto named_operands() {
     return make_filter_range(Operands,
@@ -776,8 +783,6 @@ public:
   unsigned getNumInstDefs() const override;
   unsigned getNumInstOperands() const override;
 
-  ArrayRef<InstructionOperand> getApplyDefsNeeded() const override;
-
   const CodeGenInstruction &getInst() const { return I; }
   StringRef getInstName() const override { return I.TheDef->getName(); }
 
@@ -814,11 +819,6 @@ unsigned CodeGenInstructionPattern::getNumInstOperands() const {
   unsigned NumCGIOps = I.Operands.size();
   return isVariadic() ? std::max<unsigned>(NumCGIOps, Operands.size())
                       : NumCGIOps;
-}
-
-ArrayRef<InstructionOperand>
-CodeGenInstructionPattern::getApplyDefsNeeded() const {
-  return {operands().begin(), getNumInstDefs()};
 }
 
 //===- OperandTypeChecker -------------------------------------------------===//
@@ -936,7 +936,9 @@ public:
     SmallVector<std::unique_ptr<Pattern>, 4> Pats;
   };
 
-  PatFrag(const Record &Def) : Def(Def) {}
+  explicit PatFrag(const Record &Def) : Def(Def) {
+    assert(Def.isSubClassOf(PatFragClassName));
+  }
 
   static StringRef getParamKindStr(ParamKind OK);
 
@@ -1050,6 +1052,10 @@ bool PatFrag::checkSemantics() {
       switch (Pat->getKind()) {
       case Pattern::K_AnyOpcode:
         PrintError("wip_match_opcode cannot be used in " + PatFragClassName);
+        return false;
+      case Pattern::K_Builtin:
+        PrintError("Builtin instructions cannot be used in " +
+                   PatFragClassName);
         return false;
       case Pattern::K_CXX:
       case Pattern::K_CodeGenInstruction:
@@ -1374,6 +1380,74 @@ bool PatFragPattern::mapInputCodeExpansions(const CodeExpansions &ParentCEs,
   return true;
 }
 
+//===- BuiltinPattern -----------------------------------------------------===//
+
+enum BuiltinKind {
+  BI_ReplaceReg,
+  BI_EraseRoot,
+};
+
+class BuiltinPattern : public InstructionPattern {
+  struct BuiltinInfo {
+    StringLiteral DefName;
+    BuiltinKind Kind;
+    unsigned NumOps;
+    unsigned NumDefs;
+  };
+
+  static constexpr std::array<BuiltinInfo, 2> KnownBuiltins = {{
+      {"GIReplaceReg", BI_ReplaceReg, 2, 1},
+      {"GIEraseRoot", BI_EraseRoot, 0, 0},
+  }};
+
+public:
+  BuiltinPattern(const Record &Def, StringRef Name)
+      : InstructionPattern(K_Builtin, Name), I(getBuiltinInfo(Def)) {}
+
+  static bool classof(const Pattern *P) { return P->getKind() == K_Builtin; }
+
+  unsigned getNumInstOperands() const override { return I.NumOps; }
+  unsigned getNumInstDefs() const override { return I.NumDefs; }
+  StringRef getInstName() const override { return I.DefName; }
+  BuiltinKind getBuiltinKind() const { return I.Kind; }
+
+  bool checkSemantics(ArrayRef<SMLoc> Loc) override;
+
+private:
+  static BuiltinInfo getBuiltinInfo(const Record &Def);
+
+  BuiltinInfo I;
+};
+
+BuiltinPattern::BuiltinInfo BuiltinPattern::getBuiltinInfo(const Record &Def) {
+  assert(Def.isSubClassOf(BuiltinInstClassName));
+
+  StringRef Name = Def.getName();
+  for (const auto &KBI : KnownBuiltins) {
+    if (KBI.DefName == Name)
+      return KBI;
+  }
+
+  PrintFatalError(Def.getLoc(), "Unimplemented " + BuiltinInstClassName +
+                                    " def '" + Name + "'");
+}
+
+bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
+  if (!InstructionPattern::checkSemantics(Loc))
+    return false;
+
+  // For now all builtins just take names, no immediates.
+  for (const auto &[Idx, Op] : enumerate(operands())) {
+    if (!Op.isNamedOperand() || Op.isNamedImmediate()) {
+      PrintError(Loc, "expected operand " + to_string(Idx) + " of '" +
+                          getInstName() + "' to be a name");
+      return false;
+    }
+  }
+
+  return true;
+}
+
 //===- PrettyStackTrace Helpers  ------------------------------------------===//
 
 class PrettyStackTraceParse : public PrettyStackTraceEntry {
@@ -1485,11 +1559,7 @@ private:
                     const CXXPattern &P);
 
   bool hasOnlyCXXApplyPatterns() const;
-  bool hasAnyOpcodeMatchPattern() const {
-    return any_of(MatchPats, [&](const auto &E) {
-      return isa<AnyOpcodePattern>(E.second.get());
-    });
-  }
+  bool hasEraseRoot() const;
 
   // Infer machine operand types and check their consistency.
   bool typecheckPatterns();
@@ -1502,6 +1572,9 @@ private:
   /// returns false. This is a simple safeguard to prevent combination of
   /// PatFrags from generating enormous amounts of rules.
   bool buildPermutationsToEmit();
+
+  /// Checks additional semantics of the Patterns.
+  bool checkSemantics();
 
   /// Creates a new RuleMatcher with some boilerplate
   /// settings/actions/predicates, and and adds it to \p OutRMs.
@@ -1550,18 +1623,21 @@ private:
 
   bool emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M);
 
-  // Recursively visits CodeGenInstructionPattern from P to build up the
+  // Recursively visits InstructionPatterns from P to build up the
   // RuleMatcher actions.
-  bool
-  emitCodeGenInstructionApplyPattern(CodeExpansions &CE, RuleMatcher &M,
-                                     const CodeGenInstructionPattern &P,
-                                     DenseSet<const Pattern *> &SeenPats,
-                                     StringMap<unsigned> &OperandToTempRegID);
+  bool emitInstructionApplyPattern(CodeExpansions &CE, RuleMatcher &M,
+                                   const InstructionPattern &P,
+                                   DenseSet<const Pattern *> &SeenPats,
+                                   StringMap<unsigned> &OperandToTempRegID);
 
   bool emitCodeGenInstructionApplyImmOperand(RuleMatcher &M,
                                              BuildMIAction &DstMI,
                                              const CodeGenInstructionPattern &P,
                                              const InstructionOperand &O);
+
+  bool emitBuiltinApplyPattern(CodeExpansions &CE, RuleMatcher &M,
+                               const BuiltinPattern &P,
+                               StringMap<unsigned> &OperandToTempRegID);
 
   // Recursively visits CodeGenInstructionPattern from P to build up the
   // RuleMatcher/InstructionMatcher. May create new InstructionMatchers as
@@ -1595,7 +1671,7 @@ private:
 
   /// Operand tables to tie match/apply patterns together.
   OperandTable<> MatchOpTable;
-  OperandTable<CodeGenInstructionPattern> ApplyOpTable;
+  OperandTable<> ApplyOpTable;
 
   /// Set by findRoots.
   Pattern *MatchRoot = nullptr;
@@ -1627,7 +1703,7 @@ bool CombineRuleBuilder::parseAll() {
     return false;
 
   if (!buildRuleOperandsTable() || !typecheckPatterns() || !findRoots() ||
-      !buildPermutationsToEmit())
+      !checkSemantics() || !buildPermutationsToEmit())
     return false;
   LLVM_DEBUG(verify());
   return true;
@@ -1649,6 +1725,7 @@ bool CombineRuleBuilder::emitRuleMatchers() {
       break;
     }
     case Pattern::K_PatFrag:
+    case Pattern::K_Builtin:
     case Pattern::K_CodeGenInstruction:
       if (!emitMatchPattern(CE, Alts, *cast<InstructionPattern>(MatchRoot)))
         return false;
@@ -1799,18 +1876,10 @@ bool CombineRuleBuilder::addApplyPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
-  if (isa<InstructionPattern>(Pat.get())) {
-    if (hasAnyOpcodeMatchPattern()) {
-      PrintError("cannot use wip_match_opcode in combination with apply "
-                 "instruction patterns!");
-      return false;
-    }
-
-    if (isa<PatFragPattern>(Pat.get())) {
-      PrintError("'" + Name + "': using " + PatFragClassName +
-                 " is not supported in apply patterns");
-      return false;
-    }
+  if (isa<PatFragPattern>(Pat.get())) {
+    PrintError("'" + Name + "': using " + PatFragClassName +
+               " is not supported in apply patterns");
+    return false;
   }
 
   if (auto *CXXPat = dyn_cast<CXXPattern>(Pat.get()))
@@ -1827,18 +1896,11 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
-  // TODO: Could move this to some "checkSemantics" method?
-  if (isa<AnyOpcodePattern>(Pat.get())) {
-    if (hasAnyOpcodeMatchPattern()) {
-      PrintError("wip_opcode_match can only be present once");
-      return false;
-    }
-  }
-
-  if (const auto *CXXPat = dyn_cast<CXXPattern>(Pat.get())) {
-    if (!CXXPat->getRawCode().contains("return ")) {
-      PrintWarning("'match' C++ code does not seem to return!");
-    }
+  // For now, none of the builtins can appear in 'match'.
+  if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
+    PrintError("'" + BP->getInstName() +
+               "' cannot be used in a 'match' pattern");
+    return false;
   }
 
   MatchPats[Name] = std::move(Pat);
@@ -1878,6 +1940,14 @@ void CombineRuleBuilder::addCXXAction(RuleMatcher &M, const CodeExpansions &CE,
 bool CombineRuleBuilder::hasOnlyCXXApplyPatterns() const {
   return all_of(ApplyPats, [&](auto &Entry) {
     return isa<CXXPattern>(Entry.second.get());
+  });
+}
+
+bool CombineRuleBuilder::hasEraseRoot() const {
+  return any_of(ApplyPats, [&](auto &Entry) {
+    if (const auto *BP = dyn_cast<BuiltinPattern>(Entry.second.get()))
+      return BP->getBuiltinKind() == BI_EraseRoot;
+    return false;
   });
 }
 
@@ -1955,6 +2025,97 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
   return true;
 }
 
+bool CombineRuleBuilder::checkSemantics() {
+  assert(MatchRoot && "Cannot call this before findRoots()");
+
+  bool UsesWipMatchOpcode = false;
+  for (const auto &Match : MatchPats) {
+    const auto *Pat = Match.second.get();
+
+    if (const auto *CXXPat = dyn_cast<CXXPattern>(Pat)) {
+      if (!CXXPat->getRawCode().contains("return "))
+        PrintWarning("'match' C++ code does not seem to return!");
+      continue;
+    }
+
+    const auto *AOP = dyn_cast<AnyOpcodePattern>(Pat);
+    if (!AOP)
+      continue;
+
+    if (UsesWipMatchOpcode) {
+      PrintError("wip_opcode_match can only be present once");
+      return false;
+    }
+
+    UsesWipMatchOpcode = true;
+  }
+
+  for (const auto &Apply : ApplyPats) {
+    assert(Apply.second.get());
+    const auto *IP = dyn_cast<InstructionPattern>(Apply.second.get());
+    if (!IP)
+      continue;
+
+    if (UsesWipMatchOpcode) {
+      PrintError("cannot use wip_match_opcode in combination with apply "
+                 "instruction patterns!");
+      return false;
+    }
+
+    const auto *BIP = dyn_cast<BuiltinPattern>(IP);
+    if (!BIP)
+      continue;
+    StringRef Name = BIP->getInstName();
+
+    // (GIEraseInst) has to be the only apply pattern, or it can not be used at
+    // all. The root cannot have any defs either.
+    switch (BIP->getBuiltinKind()) {
+    case BI_EraseRoot: {
+      if (ApplyPats.size() > 1) {
+        PrintError(Name + " must be the only 'apply' pattern");
+        return false;
+      }
+
+      const auto *IRoot = dyn_cast<CodeGenInstructionPattern>(MatchRoot);
+      if (!IRoot) {
+        PrintError(Name +
+                   " can only be used if the root is a CodeGenInstruction");
+        return false;
+      }
+
+      if (IRoot->getNumInstDefs() != 0) {
+        PrintError(Name + " can only be used if on roots that do "
+                          "not have any output operand");
+        PrintNote("'" + IRoot->getInstName() + "' has " +
+                  Twine(IRoot->getNumInstDefs()) + " output operands");
+        return false;
+      }
+      break;
+    }
+    case BI_ReplaceReg: {
+      // (GIReplaceReg can only be used on the root instruction)
+      // TODO: When we allow rewriting non-root instructions, also allow this.
+      StringRef OldRegName = BIP->getOperand(0).getOperandName();
+      auto *Def = MatchOpTable.getDef(OldRegName);
+      if (!Def) {
+        PrintError(Name + " cannot find a matched pattern that defines '" +
+                   OldRegName + "'");
+        return false;
+      }
+      if (MatchOpTable.getDef(OldRegName) != MatchRoot) {
+        PrintError(Name + " cannot replace '" + OldRegName +
+                   "': this builtin can only replace a register defined by the "
+                   "match root");
+        return false;
+      }
+      break;
+    }
+    }
+  }
+
+  return true;
+}
+
 RuleMatcher &CombineRuleBuilder::addRuleMatcher(const PatternAlternatives &Alts,
                                                 Twine AdditionalComment) {
   auto &RM = OutRMs.emplace_back(RuleDef.getLoc());
@@ -2009,7 +2170,7 @@ bool CombineRuleBuilder::findRoots() {
   const auto Finish = [&]() {
     assert(MatchRoot);
 
-    if (hasOnlyCXXApplyPatterns())
+    if (hasOnlyCXXApplyPatterns() || hasEraseRoot())
       return true;
 
     auto *IPRoot = dyn_cast<InstructionPattern>(MatchRoot);
@@ -2107,7 +2268,7 @@ bool CombineRuleBuilder::buildRuleOperandsTable() {
   }
 
   for (auto &Pat : values(ApplyPats)) {
-    auto *IP = dyn_cast<CodeGenInstructionPattern>(Pat.get());
+    auto *IP = dyn_cast<InstructionPattern>(Pat.get());
     if (IP && !ApplyOpTable.addPattern(IP, DiagnoseRedefApply))
       return false;
   }
@@ -2230,6 +2391,10 @@ CombineRuleBuilder::parseInstructionPattern(const Init &Arg,
     if (!PF)
       return nullptr; // Already diagnosed by parsePatFrag
     Pat = std::make_unique<PatFragPattern>(*PF, Name);
+  } else if (const DagInit *BP =
+                 getDagWithOperatorOfSubClass(Arg, BuiltinInstClassName)) {
+    Pat = std::make_unique<BuiltinPattern>(
+        *BP->getOperatorAsDef(RuleDef.getLoc()), Name);
   } else {
     return nullptr;
   }
@@ -2496,6 +2661,8 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
     if (!emitPatFragMatchPattern(CE, Alts, M, &IM, *PFP, SeenPats))
       return false;
+  } else if (isa<BuiltinPattern>(&IP)) {
+    llvm_unreachable("No match builtins known!");
   } else
     llvm_unreachable("Unknown kind of InstructionPattern!");
 
@@ -2514,6 +2681,9 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
         return false;
       continue;
     }
+    case Pattern::K_Builtin:
+      PrintError("No known match builtins");
+      return false;
     case Pattern::K_CodeGenInstruction:
       cast<InstructionPattern>(Pat.get())->reportUnreachable(RuleDef.getLoc());
       return false;
@@ -2563,6 +2733,9 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
           return false;
         continue;
       }
+      case Pattern::K_Builtin:
+        PrintError("No known match builtins");
+        return false;
       case Pattern::K_CodeGenInstruction:
         cast<InstructionPattern>(Pat.get())->reportUnreachable(
             RuleDef.getLoc());
@@ -2728,11 +2901,11 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
   StringMap<unsigned> OperandToTempRegID;
 
   for (auto *ApplyRoot : ApplyRoots) {
-    assert(isa<CodeGenInstructionPattern>(ApplyRoot) &&
-           "PatFragPatterns are not supported in apply patterns yet!");
-    if (!emitCodeGenInstructionApplyPattern(
-            CE, M, *cast<CodeGenInstructionPattern>(ApplyRoot), SeenPats,
-            OperandToTempRegID))
+    assert(isa<InstructionPattern>(ApplyRoot) &&
+           "Root can only be a InstructionPattern!");
+    if (!emitInstructionApplyPattern(CE, M,
+                                     cast<InstructionPattern>(*ApplyRoot),
+                                     SeenPats, OperandToTempRegID))
       return false;
   }
 
@@ -2746,9 +2919,13 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
     case Pattern::K_PatFrag:
       // TODO: We could support pure C++ PatFrags as a temporary thing.
       llvm_unreachable("Unexpected pattern in apply!");
+    case Pattern::K_Builtin:
+      if (!emitInstructionApplyPattern(CE, M, cast<BuiltinPattern>(*Pat),
+                                       SeenPats, OperandToTempRegID))
+        return false;
+      break;
     case Pattern::K_CodeGenInstruction:
-      cast<CodeGenInstructionPattern>(Pat.get())->reportUnreachable(
-          RuleDef.getLoc());
+      cast<CodeGenInstructionPattern>(*Pat).reportUnreachable(RuleDef.getLoc());
       return false;
     case Pattern::K_CXX: {
       addCXXAction(M, CE, *cast<CXXPattern>(Pat.get()));
@@ -2762,8 +2939,8 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
   return true;
 }
 
-bool CombineRuleBuilder::emitCodeGenInstructionApplyPattern(
-    CodeExpansions &CE, RuleMatcher &M, const CodeGenInstructionPattern &P,
+bool CombineRuleBuilder::emitInstructionApplyPattern(
+    CodeExpansions &CE, RuleMatcher &M, const InstructionPattern &P,
     DenseSet<const Pattern *> &SeenPats,
     StringMap<unsigned> &OperandToTempRegID) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &P);
@@ -2780,8 +2957,8 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyPattern(
 
     StringRef OpName = Op.getOperandName();
     if (const auto *DefPat = ApplyOpTable.getDef(OpName)) {
-      if (!emitCodeGenInstructionApplyPattern(CE, M, *DefPat, SeenPats,
-                                              OperandToTempRegID))
+      if (!emitInstructionApplyPattern(CE, M, *DefPat, SeenPats,
+                                       OperandToTempRegID))
         return false;
     } else {
       // If we have no def, check this exists in the MatchRoot.
@@ -2794,9 +2971,17 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyPattern(
     }
   }
 
+  if (const auto *BP = dyn_cast<BuiltinPattern>(&P))
+    return emitBuiltinApplyPattern(CE, M, *BP, OperandToTempRegID);
+
+  if (isa<PatFragPattern>(&P))
+    llvm_unreachable("PatFragPatterns is not supported in 'apply'!");
+
+  auto &CGIP = cast<CodeGenInstructionPattern>(P);
+
   // Now render this inst.
   auto &DstMI =
-      M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &P.getInst());
+      M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &CGIP.getInst());
 
   for (auto &Op : P.operands()) {
     if (Op.isNamedImmediate()) {
@@ -2808,7 +2993,7 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyPattern(
     }
 
     if (Op.hasImmValue()) {
-      if (!emitCodeGenInstructionApplyImmOperand(M, DstMI, P, Op))
+      if (!emitCodeGenInstructionApplyImmOperand(M, DstMI, CGIP, Op))
         return false;
       continue;
     }
@@ -2932,6 +3117,55 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
   ConstantMI.addRenderer<ImmRenderer>(O.getImmValue(), LLT);
   DstMI.addRenderer<TempRegRenderer>(TempRegID);
   return true;
+}
+
+bool CombineRuleBuilder::emitBuiltinApplyPattern(
+    CodeExpansions &CE, RuleMatcher &M, const BuiltinPattern &P,
+    StringMap<unsigned> &OperandToTempRegID) {
+  const auto Error = [&](Twine Reason) {
+    PrintError("cannot emit '" + P.getInstName() + "' builtin: " + Reason);
+    return false;
+  };
+
+  switch (P.getBuiltinKind()) {
+  case BI_EraseRoot: {
+    // Root is always inst 0.
+    M.addAction<EraseInstAction>(/*InsnID*/ 0);
+    return true;
+  }
+  case BI_ReplaceReg: {
+    StringRef Old = P.getOperand(0).getOperandName();
+    StringRef New = P.getOperand(1).getOperandName();
+
+    if (!ApplyOpTable.lookup(New).Found && !MatchOpTable.lookup(New).Found)
+      return Error("unknown operand '" + Old + "'");
+
+    auto &OldOM = M.getOperandMatcher(Old);
+    if (auto It = OperandToTempRegID.find(New);
+        It != OperandToTempRegID.end()) {
+      // Replace with temp reg.
+      M.addAction<ReplaceRegAction>(OldOM.getInsnVarID(), OldOM.getOpIdx(),
+                                    It->second);
+    } else {
+      // Replace with matched reg.
+      auto &NewOM = M.getOperandMatcher(New);
+      M.addAction<ReplaceRegAction>(OldOM.getInsnVarID(), OldOM.getOpIdx(),
+                                    NewOM.getInsnVarID(), NewOM.getOpIdx());
+    }
+    // checkSemantics should have ensured that we can only rewrite the root.
+    // Ensure we're deleting it.
+    assert(MatchOpTable.getDef(Old) == MatchRoot);
+    // TODO: We could avoid adding the action again if it's already in. The
+    // MatchTable is smart enough to only emit one opcode even if
+    // EraseInstAction is present multiple times. I think searching for a copy
+    // is more expensive than just blindly adding it though.
+    M.addAction<EraseInstAction>(/*InsnID*/ 0);
+
+    return true;
+  }
+  }
+
+  llvm_unreachable("Unknown BuiltinKind!");
 }
 
 bool isLiteralImm(const InstructionPattern &P, unsigned OpIdx) {
@@ -3097,6 +3331,10 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
     return Combiner->getValueAsString("Classname");
   }
 
+  StringRef getCombineAllMethodName() const {
+    return Combiner->getValueAsString("CombineAllMethodName");
+  }
+
   std::string getRuleConfigClassName() const {
     return getClassName().str() + "RuleConfig";
   }
@@ -3222,8 +3460,8 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
 }
 
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
-  OS << "bool " << getClassName()
-     << "::tryCombineAll(MachineInstr &I) const {\n"
+  OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
+     << "(MachineInstr &I) const {\n"
      << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
@@ -3414,6 +3652,9 @@ void GICombinerEmitter::gatherRules(
 }
 
 void GICombinerEmitter::run(raw_ostream &OS) {
+  InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
+  LLTOperandMatcher::initTypeIDValuesMap();
+
   Records.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
@@ -3427,6 +3668,16 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
+
+  llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {
+    if (A.isHigherPriorityThan(B)) {
+      assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
+                                           "and less important at "
+                                           "the same time");
+      return true;
+    }
+    return false;
+  });
 
   const MatchTable Table = buildMatchTable(Rules);
 

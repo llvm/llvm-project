@@ -246,6 +246,17 @@ define float @freeze_exp2(float %arg) {
   ret float %freeze
 }
 
+define float @freeze_exp10(float %arg) {
+; CHECK-LABEL: @freeze_exp10(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.exp10.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %op = call float @llvm.exp10.f32(float %arg)
+  %freeze = freeze float %op
+  ret float %freeze
+}
+
 define float @freeze_fabs(float %arg) {
 ; CHECK-LABEL: @freeze_fabs(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
@@ -577,6 +588,7 @@ declare float @llvm.log10.f32(float)
 declare float @llvm.log2.f32(float)
 declare float @llvm.exp.f32(float)
 declare float @llvm.exp2.f32(float)
+declare float @llvm.exp10.f32(float)
 declare float @llvm.fabs.f32(float)
 declare float @llvm.copysign.f32(float, float)
 declare float @llvm.floor.f32(float)

@@ -1221,7 +1221,7 @@ branchRoot(unsigned Position) {
   unsigned size[Nodes];
   IdxPair NewOffset(0, Position);
 
-  // Is is very common for the root node to be smaller than external nodes.
+  // It is very common for the root node to be smaller than external nodes.
   if (Nodes == 1)
     size[0] = rootSize;
   else
@@ -1262,7 +1262,7 @@ splitRoot(unsigned Position) {
   unsigned Size[Nodes];
   IdxPair NewOffset(0, Position);
 
-  // Is is very common for the root node to be smaller than external nodes.
+  // It is very common for the root node to be smaller than external nodes.
   if (Nodes == 1)
     Size[0] = rootSize;
   else
@@ -1814,7 +1814,7 @@ iterator::insertNode(unsigned Level, IntervalMapImpl::NodeRef Node, KeyT Stop) {
 
   // Insert into the branch node at Level-1.
   if (P.size(Level) == Branch::Capacity) {
-    // Branch node is full, handle handle the overflow.
+    // Branch node is full, handle the overflow.
     assert(!SplitRoot && "Cannot overflow after splitting the root");
     SplitRoot = overflow<Branch>(Level);
     Level += SplitRoot;

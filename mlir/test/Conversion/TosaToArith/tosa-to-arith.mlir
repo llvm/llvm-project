@@ -118,3 +118,40 @@ func.func @apply_scale_test_i48(%arg0 : i48, %arg1 : i32, %arg2 : i8) -> (i32) {
   %res = tosa.apply_scale %arg0, %arg1, %arg2 {double_round = true} : (i48, i32, i8) -> i32
   return %res : i32
 }
+
+// -----
+
+// CHECK-LABEL: @apply_scale_test_i64
+// SCALE: tosa.apply_scale
+func.func @apply_scale_test_i64(%arg0 : i64, %arg1 : i32, %arg2 : i8) -> (i32) {
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : i64
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : i64
+  // CHECK-DAG: %[[C31:.+]] = arith.constant 31 : i32
+
+  // Multiply in 64 bits.
+  // CHECK-DAG: %[[M64:.+]] = arith.extsi %arg1 : i32 to i64
+  // CHECK-DAG: %[[MUL:.+]] = arith.muli %arg0, %[[M64]]
+
+  // Round normally.
+  // CHECK-DAG: %[[S32:.+]] = arith.extui %arg2 : i8 to i32
+  // CHECK-DAG: %[[S64:.+]] = arith.extui %[[S32]] : i32 to i64
+  // CHECK-DAG: %[[ONEL:.+]] = arith.shli %[[C1]], %[[S64]] : i64
+  // CHECK-DAG: %[[ONER:.+]] = arith.shrui %[[ONEL]], %[[C1]]
+  // CHECK-DAG: %[[ROUND:.+]] = arith.addi %[[MUL]], %[[ONER]]
+
+  // Apply double rounding.
+  // CHECK-DAG: %[[DUP:.+]] = arith.constant 1073741824 : i64
+  // CHECK-DAG: %[[DDOWN:.+]] = arith.constant -1073741824 : i64
+  // CHECK-DAG: %[[POS:.+]] = arith.cmpi sge, %arg0, %[[C0]]
+  // CHECK-DAG: %[[DBIT:.+]] = arith.select %[[POS]], %[[DUP]], %[[DDOWN]]
+  // CHECK-DAG: %[[DRND:.+]] = arith.addi %[[DBIT]], %[[ROUND]]
+  // CHECK-DAG: %[[USED:.+]] = arith.cmpi sgt, %[[S32]], %[[C31]] : i32
+  // CHECK-DAG: %[[RES64:.+]] = arith.select %[[USED]], %[[DRND]], %[[ROUND]] : i64
+
+  // Shift and truncate final answer.
+  // CHECK-DAG: %[[SHR:.+]] = arith.shrsi %[[RES64]], %[[S64]]
+  // CHECK-DAG: %[[TRUNC:.+]] = arith.trunci %[[SHR]] : i64 to i32
+  // CHECK: return %[[TRUNC]]
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {double_round = true} : (i64, i32, i8) -> i32
+  return %res : i32
+}

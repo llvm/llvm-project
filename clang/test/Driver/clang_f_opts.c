@@ -520,6 +520,11 @@
 // CHECK-COVERAGE-COMPILATION-DIR: "-fcoverage-compilation-dir=."
 // CHECK-COVERAGE-COMPILATION-DIR-NOT: "-ffile-compilation-dir=."
 
+// RUN: %clang -### -S -fverify-intermediate-code %s 2>&1 | FileCheck -check-prefix=CHECK-VERIFY-INTERMEDIATE-CODE %s
+// RUN: %clang -### -S -fno-verify-intermediate-code %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VERIFY-INTERMEDIATE-CODE %s
+// CHECK-VERIFY-INTERMEDIATE-CODE-NOT: "-disable-llvm-verifier"
+// CHECK-NO-VERIFY-INTERMEDIATE-CODE: "-disable-llvm-verifier"
+
 // RUN: %clang -### -S -fdiscard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-DISCARD-NAMES %s
 // RUN: %clang -### -S -fno-discard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-NO-DISCARD-NAMES %s
 // CHECK-DISCARD-NAMES: "-discard-value-names"
@@ -563,12 +568,9 @@
 // RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=zero %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO %s
-// RUN: %clang -### -S -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang \
-// RUN:   -ftrivial-auto-var-init=zero %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-ENABLE-DEPRECATED %s
 // CHECK-TRIVIAL-UNINIT-NOT: hasn't been enabled
 // CHECK-TRIVIAL-PATTERN-NOT: hasn't been enabled
 // CHECK-TRIVIAL-ZERO-NOT: hasn't been enabled
-// CHECK-TRIVIAL-ZERO-ENABLE-DEPRECATED: has been deprecated
 
 // RUN: %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-stop-after=1 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-STOP-AFTER %s
 // RUN: %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-stop-after=1 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-STOP-AFTER %s

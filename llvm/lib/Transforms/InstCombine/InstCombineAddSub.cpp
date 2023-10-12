@@ -830,15 +830,15 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
   if (match(Op0, m_OneUse(m_SExt(m_NSWAdd(m_Value(X), m_Constant(NarrowC)))))) {
-    Constant *WideC = ConstantExpr::getSExt(NarrowC, Ty);
-    Constant *NewC = ConstantExpr::getAdd(WideC, Op1C);
+    Value *WideC = Builder.CreateSExt(NarrowC, Ty);
+    Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
   // (zext (X +nuw NarrowC)) + C --> (zext X) + (zext(NarrowC) + C)
   if (match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_Constant(NarrowC)))))) {
-    Constant *WideC = ConstantExpr::getZExt(NarrowC, Ty);
-    Constant *NewC = ConstantExpr::getAdd(WideC, Op1C);
+    Value *WideC = Builder.CreateZExt(NarrowC, Ty);
+    Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateZExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
@@ -904,7 +904,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   // (X | Op01C) + Op1C --> X + (Op01C + Op1C) iff the `or` is actually an `add`
   Constant *Op01C;
   if (match(Op0, m_Or(m_Value(X), m_ImmConstant(Op01C))) &&
-      haveNoCommonBitsSet(X, Op01C, DL, &AC, &Add, &DT))
+      haveNoCommonBitsSet(X, Op01C, SQ.getWithInstruction(&Add)))
     return BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
 
   // (X | C2) + C --> (X | C2) ^ C2 iff (C2 == -C)
@@ -995,37 +995,66 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   return nullptr;
 }
 
-// Fold variations of a^2 + 2*a*b + b^2 -> (a + b)^2
-Instruction *InstCombinerImpl::foldSquareSumInts(BinaryOperator &I) {
-  Value *A, *B;
+// match variations of a^2 + 2*a*b + b^2
+//
+// to reuse the code between the FP and Int versions, the instruction OpCodes
+//  and constant types have been turned into template parameters.
+//
+// Mul2Rhs: The constant to perform the multiplicative equivalent of X*2 with;
+//  should be `m_SpecificFP(2.0)` for FP and `m_SpecificInt(1)` for Int
+//  (we're matching `X<<1` instead of `X*2` for Int)
+template <bool FP, typename Mul2Rhs>
+static bool matchesSquareSum(BinaryOperator &I, Mul2Rhs M2Rhs, Value *&A,
+                             Value *&B) {
+  constexpr unsigned MulOp = FP ? Instruction::FMul : Instruction::Mul;
+  constexpr unsigned AddOp = FP ? Instruction::FAdd : Instruction::Add;
+  constexpr unsigned Mul2Op = FP ? Instruction::FMul : Instruction::Shl;
 
-  // (a * a) + (((a << 1) + b) * b)
-  bool Matches = match(
-      &I, m_c_Add(m_OneUse(m_Mul(m_Value(A), m_Deferred(A))),
-                  m_OneUse(m_Mul(m_c_Add(m_Shl(m_Deferred(A), m_SpecificInt(1)),
-                                         m_Value(B)),
-                                 m_Deferred(B)))));
+  // (a * a) + (((a * 2) + b) * b)
+  if (match(&I, m_c_BinOp(
+                    AddOp, m_OneUse(m_BinOp(MulOp, m_Value(A), m_Deferred(A))),
+                    m_OneUse(m_BinOp(
+                        MulOp,
+                        m_c_BinOp(AddOp, m_BinOp(Mul2Op, m_Deferred(A), M2Rhs),
+                                  m_Value(B)),
+                        m_Deferred(B))))))
+    return true;
 
-  // ((a * b) << 1)  or ((a << 1) * b)
+  // ((a * b) * 2)  or ((a * 2) * b)
   // +
   // (a * a + b * b) or (b * b + a * a)
-  if (!Matches) {
-    Matches = match(
-        &I,
-        m_c_Add(m_CombineOr(m_OneUse(m_Shl(m_Mul(m_Value(A), m_Value(B)),
-                                           m_SpecificInt(1))),
-                            m_OneUse(m_Mul(m_Shl(m_Value(A), m_SpecificInt(1)),
-                                           m_Value(B)))),
-                m_OneUse(m_c_Add(m_Mul(m_Deferred(A), m_Deferred(A)),
-                                 m_Mul(m_Deferred(B), m_Deferred(B))))));
-  }
+  return match(
+      &I,
+      m_c_BinOp(AddOp,
+                m_CombineOr(
+                    m_OneUse(m_BinOp(
+                        Mul2Op, m_BinOp(MulOp, m_Value(A), m_Value(B)), M2Rhs)),
+                    m_OneUse(m_BinOp(MulOp, m_BinOp(Mul2Op, m_Value(A), M2Rhs),
+                                     m_Value(B)))),
+                m_OneUse(m_c_BinOp(
+                    AddOp, m_BinOp(MulOp, m_Deferred(A), m_Deferred(A)),
+                    m_BinOp(MulOp, m_Deferred(B), m_Deferred(B))))));
+}
 
-  // if one of them matches: -> (a + b)^2
-  if (Matches) {
+// Fold integer variations of a^2 + 2*a*b + b^2 -> (a + b)^2
+Instruction *InstCombinerImpl::foldSquareSumInt(BinaryOperator &I) {
+  Value *A, *B;
+  if (matchesSquareSum</*FP*/ false>(I, m_SpecificInt(1), A, B)) {
     Value *AB = Builder.CreateAdd(A, B);
     return BinaryOperator::CreateMul(AB, AB);
   }
+  return nullptr;
+}
 
+// Fold floating point variations of a^2 + 2*a*b + b^2 -> (a + b)^2
+// Requires `nsz` and `reassoc`.
+Instruction *InstCombinerImpl::foldSquareSumFP(BinaryOperator &I) {
+  assert(I.hasAllowReassoc() && I.hasNoSignedZeros() && "Assumption mismatch");
+  Value *A, *B;
+  if (matchesSquareSum</*FP*/ true>(I, m_SpecificFP(2.0), A, B)) {
+    Value *AB = Builder.CreateFAddFMF(A, B, &I);
+    return BinaryOperator::CreateFMulFMF(AB, AB, &I);
+  }
   return nullptr;
 }
 
@@ -1537,7 +1566,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
   // A+B --> A|B iff A and B have no bits set in common.
-  if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
+  if (haveNoCommonBitsSet(LHS, RHS, SQ.getWithInstruction(&I)))
     return BinaryOperator::CreateOr(LHS, RHS);
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))
@@ -1662,12 +1691,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // ctpop(A) + ctpop(B) => ctpop(A | B) if A and B have no bits set in common.
   if (match(LHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(A)))) &&
       match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(B)))) &&
-      haveNoCommonBitsSet(A, B, DL, &AC, &I, &DT))
+      haveNoCommonBitsSet(A, B, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateOr(A, B)}));
 
-  if (Instruction *Res = foldSquareSumInts(I))
+  if (Instruction *Res = foldSquareSumInt(I))
     return Res;
 
   if (Instruction *Res = foldBinOpOfDisplacedShifts(I))
@@ -1847,6 +1876,9 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
 
   if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
     if (Instruction *F = factorizeFAddFSub(I, Builder))
+      return F;
+
+    if (Instruction *F = foldSquareSumFP(I))
       return F;
 
     // Try to fold fadd into start value of reduction intrinsic.
@@ -2113,7 +2145,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
                      m_Select(m_Value(), m_Specific(Op1), m_Specific(&I))) ||
                match(UI, m_Select(m_Value(), m_Specific(&I), m_Specific(Op1)));
       })) {
-    if (Value *NegOp1 = Negator::Negate(IsNegation, Op1, *this))
+    if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
+                                                        I.hasNoSignedWrap(),
+                                        Op1, *this))
       return BinaryOperator::CreateAdd(NegOp1, Op0);
   }
   if (IsNegation)

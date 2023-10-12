@@ -357,6 +357,16 @@ public:
     return *this;
   }
 
+  /// Set a dim in shape @pos to val.
+  Builder &setDim(unsigned pos, int64_t val) {
+    if (storage.empty())
+      storage.append(shape.begin(), shape.end());
+    assert(pos < storage.size() && "overflow");
+    storage[pos] = val;
+    shape = {storage.data(), storage.size()};
+    return *this;
+  }
+
   operator VectorType() {
     return VectorType::get(shape, elementType, scalableDims);
   }
@@ -511,7 +521,7 @@ MemRefType canonicalizeStridedLayout(MemRefType t);
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
 /// once a dynamic dimension is encountered, all canonical strides become
 /// dynamic and need to be encoded with a different symbol.
-/// For canonical strides expressions, the offset is always 0 and and fastest
+/// For canonical strides expressions, the offset is always 0 and the fastest
 /// varying stride is always `1`.
 ///
 /// Examples:

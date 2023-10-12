@@ -1940,7 +1940,7 @@ void MCDwarfFrameEmitter::encodeAdvanceLoc(MCContext &Context,
   if (AddrDelta == 0)
     return;
 
-  support::endianness E =
+  llvm::endianness E =
       Context.getAsmInfo()->isLittleEndian() ? support::little : support::big;
 
   if (isUIntN(6, AddrDelta)) {

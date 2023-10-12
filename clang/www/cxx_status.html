@@ -125,7 +125,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>constexpr cast from <tt>void*</tt></td>
   <td><a href="https://wg21.link/P2738R1">P2738R1</a></td>
-  <td class="unreleased" align="center">Clang 17</td>
+  <td class="full" align="center">Clang 17</td>
  </tr>
  <tr>
   <td>On the ignorability of standard attributes</td>
@@ -140,7 +140,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>User-generated <tt>static_assert</tt> messages</td>
   <td><a href="https://wg21.link/P2741R3">P2741R3</a></td>
-  <td class="unreleased" align="center">Clang 17</td>
+  <td class="full" align="center">Clang 17</td>
  </tr>
  <tr>
   <td>Placeholder variables with no name</td>
@@ -222,7 +222,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Deducing this</td>
       <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 18</td>
     </tr>
     <tr>
       <td><a href="https://wg21.link/P2797R0">P2797R0</a></td>
@@ -231,7 +231,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Change scope of lambda trailing-return-type</td>
       <td><a href="https://wg21.link/P2036R3">P2036R3</a></td>
-      <td rowspan=2 class="unreleased" align="center">Clang 17</td>
+      <td rowspan=2 class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td><a href="https://wg21.link/P2579R0">P2579R0</a></td>
@@ -292,10 +292,9 @@ C++23, informally referred to as C++26.</p>
       <td><a href="https://wg21.link/P2255R2">P2255R2</a></td>
       <td class="partial" align="center">
         <details><summary>Partial</summary>
-          Clang provides a <tt>__reference_binds_to_temporary</tt> type trait
-          builtin, with which the library facility can be partially implemented.
-          Both <tt>__reference_constructs_from_temporary</tt> and
-          <tt>__reference_converts_from_temporary</tt> builtins should be
+          Clang provides <tt>__reference_constructs_from_temporary</tt> type
+          trait builtin, with which <tt>std::reference_constructs_from_temporary</tt>
+          is implemented. <tt>__reference_converts_from_temporary</tt> needs to be
           provided, following the normal cross-vendor convention to implement
           traits requiring compiler support directly.
         </details></td>
@@ -408,7 +407,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>consteval needs to propagate up</td>
       <td><a href="https://wg21.link/P2564R3">P2564R3</a> (<a href="#dr">DR</a>)</td>
-      <td class="unreleased" align="center">Clang 17</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
@@ -577,7 +576,7 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2002r1">P2002R1</a></td>
-        <td class="unreleased" align="center">Clang 17</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2085r0">P2085R0</a></td>
@@ -596,7 +595,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lambdas in unevaluated contexts</td>
       <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
-      <td class="unreleased" align="center">Clang 17</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -688,7 +687,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td class="unreleased" align="center">Clang 17</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
@@ -811,7 +810,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Class template argument deduction for aggregates</td>
       <td><a href="https://wg21.link/p1816r0">P1816R0</a></td>
-      <td rowspan=2 class="unreleased" align="center">Clang 17</td>
+      <td rowspan=2 class="full" align="center">Clang 17</td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2082r1">P2082R1</a></td>

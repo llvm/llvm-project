@@ -381,7 +381,7 @@ static bool isRestoreCall(unsigned Opc) {
 
 static inline bool isOptNone(const MachineFunction &MF) {
     return MF.getFunction().hasOptNone() ||
-           MF.getTarget().getOptLevel() == CodeGenOpt::None;
+           MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 }
 
 static inline bool isOptSize(const MachineFunction &MF) {
@@ -1156,7 +1156,7 @@ bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
   // gdb can't break at the start of the function without it.  Will remove if
   // this turns out to be a gdb bug.
   //
-  if (MF.getTarget().getOptLevel() == CodeGenOpt::None)
+  if (MF.getTarget().getOptLevel() == CodeGenOptLevel::None)
     return true;
 
   // By default we want to use SP (since it's always there). FP requires
@@ -1269,7 +1269,7 @@ HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   int Offset = MFI.getObjectOffset(FI);
   bool HasAlloca = MFI.hasVarSizedObjects();
   bool HasExtraAlign = HRI.hasStackRealignment(MF);
-  bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
+  bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   unsigned FrameSize = MFI.getStackSize();
@@ -2584,7 +2584,7 @@ bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
   if (!hasFP(MF))
     return true;
   if (!isOptSize(MF) && !isMinSize(MF))
-    if (MF.getTarget().getOptLevel() > CodeGenOpt::Default)
+    if (MF.getTarget().getOptLevel() > CodeGenOptLevel::Default)
       return true;
 
   // Check if CSI only has double registers, and if the registers form

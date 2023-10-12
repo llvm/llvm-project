@@ -173,6 +173,12 @@ class VectorLegalizer {
   /// result is truncated back to the original scalar type.
   void PromoteReduction(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  /// Implements vector setcc operation promotion.
+  ///
+  /// All vector operands are promoted to a vector type with larger element
+  /// type.
+  void PromoteSETCC(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
 public:
   VectorLegalizer(SelectionDAG& dag) :
       DAG(dag), TLI(dag.getTargetLoweringInfo()) {}
@@ -392,6 +398,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FLOG10:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
@@ -602,6 +609,31 @@ void VectorLegalizer::PromoteReduction(SDNode *Node,
   Results.push_back(Res);
 }
 
+void VectorLegalizer::PromoteSETCC(SDNode *Node,
+                                   SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(0).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+
+  unsigned ExtOp = VecVT.isFloatingPoint() ? ISD::FP_EXTEND : ISD::ANY_EXTEND;
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 5> Operands(Node->getNumOperands());
+
+  Operands[0] = DAG.getNode(ExtOp, DL, NewVecVT, Node->getOperand(0));
+  Operands[1] = DAG.getNode(ExtOp, DL, NewVecVT, Node->getOperand(1));
+  Operands[2] = Node->getOperand(2);
+
+  if (Node->getOpcode() == ISD::VP_SETCC) {
+    Operands[3] = Node->getOperand(3); // mask
+    Operands[4] = Node->getOperand(4); // evl
+  }
+
+  SDValue Res = DAG.getNode(Node->getOpcode(), DL, Node->getSimpleValueType(0),
+                            Operands, Node->getFlags());
+
+  Results.push_back(Res);
+}
+
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
@@ -636,6 +668,11 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VP_REDUCE_SEQ_FADD:
     // Promote the operation by extending the operand.
     PromoteReduction(Node, Results);
+    return;
+  case ISD::VP_SETCC:
+  case ISD::SETCC:
+    // Promote the operation by extending the operand.
+    PromoteSETCC(Node, Results);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:

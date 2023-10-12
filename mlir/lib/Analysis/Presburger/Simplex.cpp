@@ -188,7 +188,7 @@ Direction flippedDirection(Direction direction) {
 /// greater, so A*y + b is always equal to or lexicographically greater than b.
 /// Thus, since we can attain x = b, that is the lexicographic minimum.
 ///
-/// We have that that every column in A is lexicopositive, i.e., has at least
+/// We have that every column in A is lexicopositive, i.e., has at least
 /// one non-zero element, with the first such element being positive. Since for
 /// the tableau to be consistent we must have non-negative sample values not
 /// only for the constraints but also for the variables, we also have x >= 0 and
@@ -436,7 +436,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 }
 
 void SymbolicLexSimplex::recordOutput(SymbolicLexOpt &result) const {
-  Matrix output(0, domainPoly.getNumVars() + 1);
+  IntMatrix output(0, domainPoly.getNumVars() + 1);
   output.reserveRows(result.lexopt.getNumOutputs());
   for (const Unknown &u : var) {
     if (u.isSymbol)
@@ -1801,7 +1801,7 @@ private:
 ///
 /// When incrementing i, no cached f values get invalidated. However, the cached
 /// duals do get invalidated as the duals for the higher levels are different.
-void Simplex::reduceBasis(Matrix &basis, unsigned level) {
+void Simplex::reduceBasis(IntMatrix &basis, unsigned level) {
   const Fraction epsilon(3, 4);
 
   if (level == basis.getNumRows() - 1)
@@ -1975,7 +1975,7 @@ std::optional<SmallVector<MPInt, 8>> Simplex::findIntegerSample() {
     return {};
 
   unsigned nDims = var.size();
-  Matrix basis = Matrix::identity(nDims);
+  IntMatrix basis = IntMatrix::identity(nDims);
 
   unsigned level = 0;
   // The snapshot just before constraining a direction to a value at each level.

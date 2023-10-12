@@ -15,15 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
+#include "target_ocaml.h"
+#include "caml/alloc.h"
+#include "caml/callback.h"
+#include "caml/custom.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
+#include "llvm_ocaml.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
-#include "caml/alloc.h"
-#include "caml/fail.h"
-#include "caml/memory.h"
-#include "caml/custom.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
 
 void llvm_raise(value Prototype, char *Message);
 value llvm_string_of_message(char *Message);
@@ -209,8 +210,6 @@ value llvm_target_has_asm_backend(value Target) {
 }
 
 /*===---- Target Machine --------------------------------------------------===*/
-
-#define TargetMachine_val(v) (*(LLVMTargetMachineRef *)(Data_custom_val(v)))
 
 static void llvm_finalize_target_machine(value Machine) {
   LLVMDisposeTargetMachine(TargetMachine_val(Machine));

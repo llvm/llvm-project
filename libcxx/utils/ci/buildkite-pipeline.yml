@@ -26,31 +26,13 @@ env:
     # LLVM POST-BRANCH bump version
     # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
     # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-    LLVM_STABLE_VERSION: "16" # Used for tooling, update after the RELEASE.
+    LLVM_STABLE_VERSION: "17" # Used for tooling, update after the RELEASE.
     LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
     GCC_STABLE_VERSION: "13"
 steps:
   #
-  # Light pre-commit tests for things like formatting or when people forget
-  # to update generated files.
+  # Light pre-commit tests for things like forgetting to update generated files.
   #
-  - label: "Format"
-    command: "libcxx/utils/ci/run-buildbot check-format"
-    artifact_paths:
-      - "**/clang-format.patch"
-    env:
-        GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION} --binary clang-format-${LLVM_STABLE_VERSION}"
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "Generated output"
     command: "libcxx/utils/ci/run-buildbot check-generated-output"
     artifact_paths:
@@ -218,9 +200,13 @@ steps:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        # Note: Modules require and absolute path for clang-scan-deps
+        # https://github.com/llvm/llvm-project/issues/61006
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
         ENABLE_CLANG_TIDY: "On"
+        ENABLE_STD_MODULES: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -276,25 +262,6 @@ steps:
         CC: "gcc-${GCC_STABLE_VERSION}"
         CXX: "g++-${GCC_STABLE_VERSION}"
         ENABLE_CLANG_TIDY: "On"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Clang 15"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    env:
-        CC: "clang-15"
-        CXX: "clang++-15"
-        ENABLE_CLANG_TIDY: "On"
-        ENABLE_STD_MODULES: "Off"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -495,6 +462,27 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "Safe mode"
+    command: "libcxx/utils/ci/run-buildbot generic-safe-mode"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        # Note: Modules require an absolute path for `clang-scan-deps` (see
+        # https://github.com/llvm/llvm-project/issues/61006).
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
+        ENABLE_CLANG_TIDY: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "Debug mode"
     command: "libcxx/utils/ci/run-buildbot generic-debug-mode"
     artifact_paths:
@@ -662,6 +650,27 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
+      agents:
+        queue: "libcxx-builders"
+        os: "linux"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+    - label: "No time zone database"
+      command: "libcxx/utils/ci/run-buildbot generic-no-tzdb"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
           ENABLE_CLANG_TIDY: "On"
@@ -680,8 +689,11 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
           ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
@@ -698,8 +710,11 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
           ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
@@ -872,7 +887,7 @@ steps:
   - group: ":mac: Apple"
     steps:
     - label: "MacOS x86_64"
-      command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -887,7 +902,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "MacOS arm64"
-      command: "libcxx/utils/ci/run-buildbot generic-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -1125,8 +1140,8 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang15"
-          CXX: "clang++15"
+          CC: "clang16"
+          CXX: "clang++16"
           ENABLE_STD_MODULES: "Off"
       agents:
         queue: "libcxx-builders"

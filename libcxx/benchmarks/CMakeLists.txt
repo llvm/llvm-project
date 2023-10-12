@@ -76,7 +76,27 @@ set(BENCHMARK_LIBCXX_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx)
 set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
 
 add_library(               cxx-benchmarks-flags INTERFACE)
-target_compile_features(   cxx-benchmarks-flags INTERFACE cxx_std_20)
+
+# TODO(cmake): remove. This is a workaround to prevent older versions of GCC
+# from failing the configure step because they don't support C++23.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.0")
+  return()
+endif()
+#TODO(cmake): remove the `add_compile_options`. Currently we have to explicitly
+# pass the `std:c++latest` flag on Windows to work around an issue where
+# requesting `cxx_std_23` results in an error -- somehow CMake fails to
+# translate the `c++23` flag into `c++latest`, and the highest numbered C++
+# version that MSVC flags support is C++20.
+if (MSVC)
+  add_compile_options(/std:c++latest)
+# ibm-clang does not recognize the cxx_std_23 flag, so use this as a temporary
+# workaround on AIX as well.
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_compile_options(-std=c++23)
+else()
+  target_compile_features( cxx-benchmarks-flags INTERFACE cxx_std_23)
+endif()
+
 target_compile_options(    cxx-benchmarks-flags INTERFACE -fsized-deallocation -nostdinc++)
 target_include_directories(cxx-benchmarks-flags INTERFACE "${LIBCXX_GENERATED_INCLUDE_DIR}"
                                                 INTERFACE "${BENCHMARK_LIBCXX_INSTALL}/include"
@@ -153,6 +173,7 @@ endfunction()
 #==============================================================================
 set(BENCHMARK_TESTS
     algorithms.partition_point.bench.cpp
+    algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
     algorithms/lower_bound.bench.cpp
@@ -163,6 +184,7 @@ set(BENCHMARK_TESTS
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
+    algorithms/ranges_ends_with.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
     algorithms/ranges_pop_heap.bench.cpp
@@ -174,6 +196,7 @@ set(BENCHMARK_TESTS
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp
     libcxxabi/dynamic_cast.bench.cpp
+    libcxxabi/dynamic_cast_old_stress.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
     deque_iterator.bench.cpp

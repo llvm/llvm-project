@@ -72,7 +72,7 @@ HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 /// virtual registers have been created for all the instructions, and it's
 /// only needed in cases where the register classes implied by the
 /// instructions are insufficient. It is emitted as a COPY MachineInstr.
-  HANDLE_TARGET_OPCODE(COPY_TO_REGCLASS)
+HANDLE_TARGET_OPCODE(COPY_TO_REGCLASS)
 
 /// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic
 HANDLE_TARGET_OPCODE(DBG_VALUE)
@@ -103,11 +103,11 @@ HANDLE_TARGET_OPCODE(DBG_LABEL)
 /// e.g. v1027 = REG_SEQUENCE v1024, 3, v1025, 4, v1026, 5
 /// After register coalescing references of v1024 should be replace with
 /// v1027:3, v1025 with v1027:4, etc.
-  HANDLE_TARGET_OPCODE(REG_SEQUENCE)
+HANDLE_TARGET_OPCODE(REG_SEQUENCE)
 
 /// COPY - Target-independent register copy. This instruction can also be
 /// used to copy between subregisters of virtual registers.
-  HANDLE_TARGET_OPCODE(COPY)
+HANDLE_TARGET_OPCODE(COPY)
 
 /// BUNDLE - This instruction represents an instruction bundle. Instructions
 /// which immediately follow a BUNDLE instruction which are marked with
@@ -617,6 +617,9 @@ HANDLE_TARGET_OPCODE(G_FEXP)
 /// Generic base-2 exponential of a value.
 HANDLE_TARGET_OPCODE(G_FEXP2)
 
+/// Generic base-10 exponential of a value.
+HANDLE_TARGET_OPCODE(G_FEXP10)
+
 /// Floating point base-e logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG)
 
@@ -679,6 +682,11 @@ HANDLE_TARGET_OPCODE(G_FMAXNUM_IEEE)
 /// FP min/max matching IEEE-754 2018 draft semantics.
 HANDLE_TARGET_OPCODE(G_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_FMAXIMUM)
+
+/// Access to FP environment.
+HANDLE_TARGET_OPCODE(G_GET_FPMODE)
+HANDLE_TARGET_OPCODE(G_SET_FPMODE)
+HANDLE_TARGET_OPCODE(G_RESET_FPMODE)
 
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_PTR_ADD)

@@ -333,7 +333,9 @@ uint32_t mapping::getNumberOfBlocksInKernel(int32_t Dim) {
   return NumberOfBlocks;
 }
 
-uint32_t mapping::getNumberOfProcessorElements() { __builtin_trap(); }
+uint32_t mapping::getNumberOfProcessorElements() {
+  return static_cast<uint32_t>(config::getHardwareParallelism());
+}
 
 ///}
 

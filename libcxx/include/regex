@@ -3106,8 +3106,7 @@ private:
 
 #if _LIBCPP_STD_VER >= 17
 template <class _ForwardIterator,
-          class = typename enable_if<__has_forward_iterator_category<_ForwardIterator>::value, nullptr_t>::type
->
+          __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
 basic_regex(_ForwardIterator, _ForwardIterator,
             regex_constants::syntax_option_type = regex_constants::ECMAScript)
     -> basic_regex<typename iterator_traits<_ForwardIterator>::value_type>;

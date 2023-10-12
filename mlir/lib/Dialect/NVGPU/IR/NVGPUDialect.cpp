@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -22,6 +23,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -151,7 +153,6 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
   //  - For F32 (TF32), F16, S8, and S4 data
   //    types the fundamental tensor core operation is of shape 8-by-8-by-128b.
   //  - F64 is an exception and is of shape 8-by-8-by-256b.
-  constexpr int kThreads = 32; // 32 threads per warp
   int64_t shapeM = 8;
   int64_t shapeN = 8;
   int64_t shapeK; // set based on data type (128b for all data types except F64)
@@ -206,17 +207,17 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
 
   // verify warp-wide size for vector a
   int64_t sparseFactor = sparse ? 2 : 1;
-  if (aShape[0] * aShape[1] * kThreads != m * k / sparseFactor)
+  if (aShape[0] * aShape[1] * kWarpSize != m * k / sparseFactor)
     return op->emitOpError()
            << "expected " << m * k << " warp-wide matrix A elements";
 
   // verify warp-wide size for vector b
-  if (bShape[0] * bShape[1] * kThreads != k * n)
+  if (bShape[0] * bShape[1] * kWarpSize != k * n)
     return op->emitOpError()
            << "expected " << k * n << " warp-wide matrix B elements";
 
   // verify warp-wide size for vector c
-  if (cShape[0] * cShape[1] * kThreads != m * n)
+  if (cShape[0] * cShape[1] * kWarpSize != m * n)
     return op->emitOpError()
            << "expected " << m * n << " warp-wide matrix C elements";
 
@@ -367,10 +368,10 @@ LogicalResult TmaCreateDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_GenerateGmmaDescriptorOp
+// NVGPU_WarpgroupGenerateDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GenerateGmmaDescriptorOp::verify() {
+LogicalResult WarpgroupGenerateDescriptorOp::verify() {
   MemRefType memrefType = getTensor().getType();
   MemRefType tensorMapType = getTensorMap().getType().getTensor();
 
@@ -399,6 +400,190 @@ LogicalResult GenerateGmmaDescriptorOp::verify() {
                        << " is supported for the time being";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WarpgroupMmaOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult isAllowedWGMMADataType(Type typeD, Type typeA, Type typeB) {
+  // F32 += F16 + F16
+  // F16 += F16 + F16
+  if (typeA.isF16() && typeB.isF16() && (typeD.isF32() || typeD.isF16()))
+    return success();
+  // F32 += TF32 + TF32
+  if (typeA.isTF32() && typeD.isF32() && typeB.isTF32())
+    return success();
+  // s32 += i8 + i8
+  if (typeA.isInteger(16) && typeB.isInteger(16) && typeD.isInteger(32))
+    return success();
+  // s32 += i1 + i1
+  if (typeA.isInteger(1) && typeB.isInteger(1) && typeD.isInteger(32))
+    return success();
+  // F32 += BF16 + BF16
+  // F16 += BF16 + BF16
+  if (typeA.isBF16() && typeB.isBF16() && (typeD.isF32() || typeD.isF16()))
+    return success();
+  // F16 += f8 + f8
+  // F32 += f8 + f8
+  if ((typeA.isFloat8E5M2() || typeA.isFloat8E4M3FN()) &&
+      (typeB.isFloat8E5M2() || typeB.isFloat8E4M3FN()) &&
+      (typeD.isF32() || typeD.isF16()))
+    return success();
+
+  return failure();
+}
+
+LogicalResult isAllowedSizeM(int sizeM) { return success(sizeM == 64); }
+
+LogicalResult isAllowedSizeN(int sizeN, Type typeA) {
+  SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
+                               72,  80,  88,  96,  104, 112, 120, 128,
+                               136, 144, 152, 160, 168, 176, 184, 192,
+                               200, 208, 216, 224, 232, 240, 248, 256};
+  SmallVector<int> allowedNshort = {8,   16,  24,  32,  48,  64,
+                                    80,  96,  112, 128, 144, 160,
+                                    176, 192, 208, 224, 240, 256};
+  if (typeA.isBF16() || typeA.isF16() || typeA.isF32() || typeA.isTF32() ||
+      typeA.isFloat8E4M3FN() || typeA.isFloat8E5M2())
+    if (llvm::is_contained(allowedN, sizeN))
+      return success();
+
+  if (typeA.isInteger(8) || typeA.isInteger(1))
+    if (llvm::is_contained(allowedNshort, sizeN))
+      return success();
+  return failure();
+}
+
+LogicalResult WarpgroupMmaOp::verify() {
+  if (getTransposeA() && !getTransposeB())
+    return emitOpError() << "supports non-transpose A (Row Major) "
+                            "and transpose B (Column Major) for the time being";
+  MemRefType matrixA = getDescriptorA().getType().getTensor();
+  MemRefType matrixB = getDescriptorB().getType().getTensor();
+  VectorType matrixC = getMatrixC()
+                           .front()
+                           .getType()
+                           .cast<WarpgroupAccumulatorType>()
+                           .getFragmented();
+  VectorType matrixD = getMatrixD()
+                           .front()
+                           .getType()
+                           .cast<WarpgroupAccumulatorType>()
+                           .getFragmented();
+  unsigned sizeAcc = getMatrixC().size();
+
+  if (getMatrixC().size() != getMatrixD().size())
+    return emitOpError() << "number of matrix C and matrix D must be the same";
+
+  if (llvm::all_of(getMatrixC(),
+                   [&](Value rhs) { return rhs.getType() == matrixC; })) {
+    return emitOpError()
+           << "types of all operands in matrix C must be the same";
+  }
+  if (llvm::all_of(getMatrixD(),
+                   [&](Value rhs) { return rhs.getType() == matrixC; })) {
+    return emitOpError()
+           << "types of all operands in matrix D must be the same as matrix C";
+  }
+
+  if (matrixA.getRank() != 2 || matrixB.getRank() != 2 ||
+      matrixC.getRank() != 2 || matrixD.getRank() != 2) {
+    return emitOpError()
+           << "has matrices A, B, C and D, they must be 2 dimensional";
+  }
+
+  if (matrixA.getShape()[1] != matrixB.getShape()[0])
+    return emitOpError() << "2nd dim matrix-A (" << matrixA.getShape()[1]
+                         << ")!= 1st dim matrix-B (" << matrixB.getShape()[0]
+                         << " )";
+  if (matrixA.getShape()[0] != (matrixC.getShape()[0] * sizeAcc))
+    return emitOpError() << "1st dim matrix-A ( " << matrixA.getShape()[0]
+                         << " )!= 1st dim matrix-C ( " << matrixC.getShape()[0]
+                         << " )";
+  if (matrixB.getShape()[1] != matrixC.getShape()[1])
+    return emitOpError() << "2nd dim matrix-B ( " << matrixB.getShape()[1]
+                         << " ) != 2nd dim matrix-C ( " << matrixC.getShape()[1]
+                         << " )";
+
+  if (failed(isAllowedWGMMADataType(matrixC.getElementType(),
+                                    matrixA.getElementType(),
+                                    matrixB.getElementType())))
+    return emitOpError() << matrixC.getElementType()
+                         << " += " << matrixA.getElementType() << " * "
+                         << matrixB.getElementType()
+                         << ", it is not supported.";
+  // Check N
+  if (failed(isAllowedSizeN(matrixB.getDimSize(1), matrixA.getElementType()))) {
+    return emitOpError() << "has input type " << matrixB << " n is set to "
+                         << matrixB.getDimSize(1) << ", it is not supported";
+  }
+
+  // Currently, f16/bf16 supported
+  if (!matrixC.getElementType().isF32() && !matrixA.getElementType().isF16() &&
+      !matrixA.getElementType().isBF16()) {
+    return emitOpError() << "hit a limitation: " << matrixC.getElementType()
+                         << " += " << matrixA.getElementType() << " * "
+                         << matrixB.getElementType()
+                         << ", it is not supported yet";
+  }
+
+  return success();
+}
+
+LogicalResult WarpgroupMmaStoreOp::verify() {
+  MemRefType dstMemrefType = getDstMemref().getType();
+  VectorType firstVtype = getMatrixD()
+                              .front()
+                              .getType()
+                              .cast<WarpgroupAccumulatorType>()
+                              .getFragmented();
+
+  int64_t totalFirstDimension = 0;
+  for (Value result : getMatrixD()) {
+    VectorType vtype =
+        result.getType().cast<WarpgroupAccumulatorType>().getFragmented();
+    if (vtype != firstVtype)
+      return emitOpError() << "all fragmented types must be the same";
+    // Limitation
+    if (!vtype.getElementType().isF32()) {
+      return emitOpError()
+             << "hit a limitation: only f32 results for the time being";
+    }
+    totalFirstDimension += vtype.getDimSize(0);
+  }
+  if (totalFirstDimension != dstMemrefType.getDimSize(0) ||
+      firstVtype.getDimSize(1) != dstMemrefType.getDimSize(1)) {
+    return emitOpError() << "results [" << totalFirstDimension << "]["
+                         << firstVtype.getDimSize(1)
+                         << "] values. However, destination memref["
+                         << dstMemrefType.getDimSize(0) << "]["
+                         << dstMemrefType.getDimSize(1)
+                         << "]  does not have same size as results";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WarpgroupMmaInitAccumulatorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
+  for (OpResult matrix : getMatrixC()) {
+    VectorType vectorType = matrix.getType()
+                                .cast<nvgpu::WarpgroupAccumulatorType>()
+                                .getFragmented();
+    // Check [M][N] shape
+    if (failed(isAllowedSizeM(vectorType.getDimSize(0))) ||
+        failed(isAllowedSizeN(vectorType.getDimSize(1),
+                              vectorType.getElementType()))) {
+      return emitOpError() << "has type " << vectorType
+                           << ". It does not fit into warp-group "
+                              "level (wgmma) matrix multiplication instruction "
+                              "(or not supported yet)";
+    }
+  }
   return success();
 }
 

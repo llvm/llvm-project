@@ -1245,7 +1245,7 @@ LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
     // `End`, decrementing by one every time.
     //
     //  * if `Smallest` sign-overflows we know `End` is `INT_SMAX`. Since the
-    //    induction variable is decreasing we know that that the smallest value
+    //    induction variable is decreasing we know that the smallest value
     //    the loop body is actually executed with is `INT_SMIN` == `Smallest`.
     //
     //  * if `Greatest` sign-overflows, we know it can only be `INT_SMIN`.  In

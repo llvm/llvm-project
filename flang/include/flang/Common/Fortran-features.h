@@ -37,7 +37,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     DistinguishableSpecifics, DefaultSave, PointerInSeqType, NonCharacterFormat,
     SaveMainProgram, SaveBigMainProgramVariables,
     DistinctArrayConstructorLengths, PPCVector, RelaxedIntentInChecking,
-    ForwardRefImplicitNoneData)
+    ForwardRefImplicitNoneData, NullActualForAllocatable)
 
 // Portability and suspicious usage warnings for conforming code
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,

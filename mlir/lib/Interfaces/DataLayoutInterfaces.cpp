@@ -536,7 +536,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
       return failure();
 
   // Second, dispatch verifications of entry groups to types or dialects they
-  // are are associated with.
+  // are associated with.
   DenseMap<TypeID, DataLayoutEntryList> types;
   DenseMap<StringAttr, DataLayoutEntryInterface> ids;
   spec.bucketEntriesByType(types, ids);

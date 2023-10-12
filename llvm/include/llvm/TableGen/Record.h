@@ -845,7 +845,8 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
-    LOG2
+    LOG2,
+    REPR
   };
 
 private:
@@ -911,7 +912,6 @@ public:
     LISTREMOVE,
     LISTELEM,
     LISTSLICE,
-    RANGE,
     RANGEC,
     STRCONCAT,
     INTERLEAVE,
@@ -988,6 +988,7 @@ public:
     FILTER,
     IF,
     DAG,
+    RANGE,
     SUBSTR,
     FIND,
     SETDAGARG,

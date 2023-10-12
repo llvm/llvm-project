@@ -155,29 +155,29 @@ private:
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __type_identity<deleter_type>, _Dummy>::type>
   using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_default_constructible<_Deleter>::value &&
-                         !is_pointer<_Deleter>::value>::type;
+      __enable_if_t<is_default_constructible<_Deleter>::value &&
+                         !is_pointer<_Deleter>::value>;
 
   template <class _ArgType>
   using _EnableIfDeleterConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
+      __enable_if_t<is_constructible<deleter_type, _ArgType>::value>;
 
   template <class _UPtr, class _Up>
-  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = __enable_if_t<
       is_convertible<typename _UPtr::pointer, pointer>::value &&
       !is_array<_Up>::value
-  >::type;
+  >;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = __enable_if_t<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
-    >::type;
+    >;
 
   template <class _UDel>
-  using _EnableIfDeleterAssignable = typename enable_if<
+  using _EnableIfDeleterAssignable = __enable_if_t<
       is_assignable<_Dp&, _UDel&&>::value
-    >::type;
+    >;
 
 public:
   template <bool _Dummy = true,
@@ -342,37 +342,37 @@ private:
   template <bool _Dummy, class _Deleter = typename __dependent_type<
                              __type_identity<deleter_type>, _Dummy>::type>
   using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_default_constructible<_Deleter>::value &&
-                         !is_pointer<_Deleter>::value>::type;
+      __enable_if_t<is_default_constructible<_Deleter>::value &&
+                         !is_pointer<_Deleter>::value>;
 
   template <class _ArgType>
   using _EnableIfDeleterConstructible _LIBCPP_NODEBUG =
-      typename enable_if<is_constructible<deleter_type, _ArgType>::value>::type;
+      __enable_if_t<is_constructible<deleter_type, _ArgType>::value>;
 
   template <class _Pp>
-  using _EnableIfPointerConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfPointerConvertible _LIBCPP_NODEBUG = __enable_if_t<
       _CheckArrayPointerConversion<_Pp>::value
-  >::type;
+  >;
 
   template <class _UPtr, class _Up,
         class _ElemT = typename _UPtr::element_type>
-  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfMoveConvertible _LIBCPP_NODEBUG = __enable_if_t<
       is_array<_Up>::value &&
       is_same<pointer, element_type*>::value &&
       is_same<typename _UPtr::pointer, _ElemT*>::value &&
       is_convertible<_ElemT(*)[], element_type(*)[]>::value
-    >::type;
+    >;
 
   template <class _UDel>
-  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfDeleterConvertible _LIBCPP_NODEBUG = __enable_if_t<
       (is_reference<_Dp>::value && is_same<_Dp, _UDel>::value) ||
       (!is_reference<_Dp>::value && is_convertible<_UDel, _Dp>::value)
-    >::type;
+    >;
 
   template <class _UDel>
-  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG = typename enable_if<
+  using _EnableIfDeleterAssignable _LIBCPP_NODEBUG = __enable_if_t<
       is_assignable<_Dp&, _UDel&&>::value
-    >::type;
+    >;
 
 public:
   template <bool _Dummy = true,

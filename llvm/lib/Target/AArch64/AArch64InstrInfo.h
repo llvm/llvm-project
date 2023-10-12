@@ -108,7 +108,7 @@ public:
   /// Returns the base register operator of a load/store.
   static const MachineOperand &getLdStBaseOp(const MachineInstr &MI);
 
-  /// Returns the the immediate offset operator of a load/store.
+  /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
   /// Returns whether the instruction is FP or NEON.
@@ -120,11 +120,17 @@ public:
   /// Returns whether the instruction is in Q form (128 bit operands)
   static bool isQForm(const MachineInstr &MI);
 
+  /// Returns whether the instruction can be compatible with non-zero BTYPE.
+  static bool hasBTISemantics(const MachineInstr &MI);
+
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
+
+  /// Returns true if MI is one of the TCRETURN* instructions.
+  static bool isTailCallReturnInst(const MachineInstr &MI);
 
   /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.
@@ -139,6 +145,13 @@ public:
   std::optional<ExtAddrMode>
   getAddrModeFromMemoryOp(const MachineInstr &MemI,
                           const TargetRegisterInfo *TRI) const override;
+
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
@@ -318,6 +331,11 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
+
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter,
+                          DebugLoc &DL) const override;
+
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;
   /// Returns true if the opcode is for an SVE instruction that sets the
@@ -343,7 +361,7 @@ public:
   std::optional<ParamLoadedValue>
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
-  unsigned int getTailDuplicateSize(CodeGenOpt::Level OptLevel) const override;
+  unsigned int getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
   bool isExtendLikelyToBeFolded(MachineInstr &ExtMI,
                                 MachineRegisterInfo &MRI) const override;
@@ -357,6 +375,13 @@ public:
                                                   int64_t &VGSized);
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+
+  // Return true if address of the form BaseReg + Scale * ScaledReg + Offset can
+  // be used for a load/store of NumBytes. BaseReg is always present and
+  // implicit.
+  bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
+                             unsigned Scale) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 

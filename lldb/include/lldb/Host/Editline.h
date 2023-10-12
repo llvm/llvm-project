@@ -103,36 +103,36 @@ using SuggestionCallbackType =
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
 
 /// Status used to decide when and how to start editing another line in
-/// multi-line sessions
+/// multi-line sessions.
 enum class EditorStatus {
 
-  /// The default state proceeds to edit the current line
+  /// The default state proceeds to edit the current line.
   Editing,
 
-  /// Editing complete, returns the complete set of edited lines
+  /// Editing complete, returns the complete set of edited lines.
   Complete,
 
-  /// End of input reported
+  /// End of input reported.
   EndOfInput,
 
-  /// Editing interrupted
+  /// Editing interrupted.
   Interrupted
 };
 
-/// Established locations that can be easily moved among with MoveCursor
+/// Established locations that can be easily moved among with MoveCursor.
 enum class CursorLocation {
-  /// The start of the first line in a multi-line edit session
+  /// The start of the first line in a multi-line edit session.
   BlockStart,
 
-  /// The start of the current line in a multi-line edit session
+  /// The start of the current line in a multi-line edit session.
   EditingPrompt,
 
   /// The location of the cursor on the current line in a multi-line edit
-  /// session
+  /// session.
   EditingCursor,
 
   /// The location immediately after the last character in a multi-line edit
-  /// session
+  /// session.
   BlockEnd
 };
 
@@ -149,13 +149,11 @@ enum class HistoryOperation {
 using namespace line_editor;
 
 /// Instances of Editline provide an abstraction over libedit's EditLine
-/// facility.  Both
-/// single- and multi-line editing are supported.
+/// facility.  Both single- and multi-line editing are supported.
 class Editline {
 public:
   Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, std::recursive_mutex &output_mutex,
-           bool color_prompts);
+           FILE *error_file, std::recursive_mutex &output_mutex);
 
   ~Editline();
 
@@ -163,28 +161,31 @@ public:
   /// of Editline.
   static Editline *InstanceFor(::EditLine *editline);
 
+  static void
+  DisplayCompletions(Editline &editline,
+                     llvm::ArrayRef<CompletionResult::Completion> results);
+
   /// Sets a string to be used as a prompt, or combined with a line number to
   /// form a prompt.
   void SetPrompt(const char *prompt);
 
   /// Sets an alternate string to be used as a prompt for the second line and
-  /// beyond in multi-line
-  /// editing scenarios.
+  /// beyond in multi-line editing scenarios.
   void SetContinuationPrompt(const char *continuation_prompt);
 
-  /// Call when the terminal size changes
+  /// Call when the terminal size changes.
   void TerminalSizeChanged();
 
-  /// Returns the prompt established by SetPrompt()
+  /// Returns the prompt established by SetPrompt.
   const char *GetPrompt();
 
-  /// Returns the index of the line currently being edited
+  /// Returns the index of the line currently being edited.
   uint32_t GetCurrentLine();
 
-  /// Interrupt the current edit as if ^C was pressed
+  /// Interrupt the current edit as if ^C was pressed.
   bool Interrupt();
 
-  /// Cancel this edit and oblitarate all trace of it
+  /// Cancel this edit and obliterate all trace of it.
   bool Cancel();
 
   /// Register a callback for autosuggestion.
@@ -211,6 +212,14 @@ public:
     m_fix_indentation_callback_chars = indent_chars;
   }
 
+  void SetPromptAnsiPrefix(std::string prefix) {
+    m_prompt_ansi_prefix = std::move(prefix);
+  }
+
+  void SetPromptAnsiSuffix(std::string suffix) {
+    m_prompt_ansi_suffix = std::move(suffix);
+  }
+
   void SetSuggestionAnsiPrefix(std::string prefix) {
     m_suggestion_ansi_prefix = std::move(prefix);
   }
@@ -227,31 +236,29 @@ public:
 
   void PrintAsync(Stream *stream, const char *s, size_t len);
 
+  /// Convert the current input lines into a UTF8 StringList
+  StringList GetInputAsStringList(int line_count = UINT32_MAX);
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
-  /// zero suppresses
-  /// line number printing in the prompt.
+  /// zero suppresses line number printing in the prompt.
   void SetBaseLineNumber(int line_number);
 
   /// Returns the complete prompt by combining the prompt or continuation prompt
-  /// with line numbers
-  /// as appropriate.  The line index is a zero-based index into the current
-  /// multi-line session.
+  /// with line numbers as appropriate.  The line index is a zero-based index
+  /// into the current multi-line session.
   std::string PromptForIndex(int line_index);
 
   /// Sets the current line index between line edits to allow free movement
-  /// between lines.  Updates
-  /// the prompt to match.
+  /// between lines.  Updates the prompt to match.
   void SetCurrentLine(int line_index);
 
   /// Determines the width of the prompt in characters.  The width is guaranteed
-  /// to be the same for
-  /// all lines of the current multi-line session.
-  int GetPromptWidth();
+  /// to be the same for all lines of the current multi-line session.
+  size_t GetPromptWidth();
 
   /// Returns true if the underlying EditLine session's keybindings are
-  /// Emacs-based, or false if
-  /// they are VI-based.
+  /// Emacs-based, or false if they are VI-based.
   bool IsEmacs();
 
   /// Returns true if the current EditLine buffer contains nothing but spaces,
@@ -262,28 +269,22 @@ private:
   int GetLineIndexForLocation(CursorLocation location, int cursor_row);
 
   /// Move the cursor from one well-established location to another using
-  /// relative line positioning
-  /// and absolute column positioning.
+  /// relative line positioning and absolute column positioning.
   void MoveCursor(CursorLocation from, CursorLocation to);
 
   /// Clear from cursor position to bottom of screen and print input lines
-  /// including prompts, optionally
-  /// starting from a specific line.  Lines are drawn with an extra space at the
-  /// end to reserve room for
-  /// the rightmost cursor position.
+  /// including prompts, optionally starting from a specific line.  Lines are
+  /// drawn with an extra space at the end to reserve room for the rightmost
+  /// cursor position.
   void DisplayInput(int firstIndex = 0);
 
   /// Counts the number of rows a given line of content will end up occupying,
-  /// taking into account both
-  /// the preceding prompt and a single trailing space occupied by a cursor when
-  /// at the end of the line.
+  /// taking into account both the preceding prompt and a single trailing space
+  /// occupied by a cursor when at the end of the line.
   int CountRowsForLine(const EditLineStringType &content);
 
-  /// Save the line currently being edited
+  /// Save the line currently being edited.
   void SaveEditedLine();
-
-  /// Convert the current input lines into a UTF8 StringList
-  StringList GetInputAsStringList(int line_count = UINT32_MAX);
 
   /// Replaces the current multi-line session with the next entry from history.
   unsigned char RecallHistory(HistoryOperation op);
@@ -373,7 +374,6 @@ private:
   bool m_multiline_enabled = false;
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
-  bool m_color_prompts = true;
   int m_terminal_width = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
@@ -399,6 +399,8 @@ private:
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
 
+  std::string m_prompt_ansi_prefix;
+  std::string m_prompt_ansi_suffix;
   std::string m_suggestion_ansi_prefix;
   std::string m_suggestion_ansi_suffix;
 

@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseNullptrCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -33,11 +35,13 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// to null within.
 /// Finding sequences of explicit casts is necessary so that an entire sequence
 /// can be replaced instead of just the inner-most implicit cast.
-StatementMatcher makeCastSequenceMatcher() {
-  StatementMatcher ImplicitCastToNull = implicitCastExpr(
+StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
+  auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
       unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
-      unless(hasSourceExpression(hasType(sugaredNullptrType()))));
+      unless(hasSourceExpression(hasType(sugaredNullptrType()))),
+      unless(hasImplicitDestinationType(
+          qualType(matchers::matchesAnyListedTypeName(NameList)))));
 
   auto IsOrHasDescendant = [](auto InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
@@ -477,16 +481,21 @@ private:
 
 UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      NullMacrosStr(Options.get("NullMacros", "NULL")) {
+      NullMacrosStr(Options.get("NullMacros", "NULL")),
+      IgnoredTypes(utils::options::parseStringList(Options.get(
+          "IgnoredTypes",
+          "std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec"))) {
   StringRef(NullMacrosStr).split(NullMacros, ",");
 }
 
 void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "NullMacros", NullMacrosStr);
+  Options.store(Opts, "IgnoredTypes",
+                utils::options::serializeStringList(IgnoredTypes));
 }
 
 void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(makeCastSequenceMatcher(), this);
+  Finder->addMatcher(makeCastSequenceMatcher(IgnoredTypes), this);
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {

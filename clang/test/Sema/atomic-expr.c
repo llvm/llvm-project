@@ -216,3 +216,9 @@ void func_18(void) {
   struct T { int a; };
   (void)(_Atomic struct T)s; // expected-error {{used type 'struct T' where arithmetic or pointer type is required}}
 }
+
+// Test if we can handle an _Atomic qualified integer in a switch statement.
+void func_19(void) {
+  _Atomic int a = 0;
+  switch (a) { }
+}

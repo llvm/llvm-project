@@ -25,6 +25,6 @@ void test(std::gamma_distribution<double> dist)
   G<int> badg;
   G<unsigned> okg;
 
-  dist(badg); //expected-error-re@*:* 3 {{{{(static_assert|static assertion)}} failed}} //expected-note {{in instantiation}}
+  dist(badg); //expected-error@*:* 3 {{static assertion failed}} //expected-note {{in instantiation}}
   dist(okg);
 }

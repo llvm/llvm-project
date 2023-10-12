@@ -42,9 +42,7 @@ automodapi_toctreedirnm = "python_api"
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
 
-autodoc_default_options = {
-    "special-members": True
-}
+autodoc_default_options = {"special-members": True}
 
 # Unless we only generate the basic manpage we need the plugin for generating
 # the Python API documentation.
@@ -60,9 +58,7 @@ if not building_man_page:
     try:
         import furo
     except ModuleNotFoundError:
-        print(
-            f"install sphinx furo theme with {sys.executable} -m pip install furo"
-        )
+        print(f"install sphinx furo theme with {sys.executable} -m pip install furo")
     # The theme to use for HTML and HTML Help pages.  See the documentation for
     # a list of builtin themes.
     html_theme = "furo"

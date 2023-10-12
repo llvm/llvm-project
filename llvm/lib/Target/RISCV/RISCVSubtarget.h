@@ -32,6 +32,18 @@
 namespace llvm {
 class StringRef;
 
+namespace RISCVTuneInfoTable {
+
+struct RISCVTuneInfo {
+  const char *Name;
+  uint8_t PrefFunctionAlignment;
+  uint8_t PrefLoopAlignment;
+};
+
+#define GET_RISCVTuneInfoTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVTuneInfoTable
+
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
   enum RISCVProcFamilyEnum : uint8_t {
@@ -48,15 +60,13 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
-  unsigned XLen = 32;
   unsigned ZvlLen = 0;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
-  Align PrefFunctionAlignment;
-  Align PrefLoopAlignment;
+  const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
 
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
@@ -97,8 +107,16 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
-  Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
+  bool enablePostRAScheduler() const override {
+    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
+  }
+
+  Align getPrefFunctionAlignment() const {
+    return Align(TuneInfo->PrefFunctionAlignment);
+  }
+  Align getPrefLoopAlignment() const {
+    return Align(TuneInfo->PrefLoopAlignment);
+  }
 
   /// Returns RISC-V processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
@@ -127,12 +145,10 @@ public:
   }
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
-    return MVT::getIntegerVT(getXLen());
+    return is64Bit() ? MVT::i64 : MVT::i32;
   }
   unsigned getXLen() const {
-    assert((XLen == 32 || XLen == 64) &&
-           "unexpected xlen");
-    return XLen;
+    return is64Bit() ? 64 : 32;
   }
   unsigned getFLen() const {
     if (HasStdExtD)

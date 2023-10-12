@@ -19,37 +19,36 @@
 
 // REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
 // REDEFINE: TENSOR1="%mlir_src_dir/test/Integration/data/mttkrp_b.tns"
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=4 enable-buffer-initialization=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
-// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{env} %{run_sve} | FileCheck %s %}
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | env %{env} %{run_sve} | FileCheck %s %}
 
 !Filename = !llvm.ptr<i8>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #SortedCOOPermuted = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton),
 }>
 
 #SortedCOO3D = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique), d2 : singleton)
 }>
 
 #SortedCOO3DPermuted = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ],
-  dimToLvl = affine_map<(i,j,k) -> (k,i,j)>
+  map = (d0, d1, d2) -> (d2 : compressed(nonunique), d0 : singleton(nonunique), d1 : singleton)
+
 }>
 
 #trait_scale = {

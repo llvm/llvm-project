@@ -240,6 +240,10 @@ def ext_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
   "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
+def ext_c23_auto_non_plain_identifier : Extension<
+  "type inference of a declaration other than a plain identifier with optional "
+  "trailing attributes is a Clang extension">,
+  InGroup<DiagGroup<"auto-decl-extensions">>;
 
 def err_invalid_saturation_spec : Error<"'_Sat' specifier is only valid on "
   "'_Fract' or '_Accum', not '%0'">;
@@ -854,15 +858,29 @@ def warn_fortify_strlen_overflow: Warning<
   " but the source string has length %2 (including NUL byte)">,
   InGroup<FortifySource>;
 
-def warn_fortify_source_format_overflow : Warning<
+def subst_format_overflow : TextSubstitution<
   "'%0' will always overflow; destination buffer has size %1,"
-  " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  " but format string expands to at least %2">;
 
-def warn_fortify_source_format_truncation: Warning<
+def warn_format_overflow : Warning<
+  "%sub{subst_format_overflow}0,1,2">,
+  InGroup<FormatOverflow>;
+
+def warn_format_overflow_non_kprintf : Warning<
+  "%sub{subst_format_overflow}0,1,2">,
+  InGroup<FormatOverflowNonKprintf>;
+
+def subst_format_truncation: TextSubstitution<
   "'%0' will always be truncated; specified size is %1,"
-  " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  " but format string expands to at least %2">;
+
+def warn_format_truncation: Warning<
+  "%sub{subst_format_truncation}0,1,2">,
+  InGroup<FormatTruncation>;
+
+def warn_format_truncation_non_kprintf: Warning<
+  "%sub{subst_format_truncation}0,1,2">,
+  InGroup<FormatTruncationNonKprintf>;
 
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
@@ -2374,7 +2392,8 @@ def err_auto_not_allowed : Error<
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
   "|in template parameter|in friend declaration|in function prototype that is "
-  "not a function declaration|in requires expression parameter}1">;
+  "not a function declaration|in requires expression parameter"
+  "|in array declaration}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -2447,7 +2466,8 @@ def err_implied_std_initializer_list_not_found : Error<
 def err_malformed_std_initializer_list : Error<
   "std::initializer_list must be a class template with a single type parameter">;
 def err_auto_init_list_from_c : Error<
-  "cannot use __auto_type with initializer list in C">;
+  "cannot use %select{'auto'|<ERROR>|'__auto_type'}0 with "
+  "%select{initializer list|array}1 in C">;
 def err_auto_bitfield : Error<
   "cannot pass bit-field as __auto_type initializer in C">;
 
@@ -4667,12 +4687,14 @@ def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
     "%sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "requires%select{ at least| at most|}3 %4 argument%s4, but %5 "
+    "requires%select{ at least| at most|}3 %4 "
+    "%select{|non-object }6argument%s4, but %5 "
     "%plural{1:was|:were}5 provided">;
 
 def note_ovl_candidate_arity_one : Note<"candidate "
     "%sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "%select{requires at least|allows at most single|requires single}3 "
+    "%select{|non-object }6"
     "argument %4, but %plural{0:no|:%5}5 arguments were provided">;
 
 def note_ovl_candidate_deleted : Note<
@@ -4855,7 +4877,7 @@ def err_ovl_deleted_object_call : Error<
   "call to deleted function call operator in type %0">;
 def note_ovl_surrogate_cand : Note<"conversion candidate of type %0">;
 def err_member_call_without_object : Error<
-  "call to non-static member function without an object argument">;
+  "call to %select{non-static|explicit}0 member function without an object argument">;
 
 // C++ Address of Overloaded Function
 def err_addr_ovl_no_viable : Error<
@@ -5210,11 +5232,11 @@ def err_explicit_specialization_inconsistent_storage_class : Error<
   "'%select{none|extern|static|__private_extern__|auto|register}0'">;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
-  " friend function template specialization">;
+  " %select{member|friend}0 function template specialization">;
 def note_dependent_function_template_spec_discard_reason : Note<
-  "candidate ignored: %select{not a function template"
-  "|not a member of the enclosing namespace;"
-  " did you mean to explicitly qualify the specialization?}0">;
+  "candidate ignored: %select{not a function template|"
+  "not a member of the enclosing %select{class template|"
+  "namespace; did you mean to explicitly qualify the specialization?}1}0">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -5400,6 +5422,8 @@ def note_constraint_normalization_here : Note<
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
+def note_building_deduction_guide_here : Note<
+  "while building implicit deduction guide first needed here">;
 def note_lambda_substitution_here : Note<
   "while substituting into a lambda expression here">;
 def note_instantiation_contexts_suppressed : Note<
@@ -6147,6 +6171,9 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
+def warn_bitfield_too_small_for_integral_type : Warning<
+  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
+  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 
@@ -6631,8 +6658,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer }0type "
-            "%1 %select{|||||||which is not trivially copyable|}0">;
+            "|sizeless ||integer |}0type "
+            "%1 %select{|||||||which is not trivially copyable||in C23}0">;
 def warn_atomic_member_access : Warning<
   "accessing a member of an atomic structure or union is undefined behavior">,
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
@@ -7275,20 +7302,42 @@ def note_logical_not_silence_with_parens : Note<
   "add parentheses around left hand side expression to silence this warning">;
 
 def err_invalid_this_use : Error<
-  "invalid use of 'this' outside of a non-static member function">;
+  "invalid use of 'this' %select{outside of a non-static member function"
+  "|in a function with an explicit object parameter}0">;
 def err_this_static_member_func : Error<
   "'this' cannot be%select{| implicitly}0 used in a static member function "
   "declaration">;
-def err_invalid_member_use_in_static_method : Error<
-  "invalid use of member %0 in static member function">;
+def err_invalid_member_use_in_method : Error<
+  "invalid use of member %0 in %select{static|explicit object}1 member function">;
+
 def err_invalid_qualified_function_type : Error<
-  "%select{non-member function|static member function|deduction guide}0 "
+  "%select{non-member function|static member function|explicit object member function|deduction guide}0 "
   "%select{of type %2 |}1cannot have '%3' qualifier">;
 def err_compound_qualified_function_type : Error<
   "%select{block pointer|pointer|reference}0 to function type %select{%2 |}1"
   "cannot have '%3' qualifier">;
 def err_qualified_function_typeid : Error<
   "type operand %0 of 'typeid' cannot have '%1' qualifier">;
+
+def err_cxx20_deducing_this  : Error<
+  "explicit object parameters are incompatible with C++ standards before C++2b">;
+def err_explicit_object_default_arg: Error<
+  "the explicit object parameter cannot have a default argument">;
+def err_explicit_object_parameter_pack: Error<
+  "the explicit object parameter cannot be a function parameter pack">;
+def err_explicit_object_parameter_must_be_first: Error<
+  "an explicit object parameter can only appear as the first parameter "
+  "of the %select{function|lambda}0">;
+def err_explicit_object_parameter_nonmember: Error<
+  "an explicit object parameter cannot appear in a "
+  "%select{static|virtual|non-member}0 %select{function|lambda}1">;
+def err_explicit_object_parameter_constructor: Error<
+  "an explicit object parameter cannot appear in a %select{constructor|destructor}0">;
+def err_explicit_object_parameter_mutable: Error<
+  "a lambda with an explicit object parameter cannot be mutable">;
+def err_invalid_explicit_object_type_in_lambda: Error<
+  "invalid explicit object parameter type %0 in lambda with capture; "
+  "the type must be the same as, or derived from, the lambda">;
 
 def err_ref_qualifier_overload : Error<
   "cannot overload a member function %select{without a ref-qualifier|with "
@@ -8511,53 +8560,65 @@ def err_call_function_incomplete_return : Error<
 def err_call_incomplete_argument : Error<
   "argument type %0 is incomplete">;
 def err_typecheck_call_too_few_args : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected %1, have %2">;
 def err_typecheck_call_too_few_args_one : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }2arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "single argument %1 was not specified">;
 def err_typecheck_call_too_few_args_at_least : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected at least %1, have %2">;
 def err_typecheck_call_too_few_args_at_least_one : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }2arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "at least argument %1 must be specified">;
 def err_typecheck_call_too_few_args_suggest : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected %1, have %2; did you mean %3?">;
+  "expected %1, have %2; did you mean %4?">;
 def err_typecheck_call_too_few_args_at_least_suggest : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected at least %1, have %2; did you mean %3?">;
+  "expected at least %1, have %2; did you mean %4?">;
 def err_typecheck_call_too_many_args : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected %1, have %2">;
 def err_typecheck_call_too_many_args_one : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected single argument %1, have %2 arguments">;
 def err_typecheck_call_too_many_args_at_most : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected at most %1, have %2">;
 def err_typecheck_call_too_many_args_at_most_one : Error<
   "too many %select{|||execution configuration }0arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected at most single argument %1, have %2 arguments">;
+  "expected at most single %select{|non-object }3argument %1, "
+  "have %2%select{|non-object}3 arguments">;
 def err_typecheck_call_too_many_args_suggest : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected %1, have %2; did you mean %3?">;
+  "expected %1, have %2; did you mean %4?">;
 def err_typecheck_call_too_many_args_at_most_suggest : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected at most %1, have %2; did you mean %3?">;
+  "expected at most %1, have %2; did you mean %4?">;
 
 def err_arc_typecheck_convert_incompatible_pointer : Error<
   "incompatible pointer types passing retainable parameter of type %0"
@@ -9375,10 +9436,10 @@ def warn_cxx98_compat_explicit_conversion_functions : Warning<
 
 // C++11 defaulted functions
 def err_defaulted_special_member_params : Error<
-  "an explicitly-defaulted %select{|copy |move }0constructor cannot "
+  "an explicitly-defaulted %sub{select_special_member_kind}0 cannot "
   "have default arguments">;
 def err_defaulted_special_member_variadic : Error<
-  "an explicitly-defaulted %select{|copy |move }0constructor cannot "
+  "an explicitly-defaulted %sub{select_special_member_kind}0 cannot "
   "be variadic">;
 def err_defaulted_special_member_return_type : Error<
   "explicitly-defaulted %select{copy|move}0 assignment operator must "
@@ -9402,6 +9463,8 @@ def err_defaulted_copy_assign_not_ref : Error<
 def err_incorrect_defaulted_constexpr : Error<
   "defaulted definition of %sub{select_special_member_kind}0 "
   "is not constexpr">;
+def err_incorrect_defaulted_constexpr_with_vb: Error<
+  "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
 def err_incorrect_defaulted_consteval : Error<
   "defaulted declaration of %sub{select_special_member_kind}0 "
   "cannot be consteval because implicit definition is not constexpr">;
@@ -9441,7 +9504,7 @@ def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
   "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
-  " comparison operator must have %select{2|1}0 parameters">;
+  " must have %select{2|1}0 parameters">;
 def err_defaulted_comparison_param : Error<
   "invalid parameter type for defaulted %sub{select_defaulted_comparison_kind}0"
   "; found %1, expected %2%select{| or %4}3">;
@@ -11836,6 +11899,10 @@ def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
 
+def warn_cuda_maxclusterrank_sm_90 : Warning<
+  "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
+  "%1 attribute">, InGroup<IgnoredAttributes>;
+
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
@@ -11916,6 +11983,9 @@ def note_unsafe_buffer_operation : Note<
   "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def note_unsafe_buffer_variable_fixit_group : Note<
   "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
+def note_unsafe_buffer_variable_fixit_together : Note<
+  "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information"
+  "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 #ifndef NDEBUG

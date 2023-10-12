@@ -75,6 +75,13 @@
 ; OBJ:     LinkageName: _main
 ; OBJ:   }
 
+; OBJ:        InlineesSym {
+; OBJ-NEXT:     Kind: S_INLINEES (0x1168)
+; OBJ-NEXT:     Inlinees [
+; OBJ-NEXT:       FuncID: g (0x1002)
+; OBJ-NEXT:     ]
+; OBJ-NEXT:   }
+
 ; Previously, g's InlineSiteSym referenced t.h, which was wasteful.
 ; OBJ:        InlineSiteSym {
 ; OBJ:          Inlinee: g (0x1002)

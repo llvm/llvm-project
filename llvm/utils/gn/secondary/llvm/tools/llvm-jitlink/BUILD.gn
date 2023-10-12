@@ -4,6 +4,7 @@ executable("llvm-jitlink") {
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/JITLink",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Debugging",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/MC",
     "//llvm/lib/Object",

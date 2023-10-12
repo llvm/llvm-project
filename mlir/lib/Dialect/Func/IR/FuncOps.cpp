@@ -40,7 +40,7 @@ void FuncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
-  declarePromisedInterface<DialectInlinerInterface>();
+  declarePromisedInterface<FuncDialect, DialectInlinerInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with

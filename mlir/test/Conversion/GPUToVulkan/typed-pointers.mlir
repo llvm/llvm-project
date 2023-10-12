@@ -21,7 +21,7 @@ module attributes {gpu.container_module} {
   llvm.func @malloc(i64) -> !llvm.ptr<i8>
   llvm.func @foo() {
     %0 = llvm.mlir.constant(12 : index) : i64
-    %1 = llvm.mlir.null : !llvm.ptr<f32>
+    %1 = llvm.mlir.zero : !llvm.ptr<f32>
     %2 = llvm.mlir.constant(1 : index) : i64
     %3 = llvm.getelementptr %1[%2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
     %4 = llvm.ptrtoint %3 : !llvm.ptr<f32> to i64

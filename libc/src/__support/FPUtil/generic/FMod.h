@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
@@ -17,7 +17,7 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/math_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace generic {
 
@@ -317,6 +317,6 @@ public:
 
 } // namespace generic
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H

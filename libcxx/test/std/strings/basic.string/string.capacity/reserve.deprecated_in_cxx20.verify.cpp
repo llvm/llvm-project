@@ -15,6 +15,6 @@
 #include <string>
 
 void f() {
-    std::string s;
-    s.reserve(); // expected-warning {{'reserve' is deprecated}}
+  std::string s;
+  s.reserve(); // expected-warning {{'reserve' is deprecated}}
 }

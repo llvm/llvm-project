@@ -178,3 +178,27 @@ FailureOr<Value> memref::replaceWithIndependentOp(RewriterBase &rewriter,
                                 replacement->getDefiningOp());
   return replacement;
 }
+
+memref::AllocaOp memref::allocToAlloca(
+    RewriterBase &rewriter, memref::AllocOp alloc,
+    function_ref<bool(memref::AllocOp, memref::DeallocOp)> filter) {
+  memref::DeallocOp dealloc = nullptr;
+  for (Operation &candidate :
+       llvm::make_range(alloc->getIterator(), alloc->getBlock()->end())) {
+    dealloc = dyn_cast<memref::DeallocOp>(candidate);
+    if (dealloc && dealloc.getMemref() == alloc.getMemref() &&
+        (!filter || filter(alloc, dealloc))) {
+      break;
+    }
+  }
+
+  if (!dealloc)
+    return nullptr;
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(alloc);
+  auto alloca = rewriter.replaceOpWithNewOp<memref::AllocaOp>(
+      alloc, alloc.getMemref().getType(), alloc.getOperands());
+  rewriter.eraseOp(dealloc);
+  return alloca;
+}

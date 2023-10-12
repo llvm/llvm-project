@@ -24,7 +24,6 @@ static_assert(std::__constexpr_memcmp(Banane, Bananf, std::__element_count(6)) =
 static_assert(!std::__constexpr_memcmp_equal(Banane, Banand, std::__element_count(6)), "");
 static_assert(std::__constexpr_memcmp_equal(Banane, Banane, std::__element_count(6)), "");
 
-
 constexpr bool test_constexpr_wmemchr() {
   const char str[] = "Banane";
   return std::__constexpr_memchr(str, 'n', 6) == str + 2;

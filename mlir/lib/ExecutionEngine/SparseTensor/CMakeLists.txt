@@ -7,8 +7,8 @@
 # that is reserved/intended for shared libraries only.
 add_mlir_library(MLIRSparseTensorRuntime
   File.cpp
+  MapRef.cpp
   NNZ.cpp
-  PermutationRef.cpp
   Storage.cpp
 
   EXCLUDE_FROM_LIBMLIR
@@ -19,8 +19,6 @@ add_mlir_library(MLIRSparseTensorRuntime
   )
 set_property(TARGET MLIRSparseTensorRuntime PROPERTY CXX_STANDARD 17)
 
-# To make sure we adhere to the style guide:
-# <https://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers>
 check_cxx_compiler_flag(-Wweak-vtables
   COMPILER_SUPPORTS_WARNING_WEAK_VTABLES)
 if(COMPILER_SUPPORTS_WARNING_WEAK_VTABLES)

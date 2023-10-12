@@ -18,11 +18,11 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 ; PPC64LE-LABEL: test_urem_odd:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    mulli 3, 3, 3277
-; PPC64LE-NEXT:    li 4, 0
+; PPC64LE-NEXT:    li 4, 1
 ; PPC64LE-NEXT:    clrlwi 3, 3, 19
 ; PPC64LE-NEXT:    cmplwi 3, 1639
-; PPC64LE-NEXT:    li 3, 1
-; PPC64LE-NEXT:    isellt 3, 3, 4
+; PPC64LE-NEXT:    li 3, 0
+; PPC64LE-NEXT:    isellt 3, 4, 3
 ; PPC64LE-NEXT:    blr
   %urem = urem i13 %X, 5
   %cmp = icmp eq i13 %urem, 0
@@ -53,13 +53,13 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; PPC64LE-NEXT:    lis 4, 1755
 ; PPC64LE-NEXT:    ori 4, 4, 28087
 ; PPC64LE-NEXT:    mullw 3, 3, 4
-; PPC64LE-NEXT:    lis 4, 146
-; PPC64LE-NEXT:    rlwinm 5, 3, 31, 6, 31
-; PPC64LE-NEXT:    rlwimi 5, 3, 26, 5, 5
-; PPC64LE-NEXT:    ori 3, 4, 18725
-; PPC64LE-NEXT:    li 4, 1
-; PPC64LE-NEXT:    cmplw 5, 3
+; PPC64LE-NEXT:    rlwinm 4, 3, 31, 6, 31
+; PPC64LE-NEXT:    rlwimi 4, 3, 26, 5, 5
+; PPC64LE-NEXT:    lis 3, 146
+; PPC64LE-NEXT:    ori 3, 3, 18725
+; PPC64LE-NEXT:    cmplw 4, 3
 ; PPC64LE-NEXT:    li 3, 0
+; PPC64LE-NEXT:    li 4, 1
 ; PPC64LE-NEXT:    isellt 3, 4, 3
 ; PPC64LE-NEXT:    blr
   %urem = urem i27 %X, 14
@@ -82,14 +82,14 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; PPC64LE-LABEL: test_urem_odd_setne:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    slwi 5, 3, 1
-; PPC64LE-NEXT:    li 4, 0
-; PPC64LE-NEXT:    add 3, 3, 5
+; PPC64LE-NEXT:    slwi 4, 3, 1
+; PPC64LE-NEXT:    add 3, 3, 4
+; PPC64LE-NEXT:    li 4, 1
 ; PPC64LE-NEXT:    neg 3, 3
 ; PPC64LE-NEXT:    clrlwi 3, 3, 28
 ; PPC64LE-NEXT:    cmplwi 3, 3
-; PPC64LE-NEXT:    li 3, 1
-; PPC64LE-NEXT:    iselgt 3, 3, 4
+; PPC64LE-NEXT:    li 3, 0
+; PPC64LE-NEXT:    iselgt 3, 4, 3
 ; PPC64LE-NEXT:    blr
   %urem = urem i4 %X, 5
   %cmp = icmp ne i4 %urem, 0
@@ -112,11 +112,11 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; PPC64LE-LABEL: test_urem_negative_odd:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    mulli 3, 3, 307
-; PPC64LE-NEXT:    li 4, 0
+; PPC64LE-NEXT:    li 4, 1
 ; PPC64LE-NEXT:    clrlwi 3, 3, 23
 ; PPC64LE-NEXT:    cmplwi 3, 1
-; PPC64LE-NEXT:    li 3, 1
-; PPC64LE-NEXT:    iselgt 3, 3, 4
+; PPC64LE-NEXT:    li 3, 0
+; PPC64LE-NEXT:    iselgt 3, 4, 3
 ; PPC64LE-NEXT:    blr
   %urem = urem i9 %X, -5
   %cmp = icmp ne i9 %urem, 0
@@ -161,48 +161,48 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ;
 ; PPC64LE-LABEL: test_urem_vec:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    addis 6, 2, .LCPI4_0@toc@ha
 ; PPC64LE-NEXT:    mtfprwz 0, 3
-; PPC64LE-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
-; PPC64LE-NEXT:    addi 6, 6, .LCPI4_0@toc@l
-; PPC64LE-NEXT:    mtfprwz 2, 4
-; PPC64LE-NEXT:    addi 3, 3, .LCPI4_1@toc@l
-; PPC64LE-NEXT:    addis 4, 2, .LCPI4_2@toc@ha
-; PPC64LE-NEXT:    lxvd2x 1, 0, 6
+; PPC64LE-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; PPC64LE-NEXT:    mtfprwz 1, 4
+; PPC64LE-NEXT:    addi 3, 3, .LCPI4_0@toc@l
 ; PPC64LE-NEXT:    mtvsrwz 36, 5
-; PPC64LE-NEXT:    xxmrghw 34, 2, 0
+; PPC64LE-NEXT:    vspltisw 5, -11
+; PPC64LE-NEXT:    lxvd2x 2, 0, 3
+; PPC64LE-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; PPC64LE-NEXT:    addi 3, 3, .LCPI4_1@toc@l
+; PPC64LE-NEXT:    xxmrghw 34, 1, 0
 ; PPC64LE-NEXT:    lxvd2x 0, 0, 3
-; PPC64LE-NEXT:    addi 3, 4, .LCPI4_2@toc@l
-; PPC64LE-NEXT:    addis 4, 2, .LCPI4_4@toc@ha
-; PPC64LE-NEXT:    addi 4, 4, .LCPI4_4@toc@l
-; PPC64LE-NEXT:    xxswapd 35, 1
-; PPC64LE-NEXT:    lxvd2x 1, 0, 3
+; PPC64LE-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
+; PPC64LE-NEXT:    addi 3, 3, .LCPI4_2@toc@l
+; PPC64LE-NEXT:    xxswapd 35, 2
+; PPC64LE-NEXT:    vperm 2, 4, 2, 3
+; PPC64LE-NEXT:    xxswapd 35, 0
+; PPC64LE-NEXT:    lxvd2x 0, 0, 3
 ; PPC64LE-NEXT:    addis 3, 2, .LCPI4_3@toc@ha
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI4_3@toc@l
-; PPC64LE-NEXT:    vperm 2, 4, 2, 3
-; PPC64LE-NEXT:    vspltisw 3, -11
+; PPC64LE-NEXT:    vsubuwm 2, 2, 3
 ; PPC64LE-NEXT:    xxswapd 36, 0
-; PPC64LE-NEXT:    xxswapd 37, 1
 ; PPC64LE-NEXT:    lxvd2x 0, 0, 3
-; PPC64LE-NEXT:    lxvd2x 1, 0, 4
+; PPC64LE-NEXT:    addis 3, 2, .LCPI4_4@toc@ha
+; PPC64LE-NEXT:    addi 3, 3, .LCPI4_4@toc@l
+; PPC64LE-NEXT:    vmuluwm 2, 2, 4
+; PPC64LE-NEXT:    vsrw 4, 5, 5
+; PPC64LE-NEXT:    xxswapd 32, 0
+; PPC64LE-NEXT:    lxvd2x 0, 0, 3
 ; PPC64LE-NEXT:    addis 3, 2, .LCPI4_5@toc@ha
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI4_5@toc@l
-; PPC64LE-NEXT:    vsrw 3, 3, 3
-; PPC64LE-NEXT:    vsubuwm 2, 2, 4
-; PPC64LE-NEXT:    xxswapd 36, 0
+; PPC64LE-NEXT:    vslw 3, 2, 0
+; PPC64LE-NEXT:    xxland 34, 34, 36
+; PPC64LE-NEXT:    xxswapd 33, 0
 ; PPC64LE-NEXT:    lxvd2x 0, 0, 3
-; PPC64LE-NEXT:    vmuluwm 2, 2, 5
-; PPC64LE-NEXT:    xxswapd 37, 1
-; PPC64LE-NEXT:    xxland 32, 34, 35
-; PPC64LE-NEXT:    vslw 2, 2, 4
-; PPC64LE-NEXT:    vsrw 4, 0, 5
-; PPC64LE-NEXT:    xxlor 1, 36, 34
-; PPC64LE-NEXT:    xxswapd 34, 0
-; PPC64LE-NEXT:    xxland 35, 1, 35
-; PPC64LE-NEXT:    vcmpgtuw 2, 3, 2
+; PPC64LE-NEXT:    vsrw 2, 2, 1
+; PPC64LE-NEXT:    xxswapd 38, 0
+; PPC64LE-NEXT:    xxlor 0, 34, 35
+; PPC64LE-NEXT:    xxland 34, 0, 36
+; PPC64LE-NEXT:    vcmpgtuw 2, 2, 6
+; PPC64LE-NEXT:    mfvsrwz 5, 34
 ; PPC64LE-NEXT:    xxswapd 0, 34
 ; PPC64LE-NEXT:    xxsldwi 1, 34, 34, 1
-; PPC64LE-NEXT:    mfvsrwz 5, 34
 ; PPC64LE-NEXT:    mffprwz 3, 0
 ; PPC64LE-NEXT:    mffprwz 4, 1
 ; PPC64LE-NEXT:    blr
@@ -259,25 +259,25 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC64LE-LABEL: test_urem_oversized:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    lis 5, 6028
+; PPC64LE-NEXT:    sldi 7, 3, 1
 ; PPC64LE-NEXT:    ori 5, 5, 51361
 ; PPC64LE-NEXT:    rldic 5, 5, 33, 2
 ; PPC64LE-NEXT:    oris 5, 5, 52741
 ; PPC64LE-NEXT:    ori 5, 5, 40665
 ; PPC64LE-NEXT:    mulhdu 6, 3, 5
 ; PPC64LE-NEXT:    mulld 4, 4, 5
-; PPC64LE-NEXT:    mulld 5, 3, 5
-; PPC64LE-NEXT:    sldi 3, 3, 1
-; PPC64LE-NEXT:    add 3, 6, 3
-; PPC64LE-NEXT:    add 3, 3, 4
-; PPC64LE-NEXT:    lis 4, -8538
-; PPC64LE-NEXT:    rotldi 6, 5, 63
-; PPC64LE-NEXT:    ori 4, 4, 44780
-; PPC64LE-NEXT:    rldimi 6, 3, 63, 0
-; PPC64LE-NEXT:    rlwinm 3, 3, 31, 31, 31
-; PPC64LE-NEXT:    rldicl 4, 4, 4, 28
-; PPC64LE-NEXT:    rlwimi. 3, 5, 1, 30, 30
-; PPC64LE-NEXT:    cmpld 1, 6, 4
+; PPC64LE-NEXT:    mulld 3, 3, 5
+; PPC64LE-NEXT:    add 6, 6, 7
+; PPC64LE-NEXT:    rotldi 5, 3, 63
+; PPC64LE-NEXT:    add 4, 6, 4
+; PPC64LE-NEXT:    lis 6, -8538
+; PPC64LE-NEXT:    ori 6, 6, 44780
+; PPC64LE-NEXT:    rldimi 5, 4, 63, 0
+; PPC64LE-NEXT:    rlwinm 4, 4, 31, 31, 31
+; PPC64LE-NEXT:    rldicl 6, 6, 4, 28
+; PPC64LE-NEXT:    rlwimi. 4, 3, 1, 30, 30
 ; PPC64LE-NEXT:    li 3, 1
+; PPC64LE-NEXT:    cmpld 1, 5, 6
 ; PPC64LE-NEXT:    crnand 20, 2, 4
 ; PPC64LE-NEXT:    isel 3, 0, 3, 20
 ; PPC64LE-NEXT:    blr

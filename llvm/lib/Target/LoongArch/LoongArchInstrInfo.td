@@ -143,6 +143,32 @@ def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
 
+def to_fclass_mask: SDNodeXForm<timm, [{
+  uint64_t Check = N->getZExtValue();
+  unsigned Mask = 0;
+  if (Check & fcSNan)
+    Mask |= LoongArch::FClassMaskSignalingNaN;
+  if (Check & fcQNan)
+    Mask |= LoongArch::FClassMaskQuietNaN;
+  if (Check & fcPosInf)
+    Mask |= LoongArch::FClassMaskPositiveInfinity;
+  if (Check & fcNegInf)
+    Mask |= LoongArch::FClassMaskNegativeInfinity;
+  if (Check & fcPosNormal)
+    Mask |= LoongArch::FClassMaskPositiveNormal;
+  if (Check & fcNegNormal)
+    Mask |= LoongArch::FClassMaskNegativeNormal;
+  if (Check & fcPosSubnormal)
+    Mask |= LoongArch::FClassMaskPositiveSubnormal;
+  if (Check & fcNegSubnormal)
+    Mask |= LoongArch::FClassMaskNegativeSubnormal;
+  if (Check & fcPosZero)
+    Mask |= LoongArch::FClassMaskPositiveZero;
+  if (Check & fcNegZero)
+    Mask |= LoongArch::FClassMaskNegativeZero;
+  return CurDAG->getTargetConstant(Mask, SDLoc(N), Subtarget->getGRLenVT());
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -1635,7 +1661,29 @@ def : RegRegStPat<store, STX_D, GPR, i64>;
 
 /// Atomic loads and stores
 
-def : Pat<(atomic_fence timm, timm), (DBAR 0)>;
+// DBAR hint encoding for LA664 and later micro-architectures, paraphrased from
+// the Linux patch revealing it [1]:
+//
+// - Bit 4: kind of constraint (0: completion, 1: ordering)
+// - Bit 3: barrier for previous read (0: true, 1: false)
+// - Bit 2: barrier for previous write (0: true, 1: false)
+// - Bit 1: barrier for succeeding read (0: true, 1: false)
+// - Bit 0: barrier for succeeding write (0: true, 1: false)
+//
+// Hint 0x700: barrier for "read after read" from the same address, which is
+// e.g. needed by LL-SC loops on older models. (DBAR 0x700 behaves the same as
+// nop if such reordering is disabled on supporting newer models.)
+//
+// [1]: https://lore.kernel.org/loongarch/20230516124536.535343-1-chenhuacai@loongson.cn/
+//
+// Implementations without support for the finer-granularity hints simply treat
+// all as the full barrier (DBAR 0), so we can unconditionally start emiting the
+// more precise hints right away.
+
+def : Pat<(atomic_fence 4, timm), (DBAR 0b10100)>; // acquire
+def : Pat<(atomic_fence 5, timm), (DBAR 0b10010)>; // release
+def : Pat<(atomic_fence 6, timm), (DBAR 0b10000)>; // acqrel
+def : Pat<(atomic_fence 7, timm), (DBAR 0b10000)>; // seqcst
 
 defm : LdPat<atomic_load_8, LD_B>;
 defm : LdPat<atomic_load_16, LD_H>;
@@ -1766,7 +1814,7 @@ def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMMinMax;
 
 class PseudoCmpXchg
     : Pseudo<(outs GPR:$res, GPR:$scratch),
-             (ins GPR:$addr, GPR:$cmpval, GPR:$newval)> {
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, grlenimm:$ordering)> {
   let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
   let mayLoad = 1;
   let mayStore = 1;
@@ -1856,14 +1904,28 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
 def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
                 PseudoMaskedAtomicLoadUMin32>;
 
-def : Pat<(atomic_cmp_swap_64 GPR:$addr, GPR:$cmp, GPR:$new),
-          (PseudoCmpXchg64 GPR:$addr, GPR:$cmp, GPR:$new)>;
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
+                            ValueType vt = GRLenVT> {
+  def : Pat<(vt (!cast<PatFrag>(Op#"_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_release") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
+}
+
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32>;
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64, i64>;
 def : Pat<(int_loongarch_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
-def : Pat<(atomic_cmp_swap_32 GPR:$addr, GPR:$cmp, GPR:$new),
-          (PseudoCmpXchg32 GPR:$addr, GPR:$cmp, GPR:$new)>;
 
 def : PseudoMaskedAMMinMaxPat<int_loongarch_masked_atomicrmw_max_i64,
                               PseudoMaskedAtomicLoadMax32>;
