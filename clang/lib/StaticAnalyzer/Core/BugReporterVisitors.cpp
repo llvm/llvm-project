@@ -137,11 +137,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       // member reference looks like the following:
       // |-MemberExpr
       //  `-DeclRefExpr
-      // This branch without the special case just takes out the DeclRefExpr
-      // of the struct, class or union.
-      // This is wrong, because this DeclRefExpr will be passed
-      // to the bug reporting and the notes will refer to wrong variable
-      // (the struct instead of the member).
+      // Without this special case the notes would refer to the whole object
+      // (struct, class or union variable) instead of just the relevant member.
+
       if (ME->getMemberDecl()->getType()->isReferenceType())
         break;
       E = ME->getBase();
