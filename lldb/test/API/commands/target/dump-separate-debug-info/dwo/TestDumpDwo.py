@@ -25,6 +25,7 @@ class TestDumpDWO(lldbtest.TestBase):
 
     @skipIfRemote
     @skipIfDarwin
+    @skipIfWindows
     def test_dwos_loaded_json_output(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -47,6 +48,7 @@ class TestDumpDWO(lldbtest.TestBase):
 
     @skipIfRemote
     @skipIfDarwin
+    @skipIfWindows
     def test_dwos_not_loaded_json_output(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -71,6 +73,7 @@ class TestDumpDWO(lldbtest.TestBase):
 
     @skipIfRemote
     @skipIfDarwin
+    @skipIfWindows
     def test_dwos_loaded_table_output(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -97,6 +100,7 @@ class TestDumpDWO(lldbtest.TestBase):
 
     @skipIfRemote
     @skipIfDarwin
+    @skipIfWindows
     def test_dwos_not_loaded_table_output(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
