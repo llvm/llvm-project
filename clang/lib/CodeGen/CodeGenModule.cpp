@@ -985,7 +985,7 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel", ProductPatch);
 
     // Record the language because we need it for the PPA2.
-    const char *lang_str = LanguageToString(
+    const char *lang_str = languageToString(
         LangStandard::getLangStandardForKind(LangOpts.LangStd).Language);
     getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
                               llvm::MDString::get(VMContext, lang_str));

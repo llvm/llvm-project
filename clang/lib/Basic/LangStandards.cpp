@@ -15,11 +15,6 @@
 using namespace clang;
 
 StringRef clang::languageToString(Language L) {
-const char *clang::LanguageToString(Language L) {
-  // I would like to make this function and the definition of Language
-  // in the .h file simply expand the contents of a .def file.
-  // However, in the .h the members of the enum have doxygen annotations
-  // and/or comments which would be lost.
   switch (L) {
   case Language::Unknown:
     return "Unknown";
