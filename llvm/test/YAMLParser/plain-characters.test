@@ -1,0 +1,15 @@
+# RUN: yaml-bench -canonical %s
+# Example from https://yaml.org/spec/1.2.2/#example-plain-characters
+
+# Outside flow collection:
+- ::vector
+- ": - ()"
+- Up, up, and away!
+- -123
+- https://example.com/foo#bar
+# Inside flow collection:
+- [ ::vector,
+  ": - ()",
+  "Up, up and away!",
+  -123,
+  https://example.com/foo#bar ]

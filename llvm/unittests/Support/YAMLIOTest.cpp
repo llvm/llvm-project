@@ -3153,7 +3153,7 @@ TEST(YAMLIO, TestFlowSequenceTokenErrors) {
 
 TEST(YAMLIO, TestDirectiveMappingNoValue) {
   Input yin("%YAML\n{5:");
-  EXPECT_FALSE(yin.setCurrentDocument());
+  yin.setCurrentDocument();
   EXPECT_TRUE(yin.error());
 
   Input yin2("%TAG\n'\x98!< :\n");
