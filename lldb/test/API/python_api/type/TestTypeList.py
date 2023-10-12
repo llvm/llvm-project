@@ -132,6 +132,8 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(union_type)
         self.DebugSBType(union_type)
 
+        # Check that FindNestedType handles types without DeclContext
+        # and other errorneous inputs
         task_ptr_type = task_type.GetPointerType()
         invalid_type = task_ptr_type.FindNestedType("name")
         self.assertFalse(invalid_type)
