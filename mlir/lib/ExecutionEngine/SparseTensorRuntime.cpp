@@ -418,12 +418,12 @@ MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSECOORDINATES)
       void *t, StridedMemRefType<V, 0> *vref,                                  \
       StridedMemRefType<index_type, 1> *dimCoordsRef) {                        \
     assert(t &&vref);                                                          \
-    auto &tensor = *static_cast<SparseTensorStorageBase *>(t);                 \
     ASSERT_NO_STRIDE(dimCoordsRef);                                            \
     const index_type *dimCoords = MEMREF_GET_PAYLOAD(dimCoordsRef);            \
     assert(dimCoords);                                                         \
     const V *value = MEMREF_GET_PAYLOAD(vref);                                 \
-    tensor.forwardingInsert(dimCoords, *value);                                \
+    static_cast<SparseTensorStorageBase *>(t)->forwardingInsert(dimCoords,     \
+                                                                *value);       \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_FORWARDINGINSERT)
 #undef IMPL_FORWARDINGINSERT
