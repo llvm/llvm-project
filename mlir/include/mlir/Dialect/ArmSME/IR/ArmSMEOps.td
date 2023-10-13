@@ -27,7 +27,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 class SMETileType<Type datatype, list<int> dims, string description>
   : ShapedContainerType<[datatype],
-      And<[IsVectorOfRankPred<[2]>, allDimsScalableVectorTypePred,
+      And<[IsVectorOfRankPred<[2]>, IsVectorTypeWithAllDimsScalablePred,
            IsVectorOfShape<dims>]>,
   description>;
 
