@@ -700,6 +700,10 @@ public:
     return getST()->getMaxPrefetchIterationsAhead();
   }
 
+  virtual InstructionCost getCompactCost() const {
+    return InstructionCost::getInvalid();
+  }
+
   virtual bool enableWritePrefetching() const {
     return getST()->enableWritePrefetching();
   }

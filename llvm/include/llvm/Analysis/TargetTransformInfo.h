@@ -1672,6 +1672,11 @@ public:
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
+  InstructionCost getCompactCost() const;
+  bool isTargetSupportedCompactStore() const;
+  unsigned getTargetSupportedCompact() const;
+  unsigned getTargetSupportedCNTP() const;
+
   /// @}
 
 private:
@@ -2041,6 +2046,10 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
+  virtual bool isTargetSupportedCompactStore() const = 0;
+  virtual unsigned getTargetSupportedCompact() const = 0;
+  virtual unsigned getTargetSupportedCNTP() const = 0;
+  virtual InstructionCost getCompactCost() const = 0;
 };
 
 template <typename T>
@@ -2756,6 +2765,22 @@ public:
 
   unsigned getMaxNumArgs() const override {
     return Impl.getMaxNumArgs();
+  }
+
+  bool isTargetSupportedCompactStore() const override {
+    return Impl.isTargetSupportedCompactStore();
+  }
+
+  unsigned getTargetSupportedCompact() const override {
+    return Impl.getTargetSupportedCompact();
+  }
+
+  unsigned getTargetSupportedCNTP() const override {
+    return Impl.getTargetSupportedCNTP();
+  }
+
+  InstructionCost getCompactCost() const override {
+    return Impl.getCompactCost();
   }
 };
 

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -301,6 +302,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FFREXP:
     Res = PromoteIntRes_FFREXP(N);
     break;
+  case ISD::INTRINSIC_WO_CHAIN:
+    if (N->getConstantOperandVal(0) == Intrinsic::aarch64_sve_compact) {
+      Res = PromoteIntRes_COMPACT(N);
+      break;
+    }
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -5940,6 +5946,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
   }
 
   return DAG.getBuildVector(N->getValueType(0), dl, NewOps);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_COMPACT(SDNode *N) {
+  SDValue OpExt = SExtOrZExtPromotedInteger(N->getOperand(2));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), OpExt.getValueType(),
+                     N->getOperand(0), N->getOperand(1), OpExt);
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STACKMAP(SDNode *N, unsigned OpNo) {

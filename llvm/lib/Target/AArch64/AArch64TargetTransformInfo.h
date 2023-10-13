@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include <cstdint>
 #include <optional>
 
@@ -412,6 +413,15 @@ public:
 
     return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
   }
+
+  bool isTargetSupportedCompactStore() const { return ST->hasSVE(); }
+  unsigned getTargetSupportedCompact() const {
+    return Intrinsic::aarch64_sve_compact;
+  }
+  unsigned getTargetSupportedCNTP() const {
+    return Intrinsic::aarch64_sve_cntp;
+  }
+  InstructionCost getCompactCost() const override;
 };
 
 } // end namespace llvm

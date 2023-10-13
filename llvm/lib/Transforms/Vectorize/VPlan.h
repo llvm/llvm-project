@@ -1274,6 +1274,40 @@ struct VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
   }
 };
 
+class VPWidenCompactInstructionRecipe : public VPRecipeBase, public VPValue {
+private:
+  Instruction &Ingredient;
+  unsigned Opcode;
+  VPValue *Mask;
+  const TargetTransformInfo *TTI;
+
+  void genCompactInc(VPTransformState &State);
+  void genCompactStore(VPTransformState &State);
+  void genCompactLiveOut(VPTransformState &State);
+
+public:
+  VPWidenCompactInstructionRecipe(Instruction *I, unsigned Opcode,
+                                  ArrayRef<VPValue *> Operands,
+                                  VPValue *Mask = nullptr,
+                                  const TargetTransformInfo *TTI = nullptr)
+      : VPRecipeBase(VPDef::VPCompactInstructionSC, Operands), VPValue(this, I),
+        Ingredient(*I), Opcode(Opcode), Mask(Mask), TTI(TTI) {}
+  ~VPWidenCompactInstructionRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPCompactInstructionSC)
+
+  unsigned getOpcode() const { return Opcode; }
+
+  VPValue *getMask() { return Mask; }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A recipe for handling GEP instructions.
 class VPWidenGEPRecipe : public VPRecipeWithIRFlags, public VPValue {
   bool isPointerLoopInvariant() const {
@@ -1614,6 +1648,34 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
+};
+
+class VPCompactPHIRecipe : public VPHeaderPHIRecipe {
+  PHINode *CompactPHI;
+  bool IsCompactSign;
+
+public:
+  VPCompactPHIRecipe(PHINode *Phi, VPValue *Start, bool IsSign)
+      : VPHeaderPHIRecipe(VPDef::VPCompactPHISC, Phi, Start), CompactPHI(Phi),
+        IsCompactSign(IsSign) {}
+
+  ~VPCompactPHIRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPCompactPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPDef::VPCompactPHISC;
+  }
+
+  bool isSign() { return IsCompactSign; }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select

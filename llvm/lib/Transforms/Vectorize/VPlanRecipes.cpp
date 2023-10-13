@@ -27,6 +27,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 
@@ -943,6 +944,140 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   // TODO: Model increment value in VPlan, by turning the recipe into a
   // multi-def and a subclass of VPHeaderPHIRecipe.
   VecInd->addIncoming(LastInduction, VectorPH);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenCompactInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                            VPSlotTracker &SlotTracker) const {
+  O << Indent << "COMPACT ";
+  if (getOpcode() != Instruction::Store) {
+    printAsOperand(O, SlotTracker);
+    O << " = ";
+  }
+  O << Instruction::getOpcodeName(getOpcode()) << " ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenCompactInstructionRecipe::execute(VPTransformState &State) {
+  switch (getOpcode()) {
+  case Instruction::Add:
+    genCompactInc(State);
+    break;
+  case Instruction::PHI:
+    genCompactLiveOut(State);
+    break;
+  case Instruction::Store:
+    genCompactStore(State);
+    break;
+  default:
+    llvm_unreachable("Unsupport opcode for compact.");
+  }
+}
+
+void VPWidenCompactInstructionRecipe::genCompactStore(VPTransformState &State) {
+  assert(State.VF.isScalable() && "Compact store is for SVE scenario");
+  auto &Builder = State.Builder;
+  VPValue *VPStoredValue = getOperand(0);
+  VPValue *VPAddr = getOperand(1);
+  StoreInst *SI = cast<StoreInst>(&Ingredient);
+  Type *ScalarTy = getLoadStoreType(&Ingredient);
+  Module *M = SI->getModule();
+  VectorType *MaskVTy = cast<VectorType>(State.get(getMask(), 0)->getType());
+  Constant *One = nullptr;
+  unsigned VL = MaskVTy->getElementCount().getKnownMinValue();
+  switch (VL) {
+  case 2:
+    One = ConstantInt::get(Type::getInt64Ty(M->getContext()), 1);
+    break;
+  case 4:
+    One = ConstantInt::get(Type::getInt32Ty(M->getContext()), 1);
+    break;
+  default:
+    // TODO: Try to support compact.nxv8i16 / compact.nxv16i8 in the future.
+    llvm_unreachable("Unsupported type");
+  }
+  Constant *VOne = ConstantVector::getSplat(MaskVTy->getElementCount(), One);
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    // Generate compact mask.
+    Value *Mask = State.get(getMask(), Part);
+    Value *CompactMaskII = createTargetCompact(Builder, M, TTI, Mask, VOne);
+    assert(CompactMaskII && "Do not support compact in current target.");
+    Value *CompactCmpII =
+        Builder.CreateCmp(ICmpInst::ICMP_EQ, CompactMaskII, VOne);
+
+    // Transform stored value into compact form.
+    VectorType *StoreVTy = VectorType::get(ScalarTy, State.VF);
+    const Align Alignment = getLoadStoreAlignment(&Ingredient);
+    Value *Addr = State.get(VPAddr, VPIteration(Part, 0));
+    Value *StoredValue = State.get(VPStoredValue, Part);
+    Value *SCompact = createTargetCompact(Builder, M, TTI, Mask, StoredValue);
+    assert(SCompact && "Do not support comapct in current target.");
+    Instruction *CompactSI =
+        Builder.CreateMaskedStore(SCompact, Addr, Alignment, CompactCmpII);
+    State.addMetadata(CompactSI, SI);
+  }
+}
+
+void VPWidenCompactInstructionRecipe::genCompactInc(VPTransformState &State) {
+  auto &Builder = State.Builder;
+  Module *M = getUnderlyingInstr()->getModule();
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *Mask = State.get(getMask(), Part);
+    Constant *PTrue = ConstantInt::getTrue(cast<VectorType>(Mask->getType()));
+    Value *CNTPCall = createTargetCNTP(Builder, M, TTI, PTrue, Mask);
+    Value *Idx = nullptr;
+    if (Part == 0)
+      Idx = State.get(getOperand(0), Part);
+    else
+      Idx = State.get(this, Part - 1);
+    Value *TruncCall = CNTPCall;
+    if (Idx->getType() != CNTPCall->getType()) {
+      TruncCall = Builder.CreateTrunc(CNTPCall, Idx->getType());
+    }
+    Value *NewInc = Builder.CreateAdd(cast<Instruction>(Idx), TruncCall);
+    State.set(this, NewInc, Part);
+  }
+}
+
+void VPWidenCompactInstructionRecipe::genCompactLiveOut(
+    VPTransformState &State) {
+  // Get the exit value of phi
+  VPValue *VPExitValue = nullptr;
+  PHINode *Phi = cast<PHINode>(&Ingredient);
+  for (unsigned Idx = 0; Idx < Phi->getNumIncomingValues(); Idx++) {
+    PHINode *PhiOp =
+        dyn_cast_or_null<PHINode>(getOperand(Idx)->getUnderlyingValue());
+    if (!PhiOp) {
+      VPExitValue = getOperand(Idx);
+      break;
+    }
+  }
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *ExitVal = State.get(VPExitValue, Part);
+    State.set(this, ExitVal, Part);
+  }
+}
+
+void VPCompactPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "COMPACT-PHI ";
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+
+void VPCompactPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  BasicBlock *VectorHeader = State.CFG.PrevBB;
+  VPValue *StartVPV = getStartValue();
+  Value *Start = StartVPV->getLiveInIRValue();
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    PHINode *Entry = PHINode::Create(Start->getType(), 2, "compact.iv",
+                                     &*VectorHeader->getFirstInsertionPt());
+    Entry->addIncoming(Start, VectorPH);
+    State.set(this, Entry, Part);
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

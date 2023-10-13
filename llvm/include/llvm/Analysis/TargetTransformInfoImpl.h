@@ -895,6 +895,13 @@ public:
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
+  bool isTargetSupportedCompactStore() const { return false; }
+  unsigned getTargetSupportedCompact() const { return 0; }
+  unsigned getTargetSupportedCNTP() const { return 0; }
+  InstructionCost getCompactCost() const {
+    return InstructionCost::getInvalid();
+  }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.

@@ -1248,6 +1248,22 @@ bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
+bool TargetTransformInfo::isTargetSupportedCompactStore() const {
+  return TTIImpl->isTargetSupportedCompactStore();
+}
+
+unsigned TargetTransformInfo::getTargetSupportedCompact() const {
+  return TTIImpl->getTargetSupportedCompact();
+}
+
+unsigned TargetTransformInfo::getTargetSupportedCNTP() const {
+  return TTIImpl->getTargetSupportedCNTP();
+}
+
+InstructionCost TargetTransformInfo::getCompactCost() const {
+  return TTIImpl->getCompactCost();
+}
+
 TargetTransformInfo::Concept::~Concept() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}

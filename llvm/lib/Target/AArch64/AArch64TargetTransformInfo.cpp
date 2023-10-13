@@ -3889,3 +3889,5 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return AM.Scale != 0 && AM.Scale != 1;
   return -1;
 }
+
+InstructionCost AArch64TTIImpl::getCompactCost() const { return 6; }

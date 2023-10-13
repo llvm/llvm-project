@@ -34,6 +34,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1117,6 +1118,34 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
     return createAnyOfTargetReduction(B, Src, Desc, OrigPhi);
 
   return createSimpleTargetReduction(B, Src, RK);
+}
+
+Value *llvm::createTargetCompact(IRBuilderBase &B, Module *M,
+                                 const TargetTransformInfo *TTI, Value *Mask,
+                                 Value *Val) {
+  Intrinsic::ID IID = TTI->getTargetSupportedCompact();
+  switch (IID) {
+  default:
+    return nullptr;
+  case Intrinsic::aarch64_sve_compact:
+    Function *CompactMaskDecl = Intrinsic::getDeclaration(
+        M, Intrinsic::aarch64_sve_compact, Val->getType());
+    return B.CreateCall(CompactMaskDecl, {Mask, Val});
+  }
+}
+
+Value *llvm::createTargetCNTP(IRBuilderBase &B, Module *M,
+                              const TargetTransformInfo *TTI, Value *Mask,
+                              Value *Val) {
+  Intrinsic::ID IID = TTI->getTargetSupportedCNTP();
+  switch (IID) {
+  default:
+    return nullptr;
+  case Intrinsic::aarch64_sve_cntp:
+    Function *CNTPDecl = Intrinsic::getDeclaration(
+        M, Intrinsic::aarch64_sve_cntp, Val->getType());
+    return B.CreateCall(CNTPDecl, {Mask, Val});
+  }
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B,

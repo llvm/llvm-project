@@ -818,6 +818,7 @@ void VPlan::execute(VPTransformState *State) {
     // generated.
     bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
                             isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
+                            isa<VPCompactPHIRecipe>(PhiR) ||
                             (isa<VPReductionPHIRecipe>(PhiR) &&
                              cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
@@ -827,6 +828,22 @@ void VPlan::execute(VPTransformState *State) {
       Value *Val = State->get(PhiR->getBackedgeValue(),
                               SinglePartNeeded ? State->UF - 1 : Part);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
+
+    // Fix Compact phis if UF > 1.
+    if (isa<VPCompactPHIRecipe>(PhiR)) {
+      for (unsigned Part = 1; Part < State->UF; ++Part) {
+        Value *Val = State->get(PhiR->getBackedgeValue(), Part - 1);
+        // BOSCC vectorization will transform liveouts into phis, and we should
+        // get the underlying value here.
+        if (auto *PN = dyn_cast<PHINode>(Val)) {
+          int ValIdx = isa<PoisonValue>(PN->getOperand(0)) ? 1 : 0;
+          Val = PN->getOperand(ValIdx);
+        }
+        PHINode *Phi = cast<PHINode>(State->get(PhiR, Part));
+        Phi->replaceAllUsesWith(Val);
+        Phi->eraseFromParent();
+      }
     }
   }
 
