@@ -7688,7 +7688,7 @@ bool Sema::CheckNonDependentConversions(
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
       unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? 0
+                             ? Args.size() - 1 - (ThisConversions + I)
                              : (ThisConversions + I);
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
@@ -10631,7 +10631,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // Find the best viable function.
   Best = end();
   for (auto *Cand : Candidates) {
-    Cand->Best = false;
+        Cand->Best = false;
     if (Cand->Viable) {
       if (Best == end() ||
           isBetterOverloadCandidate(S, *Cand, *Best, Loc, Kind))

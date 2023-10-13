@@ -113,6 +113,8 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Fix a bug in conversion sequence of arguments to a function with reversed parameter order.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
