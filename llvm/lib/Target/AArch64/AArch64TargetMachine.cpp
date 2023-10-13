@@ -165,6 +165,11 @@ static cl::opt<bool>
                            cl::desc("Enable SVE intrinsic opts"),
                            cl::init(true));
 
+static cl::opt<bool>
+EnableAArch64DotProdMatch("aarch64-enable-dotprodmatch", cl::Hidden,
+                          cl::desc("Enable matching dot product instructions"),
+                          cl::init(true));
+
 static cl::opt<bool> EnableFalkorHWPFFix("aarch64-enable-falkor-hwpf-fix",
                                          cl::init(true), cl::Hidden);
 
@@ -246,6 +251,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelPass(*PR);
   initializeAArch64GlobalsTaggingPass(*PR);
+  initializeAArch64DotProdMatcherPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -552,6 +558,11 @@ void AArch64PassConfig::addIRPasses() {
   // Always expand atomic operations, we don't deal with atomicrmw or cmpxchg
   // ourselves.
   addPass(createAtomicExpandPass());
+
+  // Make use of SVE intrinsics in place of common vector operations that span
+  // multiple basic blocks.
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAArch64DotProdMatch)
+    addPass(createAArch64DotProdMatcherPass());
 
   // Expand any SVE vector library calls that we can't code generate directly.
   if (EnableSVEIntrinsicOpts &&
