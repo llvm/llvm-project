@@ -90,10 +90,10 @@ public:
   using Off = packed<uint>;
 };
 
-using ELF32LE = ELFType<support::little, false>;
-using ELF32BE = ELFType<support::big, false>;
-using ELF64LE = ELFType<support::little, true>;
-using ELF64BE = ELFType<support::big, true>;
+using ELF32LE = ELFType<llvm::endianness::little, false>;
+using ELF32BE = ELFType<llvm::endianness::big, false>;
+using ELF64LE = ELFType<llvm::endianness::little, true>;
+using ELF64BE = ELFType<llvm::endianness::big, true>;
 
 // Use an alignment of 2 for the typedefs since that is the worst case for
 // ELF files in archives.

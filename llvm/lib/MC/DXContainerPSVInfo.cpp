@@ -87,15 +87,15 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   }
   // Write the size of the info.
 
-  support::endian::write(OS, InfoSize, support::little);
+  support::endian::write(OS, InfoSize, llvm::endianness::little);
   // Write the info itself.
   OS.write(reinterpret_cast<const char *>(&BaseData), InfoSize);
 
   uint32_t ResourceCount = static_cast<uint32_t>(Resources.size());
 
-  support::endian::write(OS, ResourceCount, support::little);
+  support::endian::write(OS, ResourceCount, llvm::endianness::little);
   if (ResourceCount > 0)
-    support::endian::write(OS, BindingSize, support::little);
+    support::endian::write(OS, BindingSize, llvm::endianness::little);
 
   for (const auto &Res : Resources)
     OS.write(reinterpret_cast<const char *>(&Res), BindingSize);
@@ -126,22 +126,22 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   }
 
   support::endian::write(OS, static_cast<uint32_t>(StrTabBuilder.getSize()),
-                         support::little);
+                         llvm::endianness::little);
 
   // Write the string table.
   StrTabBuilder.write(OS);
 
   // Write the index table size, then table.
   support::endian::write(OS, static_cast<uint32_t>(IndexBuffer.size()),
-                         support::little);
+                         llvm::endianness::little);
   for (auto I : IndexBuffer)
-    support::endian::write(OS, I, support::little);
+    support::endian::write(OS, I, llvm::endianness::little);
 
   if (SignatureElements.size() > 0) {
     // write the size of the signature elements.
     support::endian::write(OS,
                            static_cast<uint32_t>(sizeof(v0::SignatureElement)),
-                           support::little);
+                           llvm::endianness::little);
 
     // write the signature elements.
     OS.write(reinterpret_cast<const char *>(&SignatureElements[0]),
@@ -150,16 +150,16 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
 
   for (const auto &MaskVector : OutputVectorMasks)
     support::endian::write_array(OS, ArrayRef<uint32_t>(MaskVector),
-                                 support::little);
+                                 llvm::endianness::little);
   support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOrPrimMasks),
-                               support::little);
+                               llvm::endianness::little);
   for (const auto &MaskVector : InputOutputMap)
     support::endian::write_array(OS, ArrayRef<uint32_t>(MaskVector),
-                                 support::little);
+                                 llvm::endianness::little);
   support::endian::write_array(OS, ArrayRef<uint32_t>(InputPatchMap),
-                               support::little);
+                               llvm::endianness::little);
   support::endian::write_array(OS, ArrayRef<uint32_t>(PatchOutputMap),
-                               support::little);
+                               llvm::endianness::little);
 }
 
 void Signature::write(raw_ostream &OS) {

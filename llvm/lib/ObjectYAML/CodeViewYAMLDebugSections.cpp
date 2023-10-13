@@ -900,7 +900,7 @@ YAMLDebugSubsection::fromCodeViewSubection(const StringsAndChecksumsRef &SC,
 std::vector<YAMLDebugSubsection>
 llvm::CodeViewYAML::fromDebugS(ArrayRef<uint8_t> Data,
                                const StringsAndChecksumsRef &SC) {
-  BinaryStreamReader Reader(Data, support::little);
+  BinaryStreamReader Reader(Data, llvm::endianness::little);
   uint32_t Magic;
 
   ExitOnError Err("Invalid .debug$S section!");

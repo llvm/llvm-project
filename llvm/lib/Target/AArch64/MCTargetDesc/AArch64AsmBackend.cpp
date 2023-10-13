@@ -40,7 +40,8 @@ protected:
 
 public:
   AArch64AsmBackend(const Target &T, const Triple &TT, bool IsLittleEndian)
-      : MCAsmBackend(IsLittleEndian ? support::little : support::big),
+      : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
+                                    : llvm::endianness::big),
         TheTriple(TT) {}
 
   unsigned getNumFixupKinds() const override {
@@ -360,7 +361,7 @@ AArch64AsmBackend::getFixupKind(StringRef Name) const {
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
 /// container involved in big endian or 0 if the item is little endian
 unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) const {
-  if (Endian == support::little)
+  if (Endian == llvm::endianness::little)
     return 0;
 
   switch (Kind) {

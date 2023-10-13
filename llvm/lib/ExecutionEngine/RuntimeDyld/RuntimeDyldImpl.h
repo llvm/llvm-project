@@ -318,18 +318,24 @@ protected:
   std::string ErrorStr;
 
   void writeInt16BE(uint8_t *Addr, uint16_t Value) {
-    llvm::support::endian::write<uint16_t>(
-        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
+    llvm::support::endian::write<uint16_t>(Addr, Value,
+                                           IsTargetLittleEndian
+                                               ? llvm::endianness::little
+                                               : llvm::endianness::big);
   }
 
   void writeInt32BE(uint8_t *Addr, uint32_t Value) {
-    llvm::support::endian::write<uint32_t>(
-        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
+    llvm::support::endian::write<uint32_t>(Addr, Value,
+                                           IsTargetLittleEndian
+                                               ? llvm::endianness::little
+                                               : llvm::endianness::big);
   }
 
   void writeInt64BE(uint8_t *Addr, uint64_t Value) {
-    llvm::support::endian::write<uint64_t>(
-        Addr, Value, IsTargetLittleEndian ? support::little : support::big);
+    llvm::support::endian::write<uint64_t>(Addr, Value,
+                                           IsTargetLittleEndian
+                                               ? llvm::endianness::little
+                                               : llvm::endianness::big);
   }
 
   virtual void setMipsABI(const ObjectFile &Obj) {

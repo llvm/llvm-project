@@ -20,8 +20,8 @@ using namespace llvm::codeview;
 
 SymbolSerializer::SymbolSerializer(BumpPtrAllocator &Allocator,
                                    CodeViewContainer Container)
-    : Storage(Allocator), Stream(RecordBuffer, support::little), Writer(Stream),
-      Mapping(Writer, Container) {}
+    : Storage(Allocator), Stream(RecordBuffer, llvm::endianness::little),
+      Writer(Stream), Mapping(Writer, Container) {}
 
 Error SymbolSerializer::visitSymbolBegin(CVSymbol &Record) {
   assert(!CurrentSymbol && "Already in a symbol mapping!");

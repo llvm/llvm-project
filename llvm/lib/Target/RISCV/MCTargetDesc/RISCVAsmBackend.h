@@ -31,8 +31,8 @@ class RISCVAsmBackend : public MCAsmBackend {
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options)
-      : MCAsmBackend(support::little, RISCV::fixup_riscv_relax), STI(STI),
-        OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+      : MCAsmBackend(llvm::endianness::little, RISCV::fixup_riscv_relax),
+        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
     RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
   }
   ~RISCVAsmBackend() override = default;
