@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +usermsr \
 // RUN: -emit-llvm -fsyntax-only -verify
 
-#include <immintrin.h>
+#include <gprintrin.h>
 
 unsigned long long test_urdmsr(unsigned long long __A) {
   return _urdmsr(__A); // expected-error {{call to undeclared function '_urdmsr'}}

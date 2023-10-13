@@ -922,6 +922,8 @@ endif()
 
 include(HandleLLVMOptions)
 
+######
+
 # Configure all of the various header file fragments LLVM uses which depend on
 # configuration variables.
 set(LLVM_ENUM_TARGETS "")

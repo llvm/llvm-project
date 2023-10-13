@@ -21,7 +21,7 @@
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
-    defined(__UINTR__)
+    defined(__USERMSR__)
 #include <usermsrintrin.h>
 #endif
 
