@@ -240,4 +240,134 @@ TEST(isRowMajorBatchMatmul, FirstInputSwapped) {
   EXPECT_THAT(maps, Not(Truly(isRowMajorBatchMatmul)));
 }
 
+TEST(isVecMat, Simple) {
+  MLIRContext context;
+
+  AffineExpr k, n;
+  bindDims(&context, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k, n}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isVecMat));
+}
+
+TEST(isVecMat, BindingSwapped) {
+  MLIRContext context;
+
+  AffineExpr k, n;
+  bindDims(&context, k, n); // bind in different order
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k, n}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isVecMat));
+}
+
+TEST(isVecMat, WrongDimOrderMatrix) {
+  MLIRContext context;
+
+  AffineExpr k, n;
+  bindDims(&context, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {n, k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Not(Truly(isVecMat)));
+}
+
+TEST(isMatVec, Simple) {
+  MLIRContext context;
+
+  AffineExpr k, n;
+  bindDims(&context, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {n, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isMatVec));
+}
+
+TEST(isMatVec, BindingSwapped) {
+  MLIRContext context;
+
+  AffineExpr k, n;
+  bindDims(&context, k, n); // bind in different order
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {n, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isMatVec));
+}
+
+TEST(isMatVec, WrongDimOrderMatrix) {
+  MLIRContext context;
+
+  AffineExpr k, n;
+  bindDims(&context, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {k, n}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Not(Truly(isMatVec)));
+}
+
+TEST(isBatchMatVec, Simple) {
+  MLIRContext context;
+
+  AffineExpr batch, k, n;
+  bindDims(&context, batch, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isBatchMatVec));
+}
+
+TEST(isBatchMatVec, BindingSwapped) {
+  MLIRContext context;
+
+  AffineExpr batch, k, n;
+  bindDims(&context, batch, k, n); // bind in different order
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Truly(isBatchMatVec));
+}
+
+TEST(isBatchMatVec, Matmul) {
+  MLIRContext context;
+
+  AffineExpr m, n, k;
+  bindDims(&context, m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Not(Truly(isBatchMatVec)));
+}
+
+TEST(isBatchMatVec, WrongDimOrderMatrix) {
+  MLIRContext context;
+
+  AffineExpr batch, k, n;
+  bindDims(&context, batch, k, n);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k, n}, &context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
+  auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
+
+  EXPECT_THAT(maps, Not(Truly(isBatchMatVec)));
+}
+
 } // namespace
