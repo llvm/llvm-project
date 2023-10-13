@@ -209,27 +209,12 @@ public:
         genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
                       params[kParamDim2Lvl], params[kParamLvl2Dim]);
     // Secondary and primary types encoding.
-    setTemplateTypes(stt);
-    // Finally, make note that initialization is complete.
-    assert(isInitialized() && "Initialization failed");
-    // And return `this` for method chaining.
-    return *this;
-  }
-
-  /// (Re)sets the C++ template type parameters, and returns `this`
-  /// for method chaining. This is already done as part of `genBuffers`,
-  /// but is factored out so that it can also be called independently
-  /// whenever subsequent `genNewCall` calls want to reuse the same
-  /// buffers but different type parameters.
-  //
-  // TODO: This is only ever used by sparse2sparse-viaCOO `ConvertOp`;
-  // is there a better way to handle that than this one-off setter method?
-  NewCallParams &setTemplateTypes(SparseTensorType stt) {
     const auto enc = stt.getEncoding();
     params[kParamPosTp] = constantPosTypeEncoding(builder, loc, enc);
     params[kParamCrdTp] = constantCrdTypeEncoding(builder, loc, enc);
     params[kParamValTp] =
         constantPrimaryTypeEncoding(builder, loc, stt.getElementType());
+    // Return `this` for method chaining.
     return *this;
   }
 
