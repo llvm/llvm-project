@@ -234,6 +234,9 @@ private:
     if (ELFReloc == ELF::R_PPC64_TLSLD)
       return make_error<StringError>("Local-dynamic TLS model is not supported",
                                      inconvertibleErrorCode());
+    if (ELFReloc == ELF::R_PPC64_PCREL_OPT)
+      // TODO: Support PCREL optimization, now ignore it.
+      return Error::success();
 
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
     if (!ObjSymbol)
@@ -359,6 +362,9 @@ private:
       break;
     case ELF::R_PPC64_PCREL34:
       Kind = ppc64::Delta34;
+      break;
+    case ELF::R_PPC64_GOT_PCREL34:
+      Kind = ppc64::RequestGOTAndTransformToDelta34;
       break;
     case ELF::R_PPC64_GOT_TLSGD16_HA:
       Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA;
