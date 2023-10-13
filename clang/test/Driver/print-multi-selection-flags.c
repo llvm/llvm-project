@@ -40,6 +40,11 @@
 // CHECK-V8_1_FP_DP: -mfloat-abi=hard
 // CHECK-V8_1_FP_DP: -mfpu=fp-armv8-fullfp16-d16
 
+// RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv8.1m.main+nofp+fp+nofp.dp | FileCheck --check-prefix=CHECK-V8_1_NO_FP_DP %s
+// CHECK-V8_1_NO_FP_DP: -march=thumbv8.1m.main{{.*}}
+// CHECK-V8_1_NO_FP_DP: -mfloat-abi=hard
+// CHECK-V8_1_NO_FP_DP: -mfpu=fp-armv8-fullfp16-sp-d16
+
 // RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -mcpu=cortex-m85+nofp.dp | FileCheck --check-prefix=CHECK-M85_NO_FP_DP %s
 // CHECK-M85_NO_FP_DP: -march=thumbv8.1m.main{{.*}}
 // CHECK-M85_NO_FP_DP: -mfloat-abi=hard

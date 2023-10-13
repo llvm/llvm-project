@@ -371,6 +371,8 @@ static ARM::FPUKind findDoublePrecisionFPU(ARM::FPUKind InputFPUKind) {
 
   const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
 
+  // If the input FPU already supports double-precision, then there
+  // isn't any different FPU we can return here.
   if (ARM::isDoublePrecision(InputFPU.Restriction))
     return InputFPUKind;
 
@@ -396,9 +398,8 @@ static ARM::FPUKind findSinglePrecisionFPU(ARM::FPUKind InputFPUKind) {
 
   const ARM::FPUName &InputFPU = ARM::FPUNames[InputFPUKind];
 
-  // If the input FPU already supports double-precision, then there
+  // If the input FPU already is single-precision only, then there
   // isn't any different FPU we can return here.
-  //
   if (!ARM::isDoublePrecision(InputFPU.Restriction))
     return InputFPUKind;
 
