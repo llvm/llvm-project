@@ -3477,10 +3477,8 @@ libcxx/test/std/input.output/string.streams/ostringstream/ostringstream.cons/str
 libcxx/test/std/input.output/string.streams/ostringstream/ostringstream.members/str.pass.cpp
 libcxx/test/std/input.output/string.streams/ostringstream/types.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.assign/member_swap.pass.cpp
-libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.assign/move.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.assign/nonmember_swap.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.cons/default.pass.cpp
-libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.cons/move.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.cons/string.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.members/str.pass.cpp
 libcxx/test/std/input.output/string.streams/stringbuf/stringbuf.virtuals/overflow.pass.cpp
