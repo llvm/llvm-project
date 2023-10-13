@@ -42,9 +42,9 @@ Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
   process_info.m_triple = fromHex(elements["triple"]);
   StringRef endian_str = elements["endian"];
   if (endian_str == "little")
-    process_info.m_endian = support::little;
+    process_info.m_endian = llvm::endianness::little;
   else if (endian_str == "big")
-    process_info.m_endian = support::big;
+    process_info.m_endian = llvm::endianness::big;
   else
     return make_parsing_error("ProcessInfo: endian");
 
@@ -84,7 +84,7 @@ JThreadsInfo::parseRegisters(const StructuredData::Dictionary &Dict,
       return make_parsing_error("JThreadsInfo: register key[{0}]", i);
 
     auto RegValOr =
-        parseRegisterValue(RegInfos[Register], ValueStr, support::big);
+        parseRegisterValue(RegInfos[Register], ValueStr, llvm::endianness::big);
     if (!RegValOr)
       return RegValOr.takeError();
     Result[Register] = std::move(*RegValOr);
@@ -214,9 +214,10 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
   StringExtractor(HexValue).GetHexBytes(Bytes, '\xcc');
   RegisterValue Value;
   Status ST;
-  Value.SetFromMemoryData(
-      Info, Bytes.data(), Bytes.size(),
-      Endian == support::little ? eByteOrderLittle : eByteOrderBig, ST);
+  Value.SetFromMemoryData(Info, Bytes.data(), Bytes.size(),
+                          Endian == llvm::endianness::little ? eByteOrderLittle
+                                                             : eByteOrderBig,
+                          ST);
   if (ST.Fail())
     return ST.ToError();
   return Value;
