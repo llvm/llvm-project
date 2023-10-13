@@ -1542,9 +1542,7 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
                                            const MCRegisterInfo &MRI);
 
 /// \returns true if a physical register \p Reg is a VGPR starting above v255.
-/// If this is a VGPR also returns it register class.
-std::pair<bool, const MCRegisterClass*> isHighVGPR(MCPhysReg Reg,
-                                                   const MCRegisterInfo &MRI);
+bool isHighVGPR(MCPhysReg Reg, const MCRegisterInfo &MRI);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);

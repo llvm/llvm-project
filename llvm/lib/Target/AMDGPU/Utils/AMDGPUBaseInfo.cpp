@@ -762,8 +762,8 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
-    if (isHighVGPR(OpXRegs[CompOprIdx], MRI).first !=
-        isHighVGPR(OpYRegs[CompOprIdx], MRI).first)
+    if (isHighVGPR(OpXRegs[CompOprIdx], MRI) !=
+        isHighVGPR(OpYRegs[CompOprIdx], MRI))
       return CompOprIdx;
 
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
@@ -3097,20 +3097,10 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
   return nullptr;
 }
 
-std::pair<bool, const MCRegisterClass*> isHighVGPR(MCPhysReg Reg,
-                                                   const MCRegisterInfo &MRI) {
-  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  if (!RC)
-    return std::make_pair(false, RC);
-
-  // This is a high VGPR if its first regunit is between VGPR256_LO16 and
-  // VGPR511_LO16 or VGPR256_HI16 and VGPR511_HI16.
-  auto Root = *MCRegUnitRootIterator(*MCRegUnitIterator(Reg, &MRI), &MRI);
-  bool IsHigh =
-      (Root >= AMDGPU::VGPR256_LO16 && Root <= AMDGPU::VGPR511_LO16) ||
-      (Root >= AMDGPU::VGPR256_HI16 && Root <= AMDGPU::VGPR511_HI16);
-
-  return std::make_pair(IsHigh, RC);
+bool isHighVGPR(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  return Idx >= 0x100;
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {

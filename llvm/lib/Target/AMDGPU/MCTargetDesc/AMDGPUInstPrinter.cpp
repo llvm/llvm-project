@@ -398,22 +398,13 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v512] or
 // \p Reg itself otherwise.
 static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
-  const MCRegisterClass *RC;
-  bool IsHigh;
-
-  std::tie(IsHigh, RC) = AMDGPU::isHighVGPR(Reg, MRI);
-  if (!IsHigh)
+  unsigned Enc = MRI.getEncodingValue(Reg);
+  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (Idx < 0x100)
     return Reg;
 
-  // The encoding of the high and the low half of the VGPR file is the same.
-  // For example encoding of the v0 is the same as v256, v1 is the same as v257
-  // etc, with v255 having the same encoding as v511. All register classes are
-  // sorted, so to get a low VGPR representing a high VGPR we just need to scan
-  // its register class until we find a first register with the same encoding.
-  unsigned Idx = MRI.getEncodingValue(Reg);
-  return *llvm::find_if(*RC, [&MRI, Idx](MCPhysReg Reg) {
-    return MRI.getEncodingValue(Reg) == Idx;
-  });
+  const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
+  return RC->getRegister(Idx % 0x100);
 }
 
 void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,

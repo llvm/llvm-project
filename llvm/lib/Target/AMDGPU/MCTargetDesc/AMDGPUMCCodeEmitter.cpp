@@ -369,7 +369,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
     assert((Encoding & 0xFF) == 0);
     Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
-                AMDGPU::HWEncoding::REG_IDX_MASK;
+                AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   }
 
   for (unsigned i = 0; i < bytes; i++) {
@@ -520,29 +520,13 @@ void AMDGPUMCCodeEmitter::getAVOperandEncoding(
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
   unsigned Reg = MI.getOperand(OpNo).getReg();
   unsigned Enc = MRI.getEncodingValue(Reg);
-  unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+  unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   bool IsVGPROrAGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
+  bool IsAGPR = Enc & AMDGPU::HWEncoding::IS_AGPR;
 
   // VGPR and AGPR have the same encoding, but SrcA and SrcB operands of mfma
   // instructions use acc[0:1] modifier bits to distinguish. These bits are
   // encoded as a virtual 9th bit of the register for these operands.
-  bool IsAGPR = false;
-  if (MRI.getRegClass(AMDGPU::AGPR_32RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_96RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_128RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_160RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_192RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_224RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_256RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_288RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_320RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_352RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_384RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(Reg) ||
-      MRI.getRegClass(AMDGPU::AGPR_LO16RegClassID).contains(Reg))
-    IsAGPR = true;
-
   Op = Idx | (IsVGPROrAGPR << 8) | (IsAGPR << 9);
 }
 
@@ -575,7 +559,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             const MCSubtargetInfo &STI) const {
   if (MO.isReg()){
     unsigned Enc = MRI.getEncodingValue(MO.getReg());
-    unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+    unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
     bool IsVGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
     Op = Idx | (IsVGPR << 8);
     return;
@@ -596,7 +580,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
   const MCOperand &MO = MI.getOperand(OpNo);
   if (MO.isReg()) {
     uint16_t Encoding = MRI.getEncodingValue(MO.getReg());
-    unsigned RegIdx = Encoding & AMDGPU::HWEncoding::REG_IDX_MASK;
+    unsigned RegIdx = Encoding & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
     bool IsHi = Encoding & AMDGPU::HWEncoding::IS_HI;
     bool IsVGPR = Encoding & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
     assert((!IsVGPR || isUInt<7>(RegIdx)) && "VGPR0-VGPR127 expected!");
