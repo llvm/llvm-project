@@ -16,7 +16,7 @@ using namespace mlir::sparse_tensor;
 namespace {
 
 template <typename StageWithSortOp>
-struct StageUnorderedConvert : public OpRewritePattern<StageWithSortOp> {
+struct StageUnorderedSparseOps : public OpRewritePattern<StageWithSortOp> {
   using OpRewritePattern<StageWithSortOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(StageWithSortOp op,
@@ -28,6 +28,6 @@ struct StageUnorderedConvert : public OpRewritePattern<StageWithSortOp> {
 } // namespace
 
 void mlir::populateStageSparseOperationsPatterns(RewritePatternSet &patterns) {
-  patterns.add<StageUnorderedConvert<ConvertOp>,
-               StageUnorderedConvert<ConcatenateOp>>(patterns.getContext());
+  patterns.add<StageUnorderedSparseOps<ConvertOp>,
+               StageUnorderedSparseOps<ConcatenateOp>>(patterns.getContext());
 }
