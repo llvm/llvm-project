@@ -31,8 +31,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Intrinsics.h"
 
-using namespace llvm;
-
 #define Check(C, ...)                                                          \
   do {                                                                         \
     if (!(C)) {                                                                \
@@ -49,6 +47,7 @@ using namespace llvm;
     }                                                                          \
   } while (false)
 
+namespace llvm {
 static bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
   switch (IntrinsicID) {
   default:
@@ -60,7 +59,6 @@ static bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
   }
 }
 
-namespace llvm {
 template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
   Tokens.clear();
   CI.clear();
