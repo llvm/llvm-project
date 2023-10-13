@@ -8,6 +8,7 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
 
 // void store(floating-point-type, memory_order = memory_order::seq_cst) volatile noexcept;
 // void store(floating-point-type, memory_order = memory_order::seq_cst) noexcept;
@@ -18,6 +19,7 @@
 #include <concepts>
 #include <ranges>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "test_helper.h"
@@ -28,7 +30,8 @@ concept HasVolatileStore = requires(volatile std::atomic<T> a, T t) { a.store(t)
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {
-  static_assert(HasVolatileStore<T> == std::atomic<T>::is_always_lock_free);
+  // Uncomment the test after P1831R1 is implemented
+  // static_assert(HasVolatileStore<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().store(T(0))));
 
   // store

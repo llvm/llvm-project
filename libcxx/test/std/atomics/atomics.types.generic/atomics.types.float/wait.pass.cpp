@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
+// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;
 // void wait(T old, memory_order order = memory_order::seq_cst) const noexcept;
@@ -15,6 +17,7 @@
 #include <cassert>
 #include <concepts>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "test_helper.h"
@@ -25,7 +28,8 @@ concept HasVolatileWait = requires(volatile std::atomic<T> a, T t) { a.wait(T())
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {
-  static_assert(HasVolatileWait<T> == std::atomic<T>::is_always_lock_free);
+  // Uncomment the test after P1831R1 is implemented
+  // static_assert(HasVolatileWait<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().wait(T())));
 
   // wait with different value

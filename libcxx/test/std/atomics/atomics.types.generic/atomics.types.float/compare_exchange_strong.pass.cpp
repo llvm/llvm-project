@@ -8,6 +8,7 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
 
 // bool compare_exchange_strong(T& expected, T desired,
 //                            memory_order success, memory_order failure) volatile noexcept;
@@ -21,6 +22,7 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <type_traits>
 
 #include "test_helper.h"
 #include "test_macros.h"
@@ -36,7 +38,8 @@ concept HasNoexceptCompareExchangeStrong = requires(MaybeVolatile<std::atomic<T>
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t, class... MemoryOrder>
 void testBasic(MemoryOrder... memory_order) {
-  static_assert(HasVolatileCompareExchangeStrong<T, MemoryOrder...> == std::atomic<T>::is_always_lock_free);
+  // Uncomment the test after P1831R1 is implemented
+  // static_assert(HasVolatileCompareExchangeStrong<T, MemoryOrder...> == std::atomic<T>::is_always_lock_free);
   static_assert(HasNoexceptCompareExchangeStrong<T, MaybeVolatile, MemoryOrder...>);
 
   // compare pass

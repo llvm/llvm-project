@@ -8,6 +8,7 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
 
 //  operator floating-point-type() volatile noexcept;
 //  operator floating-point-type() noexcept;
@@ -15,13 +16,15 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <type_traits>
 
 #include "test_helper.h"
 #include "test_macros.h"
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {
-  static_assert(std::is_convertible_v<volatile std::atomic<T>&, T> == std::atomic<T>::is_always_lock_free);
+  // Uncomment the test after P1831R1 is implemented
+  // static_assert(std::is_convertible_v<volatile std::atomic<T>&, T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(T(std::declval<MaybeVolatile<std::atomic<T>>&>())));
 
   // operator float

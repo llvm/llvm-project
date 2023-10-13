@@ -197,7 +197,9 @@ struct atomic<_Tp> : public __atomic_base<_Tp> {
     atomic& operator=(const atomic&)          = delete;
     atomic& operator=(const atomic&) volatile = delete;
 
-    _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile noexcept {
+    _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile noexcept
+      requires __base::is_always_lock_free
+    {
         __base::store(__d);
         return __d;
     }

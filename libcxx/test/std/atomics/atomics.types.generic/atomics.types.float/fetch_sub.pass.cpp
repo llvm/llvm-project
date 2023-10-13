@@ -8,6 +8,7 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
 
 // floating-point-type fetch_sub(floating-point-type,
 //                               memory_order = memory_order::seq_cst) volatile noexcept;
@@ -18,6 +19,7 @@
 #include <cassert>
 #include <concepts>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 #include "test_helper.h"

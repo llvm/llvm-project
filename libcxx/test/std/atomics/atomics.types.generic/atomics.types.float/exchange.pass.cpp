@@ -8,6 +8,7 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
 
 //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;
 //  T exchange(T, memory_order = memory_order::seq_cst) noexcept;
@@ -15,6 +16,7 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <type_traits>
 
 #include "test_helper.h"
 #include "test_macros.h"
@@ -24,7 +26,8 @@ concept HasVolatileExchange = requires(volatile std::atomic<T> a, T t) { a.excha
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {
-  static_assert(HasVolatileExchange<T> == std::atomic<T>::is_always_lock_free);
+  // Uncomment the test after P1831R1 is implemented
+  // static_assert(HasVolatileExchange<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>() = (T(0))));
 
   // exchange

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
 
 // constexpr atomic() noexcept;
 // constexpr atomic(floating-point-type) noexcept;
@@ -14,6 +15,7 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <type_traits>
 
 #include "test_macros.h"
 
