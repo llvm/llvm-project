@@ -4410,10 +4410,6 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
   if (isa<DefInit>(Message))
     Message = UnOpInit::get( UnOpInit::REPR, Message, StringRecTy::get(Records))->Fold(CurRec);
 
-  std::string Msg;
-  if (auto SI = dyn_cast<StringInit>(Message))
-    Msg = SI->getValue();
-
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
