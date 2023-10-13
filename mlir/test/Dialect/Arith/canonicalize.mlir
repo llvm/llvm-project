@@ -909,6 +909,18 @@ func.func @tripleMulIMulII32(%arg0: i32) -> i32 {
   return %mul2 : i32
 }
 
+// CHECK-LABEL: @tripleMulLargeInt
+//       CHECK:   %[[cres:.+]] = arith.constant 3618502788666131213697322783095070105623107215331596699973092056135872020482 : i256
+//       CHECK:   %[[addi:.+]] = arith.addi %arg0, %[[cres]] : i256
+//       CHECK:   return %[[addi]]
+func.func @tripleMulLargeInt(%arg0: i256) -> i256 {
+  %0 = arith.constant 3618502788666131213697322783095070105623107215331596699973092056135872020481 : i256
+  %1 = arith.constant 1 : i256
+  %2 = arith.addi %arg0, %0 : i256
+  %3 = arith.addi %2, %1 : i256
+  return %3 : i256
+}
+
 // CHECK-LABEL: @addiMuliToSubiRhsI32
 //  CHECK-SAME:   (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
 //       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : i32
