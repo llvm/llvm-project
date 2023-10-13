@@ -14,6 +14,8 @@
 #include <cassert>
 #include <optional>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 /// Identifies a DWARF debug info entry within a given Module. It contains three
 /// "coordinates":
 /// - file_index: identifies the separate stand alone debug info file
@@ -93,7 +95,7 @@ public:
   /// \return
   ///   Returns a valid DIERef if decoding succeeded, std::nullopt if there was
   ///   unsufficient or invalid values that were decoded.
-  static std::optional<DIERef> Decode(const lldb_private::DataExtractor &data,
+  static std::optional<DIERef> Decode(const DataExtractor &data,
                                       lldb::offset_t *offset_ptr);
 
   /// Encode this object into a data encoder object.
@@ -103,7 +105,7 @@ public:
   /// \param encoder
   ///   A data encoder object that serialized bytes will be encoded into.
   ///
-  void Encode(lldb_private::DataEncoder &encoder) const;
+  void Encode(DataEncoder &encoder) const;
 
   static constexpr uint64_t k_die_offset_bit_size = DW_DIE_OFFSET_MAX_BITSIZE;
   static constexpr uint64_t k_file_index_bit_size =
@@ -131,10 +133,13 @@ private:
 static_assert(sizeof(DIERef) == 8);
 
 typedef std::vector<DIERef> DIEArray;
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 namespace llvm {
-template<> struct format_provider<DIERef> {
-  static void format(const DIERef &ref, raw_ostream &OS, StringRef Style);
+template <> struct format_provider<lldb_private::plugin::dwarf::DIERef> {
+  static void format(const lldb_private::plugin::dwarf::DIERef &ref,
+                     raw_ostream &OS, StringRef Style);
 };
 } // namespace llvm
 
