@@ -1177,16 +1177,14 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   char sentinel[5], *sp{sentinel};
   int column{2};
   for (; column < 6; ++column, ++p) {
-    if (*p != ' ') {
-      if (*p == '\n' || *p == '\t') {
-        break;
-      }
-      if (sp == sentinel + 1 && sentinel[0] == '$' && IsDecimalDigit(*p)) {
-        // OpenMP conditional compilation line: leave the label alone
-        break;
-      }
-      *sp++ = ToLowerCaseLetter(*p);
+    if (*p == ' ' || *p == '\n' || *p == '\t') {
+      break;
     }
+    if (sp == sentinel + 1 && sentinel[0] == '$' && IsDecimalDigit(*p)) {
+      // OpenMP conditional compilation line: leave the label alone
+      break;
+    }
+    *sp++ = ToLowerCaseLetter(*p);
   }
   if (column == 6) {
     if (*p == ' ' || *p == '\t' || *p == '0') {
