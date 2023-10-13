@@ -507,9 +507,9 @@ std::optional<FracMatrix> FracMatrix::inverse() {
   }
   Fraction a, b;
   for (unsigned i = 0; i < dim; i++) {
-    if (augmented(i, i) == Fraction(0, 1))
+    if (augmented(i, i) == 0)
       for (unsigned j = i + 1; j < dim; j++)
-        if (augmented(j, i) != Fraction(0, 1)) {
+        if (augmented(j, i) != 0) {
           augmented.addToRow(j, i, 1);
           break;
         }
