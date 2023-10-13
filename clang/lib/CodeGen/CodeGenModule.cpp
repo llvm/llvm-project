@@ -1391,6 +1391,10 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
   if (!D)
     return;
 
+  // Set visibility for definitions, and for declarations if requested globally
+  // or set explicitly.
+  LinkageInfo LV = D->getLinkageAndVisibility();
+
   // OpenMP declare target variables must be visible to the host so they can
   // be registered. We require protected visibility unless the variable has
   // the DT_nohost modifier and does not need to be registered.
@@ -1398,14 +1402,12 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
       Context.getLangOpts().OpenMPIsTargetDevice && isa<VarDecl>(D) &&
       D->hasAttr<OMPDeclareTargetDeclAttr>() &&
       D->getAttr<OMPDeclareTargetDeclAttr>()->getDevType() !=
-          OMPDeclareTargetDeclAttr::DT_NoHost) {
+          OMPDeclareTargetDeclAttr::DT_NoHost &&
+      LV.getVisibility() == HiddenVisibility) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     return;
   }
 
-  // Set visibility for definitions, and for declarations if requested globally
-  // or set explicitly.
-  LinkageInfo LV = D->getLinkageAndVisibility();
   if (GV->hasDLLExportStorageClass() || GV->hasDLLImportStorageClass()) {
     // Reject incompatible dlllstorage and visibility annotations.
     if (!LV.isVisibilityExplicit())
@@ -3845,6 +3847,9 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
     return true;
   const auto *F = cast<FunctionDecl>(GD.getDecl());
   if (CodeGenOpts.OptimizationLevel == 0 && !F->hasAttr<AlwaysInlineAttr>())
+    return false;
+
+  if (F->hasAttr<NoInlineAttr>())
     return false;
 
   if (F->hasAttr<DLLImportAttr>() && !F->hasAttr<AlwaysInlineAttr>()) {

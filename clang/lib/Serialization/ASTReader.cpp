@@ -1444,6 +1444,79 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
+llvm::Expected<SourceLocation::UIntTy>
+ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
+  BitstreamCursor &Cursor = F->SLocEntryCursor;
+  SavedStreamPosition SavedPosition(Cursor);
+  if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
+                                         F->SLocEntryOffsets[Index]))
+    return std::move(Err);
+
+  Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
+  if (!MaybeEntry)
+    return MaybeEntry.takeError();
+
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+  if (Entry.Kind != llvm::BitstreamEntry::Record)
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
+
+  RecordData Record;
+  StringRef Blob;
+  Expected<unsigned> MaybeSLOC = Cursor.readRecord(Entry.ID, Record, &Blob);
+  if (!MaybeSLOC)
+    return MaybeSLOC.takeError();
+
+  switch (MaybeSLOC.get()) {
+  default:
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
+  case SM_SLOC_FILE_ENTRY:
+  case SM_SLOC_BUFFER_ENTRY:
+  case SM_SLOC_EXPANSION_ENTRY:
+    return F->SLocEntryBaseOffset + Record[0];
+  }
+}
+
+int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
+  auto SLocMapI =
+      GlobalSLocOffsetMap.find(SourceManager::MaxLoadedOffset - SLocOffset - 1);
+  assert(SLocMapI != GlobalSLocOffsetMap.end() &&
+         "Corrupted global sloc offset map");
+  ModuleFile *F = SLocMapI->second;
+
+  bool Invalid = false;
+
+  auto It = llvm::upper_bound(
+      llvm::index_range(0, F->LocalNumSLocEntries), SLocOffset,
+      [&](SourceLocation::UIntTy Offset, std::size_t LocalIndex) {
+        int ID = F->SLocEntryBaseID + LocalIndex;
+        std::size_t Index = -ID - 2;
+        if (!SourceMgr.SLocEntryOffsetLoaded[Index]) {
+          assert(!SourceMgr.SLocEntryLoaded[Index]);
+          auto MaybeEntryOffset = readSLocOffset(F, LocalIndex);
+          if (!MaybeEntryOffset) {
+            Error(MaybeEntryOffset.takeError());
+            Invalid = true;
+            return true;
+          }
+          SourceMgr.LoadedSLocEntryTable[Index] =
+              SrcMgr::SLocEntry::getOffsetOnly(*MaybeEntryOffset);
+          SourceMgr.SLocEntryOffsetLoaded[Index] = true;
+        }
+        return Offset < SourceMgr.LoadedSLocEntryTable[Index].getOffset();
+      });
+
+  if (Invalid)
+    return 0;
+
+  // The iterator points to the first entry with start offset greater than the
+  // offset of interest. The previous entry must contain the offset of interest.
+  return F->SLocEntryBaseID + *std::prev(It);
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -3226,7 +3299,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       case SOURCE_LOCATION_OFFSETS:
       case MODULE_OFFSET_MAP:
       case SOURCE_MANAGER_LINE_TABLE:
-      case SOURCE_LOCATION_PRELOADS:
       case PPD_ENTITIES_OFFSETS:
       case HEADER_SEARCH_TABLE:
       case IMPORTED_MODULES:
@@ -3575,18 +3647,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case SOURCE_MANAGER_LINE_TABLE:
       ParseLineTable(F, Record);
       break;
-
-    case SOURCE_LOCATION_PRELOADS: {
-      // Need to transform from the local view (1-based IDs) to the global view,
-      // which is based off F.SLocEntryBaseID.
-      if (!F.PreloadSLocEntries.empty())
-        return llvm::createStringError(
-            std::errc::illegal_byte_sequence,
-            "Multiple SOURCE_LOCATION_PRELOADS records in AST file");
-
-      F.PreloadSLocEntries.swap(Record);
-      break;
-    }
 
     case EXT_VECTOR_DECLS:
       for (unsigned I = 0, N = Record.size(); I != N; ++I)
@@ -4416,16 +4476,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
   // Preload source locations and interesting indentifiers.
   for (ImportedModule &M : Loaded) {
     ModuleFile &F = *M.Mod;
-
-    // Preload SLocEntries.
-    for (unsigned I = 0, N = F.PreloadSLocEntries.size(); I != N; ++I) {
-      int Index = int(F.PreloadSLocEntries[I] - 1) + F.SLocEntryBaseID;
-      // Load it through the SourceManager and don't call ReadSLocEntry()
-      // directly because the entry may have already been loaded in which case
-      // calling ReadSLocEntry() directly would trigger an assertion in
-      // SourceManager.
-      SourceMgr.getLoadedSLocEntryByID(Index);
-    }
 
     // Map the original source file ID into the ID space of the current
     // compilation.
@@ -7385,15 +7435,20 @@ TemplateArgumentLoc ASTRecordReader::readTemplateArgumentLoc() {
   return TemplateArgumentLoc(Arg, readTemplateArgumentLocInfo(Arg.getKind()));
 }
 
+void ASTRecordReader::readTemplateArgumentListInfo(
+    TemplateArgumentListInfo &Result) {
+  Result.setLAngleLoc(readSourceLocation());
+  Result.setRAngleLoc(readSourceLocation());
+  unsigned NumArgsAsWritten = readInt();
+  for (unsigned i = 0; i != NumArgsAsWritten; ++i)
+    Result.addArgument(readTemplateArgumentLoc());
+}
+
 const ASTTemplateArgumentListInfo *
 ASTRecordReader::readASTTemplateArgumentListInfo() {
-  SourceLocation LAngleLoc = readSourceLocation();
-  SourceLocation RAngleLoc = readSourceLocation();
-  unsigned NumArgsAsWritten = readInt();
-  TemplateArgumentListInfo TemplArgsInfo(LAngleLoc, RAngleLoc);
-  for (unsigned i = 0; i != NumArgsAsWritten; ++i)
-    TemplArgsInfo.addArgument(readTemplateArgumentLoc());
-  return ASTTemplateArgumentListInfo::Create(getContext(), TemplArgsInfo);
+  TemplateArgumentListInfo Result;
+  readTemplateArgumentListInfo(Result);
+  return ASTTemplateArgumentListInfo::Create(getContext(), Result);
 }
 
 Decl *ASTReader::GetExternalDecl(uint32_t ID) {

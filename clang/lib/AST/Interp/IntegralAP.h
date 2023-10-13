@@ -37,8 +37,12 @@ private:
   APSInt V;
 
   template <typename T> static T truncateCast(const APSInt &V) {
-    return std::is_signed_v<T> ? V.trunc(sizeof(T) * 8).getSExtValue()
-                               : V.trunc(sizeof(T) * 8).getZExtValue();
+    constexpr unsigned BitSize = sizeof(T) * 8;
+    if (BitSize >= V.getBitWidth())
+      return std::is_signed_v<T> ? V.getSExtValue() : V.getZExtValue();
+
+    return std::is_signed_v<T> ? V.trunc(BitSize).getSExtValue()
+                               : V.trunc(BitSize).getZExtValue();
   }
 
 public:
@@ -55,6 +59,9 @@ public:
   IntegralAP() : V(APSInt::getMaxValue(1024, Signed)) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
+  IntegralAP operator-(const IntegralAP &Other) const {
+    return IntegralAP(V - Other.V);
+  }
   bool operator>(IntegralAP RHS) const { return V > RHS.V; }
   bool operator>=(IntegralAP RHS) const { return V >= RHS.V; }
   bool operator<(IntegralAP RHS) const { return V < RHS.V; }
@@ -89,10 +96,9 @@ public:
   }
 
   template <unsigned Bits, bool InputSigned>
-  static IntegralAP from(Integral<Bits, InputSigned> I) {
-    // FIXME: Take bits parameter.
+  static IntegralAP from(Integral<Bits, InputSigned> I, unsigned BitWidth) {
     APSInt Copy =
-        APSInt(APInt(128, static_cast<int64_t>(I), InputSigned), !Signed);
+        APSInt(APInt(BitWidth, static_cast<int64_t>(I), InputSigned), !Signed);
     Copy.setIsSigned(Signed);
 
     assert(Copy.isSigned() == Signed);
@@ -108,8 +114,7 @@ public:
     return IntegralAP(0);
   }
 
-  // FIXME: This can't be static if the bitwidth depends on V.
-  static constexpr unsigned bitWidth() { return 128; }
+  constexpr unsigned bitWidth() const { return V.getBitWidth(); }
 
   APSInt toAPSInt(unsigned Bits = 0) const { return V; }
   APValue toAPValue() const { return APValue(V); }

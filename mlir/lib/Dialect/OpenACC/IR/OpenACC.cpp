@@ -23,6 +23,7 @@ using namespace acc;
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 
 namespace {
@@ -435,7 +436,7 @@ static LogicalResult verifyInitLikeSingleArgRegion(
 LogicalResult acc::PrivateRecipeOp::verifyRegions() {
   if (failed(verifyInitLikeSingleArgRegion(*this, getInitRegion(),
                                            "privatization", "init", getType(),
-                                           /*verifyYield=*/true)))
+                                           /*verifyYield=*/false)))
     return failure();
   if (failed(verifyInitLikeSingleArgRegion(
           *this, getDestroyRegion(), "privatization", "destroy", getType(),
@@ -458,7 +459,7 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
     return emitOpError() << "expects non-empty copy region";
 
   Block &firstBlock = getCopyRegion().front();
-  if (firstBlock.getNumArguments() != 2 ||
+  if (firstBlock.getNumArguments() < 2 ||
       firstBlock.getArgument(0).getType() != getType())
     return emitOpError() << "expects copy region with two arguments of the "
                             "privatization type";
@@ -619,7 +620,7 @@ Value ParallelOp::getDataOperand(unsigned i) {
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getGangPrivateOperands(), "private",
-          "privatizations", false)))
+          "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
@@ -649,7 +650,7 @@ Value SerialOp::getDataOperand(unsigned i) {
 LogicalResult acc::SerialOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
           *this, getPrivatizations(), getGangPrivateOperands(), "private",
-          "privatizations")))
+          "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
           *this, getReductionRecipes(), getReductionOperands(), "reduction",

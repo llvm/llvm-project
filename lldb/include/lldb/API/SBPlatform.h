@@ -11,11 +11,13 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBProcess.h"
+#include "lldb/API/SBProcessInfoList.h"
 
 #include <functional>
 
 struct PlatformConnectOptions;
 struct PlatformShellCommand;
+class ProcessInstanceInfoMatch;
 
 namespace lldb {
 
@@ -153,6 +155,8 @@ public:
 
   SBProcess Attach(SBAttachInfo &attach_info, const SBDebugger &debugger,
                    SBTarget &target, SBError &error);
+
+  SBProcessInfoList GetAllProcesses(SBError &error);
 
   SBError Kill(const lldb::pid_t pid);
 
