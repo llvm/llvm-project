@@ -510,7 +510,7 @@ std::optional<FracMatrix> FracMatrix::inverse() {
     if (augmented(i, i) == Fraction(0, 1))
       for (unsigned j = i + 1; j < dim; j++)
         if (augmented(j, i) != Fraction(0, 1)) {
-          augmented.addToRow(i, augmented.getRow(j), Fraction(1, 1));
+          augmented.addToRow(j, i, 1);
           break;
         }
 
@@ -521,8 +521,8 @@ std::optional<FracMatrix> FracMatrix::inverse() {
       if (i == j || augmented(j, i) == 0)
         continue;
       a = augmented(j, i);
-      // Rj -> Rj - (b/a)Ri
-      augmented.addToRow(j, augmented.getRow(i), -a / b);
+      // Rj -> Rj - (a/b)Ri
+      augmented.addToRow(i, j, -a / b);
       // Now (Rj)i = 0
     }
   }
