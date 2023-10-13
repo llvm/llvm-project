@@ -1222,7 +1222,7 @@ defm USDOTlane : SIMDThreeSameVectorDotIndex<0, 1, 0b10, "usdot", int_aarch64_ne
 class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
                          string rhs_kind, RegisterOperand RegType,
                          ValueType AccumType, ValueType InputType>
-      : BaseSIMDThreeSameVectorDotIndex<Q, 0, 1, 0b00, "sudot", dst_kind,
+      : BaseSIMDThreeSameVectorIndexS<Q, 0, 0b00, 0b1111, "sudot", dst_kind,
                                         lhs_kind, rhs_kind, RegType, AccumType,
                                         InputType, null_frag> {
   let Pattern = [(set (AccumType RegType:$dst),
