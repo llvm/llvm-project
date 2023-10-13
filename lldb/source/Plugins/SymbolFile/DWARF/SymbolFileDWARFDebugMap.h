@@ -155,6 +155,9 @@ public:
 
   void DumpClangAST(lldb_private::Stream &s) override;
 
+  /// List separate oso files.
+  bool
+  GetSeparateDebugInfo(lldb_private::StructuredData::Dictionary &d) override;
   bool GetCompileOption(const char *option, std::string &value,
                         lldb_private::CompileUnit *cu) override;
 
