@@ -189,10 +189,6 @@ public:
   /// invariants satisfied.
   bool hasConsistentState() const;
 
-  // Compute the determinant of the matrix by converting it to row echelon
-  // form and then taking the product of the diagonal.
-  T determinant();
-
 private:
   /// The current number of rows, columns, and reserved columns. The underlying
   /// data vector is viewed as an nRows x nReservedColumns matrix, of which the
@@ -242,6 +238,10 @@ public:
   // Return the integer inverse of the matrix, leaving the calling object
   // unmodified.
   std::optional<IntMatrix> integerInverse();
+
+  // Compute the determinant of the matrix by converting it to row echelon
+  // form and then taking the product of the diagonal.
+  MPInt determinant();
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -260,6 +260,10 @@ public:
 
   // Return the inverse of the matrix, leaving the calling object unmodified.
   std::optional<FracMatrix> inverse();
+
+  // Compute the determinant of the matrix by converting it to row echelon
+  // form and then taking the product of the diagonal.
+  Fraction determinant();
 };
 
 } // namespace presburger

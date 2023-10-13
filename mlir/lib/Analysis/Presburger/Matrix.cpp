@@ -326,37 +326,6 @@ bool Matrix<T>::hasConsistentState() const {
   return true;
 }
 
-template <typename T>
-T Matrix<T>::determinant() {
-  unsigned r = getNumRows();
-  unsigned c = getNumColumns();
-  if (r == 1)
-    return at(0, 0);
-  if (r == 2)
-    return (at(0, 0) * at(1, 1) - at(0, 1) * at(1, 0));
-
-  T sign(-1), determinant(0);
-  Matrix<T> cofactor(r - 1, c - 1);
-
-  // Cofactor matrix consists of all columns other than the
-  // current one, and all rows except the first.
-  for (unsigned i = 0; i < c; i++) {
-    sign = -sign;
-    unsigned n = 0;
-    for (unsigned j = 0; j < c; j++) {
-      if (j == i)
-        continue;
-      for (unsigned k = 0; k < r - 1; k++)
-        cofactor(k, n) = at(k + 1, j);
-      n++;
-    }
-
-    determinant = determinant + at(0, i) * sign * cofactor.determinant();
-  }
-
-  return determinant;
-}
-
 namespace mlir {
 namespace presburger {
 template class Matrix<MPInt>;
@@ -465,6 +434,20 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
+MPInt IntMatrix::determinant() {
+  unsigned r = getNumRows();
+  unsigned c = getNumColumns();
+
+  FracMatrix m(r, c);
+  for (unsigned i = 0; i < r; i++)
+    for (unsigned j = 0; j < c; j++)
+      m.at(i, j) = Fraction(at(i, j), 1);
+  
+  Fraction det = m.determinant();
+
+  return det.getAsInteger();
+}
+
 std::optional<IntMatrix> IntMatrix::integerInverse() {
   Fraction det = Fraction(determinant(), 1);
   FracMatrix newMat(getNumRows(), getNumColumns());
@@ -487,6 +470,40 @@ std::optional<IntMatrix> IntMatrix::integerInverse() {
 
 FracMatrix FracMatrix::identity(unsigned dimension) {
   return Matrix::identity(dimension);
+}
+
+Fraction FracMatrix::determinant() {
+  unsigned r = getNumRows();
+  unsigned c = getNumColumns();
+
+  FracMatrix m(*this);
+
+  Fraction a, b;
+  // For each row in the matrix,
+  for (unsigned i = 0; i < r; i++) {
+
+    b = m.at(i, i);
+    if (b == 0)
+      continue;
+    
+    // Set all elements below the
+    // diagonal to zero.
+    for (unsigned j = i+1; j < r; j++) {
+      if (i == j || m.at(j, i) == 0)
+        continue;
+      a = m.at(j, i);
+      // Set element (j, i) to zero
+      // by subtracting the ith row,
+      // appropriately scaled.
+      m.addToRow(i, j, -a / b);
+    }
+  }
+
+  Fraction determinant = 1;
+  for (unsigned i = 0; i < r; i++)
+    determinant *= m.at(i, i);
+  
+  return determinant;
 }
 
 std::optional<FracMatrix> FracMatrix::inverse() {
