@@ -146,8 +146,6 @@ public:
 
   bool IsConst() const;
 
-  bool IsCStringType(uint32_t &length) const;
-
   bool IsDefined() const;
 
   bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
@@ -437,20 +435,10 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  void DumpValue(ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
-                 const DataExtractor &data, lldb::offset_t data_offset,
-                 size_t data_byte_size, uint32_t bitfield_bit_size,
-                 uint32_t bitfield_bit_offset, bool show_types,
-                 bool show_summary, bool verbose, uint32_t depth);
-
   bool DumpTypeValue(Stream *s, lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                      ExecutionContextScope *exe_scope);
-
-  void DumpSummary(ExecutionContext *exe_ctx, Stream *s,
-                   const DataExtractor &data, lldb::offset_t data_offset,
-                   size_t data_byte_size);
 
   /// Dump to stdout.
   void DumpTypeDescription(lldb::DescriptionLevel level =
