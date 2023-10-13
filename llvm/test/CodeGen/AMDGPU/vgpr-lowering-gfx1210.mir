@@ -51,8 +51,8 @@ body:             |
 
     ; Tuple crossing the 256 boundary
     ; GCN-NEXT: s_set_vgpr_msb 5
-    ; GCN-NEXT: v_mqsad_u32_u8 v[254:257], v[0:1] /*v[256:257]*/, v0, v[244:247] /*v[500:503]*/
-    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr256_vgpr257, $vgpr0, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
+    ; GCN-NEXT: v_mqsad_u32_u8 v[254:257], v[2:3] /*v[258:259]*/, v0, v[244:247] /*v[500:503]*/
+    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr258_vgpr259, $vgpr0, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
 
     ; DPP/tied operand
     ; GCN-NEXT: s_set_vgpr_msb 15
@@ -109,6 +109,10 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 3
     ; GCN-NEXT: global_store_b32 v[0:1] /*v[256:257]*/, v255 /*v511*/, off
     GLOBAL_STORE_DWORD $vgpr256_vgpr257, $vgpr511, 0, 0, implicit $exec
+
+    ; No change
+    ; GCN-NEXT: global_store_b96 v[0:1] /*v[256:257]*/, v[244:246] /*v[500:502]*/, off
+    GLOBAL_STORE_DWORDX3 $vgpr256_vgpr257, $vgpr500_vgpr501_vgpr502, 0, 0, implicit $exec
 
     ; GCN-NEXT: s_set_vgpr_msb 10
     ; GCN-NEXT: flat_atomic_add_u32 v254 /*v510*/, v[0:1], v255 /*v511*/ th:TH_ATOMIC_RETURN

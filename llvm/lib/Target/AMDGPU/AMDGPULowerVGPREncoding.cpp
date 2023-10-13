@@ -137,11 +137,10 @@ AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
   if (Idx <= 255)
     return std::pair(false, Reg);
 
-  Idx &= 0xff;
-  Reg = *llvm::find_if(*RC, [this, Idx](MCRegister Reg) {
-    return TRI->getHWRegIndex(Reg) == Idx;
-  });
-  return std::pair(true, Reg);
+  unsigned Align = TRI->getRegClassAlignmentNumBits(RC) / 32;
+  assert(Align == 1 || Align == 2);
+  unsigned RegNum = (Idx & 0xff) >> (Align - 1);
+  return std::pair(true, RC->getRegister(RegNum));
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
