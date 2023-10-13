@@ -75,7 +75,8 @@ class BitstreamWriter {
   std::vector<BlockInfo> BlockInfoRecords;
 
   void WriteWord(unsigned Value) {
-    Value = support::endian::byte_swap<uint32_t, support::little>(Value);
+    Value =
+        support::endian::byte_swap<uint32_t, llvm::endianness::little>(Value);
     Out.append(reinterpret_cast<const char *>(&Value),
                reinterpret_cast<const char *>(&Value + 1));
   }

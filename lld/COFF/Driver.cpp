@@ -1210,7 +1210,7 @@ static void readCallGraphsFromObjectFiles(COFFLinkerContext &ctx) {
       ArrayRef<uint8_t> contents;
       cantFail(
           obj->getCOFFObj()->getSectionContents(obj->callgraphSec, contents));
-      BinaryStreamReader reader(contents, support::little);
+      BinaryStreamReader reader(contents, llvm::endianness::little);
       while (!reader.empty()) {
         uint32_t fromIndex, toIndex;
         uint64_t count;

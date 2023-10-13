@@ -241,16 +241,6 @@ public:
     return true;
   }
 
-  /// Gets the dimension-to-level mapping.
-  //
-  // TODO: This is only ever used for passing into `genAddEltCall`;
-  // is there a better way to encapsulate that pattern (both to avoid
-  // this one-off getter, and to avoid potential mixups)?
-  Value getDimToLvl() const {
-    assert(isInitialized() && "Must initialize before getDimToLvl");
-    return params[kParamDim2Lvl];
-  }
-
   /// Generates a function call, with the current static parameters
   /// and the given dynamic arguments.
   Value genNewCall(Action action, Value ptr = Value()) {
@@ -606,7 +596,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getHasInserts()) {
       // Finalize any pending insertions.
-      StringRef name = "endInsert";
+      StringRef name = "endLexInsert";
       createFuncCall(rewriter, op->getLoc(), name, {}, adaptor.getOperands(),
                      EmitCInterface::Off);
     }
