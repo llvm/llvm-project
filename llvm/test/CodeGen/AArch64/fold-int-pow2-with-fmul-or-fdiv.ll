@@ -52,7 +52,8 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    str d0, [sp] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    fmov w0, s1
 ; CHECK-NEON-NEXT:    bl ldexpf
