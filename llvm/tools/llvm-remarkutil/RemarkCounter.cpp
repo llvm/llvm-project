@@ -181,6 +181,7 @@ std::optional<std::string> Counter::getGroupByKey(const Remark &Remark) {
       return Remark.Loc->SourceFilePath.str() + ":" + Remark.FunctionName.str();
     return Remark.Loc->SourceFilePath.str();
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 void ArgumentCounter::collect(const Remark &Remark) {
