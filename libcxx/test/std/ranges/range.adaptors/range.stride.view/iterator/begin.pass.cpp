@@ -14,7 +14,6 @@
 
 #include "../test.h"
 #include "__iterator/concepts.h"
-#include "__ranges/stride_view.h"
 #include <ranges>
 #include <type_traits>
 
@@ -54,7 +53,7 @@ constexpr bool iterator_concept_test() {
 
   {
     int arr[] = {1, 2, 3};
-    // Iterator of stride over forward view should have forward view concept.
+    // Iterator of stride over input view should have input view concept.
     auto rav = InputView(arr, arr + 3);
     auto str = std::ranges::stride_view<InputView>(rav, 1);
     static_assert(std::input_iterator<decltype(rav.begin())>);
