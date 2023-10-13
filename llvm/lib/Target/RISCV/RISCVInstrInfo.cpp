@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -1301,7 +1302,20 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (isCompressibleInst(MI, STI))
       return 2;
   }
-  return get(Opcode).getSize();
+
+  switch (Opcode) {
+  case TargetOpcode::STACKMAP:
+    // The upper bound for a stackmap intrinsic is the full length of its shadow
+    return StackMapOpers(&MI).getNumPatchBytes();
+  case TargetOpcode::PATCHPOINT:
+    // The size of the patchpoint intrinsic is the number of bytes requested
+    return PatchPointOpers(&MI).getNumPatchBytes();
+  case TargetOpcode::STATEPOINT:
+    // The size of the statepoint intrinsic is the number of bytes requested
+    return StatepointOpers(&MI).getNumPatchBytes();
+  default:
+    return get(Opcode).getSize();
+  }
 }
 
 unsigned RISCVInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
@@ -1905,6 +1919,74 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   return true;
+}
+
+bool RISCVInstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                                         const MachineInstr &AddrI,
+                                         ExtAddrMode &AM) const {
+  switch (MemI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::LB:
+  case RISCV::LBU:
+  case RISCV::LH:
+  case RISCV::LHU:
+  case RISCV::LW:
+  case RISCV::LWU:
+  case RISCV::LD:
+  case RISCV::FLH:
+  case RISCV::FLW:
+  case RISCV::FLD:
+  case RISCV::SB:
+  case RISCV::SH:
+  case RISCV::SW:
+  case RISCV::SD:
+  case RISCV::FSH:
+  case RISCV::FSW:
+  case RISCV::FSD:
+    break;
+  }
+
+  if (MemI.getOperand(0).getReg() == Reg)
+    return false;
+
+  if (AddrI.getOpcode() != RISCV::ADDI || !AddrI.getOperand(1).isReg() ||
+      !AddrI.getOperand(2).isImm())
+    return false;
+
+  int64_t OldOffset = MemI.getOperand(2).getImm();
+  int64_t Disp = AddrI.getOperand(2).getImm();
+  int64_t NewOffset = OldOffset + Disp;
+  if (!STI.is64Bit())
+    NewOffset = SignExtend64<32>(NewOffset);
+
+  if (!isInt<12>(NewOffset))
+    return false;
+
+  AM.BaseReg = AddrI.getOperand(1).getReg();
+  AM.ScaledReg = 0;
+  AM.Scale = 0;
+  AM.Displacement = NewOffset;
+  AM.Form = ExtAddrMode::Formula::Basic;
+  return true;
+}
+
+MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
+                                               const ExtAddrMode &AM) const {
+
+  const DebugLoc &DL = MemI.getDebugLoc();
+  MachineBasicBlock &MBB = *MemI.getParent();
+
+  assert(AM.ScaledReg == 0 && AM.Scale == 0 &&
+         "Addressing mode not supported for folding");
+
+  return BuildMI(MBB, MemI, DL, get(MemI.getOpcode()))
+      .addReg(MemI.getOperand(0).getReg(),
+              MemI.mayLoad() ? RegState::Define : 0)
+      .addReg(AM.BaseReg)
+      .addImm(AM.Displacement)
+      .setMemRefs(MemI.memoperands())
+      .setMIFlags(MemI.getFlags());
 }
 
 // Return true if get the base operand, byte offset of an instruction and the

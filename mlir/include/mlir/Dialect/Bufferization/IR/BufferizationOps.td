@@ -227,12 +227,14 @@ def Bufferization_MaterializeInDestinationOp
   let summary = "copy a tensor";
 
   let description = [{
-    This op indicates that the data of the `source` tensor should materialize
-    in `dest`, which can be a tensor or a memref. In case of a tensor, `source`
-    should materialize in the future buffer of `dest` and a the updated
-    destination tensor is returned. In case of a memref, `source` should
-    materialize in `dest`, which is already a buffer. The op has no results in
-    that case.
+    This op indicates that the data of the `source` tensor is guaranteed to
+    materialize in `dest`, which can be a tensor or a memref. In case of a
+    tensor, `source` materializes in the future buffer of `dest` and a the
+    updated destination tensor is returned. If this is not possible, e.g.,
+    because the destination tensor is read-only or because its original
+    contents are still read later, the input IR fails to bufferize. In case of a
+    memref, `source` materializes in `dest`, which is already a buffer. The op
+    has no results in that case.
 
     `source`, `dest` and `result` (if present) must have the same shape and
     element type. If the op has a result, the types of `result` and `dest` must
@@ -244,20 +246,27 @@ def Bufferization_MaterializeInDestinationOp
     rewrite IR such that a computation is performed directly in `dest` and no
     memcpy is needed.
 
-    If `dest` is a buffer, the `restrict` and `writable` attributes must be
-    specified. These attributes have the same meaning as the respective
-    attributes of `bufferization.to_tensor`. `writable` indicates that the
-    `dest` buffer is considered writable. It does not make sense to materialize
-    a computation in a read-only buffer, so `writable` is required. `restrict`
-    indicates that this op is the only way for the tensor IR to access `dest`
-    (or an alias thereof). E.g., there must be no other `to_tensor` ops with
-    `dest` or with an alias of `dest`. Such IR is not supported by
-    One-Shot Bufferize.
+    If `dest` is a buffer, the `writable` attribute must be specified and the
+    `restrict` keyword can be specified. These attributes have the same meaning
+    as the respective attributes of `bufferization.to_tensor`.
 
-    Note: `restrict` and `writable` could be removed from this op because they
-    must always be set for memref destinations. This op has these attributes to
-    make clear the requirements on the `dest` operand in the op assembly format.
-    Moreover, these requirements may be relaxed at some point in the future.
+    `writable` indicates that the `dest` buffer is considered writable. It does
+    not make sense to materialize a computation in a read-only buffer, so
+    `writable` is required.
+
+    `restrict` indicates that there is no `bufferization.to_tensor` op and no
+    other `bufferization.materialize_in_destination` op with `dest` (or an alias
+    thereof) and "restrict". Only ops with this attribute are considered for
+    "empty tensor elimination". As part of empty tensor elimination, a new
+    `to_tensor` op with `dest` may be inserted and the `restrict` attribute is
+    transferred from this op to the new `to_tensor` op. Having "restrict" on
+    this op guarantees that performing empty tensor elimination would not create
+    invalid IR (i.e., having multiple `to_tensor restrict` with aliasing
+    buffers).
+
+    Note: `writable` could be removed from this op because it must always be set
+    for memref destinations. This op has that attribute to make clear the
+    requirements on the `dest` operand in the op assembly format.
 
     Note: If `dest` is a tensor, `tensor.insert_slice` could be used for the
     same purpose, but since tensor dialect ops only indicate *what* should be
@@ -281,6 +290,9 @@ def Bufferization_MaterializeInDestinationOp
 
     bool bufferizesToElementwiseAccess(const AnalysisState &state,
                                        ArrayRef<OpOperand *> opOperands);
+
+    bool mustBufferizeInPlace(OpOperand &opOperand,
+                              const AnalysisState &state);
 
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
@@ -408,6 +420,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     Note: Only `to_tensor` ops with the `restrict` unit attribute are supported
     by One-Shot Bufferize. Other IR is rejected. (To support `to_tensor`
     without `restrict`, One-Shot Bufferize would have to analyze memref IR.)
+    Ops that have incorrect usage of `restrict` may bufferize incorrectly.
 
     Example:
 

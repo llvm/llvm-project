@@ -162,6 +162,7 @@ protected:
   bool HasAtomicFaddNoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16NoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
+  bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool SupportsSRAMECC = false;
@@ -1269,6 +1270,9 @@ public:
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }
+
+  // \returns true is CSUB atomics support a no-return form.
+  bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

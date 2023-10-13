@@ -55,6 +55,7 @@ unittest("ADTTests") {
     "IntervalTreeTest.cpp",
     "IntrusiveRefCntPtrTest.cpp",
     "IteratorTest.cpp",
+    "LazyAtomicPointerTest.cpp",
     "MapVectorTest.cpp",
     "MappedIteratorTest.cpp",
     "MoveOnly.cpp",

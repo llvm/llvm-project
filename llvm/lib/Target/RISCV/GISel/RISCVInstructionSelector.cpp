@@ -16,6 +16,7 @@
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -44,20 +45,37 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  // tblgen-erated 'select' implementation, used as the initial selector for
+  // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+
+  // A lowering phase that runs before any selection attempts.
+  // Returns true if the instruction was modified.
+  void preISelLower(MachineInstr &MI, MachineIRBuilder &MIB,
+                    MachineRegisterInfo &MRI);
+
+  bool replacePtrWithInt(MachineOperand &Op, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI);
+
+  // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
+                    MachineRegisterInfo &MRI) const;
 
   bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
                         const MachineRegisterInfo &MRI);
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
+  ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
+  void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                      int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -105,6 +123,14 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
 }
 
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
+  // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
+  // the combiner?
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+}
+
 // Tablegen doesn't allow us to write SRLIW/SRAIW/SLLIW patterns because the
 // immediate Operand has type XLenVT. GlobalISel wants it to be i32.
 bool RISCVInstructionSelector::earlySelectShift(
@@ -130,11 +156,13 @@ bool RISCVInstructionSelector::earlySelectShift(
 }
 
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineIRBuilder MIB(MI);
+
+  preISelLower(MI, MIB, MRI);
+  const unsigned Opc = MI.getOpcode();
 
   if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
@@ -225,6 +253,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
   switch (Opc) {
   case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC:
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT:
@@ -239,8 +268,40 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
+  case TargetOpcode::G_SELECT:
+    return selectSelect(MI, MIB, MRI);
   default:
     return false;
+  }
+}
+
+bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
+                                                 MachineIRBuilder &MIB,
+                                                 MachineRegisterInfo &MRI) {
+  Register PtrReg = Op.getReg();
+  assert(MRI.getType(PtrReg).isPointer() && "Operand is not a pointer!");
+
+  const LLT XLenLLT = LLT::scalar(STI.getXLen());
+  auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
+  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
+  MRI.setType(PtrReg, XLenLLT);
+  Op.setReg(PtrToInt.getReg(0));
+  return select(*PtrToInt);
+}
+
+void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
+                                            MachineIRBuilder &MIB,
+                                            MachineRegisterInfo &MRI) {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_PTR_ADD: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT XLenLLT = LLT::scalar(STI.getXLen());
+
+    replacePtrWithInt(MI.getOperand(1), MIB, MRI);
+    MI.setDesc(TII.get(TargetOpcode::G_ADD));
+    MRI.setType(DstReg, XLenLLT);
+    break;
+  }
   }
 }
 
@@ -251,6 +312,15 @@ void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(-CstVal);
+}
+
+void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
+                                              const MachineInstr &MI,
+                                              int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
+  MIB.addImm(CstVal + 1);
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
@@ -374,6 +444,27 @@ bool RISCVInstructionSelector::selectSExtInreg(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
+                                            MachineIRBuilder &MIB,
+                                            MachineRegisterInfo &MRI) const {
+  // TODO: Currently we check that the conditional code passed to G_SELECT is
+  // not equal to zero; however, in the future, we might want to try and check
+  // if the conditional code comes from a G_ICMP. If it does, we can directly
+  // use G_ICMP to get the first three input operands of the
+  // Select_GPR_Using_CC_GPR. This might be done here, or in the appropriate
+  // combiner.
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
+                             .addDef(MI.getOperand(0).getReg())
+                             .addReg(MI.getOperand(1).getReg())
+                             .addReg(RISCV::X0)
+                             .addImm(RISCVCC::COND_NE)
+                             .addReg(MI.getOperand(2).getReg())
+                             .addReg(MI.getOperand(3).getReg());
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 }
 
 namespace llvm {

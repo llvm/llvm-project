@@ -62,15 +62,15 @@ STATISTIC(NumOfStatepoints, "Number of statepoint nodes encountered");
 STATISTIC(StatepointMaxSlotsRequired,
           "Maximum number of stack slots required for a singe statepoint");
 
-cl::opt<bool> UseRegistersForDeoptValues(
+static cl::opt<bool> UseRegistersForDeoptValues(
     "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
     cl::desc("Allow using registers for non pointer deopt args"));
 
-cl::opt<bool> UseRegistersForGCPointersInLandingPad(
+static cl::opt<bool> UseRegistersForGCPointersInLandingPad(
     "use-registers-for-gc-values-in-landing-pad", cl::Hidden, cl::init(false),
     cl::desc("Allow using registers for gc pointer in landing pad"));
 
-cl::opt<unsigned> MaxRegistersForGCPointers(
+static cl::opt<unsigned> MaxRegistersForGCPointers(
     "max-registers-for-gc-values", cl::Hidden, cl::init(0),
     cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
 

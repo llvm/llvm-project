@@ -1834,6 +1834,30 @@ Either the comparison is useless or there is division by zero.
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
 
+.. _alpha-cplusplus-ArrayDelete:
+
+alpha.cplusplus.ArrayDelete (C++)
+"""""""""""""""""""""""""""""""""
+Reports destructions of arrays of polymorphic objects that are destructed as their base class.
+This checker corresponds to the CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
+
+.. code-block:: cpp
+
+ class Base {
+   virtual ~Base() {}
+ };
+ class Derived : public Base {}
+
+ Base *create() {
+   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+   return x;
+ }
+
+ void foo() {
+   Base *x = create();
+   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
+
 .. _alpha-cplusplus-DeleteWithNonVirtualDtor:
 
 alpha.cplusplus.DeleteWithNonVirtualDtor (C++)
@@ -1842,13 +1866,17 @@ Reports destructions of polymorphic objects with a non-virtual destructor in the
 
 .. code-block:: cpp
 
+ class NonVirtual {};
+ class NVDerived : public NonVirtual {};
+
  NonVirtual *create() {
-   NonVirtual *x = new NVDerived(); // note: conversion from derived to base
-                                    //       happened here
+   NonVirtual *x = new NVDerived(); // note: Casting from 'NVDerived' to
+                                    //       'NonVirtual' here
    return x;
  }
 
- void sink(NonVirtual *x) {
+ void foo() {
+   NonVirtual *x = create();
    delete x; // warn: destruction of a polymorphic object with no virtual
              //       destructor
  }

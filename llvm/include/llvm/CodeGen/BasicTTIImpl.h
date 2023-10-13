@@ -945,7 +945,7 @@ public:
       if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
         return TTI::SK_Broadcast;
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
-          (Index + Mask.size()) <= NumSrcElts) {
+          (Index + Mask.size()) <= (size_t)NumSrcElts) {
         SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());
         return TTI::SK_ExtractSubvector;
       }
@@ -1689,62 +1689,6 @@ public:
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
-    }
-
-    // VP Intrinsics should have the same cost as their non-vp counterpart.
-    // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
-    // counterpart when the vector length argument is smaller than the maximum
-    // vector length.
-    if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
-      std::optional<unsigned> FOp =
-          VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
-      if (FOp) {
-        // TODO: Support other kinds of Intrinsics (i.e. reductions)
-        if (ICA.getID() == Intrinsic::vp_load) {
-          Align Alignment;
-          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
-            Alignment = VPI->getPointerAlignment().valueOrOne();
-          unsigned AS = 0;
-          if (ICA.getArgs().size() > 1)
-            if (auto *PtrTy =
-                    dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
-              AS = PtrTy->getAddressSpace();
-          return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
-                                          AS, CostKind);
-        }
-        if (ICA.getID() == Intrinsic::vp_store) {
-          Align Alignment;
-          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
-            Alignment = VPI->getPointerAlignment().valueOrOne();
-          unsigned AS = 0;
-          if (ICA.getArgs().size() >= 2)
-            if (auto *PtrTy =
-                    dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
-              AS = PtrTy->getAddressSpace();
-          return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
-                                          AS, CostKind);
-        }
-        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
-          return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
-                                                 CostKind);
-        }
-      }
-
-      std::optional<Intrinsic::ID> FID =
-          VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
-      if (FID) {
-        // Non-vp version will have same Args/Tys except mask and vector length.
-        assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
-               "Expected VPIntrinsic to have Mask and Vector Length args and "
-               "types");
-        ArrayRef<const Value *> NewArgs = ArrayRef(ICA.getArgs()).drop_back(2);
-        ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
-
-        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
-                                       NewTys, ICA.getFlags(), ICA.getInst(),
-                                       ICA.getScalarizationCost());
-        return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
-      }
     }
 
     // Assume that we need to scalarize this intrinsic.
