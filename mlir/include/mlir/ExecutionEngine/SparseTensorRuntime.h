@@ -39,9 +39,9 @@ extern "C" {
 
 /// This is the "swiss army knife" method for materializing sparse
 /// tensors into the computation.  The types of the `ptr` argument and
-/// the result depend on the action, as explained in the following table
-/// (where "STS" means a sparse-tensor-storage object, "COO" means
-/// a coordinate-scheme object, and "Iterator" means an iterator object).
+/// the result depend on the action, as explained in the following table,
+/// where "STS" means a sparse-tensor-storage object and "COO" means
+/// a coordinate-scheme object.
 ///
 /// Action:         `ptr`:          Returns:
 /// kEmpty          -               STS, empty
@@ -49,8 +49,8 @@ extern "C" {
 /// kFromCOO        COO             STS, copied from the COO source
 /// kSparseToSparse STS             STS, copied from the STS source
 /// kToCOO          STS             COO, copied from the STS source
-/// kToIterator     STS             Iterator (@getNext/@delSparseTensorIterator)
 /// kPack           buffers         STS, from level buffers
+/// kSortCOOInPlace STS             STS, sorted in place
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
@@ -89,14 +89,6 @@ MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
       StridedMemRefType<index_type, 1> *dimCoordsRef);                         \
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
 #undef DECL_FORWARDINGINSERT
-
-/// Coordinate-scheme method for getting the next element while iterating.
-#define DECL_GETNEXT(VNAME, V)                                                 \
-  MLIR_CRUNNERUTILS_EXPORT bool _mlir_ciface_getNext##VNAME(                   \
-      void *iter, StridedMemRefType<index_type, 1> *cref,                      \
-      StridedMemRefType<V, 0> *vref);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
-#undef DECL_GETNEXT
 
 /// Tensor-storage method to insert elements in lexicographical
 /// level-coordinate order.
@@ -200,12 +192,6 @@ MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);
   MLIR_CRUNNERUTILS_EXPORT void delSparseTensorCOO##VNAME(void *coo);
 MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELCOO)
 #undef DECL_DELCOO
-
-/// Releases the memory for an iterator object.
-#define DECL_DELITER(VNAME, V)                                                 \
-  MLIR_CRUNNERUTILS_EXPORT void delSparseTensorIterator##VNAME(void *iter);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELITER)
-#undef DECL_DELITER
 
 /// Helper function to read a sparse tensor filename from the environment,
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
