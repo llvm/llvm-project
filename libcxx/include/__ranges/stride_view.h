@@ -189,6 +189,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__current_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
     __missing_ = ranges::advance(__current_, __stride_, __end_);
     return *this;
   }
