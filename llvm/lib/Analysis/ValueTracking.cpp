@@ -567,11 +567,24 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
 
   // All other predicates - rely on generic ConstantRange handling.
   const APInt *C;
-  if (!match(RHS, m_APInt(C)))
+  auto Zero = APInt::getZero(RHS->getType()->getScalarSizeInBits());
+  if (match(RHS, m_APInt(C))) {
+    ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(Pred, *C);
+    return !TrueValues.contains(Zero);
+  }
+
+  auto *VC = dyn_cast<ConstantDataVector>(RHS);
+  if (VC == nullptr)
     return false;
 
-  ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(Pred, *C);
-  return !TrueValues.contains(APInt::getZero(C->getBitWidth()));
+  for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
+       ++ElemIdx) {
+    ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(
+        Pred, VC->getElementAsAPInt(ElemIdx));
+    if (TrueValues.contains(Zero))
+      return false;
+  }
+  return true;
 }
 
 static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
