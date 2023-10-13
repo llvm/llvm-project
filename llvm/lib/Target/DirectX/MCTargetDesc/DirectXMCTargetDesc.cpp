@@ -72,7 +72,8 @@ public:
 class DXILAsmBackend : public MCAsmBackend {
 
 public:
-  DXILAsmBackend(const MCSubtargetInfo &STI) : MCAsmBackend(support::little) {}
+  DXILAsmBackend(const MCSubtargetInfo &STI)
+      : MCAsmBackend(llvm::endianness::little) {}
   ~DXILAsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
