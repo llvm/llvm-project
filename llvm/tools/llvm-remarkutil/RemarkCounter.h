@@ -110,9 +110,9 @@ inline Error checkRegex(const Regex &Regex) {
 /// Abstract counter class used to define the general required methods for
 /// counting a remark.
 struct Counter {
-  GroupBy GroupBy;
+  GroupBy _GroupBy;
   Counter(){};
-  Counter(enum GroupBy GroupBy) : GroupBy(GroupBy) {}
+  Counter(enum GroupBy GroupBy) : _GroupBy(GroupBy) {}
   /// Obtain the field for collecting remark info based on how we are
   /// collecting. Remarks are grouped by FunctionName, Source, Source and
   /// Function or collect by file.
@@ -161,7 +161,7 @@ struct ArgumentCounter : Counter {
   createArgumentCounter(enum GroupBy GroupBy, ArrayRef<FilterMatcher> Arguments,
                         StringRef Buffer, Filters &Filter) {
     ArgumentCounter AC;
-    AC.GroupBy = GroupBy;
+    AC._GroupBy = GroupBy;
     for (auto &Arg : Arguments) {
       if (Arg.IsRegex) {
         if (auto E = checkRegex(Arg.FilterRE))

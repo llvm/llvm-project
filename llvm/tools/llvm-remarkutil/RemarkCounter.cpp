@@ -167,7 +167,7 @@ Error ArgumentCounter::getAllMatchingArgumentsInRemark(
 
 std::optional<std::string> Counter::getGroupByKey(const Remark &Remark) {
 
-  switch (GroupBy) {
+  switch (_GroupBy) {
   case GroupBy::PER_FUNCTION:
     return Remark.FunctionName.str();
   case GroupBy::TOTAL:
@@ -177,7 +177,7 @@ std::optional<std::string> Counter::getGroupByKey(const Remark &Remark) {
     if (!Remark.Loc.has_value())
       return std::nullopt;
 
-    if (GroupBy == GroupBy::PER_FUNCTION_WITH_DEBUG_LOC)
+    if (_GroupBy == GroupBy::PER_FUNCTION_WITH_DEBUG_LOC)
       return Remark.Loc->SourceFilePath.str() + ":" + Remark.FunctionName.str();
     return Remark.Loc->SourceFilePath.str();
   }
@@ -213,7 +213,7 @@ Error ArgumentCounter::print(StringRef OutputFileName) {
     return MaybeOF.takeError();
 
   auto OF = std::move(*MaybeOF);
-  OF->os() << groupByToStr(GroupBy) << ",";
+  OF->os() << groupByToStr(_GroupBy) << ",";
   unsigned Idx = 0;
   for (auto [Key, _] : ArgumentSetIdxMap) {
     OF->os() << Key;
@@ -243,7 +243,7 @@ Error RemarkCounter::print(StringRef OutputFileName) {
     return MaybeOF.takeError();
 
   auto OF = std::move(*MaybeOF);
-  OF->os() << groupByToStr(GroupBy) << ","
+  OF->os() << groupByToStr(_GroupBy) << ","
            << "Count\n";
   for (auto [Key, Count] : CountedByRemarksMap)
     OF->os() << Key << "," << Count << "\n";
