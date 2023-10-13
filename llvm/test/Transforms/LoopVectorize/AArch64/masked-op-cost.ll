@@ -6,12 +6,13 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK-COST: Checking a loop in 'fixed_width'
 ; CHECK-COST: Found an estimated cost of 12 for VF 2 For instruction:   store i32 2, ptr %arrayidx1, align 4
-; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   store i32 2, ptr %arrayidx1, align 4
-; CHECK-COST: Selecting VF: 4.
+; CHECK-COST: Found an estimated cost of 24 for VF 4 For instruction:   store i32 2, ptr %arrayidx1, align 4
+; CHECK-COST: Selecting VF: 1.
 
+; We should decide this loop is not worth vectorising using fixed width vectors
 define void @fixed_width(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 ; CHECK-LABEL: @fixed_width(
-; CHECK: vector.body
+; CHECK-NOT: vector.body
 entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup

@@ -2949,11 +2949,7 @@ InstructionCost
 AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                       Align Alignment, unsigned AddressSpace,
                                       TTI::TargetCostKind CostKind) {
-  if (!ST->hasSVE())
-    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                        CostKind);
-  if (isa<FixedVectorType>(Src) && !ST->useSVEForFixedLengthVectors() &&
-      Src->getPrimitiveSizeInBits() != 128)
+  if (useNeonVector(Src))
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
   auto LT = getTypeLegalizationCost(Src);
