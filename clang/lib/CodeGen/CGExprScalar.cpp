@@ -3089,15 +3089,10 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     if (E->getTypeOfArgument()->isSizelessVectorType()) {
       auto *VecTy = dyn_cast<llvm::ScalableVectorType>(
           ConvertType(E->getTypeOfArgument()));
-      llvm::Type *ElementTy = VecTy->getElementType();
       uint64_t NumUnscaledElements = VecTy->getMinNumElements();
 
       llvm::Value *VScale =
-          Builder.CreateVScale(llvm::ConstantInt::get(ElementTy, 1));
-      // We need to pass the element type to the vscale call. As it may be
-      // small, like i8, we need to extend here to avoid an overflow for large
-      // vectors.
-      VScale = Builder.CreateZExt(VScale, CGF.SizeTy);
+          Builder.CreateVScale(llvm::ConstantInt::get(CGF.SizeTy, 1));
       return Builder.CreateMul(
           VScale, llvm::ConstantInt::get(CGF.SizeTy, NumUnscaledElements));
     }
