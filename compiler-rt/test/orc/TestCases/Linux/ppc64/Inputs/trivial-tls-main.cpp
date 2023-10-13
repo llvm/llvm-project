@@ -1,6 +1,3 @@
-// RUN: %clangxx -fPIC -c -o %t %s
-// RUN: %llvm_jitlink %t
-
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -9,11 +6,9 @@ thread_local int x = 0;
 thread_local int y = 1;
 thread_local int z = -1;
 
-static int __attribute__((target("arch=pwr10"))) TestPOWER10() {
-  return x + y + z;
-}
+extern int TestPOWER10();
 
-static int Test() { return x + y + z; }
+int Test() { return x + y + z; }
 
 static bool CPUModelIsPOWER10() {
   std::string line;
