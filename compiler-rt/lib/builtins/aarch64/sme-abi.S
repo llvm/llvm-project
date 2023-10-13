@@ -19,6 +19,7 @@
 #define STR_ZA_W15_0_X16 str za[w15,0], [x16]
 #define CNTD_X0 cntd x0
 #define CFI_OFFSET_VG_MINUS_16 .cfi_offset vg, -16
+#define VARIANT_PCS(sym) .variant_pcs sym
 #else
 #define ARCH armv8-a
 #define SMSTOP_SM .inst 0xd503427f
@@ -30,6 +31,7 @@
 #define STR_ZA_W15_0_X16 .inst 0xe1206200
 #define CNTD_X0 .inst 0x04e0e3e0
 #define CFI_OFFSET_VG_MINUS_16 .cfi_escape 0x10, 0x2e, 0x03, 0x11, 0x70, 0x22 // $vg  @ cfa - 16
+#define VARIANT_PCS(sym)
 #endif
 
 #if !defined(__APPLE__)
@@ -50,7 +52,7 @@
 // because the function does not return.
 DEFINE_COMPILERRT_PRIVATE_FUNCTION(do_abort)
 .cfi_startproc
-	.variant_pcs	SYMBOL_NAME(do_abort)
+	VARIANT_PCS(SYMBOL_NAME(do_abort))
 	stp	x29, x30, [sp, #-32]!
   CNTD_X0
   // Store VG to a stack location that we describe with .cfi_offset
@@ -74,7 +76,7 @@ END_COMPILERRT_FUNCTION(do_abort)
 // that is set as part of the compiler-rt startup code.
 //   __aarch64_has_sme_and_tpidr2_el0
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
-	.variant_pcs	__arm_sme_state
+	VARIANT_PCS(__arm_sme_state)
   mov x0, xzr
   mov x1, xzr
 
@@ -91,7 +93,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_sme_state)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_sme_state)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
-	.variant_pcs	__arm_tpidr2_restore
+	VARIANT_PCS(__arm_tpidr2_restore)
   // If TPIDR2_EL0 is nonnull, the subroutine aborts in some platform-specific
   // manner.
   mrs x14, REG_TPIDR2_EL0
@@ -126,6 +128,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_restore)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_restore)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
+	VARIANT_PCS(__arm_tpidr2_restore)
   // If the current thread does not have access to TPIDR2_EL0, the subroutine
   // does nothing.
   adrp  x14, TPIDR2_SYMBOL
@@ -165,6 +168,7 @@ DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_tpidr2_save)
 END_COMPILERRT_OUTLINE_FUNCTION(__arm_tpidr2_save)
 
 DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(__arm_za_disable)
+	VARIANT_PCS(__arm_tpidr2_restore)
   // If the current thread does not have access to SME, the subroutine does
   // nothing.
   adrp  x14, TPIDR2_SYMBOL
