@@ -2488,17 +2488,16 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     }
     if (SingleUseIdx == -1)
       break;
-    MachineOperand *UseMO = &I->getOperand(SingleUseIdx);
-    if (UseMO->getSubReg() == AMDGPU::NoSubRegister)
+    MachineOperand &UseMO = I->getOperand(SingleUseIdx);
+    if (UseMO.getSubReg() == AMDGPU::NoSubRegister)
       break;
 
-    unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
-    unsigned SubregSize = RI.getSubRegIdxSize(UseMO->getSubReg());
+    unsigned Offset = RI.getSubRegIdxOffset(UseMO.getSubReg());
+    unsigned SubregSize = RI.getSubRegIdxSize(UseMO.getSubReg());
 
     MachineFunction *MF = MBB.getParent();
     MachineRegisterInfo &MRI = MF->getRegInfo();
-    assert(MRI.hasAtMostUserInstrs(DestReg, 0) &&
-           "DestReg should have no users yet.");
+    assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
 
     unsigned NewOpcode = -1;
     if (SubregSize == 256)
@@ -2513,8 +2512,8 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
         RI.getAllocatableClass(getRegClass(TID, 0, &RI, *MF));
     MRI.setRegClass(DestReg, NewRC);
 
-    UseMO->setReg(DestReg);
-    UseMO->setSubReg(AMDGPU::NoSubRegister);
+    UseMO.setReg(DestReg);
+    UseMO.setSubReg(AMDGPU::NoSubRegister);
 
     // Use a smaller load with the desired size, possibly with updated offset.
     MachineInstr *MI = MF->CloneMachineInstr(&Orig);
@@ -2539,9 +2538,8 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
   default:
     break;
   }
-  MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
-  MI->substituteRegister(MI->getOperand(0).getReg(), DestReg, SubIdx, RI);
-  MBB.insert(I, MI);
+
+  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, RI);
 }
 
 std::pair<MachineInstr*, MachineInstr*>
