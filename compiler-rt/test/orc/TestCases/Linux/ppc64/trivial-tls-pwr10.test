@@ -2,8 +2,9 @@
 // RUN: %clangxx -fPIC -c -o %t/main.o %S/Inputs/trivial-tls-main.cpp
 // RUN: %clangxx -fPIC -c -o %t/pwr10.o %S/Inputs/trivial-tls-pwr10.cpp
 // RUN: %llvm_jitlink %t/main.o %t/pwr10.o
-// FIXME: We seperate pwr10 object fil from normal object file due to
+// FIXME: We seperate pwr10 object file from normal object file due to
 // currrent implementation only supports single PLT stub for the same symbol.
-// For example, `__tls_get_addr` in one object file has only one PLT stub,
-// however we need another one for `__tls_get_addr@notoc` which is not
-// implemented.
+// For example, `bl __tls_get_addr` in one object file has only one PLT stub,
+// however we need additional one for `bl __tls_get_addr@notoc` relocation
+// whose target symbol is also `__tls_get_addr`.
+
