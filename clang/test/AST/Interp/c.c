@@ -57,3 +57,13 @@ _Static_assert((&a - 100) != 0, ""); // pedantic-ref-warning {{is a GNU extensio
                                      // pedantic-expected-warning {{is a GNU extension}} \
                                      // pedantic-ref-note {{-100 of non-array}} \
                                      // pedantic-expected-note {{-100 of non-array}}
+/// extern variable of a composite type.
+/// FIXME: The 'cast from void*' note is missing in the new interpreter.
+extern struct Test50S Test50;
+_Static_assert(&Test50 != (void*)0, ""); // ref-warning {{always true}} \
+                                         // pedantic-ref-warning {{always true}} \
+                                         // pedantic-ref-warning {{is a GNU extension}} \
+                                         // pedantic-ref-note {{cast from 'void *' is not allowed}} \
+                                         // expected-warning {{always true}} \
+                                         // pedantic-expected-warning {{always true}} \
+                                         // pedantic-expected-warning {{is a GNU extension}}
