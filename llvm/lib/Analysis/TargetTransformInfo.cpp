@@ -678,6 +678,11 @@ TargetTransformInfo::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return Cost;
 }
 
+bool TargetTransformInfo::isCandidateForConstantHoisting(
+    const Instruction &Inst, const Function &Fn) const {
+  return TTIImpl->isCandidateForConstantHoisting(Inst, Fn);
+}
+
 unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }

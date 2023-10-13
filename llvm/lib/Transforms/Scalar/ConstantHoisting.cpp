@@ -523,7 +523,9 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
     if (!DT->isReachableFromEntry(&BB))
       continue;
     for (Instruction &Inst : BB)
-      collectConstantCandidates(ConstCandMap, &Inst);
+      // Skip instructions the target prefers constants remain attached.
+      if (TTI->isCandidateForConstantHoisting(Inst, Fn))
+        collectConstantCandidates(ConstCandMap, &Inst);
   }
 }
 

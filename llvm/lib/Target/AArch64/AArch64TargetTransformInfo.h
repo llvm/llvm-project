@@ -91,6 +91,10 @@ public:
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
                                       TTI::TargetCostKind CostKind);
+
+  bool isCandidateForConstantHoisting(const Instruction &Inst,
+                                      const Function &Fn) const;
+
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
 
   /// @}

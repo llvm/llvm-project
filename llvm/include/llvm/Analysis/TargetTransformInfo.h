@@ -986,6 +986,18 @@ public:
   /// more beneficial constant hoisting is).
   InstructionCost getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
                                         const APInt &Imm, Type *Ty) const;
+
+  /// Returns false if the target prefers to keep an instruction's constant
+  /// operands attached. It is not required for this function to perform
+  /// detailed constant analysis and in fact returning true does not imply
+  /// the instruction has any constant operands. This hook exists soley to
+  /// disable constant hoisting for reasons beyond the cost of generating a
+  /// constant. The motivating example is divides whereby hoisting constants
+  /// prevents the code generator's ability to transform them into combinations
+  /// of simpler operations.
+  bool isCandidateForConstantHoisting(const Instruction &Inst,
+                                      const Function &Fn) const;
+
   /// @}
 
   /// \name Vector Target Information
@@ -1847,6 +1859,8 @@ public:
   virtual InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TargetCostKind CostKind) = 0;
+  virtual bool isCandidateForConstantHoisting(const Instruction &Inst,
+                                              const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
@@ -2398,6 +2412,10 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TargetCostKind CostKind) override {
     return Impl.getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
+  }
+  bool isCandidateForConstantHoisting(const Instruction &Inst,
+                                      const Function &Fn) const override {
+    return Impl.isCandidateForConstantHoisting(Inst, Fn);
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);

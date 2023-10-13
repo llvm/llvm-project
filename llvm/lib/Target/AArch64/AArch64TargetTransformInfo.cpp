@@ -382,6 +382,25 @@ AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
+bool AArch64TTIImpl::isCandidateForConstantHoisting(const Instruction &Inst,
+                                                    const Function &Fn) const {
+  switch (Inst.getOpcode()) {
+  default:
+    break;
+  case Instruction::SDiv:
+  case Instruction::SRem:
+  case Instruction::UDiv:
+  case Instruction::URem: {
+    if (!isa<ConstantInt>(Inst.getOperand(1)))
+      return true;
+    EVT VT = TLI->getValueType(DL, Inst.getType());
+    return TLI->isIntDivCheap(VT, Fn.getAttributes());
+  }
+  };
+
+  return true;
+}
+
 TargetTransformInfo::PopcntSupportKind
 AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
