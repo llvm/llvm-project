@@ -56,9 +56,21 @@ func.func @cl_fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
 //       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
 //       CHECK:   %[[MAX0:.+]] = spirv.CL.fmax %[[S0]], %[[S1]]
-//       CHECK:   %[[MAX1:.+]] = spirv.CL.fmax %[[MAX0]], %[[S2]]
-//       CHECK:   %[[MAX2:.+]] = spirv.CL.fmax %[[MAX1]], %[[S]]
-//       CHECK:   return %[[MAX2]]
+//       CHECK:   %[[ISNAN0:.+]] = spirv.IsNan %[[S0]] : f32
+//       CHECK:   %[[ISNAN1:.+]] = spirv.IsNan %[[S1]] : f32
+//       CHECK:   %[[SELECT0:.+]] = spirv.Select %[[ISNAN0]], %[[S0]], %[[MAX0]] : i1, f32
+//       CHECK:   %[[SELECT1:.+]] = spirv.Select %[[ISNAN1]], %[[S1]], %[[SELECT0]] : i1, f32
+//       CHECK:   %[[MAX1:.+]] = spirv.CL.fmax %[[SELECT1]], %[[S2]]
+//       CHECK:   %[[ISNAN2:.+]] = spirv.IsNan %[[SELECT1]] : f32
+//       CHECK:   %[[ISNAN3:.+]] = spirv.IsNan %[[S2]] : f32
+//       CHECK:   %[[SELECT2:.+]] = spirv.Select %[[ISNAN2]], %[[SELECT1]], %[[MAX1]] : i1, f32
+//       CHECK:   %[[SELECT3:.+]] = spirv.Select %[[ISNAN3]], %[[S2]], %[[SELECT2]] : i1, f32
+//       CHECK:   %[[MAX2:.+]] = spirv.CL.fmax %[[SELECT3]], %[[S]]
+//       CHECK:   %[[ISNAN4:.+]] = spirv.IsNan %[[SELECT3]] : f32
+//       CHECK:   %[[ISNAN5:.+]] = spirv.IsNan %[[S]] : f32
+//       CHECK:   %[[SELECT4:.+]] = spirv.Select %[[ISNAN4]], %[[SELECT3]], %[[MAX2]] : i1, f32
+//       CHECK:   %[[SELECT5:.+]] = spirv.Select %[[ISNAN5]], %[[S]], %[[SELECT4]] : i1, f32
+//       CHECK:   return %[[SELECT5]]
 func.func @cl_reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
   %reduce = vector.reduction <maximumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
@@ -70,11 +82,51 @@ func.func @cl_reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
 //       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
 //       CHECK:   %[[MIN0:.+]] = spirv.CL.fmin %[[S0]], %[[S1]]
+//       CHECK:   %[[ISNAN0:.+]] = spirv.IsNan %[[S0]] : f32
+//       CHECK:   %[[ISNAN1:.+]] = spirv.IsNan %[[S1]] : f32
+//       CHECK:   %[[SELECT0:.+]] = spirv.Select %[[ISNAN0]], %[[S0]], %[[MIN0]] : i1, f32
+//       CHECK:   %[[SELECT1:.+]] = spirv.Select %[[ISNAN1]], %[[S1]], %[[SELECT0]] : i1, f32
+//       CHECK:   %[[MIN1:.+]] = spirv.CL.fmin %[[SELECT1]], %[[S2]]
+//       CHECK:   %[[ISNAN2:.+]] = spirv.IsNan %[[SELECT1]] : f32
+//       CHECK:   %[[ISNAN3:.+]] = spirv.IsNan %[[S2]] : f32
+//       CHECK:   %[[SELECT2:.+]] = spirv.Select %[[ISNAN2]], %[[SELECT1]], %[[MIN1]] : i1, f32
+//       CHECK:   %[[SELECT3:.+]] = spirv.Select %[[ISNAN3]], %[[S2]], %[[SELECT2]] : i1, f32
+//       CHECK:   %[[MIN2:.+]] = spirv.CL.fmin %[[SELECT3]], %[[S]]
+//       CHECK:   %[[ISNAN4:.+]] = spirv.IsNan %[[SELECT3]] : f32
+//       CHECK:   %[[ISNAN5:.+]] = spirv.IsNan %[[S]] : f32
+//       CHECK:   %[[SELECT4:.+]] = spirv.Select %[[ISNAN4]], %[[SELECT3]], %[[MIN2]] : i1, f32
+//       CHECK:   %[[SELECT5:.+]] = spirv.Select %[[ISNAN5]], %[[S]], %[[SELECT4]] : i1, f32
+//       CHECK:   return %[[SELECT5]]
+func.func @cl_reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// CHECK-LABEL: func @cl_reduction_maxf
+//  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+//       CHECK:   %[[MAX0:.+]] = spirv.CL.fmax %[[S0]], %[[S1]]
+//       CHECK:   %[[MAX1:.+]] = spirv.CL.fmax %[[MAX0]], %[[S2]]
+//       CHECK:   %[[MAX2:.+]] = spirv.CL.fmax %[[MAX1]], %[[S]]
+//       CHECK:   return %[[MAX2]]
+func.func @cl_reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// CHECK-LABEL: func @cl_reduction_minf
+//  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+//       CHECK:   %[[MIN0:.+]] = spirv.CL.fmin %[[S0]], %[[S1]]
 //       CHECK:   %[[MIN1:.+]] = spirv.CL.fmin %[[MIN0]], %[[S2]]
 //       CHECK:   %[[MIN2:.+]] = spirv.CL.fmin %[[MIN1]], %[[S]]
 //       CHECK:   return %[[MIN2]]
-func.func @cl_reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
+func.func @cl_reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
@@ -522,11 +574,51 @@ func.func @reduction_mul(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
 //       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
 //       CHECK:   %[[MAX0:.+]] = spirv.GL.FMax %[[S0]], %[[S1]]
-//       CHECK:   %[[MAX1:.+]] = spirv.GL.FMax %[[MAX0]], %[[S2]]
-//       CHECK:   %[[MAX2:.+]] = spirv.GL.FMax %[[MAX1]], %[[S]]
-//       CHECK:   return %[[MAX2]]
+//       CHECK:   %[[ISNAN0:.+]] = spirv.IsNan %[[S0]] : f32
+//       CHECK:   %[[ISNAN1:.+]] = spirv.IsNan %[[S1]] : f32
+//       CHECK:   %[[SELECT0:.+]] = spirv.Select %[[ISNAN0]], %[[S0]], %[[MAX0]] : i1, f32
+//       CHECK:   %[[SELECT1:.+]] = spirv.Select %[[ISNAN1]], %[[S1]], %[[SELECT0]] : i1, f32
+//       CHECK:   %[[MAX1:.+]] = spirv.GL.FMax %[[SELECT1]], %[[S2]]
+//       CHECK:   %[[ISNAN2:.+]] = spirv.IsNan %[[SELECT1]] : f32
+//       CHECK:   %[[ISNAN3:.+]] = spirv.IsNan %[[S2]] : f32
+//       CHECK:   %[[SELECT2:.+]] = spirv.Select %[[ISNAN2]], %[[SELECT1]], %[[MAX1]] : i1, f32
+//       CHECK:   %[[SELECT3:.+]] = spirv.Select %[[ISNAN3]], %[[S2]], %[[SELECT2]] : i1, f32
+//       CHECK:   %[[MAX2:.+]] = spirv.GL.FMax %[[SELECT3]], %[[S]]
+//       CHECK:   %[[ISNAN4:.+]] = spirv.IsNan %[[SELECT3]] : f32
+//       CHECK:   %[[ISNAN5:.+]] = spirv.IsNan %[[S]] : f32
+//       CHECK:   %[[SELECT4:.+]] = spirv.Select %[[ISNAN4]], %[[SELECT3]], %[[MAX2]] : i1, f32
+//       CHECK:   %[[SELECT5:.+]] = spirv.Select %[[ISNAN5]], %[[S]], %[[SELECT4]] : i1, f32
+//       CHECK:   return %[[SELECT5]]
 func.func @reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
   %reduce = vector.reduction <maximumf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_maxf
+//  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+//       CHECK:   %[[MAX0:.+]] = spirv.GL.FMax %[[S0]], %[[S1]]
+//       CHECK:   %[[ISNAN0:.+]] = spirv.IsNan %[[S0]] : f32
+//       CHECK:   %[[ISNAN1:.+]] = spirv.IsNan %[[S1]] : f32
+//       CHECK:   %[[SELECT0:.+]] = spirv.Select %[[ISNAN0]], %[[S1]], %[[MAX0]] : i1, f32
+//       CHECK:   %[[SELECT1:.+]] = spirv.Select %[[ISNAN1]], %[[S0]], %[[SELECT0]] : i1, f32
+//       CHECK:   %[[MAX1:.+]] = spirv.GL.FMax %[[SELECT1]], %[[S2]]
+//       CHECK:   %[[ISNAN2:.+]] = spirv.IsNan %[[SELECT1]] : f32
+//       CHECK:   %[[ISNAN3:.+]] = spirv.IsNan %[[S2]] : f32
+//       CHECK:   %[[SELECT2:.+]] = spirv.Select %[[ISNAN2]], %[[S2]], %[[MAX1]] : i1, f32
+//       CHECK:   %[[SELECT3:.+]] = spirv.Select %[[ISNAN3]], %[[SELECT1]], %[[SELECT2]] : i1, f32
+//       CHECK:   %[[MAX2:.+]] = spirv.GL.FMax %[[SELECT3]], %[[S]]
+//       CHECK:   %[[ISNAN4:.+]] = spirv.IsNan %[[SELECT3]] : f32
+//       CHECK:   %[[ISNAN5:.+]] = spirv.IsNan %[[S]] : f32
+//       CHECK:   %[[SELECT4:.+]] = spirv.Select %[[ISNAN4]], %[[S]], %[[MAX2]] : i1, f32
+//       CHECK:   %[[SELECT5:.+]] = spirv.Select %[[ISNAN5]], %[[SELECT3]], %[[SELECT4]] : i1, f32
+//       CHECK:   return %[[SELECT5]]
+func.func @reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
@@ -538,11 +630,51 @@ func.func @reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
 //       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
 //       CHECK:   %[[MIN0:.+]] = spirv.GL.FMin %[[S0]], %[[S1]]
-//       CHECK:   %[[MIN1:.+]] = spirv.GL.FMin %[[MIN0]], %[[S2]]
-//       CHECK:   %[[MIN2:.+]] = spirv.GL.FMin %[[MIN1]], %[[S]]
-//       CHECK:   return %[[MIN2]]
+//       CHECK:   %[[ISNAN0:.+]] = spirv.IsNan %[[S0]] : f32
+//       CHECK:   %[[ISNAN1:.+]] = spirv.IsNan %[[S1]] : f32
+//       CHECK:   %[[SELECT0:.+]] = spirv.Select %[[ISNAN0]], %[[S0]], %[[MIN0]] : i1, f32
+//       CHECK:   %[[SELECT1:.+]] = spirv.Select %[[ISNAN1]], %[[S1]], %[[SELECT0]] : i1, f32
+//       CHECK:   %[[MIN1:.+]] = spirv.GL.FMin %[[SELECT1]], %[[S2]]
+//       CHECK:   %[[ISNAN2:.+]] = spirv.IsNan %[[SELECT1]] : f32
+//       CHECK:   %[[ISNAN3:.+]] = spirv.IsNan %[[S2]] : f32
+//       CHECK:   %[[SELECT2:.+]] = spirv.Select %[[ISNAN2]], %[[SELECT1]], %[[MIN1]] : i1, f32
+//       CHECK:   %[[SELECT3:.+]] = spirv.Select %[[ISNAN3]], %[[S2]], %[[SELECT2]] : i1, f32
+//       CHECK:   %[[MIN2:.+]] = spirv.GL.FMin %[[SELECT3]], %[[S]]
+//       CHECK:   %[[ISNAN4:.+]] = spirv.IsNan %[[SELECT3]] : f32
+//       CHECK:   %[[ISNAN5:.+]] = spirv.IsNan %[[S]] : f32
+//       CHECK:   %[[SELECT4:.+]] = spirv.Select %[[ISNAN4]], %[[SELECT3]], %[[MIN2]] : i1, f32
+//       CHECK:   %[[SELECT5:.+]] = spirv.Select %[[ISNAN5]], %[[S]], %[[SELECT4]] : i1, f32
+//       CHECK:   return %[[SELECT5]]
 func.func @reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
   %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduction_minf
+//  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
+//       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+//       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+//       CHECK:   %[[S2:.+]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+//       CHECK:   %[[MIN0:.+]] = spirv.GL.FMin %[[S0]], %[[S1]]
+//       CHECK:   %[[ISNAN0:.+]] = spirv.IsNan %[[S0]] : f32
+//       CHECK:   %[[ISNAN1:.+]] = spirv.IsNan %[[S1]] : f32
+//       CHECK:   %[[SELECT0:.+]] = spirv.Select %[[ISNAN0]], %[[S1]], %[[MIN0]] : i1, f32
+//       CHECK:   %[[SELECT1:.+]] = spirv.Select %[[ISNAN1]], %[[S0]], %[[SELECT0]] : i1, f32
+//       CHECK:   %[[MIN1:.+]] = spirv.GL.FMin %[[SELECT1]], %[[S2]]
+//       CHECK:   %[[ISNAN2:.+]] = spirv.IsNan %[[SELECT1]] : f32
+//       CHECK:   %[[ISNAN3:.+]] = spirv.IsNan %[[S2]] : f32
+//       CHECK:   %[[SELECT2:.+]] = spirv.Select %[[ISNAN2]], %[[S2]], %[[MIN1]] : i1, f32
+//       CHECK:   %[[SELECT3:.+]] = spirv.Select %[[ISNAN3]], %[[SELECT1]], %[[SELECT2]] : i1, f32
+//       CHECK:   %[[MIN2:.+]] = spirv.GL.FMin %[[SELECT3]], %[[S]]
+//       CHECK:   %[[ISNAN4:.+]] = spirv.IsNan %[[SELECT3]] : f32
+//       CHECK:   %[[ISNAN5:.+]] = spirv.IsNan %[[S]] : f32
+//       CHECK:   %[[SELECT4:.+]] = spirv.Select %[[ISNAN4]], %[[S]], %[[MIN2]] : i1, f32
+//       CHECK:   %[[SELECT5:.+]] = spirv.Select %[[ISNAN5]], %[[SELECT3]], %[[SELECT4]] : i1, f32
+//       CHECK:   return %[[SELECT5]]
+func.func @reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 

@@ -29,6 +29,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
 #include <cstdint>
@@ -472,9 +473,12 @@ struct VectorReductionFloatMinMax final : MIN_MAX_PATTERN_BASE {
       switch (reduceOp.getKind()) {
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
-  case vector::CombiningKind::kind:                                            \
-    result = rewriter.create<fop>(loc, resultType, result, next);              \
-    break
+  case vector::CombiningKind::kind: {                                          \
+    fop op = rewriter.create<fop>(loc, resultType, result, next);              \
+    result = this->generateActionForOp(rewriter, loc, resultType, op,          \
+                                       vector::CombiningKind::kind);           \
+    break;                                                                     \
+  }
 
         INT_OR_FLOAT_CASE(MAXIMUMF, SPIRVFMaxOp);
         INT_OR_FLOAT_CASE(MINIMUMF, SPIRVFMinOp);
@@ -488,6 +492,51 @@ struct VectorReductionFloatMinMax final : MIN_MAX_PATTERN_BASE {
 
     rewriter.replaceOp(reduceOp, result);
     return success();
+  }
+
+private:
+  enum class Action { Nothing, PropagateNaN, PropagateNonNaN };
+
+  template <typename Op>
+  Action getActionForOp(vector::CombiningKind kind) const {
+    constexpr bool isCLOp = std::is_same_v<Op, spirv::CLFMaxOp> ||
+                            std::is_same_v<Op, spirv::CLFMinOp>;
+    switch (kind) {
+    case vector::CombiningKind::MINIMUMF:
+    case vector::CombiningKind::MAXIMUMF:
+      return Action::PropagateNaN;
+    case vector::CombiningKind::MINF:
+    case vector::CombiningKind::MAXF:
+      // CL ops already have the same semantic for NaNs as MINF/MAXF
+      // GL ops have undefined semantics for NaNs, so we need to explicitly
+      // propagate the non-NaN values
+      return isCLOp ? Action::Nothing : Action::PropagateNonNaN;
+    default:
+      llvm_unreachable("Unexpected case for the switch");
+    }
+  }
+
+  template <typename Op>
+  Value generateActionForOp(ConversionPatternRewriter &rewriter,
+                            mlir::Location loc, Type resultType, Op op,
+                            vector::CombiningKind kind) const {
+    Action action = getActionForOp<Op>(kind);
+
+    if (action == Action::Nothing) {
+      return op;
+    }
+
+    Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, op.getLhs());
+    Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, op.getRhs());
+
+    Value select1 = rewriter.create<spirv::SelectOp>(
+        loc, resultType, lhsIsNan,
+        action == Action::PropagateNaN ? op.getLhs() : op.getRhs(), op);
+    Value select2 = rewriter.create<spirv::SelectOp>(
+        loc, resultType, rhsIsNan,
+        action == Action::PropagateNaN ? op.getRhs() : op.getLhs(), select1);
+
+    return select2;
   }
 };
 #undef MIN_MAX_PATTERN_BASE
