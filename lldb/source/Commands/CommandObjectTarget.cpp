@@ -2682,12 +2682,14 @@ protected:
               llvm::StringRef type;
               llvm::StringRef symfile;
               StructuredData::Array *files;
-              assert(separate_debug_info_list->GetValueForKeyAsString("type",
-                                                                      type));
-              assert(separate_debug_info_list->GetValueForKeyAsString("symfile",
-                                                                      symfile));
-              assert(separate_debug_info_list->GetValueForKeyAsArray(
-                  "separate-debug-info-files", files));
+              if (!(separate_debug_info_list->GetValueForKeyAsString("type",
+                                                                     type) &&
+                    separate_debug_info_list->GetValueForKeyAsString("symfile",
+                                                                     symfile) &&
+                    separate_debug_info_list->GetValueForKeyAsArray(
+                        "separate-debug-info-files", files))) {
+                assert(false);
+              }
 
               strm << "Symbol file: " << symfile;
               strm.EOL();
