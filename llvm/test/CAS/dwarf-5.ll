@@ -1,8 +1,12 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: llc --filetype=obj --mccas-verify --cas-backend --cas=%t/cas %s -o %t/dwarf-5.o 
-; RUN: dwarfdump %t/dwarf-5.o | FileCheck %s 
+; RUN: llvm-dwarfdump %t/dwarf-5.o | FileCheck %s
 ; CHECK: .debug_info contents:
 ; CHECK-NEXT: 0x{{[0-9a-f]+}}: Compile Unit: length = 0x{{[0-9a-f]+}}, format = DWARF32, version = 0x0005
+
+source_filename = "/Users/shubham/Development/Delta/alternate/CommandLine.cpp"
+target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+target triple = "arm64-apple-macosx14.0.0"
 
 %"class.llvm::StringRef" = type { ptr, i64 }
 %"class.llvm::function_ref" = type { ptr, i64 }
