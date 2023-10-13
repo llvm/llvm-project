@@ -277,7 +277,7 @@ public:
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
     storage.erase(storage.begin() + pos);
-    shape = {storage.data(), storage.size()};
+    shape = {};
     return *this;
   }
 
@@ -287,12 +287,17 @@ public:
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
     storage.insert(storage.begin() + pos, val);
-    shape = {storage.data(), storage.size()};
+    shape = {};
     return *this;
   }
 
+  /// Returns the current shape.
+  ArrayRef<int64_t> getShape() {
+    return shape.empty() ? ArrayRef(storage) : shape;
+  }
+
   operator RankedTensorType() {
-    return RankedTensorType::get(shape, elementType, encoding);
+    return RankedTensorType::get(getShape(), elementType, encoding);
   }
 
 private:
@@ -319,20 +324,11 @@ public:
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
           unsigned numScalableDims = 0, ArrayRef<bool> scalableDims = {})
-      : shape(shape), elementType(elementType) {
-    if (scalableDims.empty())
-      scalableDims = SmallVector<bool>(shape.size(), false);
-    else
-      this->scalableDims = scalableDims;
-  }
+      : shape(shape), elementType(elementType), scalableDims(scalableDims) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape,
                     ArrayRef<bool> newIsScalableDim = {}) {
-    if (newIsScalableDim.empty())
-      scalableDims = SmallVector<bool>(shape.size(), false);
-    else
-      scalableDims = newIsScalableDim;
-
+    scalableDims = newIsScalableDim;
     shape = newShape;
     return *this;
   }
@@ -351,9 +347,8 @@ public:
       storageScalableDims.append(scalableDims.begin(), scalableDims.end());
     storage.erase(storage.begin() + pos);
     storageScalableDims.erase(storageScalableDims.begin() + pos);
-    shape = {storage.data(), storage.size()};
-    scalableDims =
-        ArrayRef<bool>(storageScalableDims.data(), storageScalableDims.size());
+    shape = {};
+    scalableDims = {};
     return *this;
   }
 
@@ -363,12 +358,22 @@ public:
       storage.append(shape.begin(), shape.end());
     assert(pos < storage.size() && "overflow");
     storage[pos] = val;
-    shape = {storage.data(), storage.size()};
+    shape = {};
     return *this;
   }
 
+  /// Returns the current shape.
+  ArrayRef<int64_t> getShape() {
+    return shape.empty() ? ArrayRef(storage) : shape;
+  }
+
+  /// Returns the current scalable dims.
+  ArrayRef<bool> getScalableDims() {
+    return scalableDims.empty() ? ArrayRef(storageScalableDims) : scalableDims;
+  }
+
   operator VectorType() {
-    return VectorType::get(shape, elementType, scalableDims);
+    return VectorType::get(getShape(), elementType, getScalableDims());
   }
 
 private:
