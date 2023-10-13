@@ -6243,9 +6243,6 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
-def warn_bitfield_too_small_for_integral_type : Warning<
-  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
-  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 
