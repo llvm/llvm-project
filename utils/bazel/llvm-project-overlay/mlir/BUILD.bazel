@@ -2097,6 +2097,7 @@ cc_library(
         ":IR",
         ":LLVMDialect",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -2109,13 +2110,12 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSVEDialect",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
-        ":TransformUtils",
-        "//llvm:Core",
-        "//llvm:Support",
+        ":VectorDialect",
     ],
 )
 
@@ -4816,6 +4816,7 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/NVVM*.cpp",
             "lib/Dialect/LLVMIR/IR/NVVM*.h",
             "lib/Dialect/LLVMIR/IR/ROCDL*.cpp",
+            "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
             "lib/Dialect/LLVMIR/IR/ROCDL*.h",
             "lib/Dialect/LLVMIR/IR/*X86Vector*.cpp",
             "lib/Dialect/LLVMIR/IR/*X86Vector*.h",
@@ -4827,6 +4828,7 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/*AMX*.h",
             "include/mlir/Dialect/LLVMIR/*ArmSVE*.h",
             "include/mlir/Dialect/LLVMIR/NVVM*.h",
+            "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
             "include/mlir/Dialect/LLVMIR/ROCDL*.h",
             "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
         ],
@@ -5768,6 +5770,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/NVVMDialect.h"],
     includes = ["include"],
     deps = [
+        ":BasicPtxBuilderInterface",
         ":ConvertToLLVM",
         ":DialectUtils",
         ":GPUDialect",
@@ -5823,14 +5826,53 @@ cc_library(
 )
 
 td_library(
-    name = "NVVMOpsTdFiles",
-    srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
+    name = "BasicPtxBuilderIntTdFiles",
+    srcs = [
+        "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td",
+    ],
     includes = ["include"],
     deps = [
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
+    ],
+)
+
+td_library(
+    name = "NVVMOpsTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
+    includes = ["include"],
+    deps = [
+        ":BasicPtxBuilderIntTdFiles",
+        ":GPUOpsTdFiles",
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BasicPtxBuilderIntGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-interface-decls",
+            ],
+            "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h.inc",
+        ),
+        (
+            [
+                "-gen-op-interface-defs",
+            ],
+            "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td",
+    deps = [
+        ":BasicPtxBuilderIntTdFiles",
+        ":GPUOpsTdFiles",
+        ":LLVMOpsTdFiles",
     ],
 )
 
@@ -5881,20 +5923,6 @@ gentbl_cc_library(
             ],
             "include/mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc",
         ),
-        (
-            [
-                "-gen-op-interface-decls",
-                "-attrdefs-dialect=nvvm",
-            ],
-            "include/mlir/Dialect/LLVMIR/NVVMOpsInterface.h.inc",
-        ),
-        (
-            [
-                "-gen-op-interface-defs",
-                "-attrdefs-dialect=nvvm",
-            ],
-            "include/mlir/Dialect/LLVMIR/NVVMOpsInterface.cpp.inc",
-        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
@@ -5913,6 +5941,22 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
     deps = [":NVVMOpsTdFiles"],
 )
+
+cc_library(
+    name = "BasicPtxBuilderInterface",
+    srcs = ["lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp"],
+    hdrs = [
+        "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BasicPtxBuilderIntGen",
+        ":IR",
+        ":LLVMDialect",
+        ":Support",
+    ],
+)
+
 
 cc_library(
     name = "NVVMToLLVM",
@@ -7996,6 +8040,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":OpenMPDialect",
         ":Support",
+        ":TransformUtils",
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -8201,6 +8246,7 @@ cc_library(
         ":OpenMPCommon",
         ":Support",
         ":ToLLVMIRTranslation",
+        ":TransformUtils",
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
