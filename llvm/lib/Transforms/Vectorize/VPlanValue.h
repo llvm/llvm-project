@@ -64,7 +64,7 @@ protected:
   /// VPValue is not defined by any recipe modeled in VPlan.
   VPDef *Def;
 
-  VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
+  LLVM_FUNC_ABI VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -101,7 +101,7 @@ public:
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
-  virtual ~VPValue();
+  LLVM_FUNC_ABI virtual ~VPValue();
 
   /// \return an ID for the concrete type of this object.
   /// This is used to implement the classof checks. This should not be used
@@ -161,7 +161,7 @@ public:
     return Current != user_end();
   }
 
-  void replaceAllUsesWith(VPValue *New);
+  LLVM_FUNC_ABI void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p
   /// New if the callback ShouldReplace returns true for the given use specified
@@ -172,7 +172,7 @@ public:
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
-  VPRecipeBase *getDefiningRecipe();
+  LLVM_FUNC_ABI VPRecipeBase *getDefiningRecipe();
   const VPRecipeBase *getDefiningRecipe() const;
 
   /// Returns true if this VPValue is defined by a recipe.

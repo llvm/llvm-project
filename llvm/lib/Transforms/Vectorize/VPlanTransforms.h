@@ -31,7 +31,7 @@ class VPRecipeBuilder;
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
-  static void
+  LLVM_FUNC_ABI static void
   VPInstructionsToVPRecipes(VPlanPtr &Plan,
                             function_ref<const InductionDescriptor *(PHINode *)>
                                 GetIntOrFpInductionDescriptor,

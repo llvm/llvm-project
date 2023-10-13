@@ -24,6 +24,8 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class VPRegionBlock;
 class VPlan;
@@ -41,7 +43,7 @@ struct VPlanVerifier {
   /// 1. all phi-like recipes must be at the beginning of a block, with no other
   /// recipes in between. Note that currently there is still an exception for
   /// VPBlendRecipes.
-  static bool verifyPlanIsValid(const VPlan &Plan);
+  LLVM_FUNC_ABI static bool verifyPlanIsValid(const VPlan &Plan);
 };
 } // namespace llvm
 

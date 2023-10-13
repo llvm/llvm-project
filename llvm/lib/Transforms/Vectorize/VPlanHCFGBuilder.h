@@ -65,7 +65,7 @@ public:
       : TheLoop(Lp), LI(LI), Plan(P) {}
 
   /// Build H-CFG for TheLoop and update Plan accordingly.
-  void buildHierarchicalCFG();
+  LLVM_FUNC_ABI void buildHierarchicalCFG();
 };
 } // namespace llvm
 
