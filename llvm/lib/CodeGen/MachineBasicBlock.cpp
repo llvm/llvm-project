@@ -1097,19 +1097,18 @@ static bool jumpTableHasOtherUses(const MachineFunction &MF,
   return false;
 }
 
-class MBBSplitCriticalEdgeDelegate : public MachineFunction::Delegate {
+class SlotIndexUpdateDelegate : public MachineFunction::Delegate {
 private:
-  MachineFunction *MF;
+  MachineFunction &MF;
   SlotIndexes *Indexes;
 
 public:
-  MBBSplitCriticalEdgeDelegate(MachineBasicBlock *MBB,
-                               SlotIndexes *IndexesToUpdate)
-      : MF(MBB->getParent()), Indexes(IndexesToUpdate) {
-    MF->setDelegate(this);
+  SlotIndexUpdateDelegate(MachineFunction &MF, SlotIndexes *Indexes)
+      : MF(MF), Indexes(Indexes) {
+    MF.setDelegate(this);
   }
 
-  ~MBBSplitCriticalEdgeDelegate() { MF->resetDelegate(this); }
+  ~SlotIndexUpdateDelegate() { MF.resetDelegate(this); }
 
   void MF_HandleInsertion(MachineInstr &MI) override {
     if (Indexes)
@@ -1201,14 +1200,14 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     PrevFallthrough = NMBB;
 
   if (!ChangedIndirectJump) {
-    MBBSplitCriticalEdgeDelegate SlotUpdater(this, Indexes);
+    SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
     updateTerminator(PrevFallthrough);
   }
 
   // Insert unconditional "jump Succ" instruction in NMBB if necessary.
   NMBB->addSuccessor(Succ);
   if (!NMBB->isLayoutSuccessor(Succ)) {
-    MBBSplitCriticalEdgeDelegate SlotUpdater(NMBB, Indexes);
+    SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
