@@ -4813,54 +4813,43 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   for (auto *DbgAssign : at::getAssignmentMarkers(&AI))
     DbgVariables.push_back(DbgAssign);
   for (DbgVariableIntrinsic *DbgVariable : DbgVariables) {
-    auto *Expr = DbgVariable->getExpression();
     DIBuilder DIB(*AI.getModule(), /*AllowUnresolved*/ false);
-    uint64_t AllocaSize =
-        DL.getTypeSizeInBits(AI.getAllocatedType()).getFixedValue();
+
     for (auto Fragment : Fragments) {
-      // Create a fragment expression describing the new partition or reuse AI's
-      // expression if there is only one partition.
-      auto *FragmentExpr = Expr;
-      if (Fragment.Size < AllocaSize || Expr->isFragment()) {
-        // If this alloca is already a scalar replacement of a larger aggregate,
-        // Fragment.Offset describes the offset inside the scalar.
-        auto ExprFragment = Expr->getFragmentInfo();
-        uint64_t Offset = ExprFragment ? ExprFragment->OffsetInBits : 0;
-        uint64_t Start = Offset + Fragment.Offset;
-        uint64_t Size = Fragment.Size;
-        if (ExprFragment) {
-          uint64_t AbsEnd =
-              ExprFragment->OffsetInBits + ExprFragment->SizeInBits;
-          if (Start >= AbsEnd) {
-            // No need to describe a SROAed padding.
-            continue;
-          }
-          Size = std::min(Size, AbsEnd - Start);
-        }
-        // The new, smaller fragment is stenciled out from the old fragment.
-        if (auto OrigFragment = FragmentExpr->getFragmentInfo()) {
-          assert(Start >= OrigFragment->OffsetInBits &&
-                 "new fragment is outside of original fragment");
-          Start -= OrigFragment->OffsetInBits;
-        }
+      uint64_t OffestFromNewAllocaInBits;
+      std::optional<DIExpression::FragmentInfo> NewDbgFragment;
 
-        // The alloca may be larger than the variable.
-        auto VarSize = DbgVariable->getVariable()->getSizeInBits();
-        if (VarSize) {
-          if (Size > *VarSize)
-            Size = *VarSize;
-          if (Size == 0 || Start + Size > *VarSize)
-            continue;
-        }
+      // Drop debug info for this variable fragment if we can't compute an
+      // intersect between it and the alloca slice.
+      if (!at::calculateFragmentIntersect(
+              DL, &AI, Fragment.Offset, Fragment.Size, DbgVariable,
+              NewDbgFragment, OffestFromNewAllocaInBits))
+        continue; // Do not migrate this fragment to this slice.
 
-        // Avoid creating a fragment expression that covers the entire variable.
-        if (!VarSize || *VarSize != Size) {
-          if (auto E =
-                  DIExpression::createFragmentExpression(Expr, Start, Size))
-            FragmentExpr = *E;
-          else
-            continue;
-        }
+      // Zero sized fragment indicates there's no intersect between the variable
+      // fragment and the alloca slice. Skip this slice for this variable
+      // fragment.
+      if (NewDbgFragment && !NewDbgFragment->SizeInBits)
+        continue; // Do not migrate this fragment to this slice.
+
+      // No fragment indicates DbgVariable's variable or fragment exactly
+      // overlaps the slice; copy its fragment (or nullopt if there isn't one).
+      if (!NewDbgFragment)
+        NewDbgFragment = DbgVariable->getFragment();
+
+      // calculateFragmentIntersect fails if DbgVariable's expression is not a
+      // trivial offset expression, meaning it must contains only an offset and
+      // fragment. Start from scratch; add the fragment and then the offset.
+      // If calculateFragmentIntersect gets smarter this needs updating
+      // (sroa-alloca-offset.ll should start failing) - we'd need to copy the
+      // other parts of the original expression.
+      DIExpression *NewExpr = DIExpression::get(AI.getContext(), {});
+      if (NewDbgFragment)
+        NewExpr = *DIExpression::createFragmentExpression(
+            NewExpr, NewDbgFragment->OffsetInBits, NewDbgFragment->SizeInBits);
+      if (OffestFromNewAllocaInBits > 0) {
+        int64_t OffsetInBytes = (OffestFromNewAllocaInBits + 7) / 8;
+        NewExpr = DIExpression::prepend(NewExpr, /*flags=*/0, OffsetInBytes);
       }
 
       // Remove any existing intrinsics on the new alloca describing
@@ -4884,14 +4873,14 @@ bool SROAPass::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         }
         auto *NewAssign = DIB.insertDbgAssign(
             Fragment.Alloca, DbgAssign->getValue(), DbgAssign->getVariable(),
-            FragmentExpr, Fragment.Alloca, DbgAssign->getAddressExpression(),
+            NewExpr, Fragment.Alloca, DbgAssign->getAddressExpression(),
             DbgAssign->getDebugLoc());
         NewAssign->setDebugLoc(DbgAssign->getDebugLoc());
         LLVM_DEBUG(dbgs() << "Created new assign intrinsic: " << *NewAssign
                           << "\n");
       } else {
-        DIB.insertDeclare(Fragment.Alloca, DbgVariable->getVariable(),
-                          FragmentExpr, DbgVariable->getDebugLoc(), &AI);
+        DIB.insertDeclare(Fragment.Alloca, DbgVariable->getVariable(), NewExpr,
+                          DbgVariable->getDebugLoc(), &AI);
       }
     }
   }

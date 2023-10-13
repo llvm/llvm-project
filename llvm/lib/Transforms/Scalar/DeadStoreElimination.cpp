@@ -530,11 +530,12 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
                                            LinkedRange.end());
   for (auto *DAI : Linked) {
+    uint64_t NewExprOffsetInBits;
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
-                                        DeadSliceSizeInBits, DAI,
-                                        NewFragment) ||
-        !NewFragment) {
+                                        DeadSliceSizeInBits, DAI, NewFragment,
+                                        NewExprOffsetInBits) ||
+        !NewFragment || NewExprOffsetInBits > 0) {
       // We couldn't calculate the intersecting fragment for some reason. Be
       // cautious and unlink the whole assignment from the store.
       DAI->setKillAddress();

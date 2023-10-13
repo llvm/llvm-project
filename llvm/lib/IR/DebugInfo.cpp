@@ -1782,8 +1782,34 @@ void at::deleteAll(Function *F) {
 
 bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
-    std::optional<DIExpression::FragmentInfo> &Result) {
+    uint64_t SliceSizeInBits, const DbgVariableIntrinsic *DVI,
+    std::optional<DIExpression::FragmentInfo> &Result,
+    uint64_t &NewExprOffsetInBits) {
+
+  // Only dbg.assign and dbg.declares are allowed because this function
+  // deals with memory locations. This isn't comprehensive because dbg.values
+  // are able to describe memory locations; support for dbg.values can be added
+  // if/when needed.
+  assert(isa<DbgAssignIntrinsic>(DVI) || isa<DbgDeclareInst>(DVI));
+
+  // There isn't a shared interface to get the "address" parts out of a
+  // dbg.declare and dbg.assign, so provide some wrappers now.
+  auto GetAddress = [DVI]() -> const Value * {
+    if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      return DAI->getAddress();
+    return cast<DbgDeclareInst>(DVI)->getAddress();
+  };
+  auto IsKillLocation = [DVI]() -> bool {
+    if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      return DAI->isKillAddress();
+    return cast<DbgDeclareInst>(DVI)->isKillLocation();
+  };
+  auto GetExpression = [DVI]() -> const DIExpression * {
+    if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      return DAI->getAddressExpression();
+    return cast<DbgDeclareInst>(DVI)->getExpression();
+  };
+
   // There are multiple offsets at play in this function, so let's break it
   // down. Starting with how variables may be stored in allocas:
   //
@@ -1874,10 +1900,10 @@ bool at::calculateFragmentIntersect(
   //      SliceOfVariable ∩ DAI_fragment = (offset: 144, size: 16)
   // SliceOfVariable tells us the bits of the variable described by DAI that are
   // affected by the DSE.
-  if (DAI->isKillAddress())
+  if (IsKillLocation())
     return false;
 
-  DIExpression::FragmentInfo VarFrag = DAI->getFragmentOrEntireVariable();
+  DIExpression::FragmentInfo VarFrag = DVI->getFragmentOrEntireVariable();
   if (VarFrag.SizeInBits == 0)
     return false; // Variable size is unknown.
 
@@ -1885,12 +1911,12 @@ bool at::calculateFragmentIntersect(
   // address-modifying expression.
   int64_t PointerOffsetInBits;
   {
-    auto DestOffsetInBytes = DAI->getAddress()->getPointerOffsetFrom(Dest, DL);
+    auto DestOffsetInBytes = GetAddress()->getPointerOffsetFrom(Dest, DL);
     if (!DestOffsetInBytes)
       return false; // Can't calculate difference in addresses.
 
     int64_t ExprOffsetInBytes;
-    if (!DAI->getAddressExpression()->extractIfOffset(ExprOffsetInBytes))
+    if (!GetExpression()->extractIfOffset(ExprOffsetInBytes))
       return false;
 
     int64_t PointerOffsetInBytes = *DestOffsetInBytes + ExprOffsetInBytes;
@@ -1899,11 +1925,19 @@ bool at::calculateFragmentIntersect(
 
   // Adjust the slice offset so that we go from describing the a slice
   // of memory to a slice of the variable.
-  int64_t NewOffsetInBits =
+  int64_t AdjustedSliceOffsetInBits =
       SliceOffsetInBits + VarFrag.OffsetInBits - PointerOffsetInBits;
-  if (NewOffsetInBits < 0)
-    return false; // Fragment offsets can only be positive.
-  DIExpression::FragmentInfo SliceOfVariable(SliceSizeInBits, NewOffsetInBits);
+  NewExprOffsetInBits = std::max(0l, -AdjustedSliceOffsetInBits);
+  AdjustedSliceOffsetInBits = std::max(0l, AdjustedSliceOffsetInBits);
+
+  // Check if the variable fragment sits outside this memory slice.
+  if (NewExprOffsetInBits >= SliceSizeInBits) {
+    Result = {0, 0};
+    return true;
+  }
+
+  DIExpression::FragmentInfo SliceOfVariable(
+      SliceSizeInBits - NewExprOffsetInBits, AdjustedSliceOffsetInBits);
   // Intersect the variable slice with DAI's fragment to trim it down to size.
   DIExpression::FragmentInfo TrimmedSliceOfVariable =
       DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);

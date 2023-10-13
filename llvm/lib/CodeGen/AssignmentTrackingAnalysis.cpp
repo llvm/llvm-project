@@ -1981,12 +1981,15 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
         for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(Info->Base)) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
 
+          uint64_t NewExprOffsetInBits;
           // Skip this assignment if the affected bits are outside of the
           // variable fragment.
-          if (!at::calculateFragmentIntersect(
-                  I.getModule()->getDataLayout(), Info->Base,
-                  Info->OffsetInBits, Info->SizeInBits, DAI, FragInfo) ||
-              (FragInfo && FragInfo->SizeInBits == 0))
+          if (!at::calculateFragmentIntersect(I.getModule()->getDataLayout(),
+                                              Info->Base, Info->OffsetInBits,
+                                              Info->SizeInBits, DAI, FragInfo,
+                                              NewExprOffsetInBits) ||
+              (FragInfo && FragInfo->SizeInBits == 0) ||
+              NewExprOffsetInBits > 0)
             continue;
 
           // FragInfo from calculateFragmentIntersect is nullopt if the
