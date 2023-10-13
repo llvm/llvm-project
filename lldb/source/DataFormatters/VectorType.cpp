@@ -169,9 +169,9 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
   }
 }
 
-/// \brief Returns the number of elements stored in a container
-/// (with element type 'container_elem_type') as if it had elements
-/// of type 'element_type'.
+/// The number of elements stored in a container (with element
+/// type 'container_elem_type') as if it had elements of type
+/// 'element_type'.
 ///
 /// For example, a container of type
 /// `uint8_t __attribute__((vector_size(16)))` has 16 elements.
@@ -189,27 +189,28 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
 /// container_type to contain for the purposes of calculating
 /// the number of children.
 ///
-/// If size of the container is not a multiple of 'element_type'
-/// returns 0.
-///
-/// On error, returns 0.
-static size_t CalculateNumChildren(CompilerType container_elem_type,
-                                   uint64_t num_elements,
-                                   CompilerType element_type) {
+/// \returns The number of elements stored in a container of
+/// type 'element_type'. Returns a std::nullopt if the
+/// size of the container is not a multiple of 'element_type'
+/// or if an error occurs.
+static std::optional<size_t> CalculateNumChildren(
+        CompilerType container_elem_type,
+        uint64_t num_elements,
+        CompilerType element_type) {
   std::optional<uint64_t> container_elem_size =
       container_elem_type.GetByteSize(/* exe_scope */ nullptr);
   if (!container_elem_size)
-    return 0;
+    return {};
 
   auto container_size = *container_elem_size * num_elements;
 
   std::optional<uint64_t> element_size =
       element_type.GetByteSize(/* exe_scope */ nullptr);
   if (!element_size || !*element_size)
-    return 0;
+    return {};
 
   if (container_size % *element_size)
-    return 0;
+    return {};
 
   return container_size / *element_size;
 }
@@ -255,7 +256,7 @@ public:
         m_parent_format, element_type,
         parent_type.GetTypeSystem().GetSharedPointer());
     m_num_children =
-        ::CalculateNumChildren(element_type, num_elements, m_child_type);
+        ::CalculateNumChildren(element_type, num_elements, m_child_type).value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return false;
   }
