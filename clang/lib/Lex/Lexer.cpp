@@ -1851,25 +1851,27 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
-static const char *fastParseASCIIIdentifier(const char *CurPtr, const char* BufferEnd) {
+static const char *fastParseASCIIIdentifier(const char *CurPtr,
+                                            const char *BufferEnd) {
 #ifdef __SSE4_2__
-  static constexpr char AsciiIdentifierRange[16] = {
+  alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
   constexpr ssize_t BytesPerRegister = 16;
 
-  while (LLVM_LIKELY(BufferEnd - CurPtr >= BytesPerRegister)) {
-    __m128i AsciiIdentifierRangeV = _mm_loadu_si128((const __m128i *)AsciiIdentifierRange);
+  __m128i AsciiIdentifierRangeV =
+      _mm_load_si128((const __m128i *)AsciiIdentifierRange);
 
-      __m128i Cv = _mm_loadu_si128((const __m128i *)(CurPtr));
-      int Consumed =
-          _mm_cmpistri(AsciiIdentifierRangeV, Cv,
-                       _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
-                           _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
-      CurPtr += Consumed;
-      if (Consumed == BytesPerRegister)
-        continue;
-      return CurPtr;
+  while (LLVM_LIKELY(BufferEnd - CurPtr >= BytesPerRegister)) {
+    __m128i Cv = _mm_loadu_si128((const __m128i *)(CurPtr));
+
+    int Consumed = _mm_cmpistri(AsciiIdentifierRangeV, Cv,
+                                _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
+                                    _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
+    CurPtr += Consumed;
+    if (Consumed == BytesPerRegister)
+      continue;
+    return CurPtr;
   }
 #else
   (void)BufferEnd;
