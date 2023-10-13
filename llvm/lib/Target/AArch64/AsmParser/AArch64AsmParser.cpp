@@ -4537,6 +4537,8 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
 
   // Check if register is followed by an index
   if (parseOptionalToken(AsmToken::LBrac)) {
+    Operands.push_back(
+        AArch64Operand::CreateToken("[", getLoc(), getContext()));
     const MCExpr *ImmVal;
     if (getParser().parseExpression(ImmVal))
       return ParseStatus::NoMatch;
@@ -4549,6 +4551,8 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
     Operands.push_back(AArch64Operand::CreateImm(
         MCConstantExpr::create(MCE->getValue(), getContext()), StartLoc,
         getLoc(), getContext()));
+    Operands.push_back(
+        AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
 
   return ParseStatus::Success;
