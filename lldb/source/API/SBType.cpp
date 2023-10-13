@@ -591,7 +591,7 @@ SBType SBType::FindDirectNestedType(const char *name) {
 
   if (!IsValid())
     return SBType();
-  auto ret = SBType(m_opaque_sp->FindDirectNestedType(ConstString(name)));
+  auto ret = SBType(m_opaque_sp->FindDirectNestedType(name));
   return ret;
 }
 

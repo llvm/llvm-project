@@ -1082,8 +1082,8 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   return true;
 }
 
-CompilerType TypeImpl::FindDirectNestedType(ConstString name) {
-  if (name.IsEmpty())
+CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
+  if (name.empty())
     return CompilerType();
   auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
   auto *symbol_file = type_system->GetSymbolFile();
@@ -1092,7 +1092,7 @@ CompilerType TypeImpl::FindDirectNestedType(ConstString name) {
     return CompilerType();
   llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
   TypeMap search_result;
-  symbol_file->FindTypes(name, decl_context, /*max_matches*/ 1,
+  symbol_file->FindTypes(ConstString(name), decl_context, /*max_matches*/ 1,
                          searched_symbol_files, search_result);
   if (search_result.Empty())
     return CompilerType();

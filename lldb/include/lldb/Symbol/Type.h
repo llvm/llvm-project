@@ -313,7 +313,7 @@ public:
   bool GetDescription(lldb_private::Stream &strm,
                       lldb::DescriptionLevel description_level);
 
-  CompilerType FindDirectNestedType(ConstString name);
+  CompilerType FindDirectNestedType(llvm::StringRef name);
 
 private:
   bool CheckModule(lldb::ModuleSP &module_sp) const;
