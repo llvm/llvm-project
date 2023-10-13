@@ -56,6 +56,11 @@
 // CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/tools/lib/gcc/x86_64-unknown-haiku/13.2.0/crtendS.o"
 // CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/lib/crtn.o"
 
+// Check -rdynamic is a no-op
+// RUN: %clang -### -rdynamic %s 2>&1 --target=x86_64-unknown-haiku \
+// RUN:    | FileCheck --check-prefix=CHECK-RDYNAMIC %s
+// CHECK-RDYNAMIC-NOT: "-export-dynamic"
+
 // Check the right flags are present with -shared
 // RUN: %clang -### %s -shared 2>&1 --target=x86_64-unknown-haiku \
 // RUN:     --gcc-toolchain="" \
