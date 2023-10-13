@@ -39,34 +39,28 @@ using namespace mlir::arith;
 static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
-                    function_ref<APInt(const APInt&, const APInt&)> binFn) {
-  auto lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
-  auto rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
-  auto value = binFn(lhsVal, rhsVal);
+                    function_ref<APInt(const APInt &, const APInt &)> binFn) {
+  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  APInt value = binFn(lhsVal, rhsVal);
   return IntegerAttr::get(res.getType(), value);
 }
 
 static IntegerAttr addIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  auto binFn = [](APInt a, APInt& b) -> APInt {
-    return a + b;
-  };
+  auto binFn = [](const APInt &a, const APInt &b) -> APInt { return a + b; };
   return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
 }
 
 static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  auto binFn = [](APInt a, APInt& b) -> APInt {
-    return std::move(a) - b;
-  };
+  auto binFn = [](const APInt &a, const APInt &b) -> APInt { return a - b; };
   return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
 }
 
 static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  auto binFn = [](APInt a, APInt& b) -> APInt {
-    return std::move(a) * b;
-  };
+  auto binFn = [](const APInt &a, const APInt &b) -> APInt { return a * b; };
   return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
 }
 
