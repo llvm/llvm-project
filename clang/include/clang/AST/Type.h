@@ -1626,7 +1626,8 @@ class ExtQualsTypeCommonBase {
 /// in three low bits on the QualType pointer; a fourth bit records whether
 /// the pointer is an ExtQuals node. The extended qualifiers (address spaces,
 /// Objective-C GC attributes) are much more rare.
-class ExtQuals : public ExtQualsTypeCommonBase, public llvm::FoldingSetNode {
+class alignas(TypeAlignment) ExtQuals : public ExtQualsTypeCommonBase,
+                                        public llvm::FoldingSetNode {
   // NOTE: changing the fast qualifiers should be straightforward as
   // long as you don't make 'const' non-fast.
   // 1. Qualifiers:
@@ -1738,7 +1739,7 @@ enum class AutoTypeKeyword {
 ///
 /// Types, once created, are immutable.
 ///
-class alignas(8) Type : public ExtQualsTypeCommonBase {
+class alignas(TypeAlignment) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {
 #define TYPE(Class, Base) Class,
@@ -2126,9 +2127,10 @@ protected:
   Type(TypeClass tc, QualType canon, TypeDependence Dependence)
       : ExtQualsTypeCommonBase(this,
                                canon.isNull() ? QualType(this_(), 0) : canon) {
-    static_assert(sizeof(*this) <= 8 + sizeof(ExtQualsTypeCommonBase),
+    static_assert(sizeof(*this) <=
+                      alignof(decltype(*this)) + sizeof(ExtQualsTypeCommonBase),
                   "changing bitfields changed sizeof(Type)!");
-    static_assert(alignof(decltype(*this)) % sizeof(void *) == 0,
+    static_assert(alignof(decltype(*this)) % TypeAlignment == 0,
                   "Insufficient alignment!");
     TypeBits.TC = tc;
     TypeBits.Dependence = static_cast<unsigned>(Dependence);
@@ -5492,7 +5494,7 @@ public:
 
 /// Represents a C++11 auto or C++14 decltype(auto) type, possibly constrained
 /// by a type-constraint.
-class alignas(8) AutoType : public DeducedType, public llvm::FoldingSetNode {
+class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   ConceptDecl *TypeConstraintConcept;
@@ -5600,9 +5602,7 @@ public:
 /// TemplateArguments, followed by a QualType representing the
 /// non-canonical aliased type when the template is a type alias
 /// template.
-class alignas(8) TemplateSpecializationType
-    : public Type,
-      public llvm::FoldingSetNode {
+class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The name of the template being specialized.  This is
@@ -6016,9 +6016,8 @@ public:
 /// Represents a template specialization type whose template cannot be
 /// resolved, e.g.
 ///   A<T>::template B<T>
-class alignas(8) DependentTemplateSpecializationType
-    : public TypeWithKeyword,
-      public llvm::FoldingSetNode {
+class DependentTemplateSpecializationType : public TypeWithKeyword,
+                                            public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The nested name specifier containing the qualifier.
