@@ -62,7 +62,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
 void unmap(UNUSED void *Addr, UNUSED uptr Size, UNUSED uptr Flags,
            UNUSED MapPlatformData *Data) {
   if (_trusty_munmap(Addr, Size) != 0)
-    reportUnmapError(Addr, Size);
+    reportUnmapError(reinterpret_cast<uptr>(Addr), Size);
 }
 
 void setMemoryPermission(UNUSED uptr Addr, UNUSED uptr Size, UNUSED uptr Flags,
