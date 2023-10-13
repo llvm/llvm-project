@@ -40,13 +40,8 @@ struct _LIBCPP_TEMPLATE_VIS plus
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
-template <class _Pred>
-struct __desugars_to<plus<_Pred>, plus<_Pred>> : true_type {};
-
-#if _LIBCPP_STD_VER >= 14
-template <>
-struct __desugars_to<plus<>, plus<>> : true_type {};
-#endif
+template <class _Tp>
+struct __desugars_to<plus<_Tp>, plus<void>> : true_type {};
 
 #if _LIBCPP_STD_VER >= 14
 template <>
@@ -352,12 +347,7 @@ struct _LIBCPP_TEMPLATE_VIS equal_to<void>
 #endif
 
 template <class _Tp>
-struct __desugars_to<equal_to<_Tp>, std::equal_to<_Tp>> : true_type {};
-
-#if _LIBCPP_STD_VER >= 14
-template <>
-struct __desugars_to<equal_to<>, std::equal_to<>> : true_type {};
-#endif
+struct __desugars_to<equal_to<_Tp>, equal_to<void>> : true_type {};
 
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp = void>

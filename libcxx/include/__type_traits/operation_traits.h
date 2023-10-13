@@ -18,8 +18,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Pred, class _Reference>
+template <class _Operation, class _Canonical>
 struct __desugars_to : false_type {};
+
+template <class _Operation>
+struct __desugars_to<_Operation, _Operation> : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
