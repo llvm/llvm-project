@@ -6066,6 +6066,47 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
   return CmpInst::isEquality(Pred) && Y.isValid();
 }
 
+bool CombinerHelper::matchDoubleICmpZeroAndOr(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  const unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_OR || Opcode == TargetOpcode::G_AND);
+
+  const Register Dst = MI.getOperand(0).getReg();
+  CmpInst::Predicate LHSPred, RHSPred;
+  int64_t LHSImm, RHSImm;
+  Register LHSCmpSrc, RHSCmpSrc;
+  if (!mi_match(
+          Dst, MRI,
+          m_BinOp(Opcode,
+                  m_GICmp(m_Pred(LHSPred), m_Reg(LHSCmpSrc), m_ICst(LHSImm)),
+                  m_GICmp(m_Pred(RHSPred), m_Reg(RHSCmpSrc), m_ICst(RHSImm)))))
+    return false;
+
+  // G_OR and G_AND cannot handle pointers
+  const auto LHSSrcTy = MRI.getType(LHSCmpSrc);
+  if (LHSSrcTy != MRI.getType(RHSCmpSrc) || LHSSrcTy.isPointer())
+    return false;
+
+  const bool IsAnd = Opcode == TargetOpcode::G_AND;
+  if ((IsAnd && LHSPred != CmpInst::ICMP_EQ) ||
+      (!IsAnd && LHSPred != CmpInst::ICMP_NE) || LHSPred != RHSPred)
+    return false;
+
+  if (LHSImm != 0 || RHSImm != 0)
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    const Register OrDst = MRI.createGenericVirtualRegister(LHSSrcTy);
+    auto Zero = B.buildConstant(LHSSrcTy, 0);
+    B.buildOr(OrDst, LHSCmpSrc, RHSCmpSrc);
+    B.buildICmp(IsAnd ? CmpInst::Predicate::ICMP_EQ
+                      : CmpInst::Predicate::ICMP_NE,
+                Dst, OrDst, Zero);
+  };
+
+  return true;
+}
+
 bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) {
   Register ShiftReg = MI.getOperand(2).getReg();
   LLT ResTy = MRI.getType(MI.getOperand(0).getReg());

@@ -805,6 +805,10 @@ public:
   ///   (X ^ Y) != X -> Y != 0
   bool matchRedundantBinOpInEquality(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Transform: (X == 0 & Y == 0) -> (X | Y) == 0
+  ///            (X != 0 | Y != 0) -> (X | Y) != 0
+  bool matchDoubleICmpZeroAndOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Match shifts greater or equal to the bitwidth of the operation.
   bool matchShiftsTooBig(MachineInstr &MI);
 
