@@ -3101,14 +3101,12 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (isa<ConstantPointerNull>(C))
     return DIB.createConstantValueExpression(0);
 
-  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(&C)) {
-    if (CE->getNumOperands() == 1) {
+  if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(&C))
+    if (CE->getOpcode() == Instruction::IntToPtr) {
       const Value *V = CE->getOperand(0);
-      if (auto CI = dyn_cast_or_null<ConstantInt>(V)) {
+      if (auto CI = dyn_cast_or_null<ConstantInt>(V))
         return createIntegerExpression(*CI);
-      }
     }
-  }
   return nullptr;
 }
 

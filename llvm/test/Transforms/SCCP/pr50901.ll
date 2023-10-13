@@ -50,9 +50,6 @@
 ; CHECK: ![[G7:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG7:[0-9]+]], expr: !DIExpression(DW_OP_constu, 70, DW_OP_stack_value))
 ; CHECK-DAG: ![[DBG7]] = distinct !DIGlobalVariable(name: "g_77", {{.*}}
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
-
 @g_1 = dso_local global i32 -4, align 4, !dbg !0
 @g_2 = dso_local global float 0x4011C28F60000000, align 4, !dbg !8
 @g_3 = dso_local global i8 97, align 1, !dbg !10
@@ -70,23 +67,23 @@ target triple = "x86_64-pc-linux-gnu"
 
 define dso_local void @_Z3barv() !dbg !46 {
 entry:
-  %0 = load i32, ptr @_ZL4g_11, align 4, !dbg !49, !tbaa !50
-  store i32 %0, ptr @g_1, align 4, !dbg !54, !tbaa !50
-  %1 = load float, ptr @_ZL4g_22, align 4, !dbg !55, !tbaa !56
-  store float %1, ptr @g_2, align 4, !dbg !58, !tbaa !56
-  %2 = load i8, ptr @_ZL4g_33, align 1, !dbg !59, !tbaa !60
-  store i8 %2, ptr @g_3, align 1, !dbg !61, !tbaa !60
-  %3 = load i32, ptr @_ZL4g_44, align 4, !dbg !62, !tbaa !50
-  store i32 %3, ptr @g_4, align 4, !dbg !63, !tbaa !50
-  %4 = load i8, ptr @_ZL4g_55, align 1, !dbg !64, !tbaa !65, !range !67, !noundef !68
-  %tobool = trunc i8 %4 to i1, !dbg !64
-  %frombool = zext i1 %tobool to i8, !dbg !69
-  store i8 %frombool, ptr @g_5, align 1, !dbg !69, !tbaa !65
-  %5 = load ptr, ptr @_ZL4g_66, align 8, !dbg !70, !tbaa !71
-  store ptr %5, ptr @g_6, align 8, !dbg !73, !tbaa !71
-  %6 = load ptr, ptr @_ZL4g_77, align 8, !dbg !74, !tbaa !71
-  store ptr %6, ptr @g_7, align 8, !dbg !75, !tbaa !71
-  ret void, !dbg !76
+  %0 = load i32, ptr @_ZL4g_11, align 4, !dbg !59
+  store i32 %0, ptr @g_1, align 4, !dbg !59
+  %1 = load float, ptr @_ZL4g_22, align 4, !dbg !59
+  store float %1, ptr @g_2, align 4, !dbg !59
+  %2 = load i8, ptr @_ZL4g_33, align 1, !dbg !59
+  store i8 %2, ptr @g_3, align 1, !dbg !59
+  %3 = load i32, ptr @_ZL4g_44, align 4, !dbg !59
+  store i32 %3, ptr @g_4, align 4, !dbg !59
+  %4 = load i8, ptr @_ZL4g_55, align 1, !dbg !59
+  %tobool = trunc i8 %4 to i1, !dbg !59
+  %frombool = zext i1 %tobool to i8, !dbg !59
+  store i8 %frombool, ptr @g_5, align 1, !dbg !59
+  %5 = load ptr, ptr @_ZL4g_66, align 8, !dbg !59
+  store ptr %5, ptr @g_6, align 8, !dbg !59
+  %6 = load ptr, ptr @_ZL4g_77, align 8, !dbg !59
+  store ptr %6, ptr @g_7, align 8, !dbg !59
+  ret void, !dbg !59
 }
 
 define dso_local noundef i32 @main() !dbg !77 {
@@ -148,34 +145,7 @@ entry:
 !46 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !3, file: !3, line: 17, type: !47, scopeLine: 17, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
 !47 = !DISubroutineType(types: !48)
 !48 = !{null}
-!49 = !DILocation(line: 18, column: 9, scope: !46)
-!50 = !{!51, !51, i64 0}
-!51 = !{!"int", !52, i64 0}
-!52 = !{!"omnipotent char", !53, i64 0}
-!53 = !{!"Simple C++ TBAA"}
-!54 = !DILocation(line: 18, column: 7, scope: !46)
-!55 = !DILocation(line: 19, column: 9, scope: !46)
-!56 = !{!57, !57, i64 0}
-!57 = !{!"float", !52, i64 0}
-!58 = !DILocation(line: 19, column: 7, scope: !46)
 !59 = !DILocation(line: 20, column: 9, scope: !46)
-!60 = !{!52, !52, i64 0}
-!61 = !DILocation(line: 20, column: 7, scope: !46)
-!62 = !DILocation(line: 21, column: 9, scope: !46)
-!63 = !DILocation(line: 21, column: 7, scope: !46)
-!64 = !DILocation(line: 22, column: 9, scope: !46)
-!65 = !{!66, !66, i64 0}
-!66 = !{!"bool", !52, i64 0}
-!67 = !{i8 0, i8 2}
-!68 = !{}
-!69 = !DILocation(line: 22, column: 7, scope: !46)
-!70 = !DILocation(line: 23, column: 9, scope: !46)
-!71 = !{!72, !72, i64 0}
-!72 = !{!"any pointer", !52, i64 0}
-!73 = !DILocation(line: 23, column: 7, scope: !46)
-!74 = !DILocation(line: 24, column: 9, scope: !46)
-!75 = !DILocation(line: 24, column: 7, scope: !46)
-!76 = !DILocation(line: 25, column: 1, scope: !46)
 !77 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 27, type: !78, scopeLine: 27, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
 !78 = !DISubroutineType(types: !79)
 !79 = !{!22}
