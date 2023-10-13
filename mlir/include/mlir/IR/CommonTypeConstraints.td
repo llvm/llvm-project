@@ -34,8 +34,9 @@ def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                                   !::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType.
-def IsScalableVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
-                                   ::llvm::cast<VectorType>($_self).isScalable()}]>;
+def IsVectorTypeWithAnyDimScalablePred 
+        : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
+                  ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType, with a single trailing scalable dimension.
 // Examples:
@@ -51,7 +52,7 @@ def IsVectorTypeWithOnlyTrailingDimScalablePred : And<[
 ]>;
 
 // Whether a type is a VectorType and all dimensions are scalable.
-def allDimsScalableVectorTypePred : And<[
+def IsVectorTypeWithAllDimsScalablePred : And<[
   IsVectorTypePred,
   CPred<[{::llvm::cast<::mlir::VectorType>($_self).allDimsScalable()}]>
 ]>;
@@ -414,7 +415,7 @@ class FixedVectorOf<list<Type> allowedTypes> :
           "fixed-length vector", "::mlir::VectorType">;
 
 class ScalableVectorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsScalableVectorTypePred,
+  ShapedContainerType<allowedTypes, IsVectorTypeWithAnyDimScalablePred,
           "scalable vector", "::mlir::VectorType">;
 
 // Any vector with a single trailing scalable dimension, with an element type in
@@ -447,7 +448,7 @@ class IsFixedVectorOfRankPred<list<int> allowedRanks> :
 // Whether the number of elements of a scalable vector is from the given
 // `allowedRanks` list
 class IsScalableVectorOfRankPred<list<int> allowedRanks> :
-  And<[IsScalableVectorTypePred,
+  And<[IsVectorTypeWithAnyDimScalablePred,
        Or<!foreach(allowedlength, allowedRanks,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getRank()
                            == }]
@@ -497,7 +498,7 @@ class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
 // Whether the number of elements of a scalable vector is from the given
 // `allowedLengths` list
 class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
-  And<[IsScalableVectorTypePred,
+  And<[IsVectorTypeWithAnyDimScalablePred,
        Or<!foreach(allowedlength, allowedLengths,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
                            == }]
