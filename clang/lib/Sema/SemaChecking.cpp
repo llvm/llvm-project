@@ -6359,7 +6359,7 @@ bool Sema::CheckX86BuiltinTileDuplicate(CallExpr *TheCall,
     if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
       return true;
     int ArgExtValue = Result.getExtValue();
-    assert((ArgExtValue >= TileRegLow || ArgExtValue <= TileRegHigh) &&
+    assert((ArgExtValue >= TileRegLow && ArgExtValue <= TileRegHigh) &&
            "Incorrect tile register num.");
     if (ArgValues.test(ArgExtValue))
       return Diag(TheCall->getBeginLoc(),
