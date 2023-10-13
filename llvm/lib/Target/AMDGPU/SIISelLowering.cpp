@@ -5709,6 +5709,9 @@ bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
 }
 
 bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
+  if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS())
+    return false;
+
   // FIXME: Either avoid relying on address space here or change the default
   // address space for functions to avoid the explicit check.
   return (GV->getValueType()->isFunctionTy() ||
@@ -6726,9 +6729,22 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
     return DAG.getNode(AMDGPUISD::LDS, DL, MVT::i32, GA);
   }
 
+  if (Subtarget->isAmdPalOS() || Subtarget->isMesa3DOS()) {
+    SDValue AddrLo = DAG.getTargetGlobalAddress(
+        GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_LO);
+    AddrLo = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrLo), 0};
+
+    SDValue AddrHi = DAG.getTargetGlobalAddress(
+        GV, DL, MVT::i32, GSD->getOffset(), SIInstrInfo::MO_ABS32_HI);
+    AddrHi = {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, AddrHi), 0};
+
+    return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, AddrLo, AddrHi);
+  }
+
   if (shouldEmitFixup(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT);
-  else if (shouldEmitPCReloc(GV))
+
+  if (shouldEmitPCReloc(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT,
                                    SIInstrInfo::MO_REL32);
 

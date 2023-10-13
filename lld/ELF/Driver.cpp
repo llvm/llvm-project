@@ -3029,8 +3029,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   copySectionsIntoPartitions();
 
-  if (config->emachine == EM_AARCH64 &&
-      config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+  if (canHaveMemtagGlobals()) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx.objectFiles);
   }

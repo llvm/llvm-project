@@ -129,6 +129,11 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* The ``i128`` type now matches GCC and clang's ``__int128`` type. This mainly
+  benefits external projects such as Rust which aim to be binary compatible
+  with C, but also fixes code generation where LLVM already assumed that the
+  type matched and called into libgcc helper functions.
+
 Changes to the OCaml bindings
 -----------------------------
 
