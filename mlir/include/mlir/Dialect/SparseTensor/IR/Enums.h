@@ -146,11 +146,8 @@ enum class Action : uint32_t {
   kEmptyForward = 1,
   kFromCOO = 2,
   kSparseToSparse = 3,
-  kFuture = 4, // not used
   kToCOO = 5,
-  kToIterator = 6,
   kPack = 7,
-  // Sort an unordered COO in place.
   kSortCOOInPlace = 8,
 };
 
