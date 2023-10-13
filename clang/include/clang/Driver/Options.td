@@ -2597,6 +2597,12 @@ defm modules : BoolFOption<"modules",
   LangOpts<"Modules">, Default<fcxx_modules.KeyPath>,
   PosFlag<SetTrue, [CC1Option], "Enable the 'modules' language feature">,
   NegFlag<SetFalse>, BothFlags<[NoXarchOption, CoreOption]>>;
+def fbuiltin_headers_in_system_modules : Flag <["-"], "fbuiltin-headers-in-system-modules">,
+  Group<f_Group>,
+  Flags<[NoXarchOption,CC1Option]>,
+  ShouldParseIf<fmodules.KeyPath>,
+  HelpText<"builtin headers belong to system modules, and _Builtin_ modules are ignored for cstdlib headers">,
+  MarshallingInfoFlag<LangOpts<"BuiltinHeadersInSystemModules">>;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Flags<[CoreOption]>, Alias<fimplicit_module_maps>;
 def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
   Flags<[NoXarchOption,CC1Option,CoreOption]>, MetaVarName<"<name>">,
