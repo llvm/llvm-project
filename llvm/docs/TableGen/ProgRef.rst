@@ -1281,6 +1281,19 @@ with ``F0``, ``F1``, ``F2``, and ``F3``.
 A ``dump`` statement prints the input string to standard error
 output. It is intended for debugging purpose.
 
+* At top level, the message is printed immediately.
+
+* In a record definition, the message is saved and all messages are
+  printed after the record is completely built.
+
+* In a class definition, the messages are saved and inherited by all
+  the subclasses and records that inherit from the class. The messages
+  are then printed when the records are completely built.
+
+* In a multiclass definition, the messages are saved with the other
+  components of the multiclass and then printed each time the
+  multiclass is instantiated with ``defm``.
+
 .. productionlist::
    Dump: "dump"  `string` ";"
 
@@ -1292,6 +1305,7 @@ the values passed to a multiclass:
   multiclass MC<dag s> {
     dump "s = " # !repr(s);
   }
+
 
 ``if`` --- select statements based on a test
 --------------------------------------------
