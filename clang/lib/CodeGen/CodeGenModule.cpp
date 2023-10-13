@@ -978,11 +978,14 @@ void CodeGenModule::Release() {
 
   if (getTriple().isOSzOS()) {
     int32_t ProductVersion, ProductRelease, ProductPatch;
-    ProductVersion = LLVM_VERSION_MAJOR,
-    ProductRelease = LLVM_VERSION_MINOR, ProductPatch = LLVM_VERSION_PATCH;
-    getModule().addModuleFlag(llvm::Module::Warning, "Product Major Version", ProductVersion);
-    getModule().addModuleFlag(llvm::Module::Warning, "Product Minor Version", ProductRelease);
-    getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel", ProductPatch);
+    ProductVersion = LLVM_VERSION_MAJOR, ProductRelease = LLVM_VERSION_MINOR,
+    ProductPatch = LLVM_VERSION_PATCH;
+    getModule().addModuleFlag(llvm::Module::Warning, "Product Major Version",
+                              ProductVersion);
+    getModule().addModuleFlag(llvm::Module::Warning, "Product Minor Version",
+                              ProductRelease);
+    getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel",
+                              ProductPatch);
 
     // Record the language because we need it for the PPA2.
     const char *lang_str = languageToString(

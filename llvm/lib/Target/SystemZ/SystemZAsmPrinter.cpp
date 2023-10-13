@@ -28,7 +28,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatProviders.h"
@@ -1092,8 +1091,8 @@ void SystemZAsmPrinter::emitIDRLSection(Module &M) {
 
   ConverterEBCDIC::convertToEBCDIC(TempStr, Data);
 
-  OutStreamer->emitInt8(0);   // Reserved.
-  OutStreamer->emitInt8(3);   // Format.
+  OutStreamer->emitInt8(0);               // Reserved.
+  OutStreamer->emitInt8(3);               // Format.
   OutStreamer->emitInt16(IDRLDataLength); // Length.
   OutStreamer->emitBytes(Data.str());
   OutStreamer->popSection();
@@ -1402,8 +1401,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
 
   SmallString<7> Version; // 6 + null
   raw_svector_ostream ostr(Version);
-  ostr << formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion,
-                  ProductRelease, ProductPatch);
+  ostr << formatv("{0,0-2:d}{1,0-2:d}{2,0-2:d}", ProductVersion, ProductRelease,
+                  ProductPatch);
 
   // Drop 0 during conversion.
   SmallString<sizeof(CompilationTime) - 1> CompilationTimeStr;
