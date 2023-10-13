@@ -2151,6 +2151,37 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsControlStatements) {
+  auto Tokens = annotate("while (true) {}");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[5], tok::r_brace, TT_ControlStatementRBrace);
+
+  Tokens = annotate("for (;;) {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_ControlStatementRBrace);
+
+  Tokens = annotate("do {} while (true);");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[2], tok::r_brace, TT_ControlStatementRBrace);
+
+  Tokens = annotate("if (true) {} else if (false) {} else {}");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[5], tok::r_brace, TT_ControlStatementRBrace);
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[12], tok::r_brace, TT_ControlStatementRBrace);
+  EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_ElseLBrace);
+  EXPECT_TOKEN(Tokens[15], tok::r_brace, TT_ElseRBrace);
+
+  Tokens = annotate("switch (foo) {}");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[5], tok::r_brace, TT_ControlStatementRBrace);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
