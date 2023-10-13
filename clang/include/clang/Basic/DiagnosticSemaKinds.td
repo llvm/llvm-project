@@ -10136,6 +10136,9 @@ def err_vec_builtin_incompatible_vector : Error<
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
+def err_vectorelements_non_vector : Error<
+ "'__builtin_vectorelements' argument must be a vector">;
+
 def err_shufflevector_nonconstant_argument : Error<
   "index for __builtin_shufflevector must be a constant integer">;
 def err_shufflevector_argument_too_large : Error<

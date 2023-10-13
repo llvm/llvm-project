@@ -11,7 +11,7 @@ typedef int int4 __attribute__((vector_size(16)));
 typedef int int8 __attribute__((vector_size(32)));
 typedef int int16 __attribute__((vector_size(64)));
 typedef float float2 __attribute__((vector_size(8)));
-typedef long extLong4 __attribute__((ext_vector_type(4)));;
+typedef long extLong4 __attribute__((ext_vector_type(4)));
 
 
 int test_builtin_vectorelements_int1() {
@@ -48,6 +48,12 @@ int test_builtin_vectorelements_extLong4() {
   // CHECK-LABEL: i32 @test_builtin_vectorelements_extLong4(
   // CHECK: ret i32 4
   return __builtin_vectorelements(extLong4);
+}
+
+int test_builtin_vectorelements_multiply_constant() {
+  // CHECK-LABEL: i32 @test_builtin_vectorelements_multiply_constant(
+  // CHECK: ret i32 32
+  return __builtin_vectorelements(int16) * 2;
 }
 
 
