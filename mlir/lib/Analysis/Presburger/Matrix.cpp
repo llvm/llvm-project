@@ -499,12 +499,11 @@ std::optional<FracMatrix> FracMatrix::inverse() {
   // Construct the augmented matrix [M | I]
   FracMatrix augmented(dim, dim + dim);
   for (unsigned i = 0; i < dim; i++) {
-    augmented.fillRow(i, 0);
     for (unsigned j = 0; j < dim; j++)
       augmented(i, j) = at(i, j);
-    augmented(i, dim + i).num = 1;
-    augmented(i, dim + i).den = 1;
+    augmented(i, dim + i) = 1;
   }
+
   Fraction a, b;
   for (unsigned i = 0; i < dim; i++) {
     if (augmented(i, i) == 0)
