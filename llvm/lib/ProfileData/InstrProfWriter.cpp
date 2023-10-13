@@ -49,9 +49,9 @@ namespace llvm {
 class ProfOStream {
 public:
   ProfOStream(raw_fd_ostream &FD)
-      : IsFDOStream(true), OS(FD), LE(FD, support::little) {}
+      : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
   ProfOStream(raw_string_ostream &STR)
-      : IsFDOStream(false), OS(STR), LE(STR, support::little) {}
+      : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
 
   uint64_t tell() { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
@@ -106,7 +106,7 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  llvm::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
   InstrProfSummaryBuilder *SummaryBuilder;
   InstrProfSummaryBuilder *CSSummaryBuilder;
 

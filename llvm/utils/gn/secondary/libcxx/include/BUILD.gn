@@ -1046,7 +1046,6 @@ if (current_toolchain == default_toolchain) {
       "scoped_allocator",
       "semaphore",
       "set",
-      "setjmp.h",
       "shared_mutex",
       "span",
       "sstream",

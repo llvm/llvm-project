@@ -411,6 +411,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
+    if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
+      Imm = Hi_32(Imm);
+
     support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
 
     // Only one literal value allowed
