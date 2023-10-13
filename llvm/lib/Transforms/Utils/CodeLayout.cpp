@@ -1139,13 +1139,6 @@ private:
       // Extract the best (top) edge for merging.
       ChainEdge *BestEdge = *Queue.begin();
       Queue.erase(Queue.begin());
-      // Ignore self-edges.
-      if (BestEdge->isSelfEdge())
-        continue;
-      // Ignore edges with non-positive gains.
-      if (BestEdge->gain() <= EPS)
-        continue;
-
       ChainT *BestSrcChain = BestEdge->srcChain();
       ChainT *BestDstChain = BestEdge->dstChain();
 
