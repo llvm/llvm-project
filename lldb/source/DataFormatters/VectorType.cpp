@@ -169,8 +169,8 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
   }
 }
 
-/// The number of elements stored in a container (with element
-/// type 'container_elem_type') as if it had elements of type
+/// Calculates the number of elements stored in a container (with
+/// element type 'container_elem_type') as if it had elements of type
 /// 'element_type'.
 ///
 /// For example, a container of type
@@ -193,10 +193,9 @@ static lldb::Format GetItemFormatForFormat(lldb::Format format,
 /// type 'element_type'. Returns a std::nullopt if the
 /// size of the container is not a multiple of 'element_type'
 /// or if an error occurs.
-static std::optional<size_t> CalculateNumChildren(
-        CompilerType container_elem_type,
-        uint64_t num_elements,
-        CompilerType element_type) {
+static std::optional<size_t>
+CalculateNumChildren(CompilerType container_elem_type, uint64_t num_elements,
+                     CompilerType element_type) {
   std::optional<uint64_t> container_elem_size =
       container_elem_type.GetByteSize(/* exe_scope */ nullptr);
   if (!container_elem_size)
@@ -256,7 +255,8 @@ public:
         m_parent_format, element_type,
         parent_type.GetTypeSystem().GetSharedPointer());
     m_num_children =
-        ::CalculateNumChildren(element_type, num_elements, m_child_type).value_or(0);
+        ::CalculateNumChildren(element_type, num_elements, m_child_type)
+            .value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return false;
   }
