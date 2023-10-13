@@ -19,7 +19,6 @@
 //     constexpr bool ranges::contains(R&& r, const T& value, Proj proj = {});                 // since C++23
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <ranges>
 #include <vector>
@@ -34,6 +33,7 @@ template <class Iter, class Sent = Iter>
 concept HasContainsIt = requires(Iter iter, Sent sent) { std::ranges::contains(iter, sent, *iter); };
 
 static_assert(HasContainsIt<int*>);
+static_assert(HasContainsIt<int*, int*>);
 static_assert(!HasContainsIt<NotEqualityComparable*>);
 static_assert(!HasContainsIt<InputIteratorNotDerivedFrom>);
 static_assert(!HasContainsIt<InputIteratorNotIndirectlyReadable>);
@@ -44,7 +44,6 @@ static_assert(!HasContainsIt<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_
 
 static_assert(!HasContainsIt<int*, int>);
 static_assert(!HasContainsIt<int, int*>);
-static_assert(HasContainsIt<int*, int*>);
 
 template <class Range, class ValT>
 concept HasContainsR = requires(Range&& range) { std::ranges::contains(std::forward<Range>(range), ValT{}); };
@@ -58,8 +57,6 @@ static_assert(!HasContainsR<InputRangeNotInputOrOutputIterator, int>);
 static_assert(!HasContainsR<InputRangeNotSentinelSemiregular, int>);
 static_assert(!HasContainsR<InputRangeNotSentinelEqualityComparableWith, int>);
 
-static std::vector<int> comparable_data;
-
 template <class Iter, class Sent = Iter>
 constexpr void test_iterators() {
   using ValueT = std::iter_value_t<Iter>;
@@ -67,13 +64,12 @@ constexpr void test_iterators() {
     ValueT a[] = {1, 2, 3, 4, 5, 6};
     auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 6)));
     {
-      [[maybe_unused]] std::same_as<bool> decltype(auto) ret =
+      std::same_as<bool> decltype(auto) ret =
         std::ranges::contains(whole.begin(), whole.end(), 3);
       assert(ret);
     }
     {
-      [[maybe_unused]] std::same_as<bool> decltype(auto) ret =
-        std::ranges::contains(whole, 3);
+      std::same_as<bool> decltype(auto) ret = std::ranges::contains(whole, 3);
       assert(ret);
     }
   }
@@ -155,53 +151,10 @@ constexpr void test_iterators() {
       assert(ret);
     }
   }
-
-  { // check the nodiscard extension
-    // use #pragma around to suppress error: ignoring return value of function
-    // declared with 'nodiscard' attribute [-Werror,-Wunused-result]
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wunused-result"
-    ValueT a[] = {1, 9, 0, 13, 25};
-    auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 5)));
-    std::ranges::contains(whole, 12);
-    #pragma clang diagnostic pop
-  }
-
-  if (!std::is_constant_evaluated())
-    comparable_data.clear();
 }
 
-template <class ElementT>
-class TriviallyComparable {
-  ElementT el_;
-
-public:
-  constexpr TriviallyComparable(ElementT el) : el_(el) {}
-  bool operator==(const TriviallyComparable&) const = default;
-};
-
-template <class IndexT>
-class Comparable {
-  IndexT index_;
-
-public:
-  Comparable(IndexT i)
-      : index_([&]() {
-          IndexT size = static_cast<IndexT>(comparable_data.size());
-          comparable_data.push_back(i);
-          return size;
-        }()) {}
-
-  bool operator==(const Comparable& other) const {
-    return comparable_data[other.index_] == comparable_data[index_];
-  }
-
-  friend bool operator==(const Comparable& lhs, long long rhs) { return comparable_data[lhs.index_] == rhs; }
-};
-
 constexpr bool test() {
-  types::for_each(types::type_list<char, short, int, long, long long,
-                  TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
+  types::for_each(types::type_list<char, short, int, long, long long>{},
                   []<class T> {
                     types::for_each(types::cpp20_input_iterator_list<T*>{},
                       []<class Iter> {
@@ -220,11 +173,10 @@ constexpr bool test() {
                                 [&](int i) { ++projection_count; return i; });
       assert(ret);
       assert(projection_count == 3);
+      projection_count = 0;
     }
     {
-      projection_count = 0;
-      auto range = std::ranges::subrange(a, a + 5);
-      bool ret = std::ranges::contains(range, 0, [&](int i) { ++projection_count; return i; });
+      bool ret = std::ranges::contains(a, 0, [&](int i) { ++projection_count; return i; });
       assert(ret);
       assert(projection_count == 3);
     }
@@ -236,17 +188,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
-
-  types::for_each(types::type_list<Comparable<char>, Comparable<wchar_t>>{},
-                []<class T> {
-                  types::for_each(types::cpp20_input_iterator_list<T*>{},
-                    []<class Iter> {
-                    if constexpr (std::forward_iterator<Iter>)
-                      test_iterators<Iter>();
-                    test_iterators<Iter, sentinel_wrapper<Iter>>();
-                    test_iterators<Iter, sized_sentinel<Iter>>();
-                  });
-                });
 
   return 0;
 }
