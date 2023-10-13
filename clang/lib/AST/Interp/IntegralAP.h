@@ -59,6 +59,9 @@ public:
   IntegralAP() : V(APSInt::getMaxValue(1024, Signed)) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
+  IntegralAP operator-(const IntegralAP &Other) const {
+    return IntegralAP(V - Other.V);
+  }
   bool operator>(IntegralAP RHS) const { return V > RHS.V; }
   bool operator>=(IntegralAP RHS) const { return V >= RHS.V; }
   bool operator<(IntegralAP RHS) const { return V < RHS.V; }

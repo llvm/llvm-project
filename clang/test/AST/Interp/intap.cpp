@@ -90,4 +90,14 @@ namespace i128 {
                                            // expected-error {{must be initialized by a constant expression}} \
                                            // expected-note {{is outside the range of representable values of type}}
 }
+
+namespace AddSubOffset {
+  constexpr __int128 A = 1;
+  constexpr int arr[] = {1,2,3};
+  constexpr const int *P = arr + A;
+  static_assert(*P == 2, "");
+  constexpr const int *P2 = P - A;
+  static_assert(*P2 == 1,"");
+}
+
 #endif
