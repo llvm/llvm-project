@@ -2667,6 +2667,8 @@ static bool
 HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
   if (Decl->isUnion())
     return false;
+  if (Decl->isLambda())
+    return Decl->isCapturelessLambda();
 
   auto IsDefaultedOperatorEqualEqual = [&](const FunctionDecl *Function) {
     return Function->getOverloadedOperator() ==

@@ -685,8 +685,9 @@ public:
       // using the .long directive, or .byte directive if fewer than 4 bytes
       // remaining
       if (Bytes.size() >= 4) {
-        OS << format("\t.long 0x%08" PRIx32 " ",
-                     support::endian::read32<support::little>(Bytes.data()));
+        OS << format(
+            "\t.long 0x%08" PRIx32 " ",
+            support::endian::read32<llvm::endianness::little>(Bytes.data()));
         OS.indent(42);
       } else {
           OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
@@ -788,7 +789,7 @@ public:
   }
 
 private:
-  llvm::endianness InstructionEndianness = llvm::support::little;
+  llvm::endianness InstructionEndianness = llvm::endianness::little;
 };
 ARMPrettyPrinter ARMPrettyPrinterInst;
 
@@ -811,8 +812,8 @@ public:
       for (; Pos + 4 <= End; Pos += 4)
         OS << ' '
            << format_hex_no_prefix(
-                  llvm::support::endian::read<uint32_t>(Bytes.data() + Pos,
-                                                        llvm::support::little),
+                  llvm::support::endian::read<uint32_t>(
+                      Bytes.data() + Pos, llvm::endianness::little),
                   8);
       if (Pos < End) {
         OS << ' ';
@@ -1167,8 +1168,8 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
                                const MCSubtargetInfo &STI, raw_ostream &OS) {
-  support::endianness Endian =
-      Obj.isLittleEndian() ? support::little : support::big;
+  llvm::endianness Endian =
+      Obj.isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
   size_t Start = OS.tell();
   OS << format("%8" PRIx64 ": ", SectionAddr + Index);
   if (Index + 4 <= End) {
@@ -2289,9 +2290,9 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
     if (Elf32BE && (Elf32BE->isRelocatableObject() ||
                     !(Elf32BE->getPlatformFlags() & ELF::EF_ARM_BE8))) {
       Features.AddFeature("+big-endian-instructions");
-      ARMPrettyPrinterInst.setInstructionEndianness(llvm::support::big);
+      ARMPrettyPrinterInst.setInstructionEndianness(llvm::endianness::big);
     } else {
-      ARMPrettyPrinterInst.setInstructionEndianness(llvm::support::little);
+      ARMPrettyPrinterInst.setInstructionEndianness(llvm::endianness::little);
     }
   }
 

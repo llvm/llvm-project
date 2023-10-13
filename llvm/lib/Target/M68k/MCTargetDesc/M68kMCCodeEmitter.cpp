@@ -218,7 +218,7 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
   for (uint64_t Word : Data) {
     for (int i = 0; i < 4 && InstSize > 0; ++i, InstSize -= 16) {
       support::endian::write<uint16_t>(CB, static_cast<uint16_t>(Word),
-                                       support::big);
+                                       llvm::endianness::big);
       Word >>= 16;
     }
   }

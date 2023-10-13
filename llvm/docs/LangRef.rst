@@ -18357,8 +18357,8 @@ For example:
 
 .. code-block:: text
 
- llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, 1)  ==> <B, C, D, E> ; index
- llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, -3) ==> <B, C, D, E> ; trailing elements
+ llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
+ llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
 
 
 Arguments:
@@ -21517,8 +21517,8 @@ Examples:
 
 .. code-block:: text
 
- llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3)  ==> <B, E, F, poison> ; index
- llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2) ==> <B, C, poison, poison> ; trailing elements
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
 
 
 .. _int_vp_load:

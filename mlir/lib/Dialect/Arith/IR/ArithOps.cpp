@@ -39,26 +39,26 @@ using namespace mlir::arith;
 static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
-                    function_ref<int64_t(int64_t, int64_t)> binFn) {
-  return builder.getIntegerAttr(res.getType(),
-                                binFn(llvm::cast<IntegerAttr>(lhs).getInt(),
-                                      llvm::cast<IntegerAttr>(rhs).getInt()));
+                    function_ref<APInt(const APInt &, const APInt &)> binFn) {
+  APInt lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
+  APInt rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
+  APInt value = binFn(lhsVal, rhsVal);
+  return IntegerAttr::get(res.getType(), value);
 }
 
 static IntegerAttr addIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  return applyToIntegerAttrs(builder, res, lhs, rhs, std::plus<int64_t>());
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::plus<APInt>());
 }
 
 static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  return applyToIntegerAttrs(builder, res, lhs, rhs, std::minus<int64_t>());
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::minus<APInt>());
 }
 
 static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  return applyToIntegerAttrs(builder, res, lhs, rhs,
-                             std::multiplies<int64_t>());
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
 }
 
 /// Invert an integer comparison predicate.
@@ -2212,9 +2212,7 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
 
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<RedundantSelectFalse, RedundantSelectTrue, SelectI1Simplify,
-              SelectAndCond, SelectAndNotCond, SelectOrCond, SelectOrNotCond,
-              SelectNotCond, SelectToExtUI>(context);
+  results.add<SelectI1Simplify, SelectToExtUI>(context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {

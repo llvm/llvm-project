@@ -132,9 +132,6 @@ struct SparseTensorConversionPass
 
   SparseTensorConversionPass() = default;
   SparseTensorConversionPass(const SparseTensorConversionPass &pass) = default;
-  SparseTensorConversionPass(const SparseTensorConversionOptions &options) {
-    sparseToSparse = static_cast<int32_t>(options.sparseToSparseStrategy);
-  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
@@ -187,16 +184,14 @@ struct SparseTensorConversionPass
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
-    // Translate strategy flags to strategy options.
-    SparseTensorConversionOptions options(
-        sparseToSparseConversionStrategy(sparseToSparse));
+
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     populateCallOpTypeConversionPattern(patterns, converter);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    populateSparseTensorConversionPatterns(converter, patterns, options);
+    populateSparseTensorConversionPatterns(converter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -365,22 +360,6 @@ struct StorageSpecifierToLLVMPass
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Strategy flag methods.
-//===----------------------------------------------------------------------===//
-
-SparseToSparseConversionStrategy
-mlir::sparseToSparseConversionStrategy(int32_t flag) {
-  switch (flag) {
-  default:
-    return SparseToSparseConversionStrategy::kAuto;
-  case 1:
-    return SparseToSparseConversionStrategy::kViaCOO;
-  case 2:
-    return SparseToSparseConversionStrategy::kDirect;
-  }
-}
-
-//===----------------------------------------------------------------------===//
 // Pass creation methods.
 //===----------------------------------------------------------------------===//
 
@@ -414,11 +393,6 @@ mlir::createPostSparsificationRewritePass(bool enableRT, bool enableForeach,
 
 std::unique_ptr<Pass> mlir::createSparseTensorConversionPass() {
   return std::make_unique<SparseTensorConversionPass>();
-}
-
-std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
-    const SparseTensorConversionOptions &options) {
-  return std::make_unique<SparseTensorConversionPass>(options);
 }
 
 std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {

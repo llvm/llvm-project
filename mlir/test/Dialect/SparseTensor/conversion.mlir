@@ -296,7 +296,7 @@ func.func @sparse_reconstruct(%arg0: tensor<128xf32, #SparseVector>) -> tensor<1
 
 // CHECK-LABEL: func @sparse_reconstruct_ins(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>
-//       CHECK: call @endInsert(%[[A]]) : (!llvm.ptr<i8>) -> ()
+//       CHECK: call @endLexInsert(%[[A]]) : (!llvm.ptr<i8>) -> ()
 //       CHECK: return %[[A]] : !llvm.ptr<i8>
 func.func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tensor<128xf32, #SparseVector> {
   %0 = sparse_tensor.load %arg0 hasInserts : tensor<128xf32, #SparseVector>

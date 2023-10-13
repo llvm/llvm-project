@@ -8887,17 +8887,6 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       return DAG.getBitcast(Op.getValueType(), SubVec);
     }
 
-    // Shrink down Vec so we're performing the slideup on a smaller LMUL.
-    unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
-    MVT OrigContainerVT = ContainerVT;
-    SDValue OrigVec = Vec;
-    if (auto ShrunkVT =
-            getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
-      ContainerVT = *ShrunkVT;
-      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
-                        DAG.getVectorIdxConstant(0, DL));
-    }
-
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
                          DAG.getUNDEF(ContainerVT), SubVec,
                          DAG.getConstant(0, DL, XLenVT));
@@ -8923,12 +8912,6 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
       SubVec = getVSlideup(DAG, Subtarget, DL, ContainerVT, Vec, SubVec,
                            SlideupAmt, Mask, VL, Policy);
     }
-
-    // If we performed the slideup on a smaller LMUL, insert the result back
-    // into the rest of the vector.
-    if (ContainerVT != OrigContainerVT)
-      SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigContainerVT, OrigVec,
-                           SubVec, DAG.getVectorIdxConstant(0, DL));
 
     if (VecVT.isFixedLengthVector())
       SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
@@ -16228,6 +16211,13 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_D_INX:
   case RISCV::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
+  case TargetOpcode::STATEPOINT:
+  case TargetOpcode::STACKMAP:
+  case TargetOpcode::PATCHPOINT:
+    if (!Subtarget.is64Bit())
+      report_fatal_error("STACKMAP, PATCHPOINT and STATEPOINT are only "
+                         "supported on 64-bit targets");
+    return emitPatchPoint(MI, BB);
   }
 }
 

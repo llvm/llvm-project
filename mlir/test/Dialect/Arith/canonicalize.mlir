@@ -128,82 +128,6 @@ func.func @selToArith(%arg0: i1, %arg1 : i1, %arg2 : i1) -> i1 {
   return %res : i1
 }
 
-// CHECK-LABEL: @redundantSelectTrue
-//       CHECK-NEXT: %[[res:.+]] = arith.select %arg0, %arg1, %arg3
-//       CHECK-NEXT: return %[[res]]
-func.func @redundantSelectTrue(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
-  %0 = arith.select %arg0, %arg1, %arg2 : i32
-  %res = arith.select %arg0, %0, %arg3 : i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @redundantSelectFalse
-//       CHECK-NEXT: %[[res:.+]] = arith.select %arg0, %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @redundantSelectFalse(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32 {
-  %0 = arith.select %arg0, %arg1, %arg2 : i32
-  %res = arith.select %arg0, %arg3, %0 : i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @selNotCond
-//       CHECK-NEXT: %[[res1:.+]] = arith.select %arg0, %arg2, %arg1
-//       CHECK-NEXT: %[[res2:.+]] = arith.select %arg0, %arg4, %arg3
-//       CHECK-NEXT: return %[[res1]], %[[res2]]
-func.func @selNotCond(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : i32) -> (i32, i32) {
-  %one = arith.constant 1 : i1
-  %cond1 = arith.xori %arg0, %one : i1
-  %cond2 = arith.xori %one, %arg0 : i1
-
-  %res1 = arith.select %cond1, %arg1, %arg2 : i32
-  %res2 = arith.select %cond2, %arg3, %arg4 : i32
-  return %res1, %res2 : i32, i32
-}
-
-// CHECK-LABEL: @selAndCond
-//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %arg0
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg2, %arg3
-//       CHECK-NEXT: return %[[res]]
-func.func @selAndCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %sel, %arg3 : i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @selAndNotCond
-//       CHECK-NEXT: %[[one:.+]] = arith.constant true
-//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
-//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %[[not]]
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @selAndNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %sel, %arg2 : i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @selOrCond
-//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %arg0
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg2, %arg3
-//       CHECK-NEXT: return %[[res]]
-func.func @selOrCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %arg2, %sel : i32
-  return %res : i32
-}
-
-// CHECK-LABEL: @selOrNotCond
-//       CHECK-NEXT: %[[one:.+]] = arith.constant true
-//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
-//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %[[not]]
-//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg3, %arg2
-//       CHECK-NEXT: return %[[res]]
-func.func @selOrNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
-  %sel = arith.select %arg0, %arg2, %arg3 : i32
-  %res = arith.select %arg1, %arg3, %sel : i32
-  return %res : i32
-}
-
 // Test case: Folding of comparisons with equal operands.
 // CHECK-LABEL: @cmpi_equal_operands
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true
@@ -983,6 +907,18 @@ func.func @tripleMulIMulII32(%arg0: i32) -> i32 {
   %mul1 = arith.muli %arg0, %c_n3 : i32
   %mul2 = arith.muli %mul1, %c7 : i32
   return %mul2 : i32
+}
+
+// CHECK-LABEL: @tripleMulLargeInt
+//       CHECK:   %[[cres:.+]] = arith.constant 3618502788666131213697322783095070105623107215331596699973092056135872020482 : i256
+//       CHECK:   %[[addi:.+]] = arith.addi %arg0, %[[cres]] : i256
+//       CHECK:   return %[[addi]]
+func.func @tripleMulLargeInt(%arg0: i256) -> i256 {
+  %0 = arith.constant 3618502788666131213697322783095070105623107215331596699973092056135872020481 : i256
+  %1 = arith.constant 1 : i256
+  %2 = arith.addi %arg0, %0 : i256
+  %3 = arith.addi %2, %1 : i256
+  return %3 : i256
 }
 
 // CHECK-LABEL: @addiMuliToSubiRhsI32

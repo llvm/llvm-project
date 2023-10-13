@@ -1977,11 +1977,9 @@ void JumpThreadingPass::updateSSA(
 
     // Find debug values outside of the block
     findDbgValues(DbgValues, &I);
-    DbgValues.erase(remove_if(DbgValues,
-                              [&](const DbgValueInst *DbgVal) {
-                                return DbgVal->getParent() == BB;
-                              }),
-                    DbgValues.end());
+    llvm::erase_if(DbgValues, [&](const DbgValueInst *DbgVal) {
+      return DbgVal->getParent() == BB;
+    });
 
     // If there are no uses outside the block, we're done with this instruction.
     if (UsesToRename.empty() && DbgValues.empty())
