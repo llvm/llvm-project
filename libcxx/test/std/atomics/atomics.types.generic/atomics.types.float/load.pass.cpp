@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 //  floating-point-type load(memory_order = memory_order::seq_cst) volatile noexcept;
 //  floating-point-type load(memory_order = memory_order::seq_cst) noexcept;
