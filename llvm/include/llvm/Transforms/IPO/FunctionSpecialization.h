@@ -84,8 +84,6 @@
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
-using namespace llvm;
-
 namespace llvm {
 // Map of potential specializations for each function. The FunctionSpecializer
 // keeps the discovered specialisation opportunities for the module in a single

@@ -28,8 +28,6 @@
 
 #define DEBUG_TYPE "cfgmst"
 
-using namespace llvm;
-
 namespace llvm {
 
 /// An union-find based Minimum Spanning Tree for CFG
