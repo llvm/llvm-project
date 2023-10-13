@@ -182,6 +182,18 @@ func.func @selAndNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 
   return %res : i32
 }
 
+// CHECK-LABEL: @selAndNotCondVec
+//       CHECK-NEXT: %[[one:.+]] = arith.constant dense<true> : vector<4xi1>
+//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
+//       CHECK-NEXT: %[[and:.+]] = arith.andi %arg1, %[[not]]
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[and]], %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @selAndNotCondVec(%arg0: vector<4xi1>, %arg1: vector<4xi1>, %arg2 : vector<4xi32>, %arg3 : vector<4xi32>) -> vector<4xi32> {
+  %sel = arith.select %arg0, %arg2, %arg3 : vector<4xi1>, vector<4xi32>
+  %res = arith.select %arg1, %sel, %arg2 : vector<4xi1>, vector<4xi32>
+  return %res : vector<4xi32>
+}
+
 // CHECK-LABEL: @selOrCond
 //       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %arg0
 //       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg2, %arg3
@@ -202,6 +214,18 @@ func.func @selOrNotCond(%arg0: i1, %arg1: i1, %arg2 : i32, %arg3 : i32) -> i32 {
   %sel = arith.select %arg0, %arg2, %arg3 : i32
   %res = arith.select %arg1, %arg3, %sel : i32
   return %res : i32
+}
+
+// CHECK-LABEL: @selOrNotCondVec
+//       CHECK-NEXT: %[[one:.+]] = arith.constant dense<true> : vector<4xi1>
+//       CHECK-NEXT: %[[not:.+]] = arith.xori %arg0, %[[one]]
+//       CHECK-NEXT: %[[or:.+]] = arith.ori %arg1, %[[not]]
+//       CHECK-NEXT: %[[res:.+]] = arith.select %[[or]], %arg3, %arg2
+//       CHECK-NEXT: return %[[res]]
+func.func @selOrNotCondVec(%arg0: vector<4xi1>, %arg1: vector<4xi1>, %arg2 : vector<4xi32>, %arg3 : vector<4xi32>) -> vector<4xi32> {
+  %sel = arith.select %arg0, %arg2, %arg3 : vector<4xi1>, vector<4xi32>
+  %res = arith.select %arg1, %arg3, %sel : vector<4xi1>, vector<4xi32>
+  return %res : vector<4xi32>
 }
 
 // Test case: Folding of comparisons with equal operands.

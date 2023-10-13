@@ -113,6 +113,14 @@ static FailureOr<APInt> getIntOrSplatIntValue(Attribute attr) {
   return failure();
 }
 
+static Attribute getBoolAttribute(Type type, bool value) {
+  auto boolAttr = BoolAttr::get(type.getContext(), value);
+  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
+  if (!shapedType)
+    return boolAttr;
+  return DenseElementsAttr::get(shapedType, boolAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
@@ -1696,14 +1704,6 @@ static bool applyCmpPredicateToEqualOperands(arith::CmpIPredicate predicate) {
   llvm_unreachable("unknown cmpi predicate kind");
 }
 
-static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
-  auto boolAttr = BoolAttr::get(ctx, value);
-  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
-  if (!shapedType)
-    return boolAttr;
-  return DenseElementsAttr::get(shapedType, boolAttr);
-}
-
 static std::optional<int64_t> getIntegerWidth(Type t) {
   if (auto intType = llvm::dyn_cast<IntegerType>(t)) {
     return intType.getWidth();
@@ -1718,7 +1718,7 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
   // cmpi(pred, x, x)
   if (getLhs() == getRhs()) {
     auto val = applyCmpPredicateToEqualOperands(getPredicate());
-    return getBoolAttribute(getType(), getContext(), val);
+    return getBoolAttribute(getType(), val);
   }
 
   if (matchPattern(adaptor.getRhs(), m_Zero())) {
