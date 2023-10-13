@@ -77,40 +77,29 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end()
-    requires(!__simple_view<_View> && common_range<_View> && sized_range<_View> && forward_range<_View>)
-  {
-    auto __missing = (__stride_ - ranges::distance(__base_) % __stride_) % __stride_;
-    return __iterator<false>(this, ranges::end(__base_), __missing);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
-    requires(!__simple_view<_View> && common_range<_View> && !bidirectional_range<_View>)
-  {
-    return __iterator<false>(this, ranges::end(__base_));
-  }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!__simple_view<_View>)
   {
-    return default_sentinel;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
-    requires(range<const _View> && common_range<const _View> && sized_range<const _View> && forward_range<const _View>)
-  {
-    auto __missing = (__stride_ - ranges::distance(__base_) % __stride_) % __stride_;
-    return __iterator<true>(this, ranges::end(__base_), __missing);
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
-    requires(range<const _View> && common_range<_View> && !bidirectional_range<_View>)
-  {
-    return __iterator<true>(this, ranges::end(__base_));
+    if constexpr (common_range<_View> && sized_range<_View> && forward_range<_View>) {
+      auto __missing = (__stride_ - ranges::distance(__base_) % __stride_) % __stride_;
+      return __iterator<false>(this, ranges::end(__base_), __missing);
+    } else if constexpr (common_range<_View> && !bidirectional_range<_View>) {
+      return __iterator<false>(this, ranges::end(__base_));
+    } else {
+      return default_sentinel;
+    }
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires(range<const _View>)
   {
-    return default_sentinel;
+    if constexpr (common_range<const _View> && sized_range<const _View> && forward_range<const _View>) {
+      auto __missing = (__stride_ - ranges::distance(__base_) % __stride_) % __stride_;
+      return __iterator<true>(this, ranges::end(__base_), __missing);
+    } else if constexpr (common_range<_View> && !bidirectional_range<_View>) {
+      return __iterator<true>(this, ranges::end(__base_));
+    } else {
+      return default_sentinel;
+    }
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size()
@@ -130,25 +119,6 @@ template <class _Range>
 stride_view(_Range&&, range_difference_t<_Range>) -> stride_view<views::all_t<_Range>>;
 
 namespace views {
-template <class _View>
-struct __stride_view_iterator_concept {
-  using type = input_iterator_tag;
-};
-
-template <random_access_range _View>
-struct __stride_view_iterator_concept<_View> {
-  using type = random_access_iterator_tag;
-};
-
-template <bidirectional_range _View>
-struct __stride_view_iterator_concept<_View> {
-  using type = bidirectional_iterator_tag;
-};
-
-template <forward_range _View>
-struct __stride_view_iterator_concept<_View> {
-  using type = forward_iterator_tag;
-};
 
 template <class _View>
 struct __stride_iterator_category {};
@@ -183,10 +153,22 @@ class stride_view<_View>::__iterator : public __stride_iterator_category<_View> 
         __stride_(__parent->__stride_),
         __missing_(__missing) {}
 
+  static consteval auto __get_stride_view_iterator_concept() {
+    if constexpr (random_access_range<_Base>) {
+      return random_access_iterator_tag{};
+    } else if constexpr (bidirectional_range<_Base>) {
+      return bidirectional_iterator_tag{};
+    } else if constexpr (forward_range<_Base>) {
+      return forward_iterator_tag{};
+    } else {
+      return input_iterator_tag{};
+    }
+  }
+
 public:
   using difference_type  = range_difference_t<_Base>;
   using value_type       = range_value_t<_Base>;
-  using iterator_concept = typename __stride_view_iterator_concept<_View>::type;
+  using iterator_concept = decltype(__get_stride_view_iterator_concept());
   // using iterator_category = inherited;
 
   _LIBCPP_HIDE_FROM_ABI __iterator()
