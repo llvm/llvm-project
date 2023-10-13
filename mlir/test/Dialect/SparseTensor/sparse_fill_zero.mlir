@@ -112,7 +112,7 @@
 // CHECK:           memref.dealloc %[[VAL_20]] : memref<300xf64>
 // CHECK:           memref.dealloc %[[VAL_22]] : memref<300xi1>
 // CHECK:           memref.dealloc %[[VAL_24]] : memref<300xindex>
-// CHECK:           call @endInsert(%[[VAL_19]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:           call @endLexInsert(%[[VAL_19]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:           return %[[VAL_19]] : !llvm.ptr<i8>
 // CHECK:       }
 func.func @fill_zero_after_alloc(%arg0: tensor<100x200xf64, #DCSR>,

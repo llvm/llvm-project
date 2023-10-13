@@ -143,11 +143,10 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  // newSparseTensor no longer handles `kFromFile=1`, so we leave this
-  // number reserved to help catch any code that still needs updating.
+  kEmptyForward = 1,
   kFromCOO = 2,
   kSparseToSparse = 3,
-  kEmptyCOO = 4,
+  kFuture = 4, // not used
   kToCOO = 5,
   kToIterator = 6,
   kPack = 7,
