@@ -28,7 +28,7 @@ struct __equal_to {
 };
 
 template <>
-struct __desugars_to<__equal_to, equal_to<void>> : true_type {};
+struct __desugars_to<__equal_to, equal_to<void> > : true_type {};
 
 // The definition is required because __less is part of the ABI, but it's empty
 // because all comparisons should be transparent.
