@@ -133,7 +133,6 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBType(union_type)
 
         # Check that we don't find indirectly nested types
-
         self.assertTrue(enum_type.size == 1)
 
         invalid_type = task_type.FindDirectNestedType("E2")

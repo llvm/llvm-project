@@ -8,9 +8,6 @@ public:
         TASK_TYPE_1,
         TASK_TYPE_2
     } type;
-    enum E : unsigned char {} e;
-    union U {
-    } u;
     // This struct is anonymous b/c it does not have a name
     // and it is not unnamed class.
     // Anonymous classes are a GNU extension.
@@ -27,6 +24,9 @@ public:
       enum E : int {} e;
       enum E2 {} e2;
     } my_type_is_named;
+    enum E : unsigned char {} e;
+    union U {
+    } u;
     Task(int i, Task *n):
         id(i),
         next(n),
