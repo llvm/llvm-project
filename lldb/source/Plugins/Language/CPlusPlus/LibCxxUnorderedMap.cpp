@@ -168,10 +168,13 @@ lldb::ValueObjectSP lldb_private::formatters::
 
       value_sp = node_sp->GetChildMemberWithName("__value_");
       if (!value_sp) {
-        // Since D101206 (ba79fb2e1f), libc++ wraps the `__value_` in an anonymous union.
+        // clang-format off
+        // Since D101206 (ba79fb2e1f), libc++ wraps the `__value_` in an
+        // anonymous union.
         // Child 0: __hash_node_base base class
         // Child 1: __hash_
         // Child 2: anonymous union
+        // clang-format on
         auto anon_union_sp = node_sp->GetChildAtIndex(2);
         if (!anon_union_sp)
           return nullptr;
