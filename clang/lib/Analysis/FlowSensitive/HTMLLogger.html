@@ -62,7 +62,7 @@
   <template data-for="iter in cfg[selection.bb].iters">
     <a class="chooser {{selection.bb}}:{{iter.iter}}" data-iter="{{selection.bb}}:{{iter.iter}}">
       <template data-if="iter.post_visit">Post-visit</template>
-      <template data-if="!iter.post_visit">Iteration {{iter.iter}}</template>
+      <template data-if="!iter.post_visit">{{iter.iter}}</template>
       <template data-if="iter.converged"> &#x2192;&#x7c;<!--Rightwards arrow, vertical line--></template>
     </a>
   </template>

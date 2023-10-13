@@ -412,13 +412,13 @@ private:
     return ShouldSwapBytes ? llvm::byteswap(Int) : Int;
   }
 
-  support::endianness getDataEndianness() const {
+  llvm::endianness getDataEndianness() const {
     if (!ShouldSwapBytes)
       return llvm::endianness::native;
     if (llvm::endianness::native == llvm::endianness::little)
-      return support::big;
+      return llvm::endianness::big;
     else
-      return support::little;
+      return llvm::endianness::little;
   }
 
   inline uint8_t getNumPaddingBytes(uint64_t SizeInBytes) {
@@ -477,7 +477,7 @@ class InstrProfLookupTrait {
   // Endianness of the input value profile data.
   // It should be LE by default, but can be changed
   // for testing purpose.
-  support::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
 
 public:
   InstrProfLookupTrait(IndexedInstrProf::HashT HashType, unsigned FormatVersion)
@@ -514,7 +514,7 @@ public:
   data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
 
   // Used for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness) {
+  void setValueProfDataEndianness(llvm::endianness Endianness) {
     ValueProfDataEndianness = Endianness;
   }
 };
@@ -531,7 +531,7 @@ struct InstrProfReaderIndexBase {
                                      ArrayRef<NamedInstrProfRecord> &Data) = 0;
   virtual void advanceToNextKey() = 0;
   virtual bool atEnd() const = 0;
-  virtual void setValueProfDataEndianness(support::endianness Endianness) = 0;
+  virtual void setValueProfDataEndianness(llvm::endianness Endianness) = 0;
   virtual uint64_t getVersion() const = 0;
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
@@ -580,7 +580,7 @@ public:
     return RecordIterator == HashTable->data_end();
   }
 
-  void setValueProfDataEndianness(support::endianness Endianness) override {
+  void setValueProfDataEndianness(llvm::endianness Endianness) override {
     HashTable->getInfoObj().setValueProfDataEndianness(Endianness);
   }
 
@@ -753,7 +753,7 @@ public:
          std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr);
 
   // Used for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness) {
+  void setValueProfDataEndianness(llvm::endianness Endianness) {
     Index->setValueProfDataEndianness(Endianness);
   }
 
