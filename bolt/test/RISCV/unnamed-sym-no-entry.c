@@ -1,6 +1,8 @@
 /// Verify that unnamed symbols are not added as function entry points. Such
 /// symbols are used by relocations in debugging sections.
 
+// clang-format off
+
 // RUN: %clang %cflags -g -Wl,-q -o %t %s
 
 /// Verify that the binary indeed contains an unnamed symbol at _start
