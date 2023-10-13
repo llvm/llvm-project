@@ -10631,7 +10631,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   // Find the best viable function.
   Best = end();
   for (auto *Cand : Candidates) {
-        Cand->Best = false;
+    Cand->Best = false;
     if (Cand->Viable) {
       if (Best == end() ||
           isBetterOverloadCandidate(S, *Cand, *Best, Loc, Kind))
