@@ -156,9 +156,11 @@ public:
     /// The mutex that needs to be locked before mutation of any member.
     mutable std::mutex CacheLock;
 
-    /// Map from filenames to cached entries.
-    llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator>
-        EntriesByFilename;
+    /// Map from filenames to cached entries and real paths.
+    llvm::StringMap<
+        std::pair<const CachedFileSystemEntry *, const CachedRealPath *>,
+        llvm::BumpPtrAllocator>
+        CacheByFilename;
 
     /// Map from unique IDs to cached entries.
     llvm::DenseMap<llvm::sys::fs::UniqueID, const CachedFileSystemEntry *>
@@ -169,9 +171,6 @@ public:
 
     /// The backing storage for cached contents.
     llvm::SpecificBumpPtrAllocator<CachedFileContents> ContentsStorage;
-
-    /// Map from filenames to cached real paths.
-    llvm::StringMap<const CachedRealPath *> RealPathsByFilename;
 
     /// The backing storage for cached real paths.
     llvm::SpecificBumpPtrAllocator<CachedRealPath> RealPathStorage;
@@ -229,16 +228,17 @@ private:
 /// This class is a local cache, that caches the 'stat' and 'open' calls to the
 /// underlying real file system.
 class DependencyScanningFilesystemLocalCache {
-  llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator> Cache;
-
-  llvm::StringMap<const CachedRealPath *, llvm::BumpPtrAllocator> RealPathCache;
+  llvm::StringMap<
+      std::pair<const CachedFileSystemEntry *, const CachedRealPath *>,
+      llvm::BumpPtrAllocator>
+      Cache;
 
 public:
   /// Returns entry associated with the filename or nullptr if none is found.
   const CachedFileSystemEntry *findEntryByFilename(StringRef Filename) const {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
     auto It = Cache.find(Filename);
-    return It == Cache.end() ? nullptr : It->getValue();
+    return It == Cache.end() ? nullptr : It->getValue().first;
   }
 
   /// Associates the given entry with the filename and returns the given entry
@@ -247,17 +247,17 @@ public:
   insertEntryForFilename(StringRef Filename,
                          const CachedFileSystemEntry &Entry) {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-    const auto *InsertedEntry = Cache.insert({Filename, &Entry}).first->second;
-    assert(InsertedEntry == &Entry && "entry already present");
-    return *InsertedEntry;
+    assert(Cache[Filename].first == nullptr && "entry already present");
+    Cache[Filename].first = &Entry;
+    return Entry;
   }
 
   /// Returns real path associated with the filename or nullptr if none is
   /// found.
   const CachedRealPath *findRealPathByFilename(StringRef Filename) const {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-    auto It = RealPathCache.find(Filename);
-    return It == RealPathCache.end() ? nullptr : It->getValue();
+    auto It = Cache.find(Filename);
+    return It == Cache.end() ? nullptr : It->getValue().second;
   }
 
   /// Associates the given real path with the filename and returns the given
@@ -266,10 +266,9 @@ public:
   insertRealPathForFilename(StringRef Filename,
                             const CachedRealPath &RealPath) {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-    const auto *InsertedRealPath =
-        RealPathCache.insert({Filename, &RealPath}).first->second;
-    assert(InsertedRealPath == &RealPath && "entry already present");
-    return *InsertedRealPath;
+    assert(Cache[Filename].second == nullptr && "entry already present");
+    Cache[Filename].second = &RealPath;
+    return RealPath;
   }
 };
 

@@ -112,8 +112,8 @@ DependencyScanningFilesystemSharedCache::CacheShard::findEntryByFilename(
     StringRef Filename) const {
   assert(llvm::sys::path::is_absolute_gnu(Filename));
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  auto It = EntriesByFilename.find(Filename);
-  return It == EntriesByFilename.end() ? nullptr : It->getValue();
+  auto It = CacheByFilename.find(Filename);
+  return It == CacheByFilename.end() ? nullptr : It->getValue().first;
 }
 
 const CachedFileSystemEntry *
@@ -129,11 +129,11 @@ DependencyScanningFilesystemSharedCache::CacheShard::
     getOrEmplaceEntryForFilename(StringRef Filename,
                                  llvm::ErrorOr<llvm::vfs::Status> Stat) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  auto Insertion = EntriesByFilename.insert({Filename, nullptr});
-  if (Insertion.second)
-    Insertion.first->second =
+  const CachedFileSystemEntry *StoredEntry = CacheByFilename[Filename].first;
+  if (!StoredEntry)
+    StoredEntry =
         new (EntryStorage.Allocate()) CachedFileSystemEntry(std::move(Stat));
-  return *Insertion.first->second;
+  return *StoredEntry;
 }
 
 const CachedFileSystemEntry &
@@ -158,7 +158,8 @@ DependencyScanningFilesystemSharedCache::CacheShard::
     getOrInsertEntryForFilename(StringRef Filename,
                                 const CachedFileSystemEntry &Entry) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  return *EntriesByFilename.insert({Filename, &Entry}).first->getValue();
+  CacheByFilename[Filename].first = &Entry;
+  return Entry;
 }
 
 const CachedRealPath *
@@ -166,8 +167,8 @@ DependencyScanningFilesystemSharedCache::CacheShard::findRealPathByFilename(
     StringRef Filename) const {
   assert(llvm::sys::path::is_absolute_gnu(Filename));
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  auto It = RealPathsByFilename.find(Filename);
-  return It == RealPathsByFilename.end() ? nullptr : It->getValue();
+  auto It = CacheByFilename.find(Filename);
+  return It == CacheByFilename.end() ? nullptr : It->getValue().second;
 }
 
 const CachedRealPath &DependencyScanningFilesystemSharedCache::CacheShard::
@@ -175,19 +176,19 @@ const CachedRealPath &DependencyScanningFilesystemSharedCache::CacheShard::
                                     llvm::ErrorOr<llvm::StringRef> RealPath) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
 
-  auto Insertion = RealPathsByFilename.insert({Filename, nullptr});
-  if (Insertion.second) {
+  const CachedRealPath *StoredRealPath = CacheByFilename[Filename].second;
+  if (!StoredRealPath) {
     auto OwnedRealPath = [&]() -> CachedRealPath {
       if (!RealPath)
         return RealPath.getError();
       return RealPath->str();
     }();
 
-    Insertion.first->second = new (RealPathStorage.Allocate())
+    StoredRealPath = new (RealPathStorage.Allocate())
         CachedRealPath(std::move(OwnedRealPath));
   }
 
-  return *Insertion.first->second;
+  return *StoredRealPath;
 }
 
 /// Whitelist file extensions that should be minimized, treating no extension as
