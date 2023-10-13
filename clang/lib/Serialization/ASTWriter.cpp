@@ -1384,10 +1384,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
       SmallVector<FileEntryRef, 1> ModMaps(AdditionalModMaps->begin(),
                                            AdditionalModMaps->end());
       llvm::sort(ModMaps, [](FileEntryRef A, FileEntryRef B) {
-        return A.getName() < B.getName();
+        return A.getNameAsRequested() < B.getNameAsRequested();
       });
       for (FileEntryRef F : ModMaps)
-        AddPath(F.getName(), Record);
+        AddPath(F.getNameAsRequested(), Record);
     } else {
       Record.push_back(0);
     }
