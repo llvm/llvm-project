@@ -28,7 +28,6 @@ void testImpl() {
   static_assert(HasVolatileNotifyOne<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().notify_one()));
 
-
   // bug?? wait can also fail for long double ??
   // should x87 80bit long double work at all?
   if constexpr (!std::same_as<T, long double>) {
@@ -60,7 +59,6 @@ void testImpl() {
       t.join();
     }
   }
-
 }
 
 template <class T>
