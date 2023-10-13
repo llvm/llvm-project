@@ -88,12 +88,12 @@ public:
   /// \returns a wildcard regular expression string that matches any value in
   /// the format represented by this instance and no other value, or an error
   /// if the format is NoFormat.
-  Expected<std::string> getWildcardRegex() const;
+  LLVM_FUNC_ABI Expected<std::string> getWildcardRegex() const;
 
   /// \returns the string representation of \p Value in the format represented
   /// by this instance, or an error if conversion to this format failed or the
   /// format is NoFormat.
-  Expected<std::string> getMatchingString(APInt Value) const;
+  LLVM_FUNC_ABI Expected<std::string> getMatchingString(APInt Value) const;
 
   /// \returns the value corresponding to string representation \p StrVal
   /// according to the matching format represented by this instance.
@@ -104,7 +104,7 @@ public:
 /// value.
 class OverflowError : public ErrorInfo<OverflowError> {
 public:
-  static char ID;
+  LLVM_FUNC_ABI static char ID;
 
   std::error_code convertToErrorCode() const override {
     return std::make_error_code(std::errc::value_too_large);
@@ -115,12 +115,12 @@ public:
 
 /// Performs operation and \returns its result or an error in case of failure,
 /// such as if an overflow occurs.
-Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprMax(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
-Expected<APInt> exprMin(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_FUNC_ABI Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_FUNC_ABI Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_FUNC_ABI Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_FUNC_ABI Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_FUNC_ABI Expected<APInt> exprMax(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+LLVM_FUNC_ABI Expected<APInt> exprMin(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
 
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
@@ -164,7 +164,7 @@ public:
 
 /// Class to represent an undefined variable error, which quotes that
 /// variable's name when printed.
-class UndefVarError : public ErrorInfo<UndefVarError> {
+class LLVM_CLASS_ABI UndefVarError : public ErrorInfo<UndefVarError> {
 private:
   StringRef VarName;
 
@@ -299,7 +299,7 @@ public:
 using binop_eval_t = Expected<APInt> (*)(const APInt &, const APInt &, bool &);
 
 /// Class representing a single binary operation in the AST of an expression.
-class BinaryOperation : public ExpressionAST {
+class LLVM_CLASS_ABI BinaryOperation : public ExpressionAST {
 private:
   /// Left operand.
   std::unique_ptr<ExpressionAST> LeftOperand;
@@ -490,7 +490,7 @@ private:
   SMRange Range;
 
 public:
-  static char ID;
+  LLVM_FUNC_ABI static char ID;
 
   ErrorDiagnostic(SMDiagnostic &&Diag, SMRange Range)
       : Diagnostic(Diag), Range(Range) {}
