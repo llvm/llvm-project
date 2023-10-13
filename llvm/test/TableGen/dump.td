@@ -46,6 +46,20 @@ multiclass MC<dag s> {
 }
 defm X : MC<(op a)>;
 
+multiclass MMC<dag s> {
+// CHECK: [[FILE]]:[[@LINE+1]]:3: note: the operand of s is op
+  dump "the operand of s is " # !getdagop(s);
+// CHECK: [[FILE]]:[[@LINE-13]]:3: note: s = (op a, a)
+// CHECK: [[FILE]]:[[@LINE-9]]:3: note: args[0] = a {        // A
+// CHECK-NEXT:   string A = "some text";
+// CHECK-NEXT: dag X = (op op);
+// CHECK-NEXT: }
+  defm : MC<s>;
+}
+
+defm XX : MMC<(op a, a)>;
+
+
 foreach i = [-1, 2] in {
 // CHECK: [[FILE]]:[[@LINE+4]]:3: note: i = -1 (negative)
 // CHECK: [[FILE]]:[[@LINE+8]]:5: note: i + 1  <= 0
