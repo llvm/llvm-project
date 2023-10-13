@@ -38,7 +38,7 @@ public:
   uint64_t computeCUSignature(StringRef DWOName, const DIE &Die);
 
   /// Computes the type signature.
-  uint64_t computeTypeSignature(const DIE &Die);
+  LLVM_FUNC_ABI uint64_t computeTypeSignature(const DIE &Die);
 
   // Helper routines to process parts of a DIE.
 private:

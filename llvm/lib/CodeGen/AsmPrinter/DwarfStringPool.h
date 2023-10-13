@@ -37,12 +37,12 @@ class DwarfStringPool {
 public:
   using EntryRef = DwarfStringPoolEntryRef;
 
-  DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm, StringRef Prefix);
+  LLVM_FUNC_ABI DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm, StringRef Prefix);
 
-  void emitStringOffsetsTableHeader(AsmPrinter &Asm, MCSection *OffsetSection,
+  LLVM_FUNC_ABI void emitStringOffsetsTableHeader(AsmPrinter &Asm, MCSection *OffsetSection,
                                     MCSymbol *StartSym);
 
-  void emit(AsmPrinter &Asm, MCSection *StrSection,
+  LLVM_FUNC_ABI void emit(AsmPrinter &Asm, MCSection *StrSection,
             MCSection *OffsetSection = nullptr,
             bool UseRelativeOffsets = false);
 
@@ -53,12 +53,12 @@ public:
   unsigned getNumIndexedStrings() const { return NumIndexedStrings; }
 
   /// Get a reference to an entry in the string pool.
-  EntryRef getEntry(AsmPrinter &Asm, StringRef Str);
+  LLVM_FUNC_ABI EntryRef getEntry(AsmPrinter &Asm, StringRef Str);
 
   /// Same as getEntry, except that you can use EntryRef::getIndex to obtain a
   /// unique ID of this entry (e.g., for use in indexed forms like
   /// DW_FORM_strx).
-  EntryRef getIndexedEntry(AsmPrinter &Asm, StringRef Str);
+  LLVM_FUNC_ABI EntryRef getIndexedEntry(AsmPrinter &Asm, StringRef Str);
 };
 
 } // end namespace llvm

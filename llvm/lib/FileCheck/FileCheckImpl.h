@@ -371,7 +371,7 @@ public:
   virtual Expected<std::string> getResult() const = 0;
 };
 
-class StringSubstitution : public Substitution {
+LLVM_CLASS_ABI class StringSubstitution : public Substitution {
 public:
   StringSubstitution(FileCheckPatternContext *Context, StringRef VarName,
                      size_t InsertIdx)
@@ -379,10 +379,10 @@ public:
 
   /// \returns the text that the string variable in this substitution matched
   /// when defined, or an error if the variable is undefined.
-  Expected<std::string> getResult() const override;
+  LLVM_FUNC_ABI Expected<std::string> getResult() const override;
 };
 
-class NumericSubstitution : public Substitution {
+LLVM_CLASS_ABI class NumericSubstitution : public Substitution {
 private:
   /// Pointer to the class representing the expression whose value is to be
   /// substituted.
@@ -397,7 +397,7 @@ public:
 
   /// \returns a string containing the result of evaluating the expression in
   /// this substitution, or an error if evaluation failed.
-  Expected<std::string> getResult() const override;
+  LLVM_FUNC_ABI Expected<std::string> getResult() const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -447,24 +447,24 @@ private:
 public:
   /// \returns the value of string variable \p VarName or an error if no such
   /// variable has been defined.
-  Expected<StringRef> getPatternVarValue(StringRef VarName);
+  LLVM_FUNC_ABI Expected<StringRef> getPatternVarValue(StringRef VarName);
 
   /// Defines string and numeric variables from definitions given on the
   /// command line, passed as a vector of [#]VAR=VAL strings in
   /// \p CmdlineDefines. \returns an error list containing diagnostics against
   /// \p SM for all definition parsing failures, if any, or Success otherwise.
-  Error defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines,
+  LLVM_FUNC_ABI Error defineCmdlineVariables(ArrayRef<StringRef> CmdlineDefines,
                                SourceMgr &SM);
 
   /// Create @LINE pseudo variable. Value is set when pattern are being
   /// matched.
-  void createLineVariable();
+  LLVM_FUNC_ABI void createLineVariable();
 
   /// Undefines local variables (variables whose name does not start with a '$'
   /// sign), i.e. removes them from GlobalVariableTable and from
   /// GlobalNumericVariableTable and also clears the value of numeric
   /// variables.
-  void clearLocalVars();
+  LLVM_FUNC_ABI void clearLocalVars();
 
 private:
   /// Makes a new numeric variable and registers it for destruction when the
@@ -669,7 +669,7 @@ public:
   /// successful, sets \p DefinedNumericVariable to point to the class
   /// representing the numeric variable defined in this numeric substitution
   /// block, or std::nullopt if this block does not define any variable.
-  static Expected<std::unique_ptr<Expression>> parseNumericSubstitutionBlock(
+  LLVM_FUNC_ABI static Expected<std::unique_ptr<Expression>> parseNumericSubstitutionBlock(
       StringRef Expr, std::optional<NumericVariable *> &DefinedNumericVariable,
       bool IsLegacyLineExpr, std::optional<size_t> LineNumber,
       FileCheckPatternContext *Context, const SourceMgr &SM);
@@ -680,7 +680,7 @@ public:
   /// global options that influence the parsing such as whitespace
   /// canonicalization, \p SM provides the SourceMgr used for error reports.
   /// \returns true in case of an error, false otherwise.
-  bool parsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
+  LLVM_FUNC_ABI bool parsePattern(StringRef PatternStr, StringRef Prefix, SourceMgr &SM,
                     const FileCheckRequest &Req);
   struct Match {
     size_t Pos;
@@ -705,7 +705,7 @@ public:
   /// GlobalNumericVariableTable StringMap in the same class provides the
   /// current values of FileCheck numeric variables and is updated if this
   /// match defines new numeric values.
-  MatchResult match(StringRef Buffer, const SourceMgr &SM) const;
+  LLVM_FUNC_ABI MatchResult match(StringRef Buffer, const SourceMgr &SM) const;
   /// Prints the value of successful substitutions.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                           SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
@@ -716,7 +716,7 @@ public:
   bool hasVariable() const {
     return !(Substitutions.empty() && VariableDefs.empty());
   }
-  void printVariableDefs(const SourceMgr &SM, FileCheckDiag::MatchType MatchTy,
+  LLVM_FUNC_ABI void printVariableDefs(const SourceMgr &SM, FileCheckDiag::MatchType MatchTy,
                          std::vector<FileCheckDiag> *Diags) const;
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }

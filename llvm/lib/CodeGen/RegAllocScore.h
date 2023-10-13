@@ -52,19 +52,19 @@ public:
   void onCheapRemat(double Freq) { CheapRematCounts += Freq; }
 
   RegAllocScore &operator+=(const RegAllocScore &Other);
-  bool operator==(const RegAllocScore &Other) const;
+  LLVM_FUNC_ABI bool operator==(const RegAllocScore &Other) const;
   bool operator!=(const RegAllocScore &Other) const;
-  double getScore() const;
+  LLVM_FUNC_ABI double getScore() const;
 };
 
 /// Calculate a score. When comparing 2 scores for the same function but
 /// different policies, the better policy would have a smaller score.
 /// The implementation is the overload below (which is also easily unittestable)
-RegAllocScore calculateRegAllocScore(const MachineFunction &MF,
+LLVM_FUNC_ABI RegAllocScore calculateRegAllocScore(const MachineFunction &MF,
                                      const MachineBlockFrequencyInfo &MBFI);
 
 /// Implementation of the above, which is also more easily unittestable.
-RegAllocScore calculateRegAllocScore(
+LLVM_FUNC_ABI RegAllocScore calculateRegAllocScore(
     const MachineFunction &MF,
     llvm::function_ref<double(const MachineBasicBlock &)> GetBBFreq,
     llvm::function_ref<bool(const MachineInstr &)> IsTriviallyRematerializable);
