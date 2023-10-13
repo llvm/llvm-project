@@ -682,6 +682,8 @@ R"(All available -march extensions for RISC-V
     zksed               1.0
     zksh                1.0
     zkt                 1.0
+    zvbb                1.0
+    zvbc                1.0
     zve32f              1.0
     zve32x              1.0
     zve64d              1.0
@@ -689,6 +691,20 @@ R"(All available -march extensions for RISC-V
     zve64x              1.0
     zvfh                1.0
     zvfhmin             1.0
+    zvkb                1.0
+    zvkg                1.0
+    zvkn                1.0
+    zvknc               1.0
+    zvkned              1.0
+    zvkng               1.0
+    zvknha              1.0
+    zvknhb              1.0
+    zvks                1.0
+    zvksc               1.0
+    zvksed              1.0
+    zvksg               1.0
+    zvksh               1.0
+    zvkt                1.0
     zvl1024b            1.0
     zvl128b             1.0
     zvl16384b           1.0
@@ -732,24 +748,8 @@ Experimental extensions
     zacas               1.0
     zfbfmin             0.8
     ztso                0.1
-    zvbb                1.0
-    zvbc                1.0
     zvfbfmin            0.8
     zvfbfwma            0.8
-    zvkb                1.0
-    zvkg                1.0
-    zvkn                1.0
-    zvknc               1.0
-    zvkned              1.0
-    zvkng               1.0
-    zvknha              1.0
-    zvknhb              1.0
-    zvks                1.0
-    zvksc               1.0
-    zvksed              1.0
-    zvksg               1.0
-    zvksh               1.0
-    zvkt                1.0
     smaia               1.0
     ssaia               1.0
 

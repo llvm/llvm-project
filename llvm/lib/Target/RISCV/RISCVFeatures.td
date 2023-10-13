@@ -561,14 +561,14 @@ def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
                                "'Zawrs' (Wait on Reservation Set)">;
 
 def FeatureStdExtZvkb
-    : SubtargetFeature<"experimental-zvkb", "HasStdExtZvkb", "true",
+    : SubtargetFeature<"zvkb", "HasStdExtZvkb", "true",
                        "'Zvkb' (Vector Bit-manipulation used in Cryptography)">;
 def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
                               AssemblerPredicate<(all_of FeatureStdExtZvkb),
                               "'Zvkb' (Vector Bit-manipulation used in Cryptography)">;
 
 def FeatureStdExtZvbb
-    : SubtargetFeature<"experimental-zvbb", "HasStdExtZvbb", "true",
+    : SubtargetFeature<"zvbb", "HasStdExtZvbb", "true",
                        "'Zvbb' (Vector basic bit-manipulation instructions.)",
                        [FeatureStdExtZvkb]>;
 def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
@@ -576,32 +576,32 @@ def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
                               "'Zvbb' (Vector basic bit-manipulation instructions.)">;
 
 def FeatureStdExtZvbc
-    : SubtargetFeature<"experimental-zvbc", "HasStdExtZvbc", "true",
+    : SubtargetFeature<"zvbc", "HasStdExtZvbc", "true",
                        "'Zvbc' (Vector Carryless Multiplication)">;
 def HasStdExtZvbc : Predicate<"Subtarget->hasStdExtZvbc()">,
                               AssemblerPredicate<(all_of FeatureStdExtZvbc),
                               "'Zvbc' (Vector Carryless Multiplication)">;
 
 def FeatureStdExtZvkg
-    : SubtargetFeature<"experimental-zvkg", "HasStdExtZvkg", "true",
+    : SubtargetFeature<"zvkg", "HasStdExtZvkg", "true",
                        "'Zvkg' (Vector GCM instructions for Cryptography)">;
 def HasStdExtZvkg : Predicate<"Subtarget->hasStdExtZvkg()">,
                               AssemblerPredicate<(all_of FeatureStdExtZvkg),
                               "'Zvkg' (Vector GCM instructions for Cryptography)">;
 
 def FeatureStdExtZvkned
-    : SubtargetFeature<"experimental-zvkned", "HasStdExtZvkned", "true",
+    : SubtargetFeature<"zvkned", "HasStdExtZvkned", "true",
                        "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">;
 def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZvkned),
                                 "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">;
 
 def FeatureStdExtZvknha
-    : SubtargetFeature<"experimental-zvknha", "HasStdExtZvknha", "true",
+    : SubtargetFeature<"zvknha", "HasStdExtZvknha", "true",
                        "'Zvknha' (Vector SHA-2 (SHA-256 only))">;
 
 def FeatureStdExtZvknhb
-    : SubtargetFeature<"experimental-zvknhb", "HasStdExtZvknhb", "true",
+    : SubtargetFeature<"zvknhb", "HasStdExtZvknhb", "true",
                        "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))",
                        [FeatureStdExtZvknha]>;
 def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
@@ -609,59 +609,59 @@ def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
                                 "'Zvknha' (Vector SHA-2 (SHA-256 only))">;
 
 def FeatureStdExtZvksed
-    : SubtargetFeature<"experimental-zvksed", "HasStdExtZvksed", "true",
+    : SubtargetFeature<"zvksed", "HasStdExtZvksed", "true",
                        "'Zvksed' (SM4 Block Cipher Instructions)">;
 def HasStdExtZvksed : Predicate<"Subtarget->hasStdExtZvksed()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZvksed),
                                 "'Zvksed' (SM4 Block Cipher Instructions)">;
 
 def FeatureStdExtZvksh
-    : SubtargetFeature<"experimental-zvksh", "HasStdExtZvksh", "true",
+    : SubtargetFeature<"zvksh", "HasStdExtZvksh", "true",
                        "'Zvksh' (SM3 Hash Function Instructions)">;
 def HasStdExtZvksh : Predicate<"Subtarget->hasStdExtZvksh()">,
                                AssemblerPredicate<(all_of FeatureStdExtZvksh),
                                "'Zvksh' (SM3 Hash Function Instructions)">;
 
 def FeatureStdExtZvkt
-    : SubtargetFeature<"experimental-zvkt", "HasStdExtZvkt", "true",
+    : SubtargetFeature<"zvkt", "HasStdExtZvkt", "true",
                        "'Zvkt' (Vector Data-Independent Execution Latency)">;
 
 // Zvk short-hand extensions
 
 def FeatureStdExtZvkn
-    : SubtargetFeature<"experimental-zvkn", "HasStdExtZvkn", "true",
+    : SubtargetFeature<"zvkn", "HasStdExtZvkn", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvkned, Zvknhb, Zvkb and Zvkt.",
                        [FeatureStdExtZvkned, FeatureStdExtZvknhb,
                         FeatureStdExtZvkb, FeatureStdExtZvkt]>;
 
 def FeatureStdExtZvknc
-    : SubtargetFeature<"experimental-zvknc", "HasStdExtZvknc", "true",
+    : SubtargetFeature<"zvknc", "HasStdExtZvknc", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvkn and Zvbc.",
                        [FeatureStdExtZvkn, FeatureStdExtZvbc]>;
 
 def FeatureStdExtZvkng
-    : SubtargetFeature<"experimental-zvkng", "HasStdExtZvkng", "true",
+    : SubtargetFeature<"zvkng", "HasStdExtZvkng", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvkn and Zvkg.",
                        [FeatureStdExtZvkn, FeatureStdExtZvkg]>;
 
 def FeatureStdExtZvks
-    : SubtargetFeature<"experimental-zvks", "HasStdExtZvks", "true",
+    : SubtargetFeature<"zvks", "HasStdExtZvks", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvksed, Zvksh, Zvkb and Zvkt.",
                        [FeatureStdExtZvksed, FeatureStdExtZvksh,
                         FeatureStdExtZvkb, FeatureStdExtZvkt]>;
 
 def FeatureStdExtZvksc
-    : SubtargetFeature<"experimental-zvksc", "HasStdExtZvksc", "true",
+    : SubtargetFeature<"zvksc", "HasStdExtZvksc", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvks and Zvbc.",
                        [FeatureStdExtZvks, FeatureStdExtZvbc]>;
 
 def FeatureStdExtZvksg
-    : SubtargetFeature<"experimental-zvksg", "HasStdExtZvksg", "true",
+    : SubtargetFeature<"zvksg", "HasStdExtZvksg", "true",
                        "This extension is shorthand for the following set of "
                        "other extensions: Zvks and Zvkg.",
                        [FeatureStdExtZvks, FeatureStdExtZvkg]>;

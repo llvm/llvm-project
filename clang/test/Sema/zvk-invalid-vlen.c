@@ -1,6 +1,6 @@
 // REQUIRES: riscv-registered-target
-// RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +experimental-zvkned \
-// RUN:   -target-feature +experimental-zvksh %s -fsyntax-only -verify
+// RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +zvkned \
+// RUN:   -target-feature +zvksh %s -fsyntax-only -verify
 
 #include <riscv_vector.h>
 
