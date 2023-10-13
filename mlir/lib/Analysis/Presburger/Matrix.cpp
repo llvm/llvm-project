@@ -492,9 +492,10 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 std::optional<FracMatrix> FracMatrix::inverse() {
   // We use Gaussian elimination on the rows of [M | I]
   // to find the integer inverse. We proceed left-to-right,
-  // top-to-bottom. M is assumed to be a dim x dim matrix.
+  // top-to-bottom.
 
   unsigned dim = getNumRows();
+  if (dim != getNumColumns()) return {};
 
   // Construct the augmented matrix [M | I]
   FracMatrix augmented(dim, dim + dim);
@@ -505,8 +506,12 @@ std::optional<FracMatrix> FracMatrix::inverse() {
   }
 
   Fraction a, b;
+  // For each row in the matrix,
   for (unsigned i = 0; i < dim; i++) {
     if (augmented(i, i) == 0)
+    // First ensure that the diagonal
+    // element is nonzero, by adding
+    // a nonzero row to it.
       for (unsigned j = i + 1; j < dim; j++)
         if (augmented(j, i) != 0) {
           augmented.addToRow(j, i, 1);
@@ -514,20 +519,24 @@ std::optional<FracMatrix> FracMatrix::inverse() {
         }
 
     b = augmented(i, i);
+    // If it is still zero, the matrix is singular.
     if (b == 0)
       return {};
+    
     for (unsigned j = 0; j < dim; j++) {
       if (i == j || augmented(j, i) == 0)
         continue;
       a = augmented(j, i);
       // Rj -> Rj - (a/b)Ri
+      // Otherwise set element (j, i) to zero
+      // by subtracting the ith row,
+      // appropriately scaled.
       augmented.addToRow(i, j, -a / b);
-      // Now (Rj)i = 0
     }
   }
 
   // Now only diagonal elements are nonzero, but they are
-  // not necessarily 1.
+  // not necessarily 1. We normalise them.
   for (unsigned i = 0; i < dim; i++) {
     a = augmented(i, i);
     for (unsigned j = dim; j < dim + dim; j++)
