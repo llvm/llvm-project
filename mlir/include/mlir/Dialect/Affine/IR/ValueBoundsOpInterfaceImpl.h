@@ -9,11 +9,25 @@
 #ifndef MLIR_DIALECT_AFFINE_IR_VALUEBOUNDSOPINTERFACEIMPL_H
 #define MLIR_DIALECT_AFFINE_IR_VALUEBOUNDSOPINTERFACEIMPL_H
 
+#include "mlir/Support/LogicalResult.h"
+
 namespace mlir {
 class DialectRegistry;
+class Value;
 
 namespace affine {
 void registerValueBoundsOpInterfaceExternalModels(DialectRegistry &registry);
+
+/// Compute whether the given values are equal. Return "failure" if equality
+/// could not be determined. `value1`/`value2` must be index-typed.
+///
+/// This function is similar to `ValueBoundsConstraintSet::areEqual`. To work
+/// around limitations in `FlatLinearConstraints`, this function fully composes
+/// `value1` and `value2` (if they are the result of affine.apply ops) before
+/// populating the constraint set. The folding/composing logic can see
+/// opportunities for simplifications that the constraint set implementation
+/// cannot see.
+FailureOr<bool> fullyComposeAndCheckIfEqual(Value value1, Value value2);
 } // namespace affine
 } // namespace mlir
 

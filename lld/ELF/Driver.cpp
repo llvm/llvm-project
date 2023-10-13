@@ -1095,7 +1095,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
 }
 
 static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
-  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "cdsort");
+  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "hfsort");
   if (s == "hfsort")
     return CGProfileSortKind::Hfsort;
   if (s == "cdsort")
