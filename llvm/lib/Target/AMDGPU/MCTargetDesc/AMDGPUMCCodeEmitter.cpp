@@ -414,7 +414,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
       Imm = Hi_32(Imm);
 
-    support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
+    support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
 
     // Only one literal value allowed
     break;
