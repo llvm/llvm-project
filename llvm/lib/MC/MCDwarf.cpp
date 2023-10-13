@@ -1947,8 +1947,9 @@ void MCDwarfFrameEmitter::encodeAdvanceLoc(MCContext &Context,
   if (AddrDelta == 0)
     return;
 
-  llvm::endianness E =
-      Context.getAsmInfo()->isLittleEndian() ? support::little : support::big;
+  llvm::endianness E = Context.getAsmInfo()->isLittleEndian()
+                           ? llvm::endianness::little
+                           : llvm::endianness::big;
 
   if (isUIntN(6, AddrDelta)) {
     uint8_t Opcode = dwarf::DW_CFA_advance_loc | AddrDelta;

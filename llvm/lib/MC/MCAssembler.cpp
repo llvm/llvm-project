@@ -610,7 +610,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     // Duplicate V into Data as byte vector to reduce number of
     // writes done. As such, do endian conversion here.
     for (unsigned I = 0; I != VSize; ++I) {
-      unsigned index = Endian == support::little ? I : (VSize - I - 1);
+      unsigned index = Endian == llvm::endianness::little ? I : (VSize - I - 1);
       Data[I] = uint8_t(V >> (index * 8));
     }
     for (unsigned I = VSize; I < MaxChunkSize; ++I)

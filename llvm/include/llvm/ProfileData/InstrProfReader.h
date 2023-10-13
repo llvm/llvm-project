@@ -417,9 +417,9 @@ private:
     if (!ShouldSwapBytes)
       return llvm::endianness::native;
     if (llvm::endianness::native == llvm::endianness::little)
-      return support::big;
+      return llvm::endianness::big;
     else
-      return support::little;
+      return llvm::endianness::little;
   }
 
   inline uint8_t getNumPaddingBytes(uint64_t SizeInBytes) {
@@ -478,7 +478,7 @@ class InstrProfLookupTrait {
   // Endianness of the input value profile data.
   // It should be LE by default, but can be changed
   // for testing purpose.
-  llvm::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
 
 public:
   InstrProfLookupTrait(IndexedInstrProf::HashT HashType, unsigned FormatVersion)

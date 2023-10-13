@@ -506,26 +506,26 @@ void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
 
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_ppc64(MemoryBufferRef ObjectBuffer) {
-  return createLinkGraphFromELFObject_ppc64<support::big>(
+  return createLinkGraphFromELFObject_ppc64<llvm::endianness::big>(
       std::move(ObjectBuffer));
 }
 
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_ppc64le(MemoryBufferRef ObjectBuffer) {
-  return createLinkGraphFromELFObject_ppc64<support::little>(
+  return createLinkGraphFromELFObject_ppc64<llvm::endianness::little>(
       std::move(ObjectBuffer));
 }
 
 /// jit-link the given object buffer, which must be a ELF ppc64 object file.
 void link_ELF_ppc64(std::unique_ptr<LinkGraph> G,
                     std::unique_ptr<JITLinkContext> Ctx) {
-  return link_ELF_ppc64<support::big>(std::move(G), std::move(Ctx));
+  return link_ELF_ppc64<llvm::endianness::big>(std::move(G), std::move(Ctx));
 }
 
 /// jit-link the given object buffer, which must be a ELF ppc64le object file.
 void link_ELF_ppc64le(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
-  return link_ELF_ppc64<support::little>(std::move(G), std::move(Ctx));
+  return link_ELF_ppc64<llvm::endianness::little>(std::move(G), std::move(Ctx));
 }
 
 } // end namespace llvm::jitlink
