@@ -31,6 +31,17 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+              CompFuncTy Comp) const override {
+    const auto &RISCVExprA = cast<RISCVMCExpr>(A);
+    const auto &RISCVExprB = cast<RISCVMCExpr>(B);
+    if (RISCVExprA.getKind() != RISCVExprB.getKind())
+      return false;
+
+    return MCPlusBuilder::equals(*RISCVExprA.getSubExpr(),
+                                 *RISCVExprB.getSubExpr(), Comp);
+  }
+
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
