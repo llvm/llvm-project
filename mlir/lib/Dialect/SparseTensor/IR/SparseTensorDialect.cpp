@@ -1304,10 +1304,9 @@ LogicalResult ConcatenateOp::verify() {
         // If all dimension are statically known, the sum of all the input
         // dimensions should be equal to the output dimension.
         if (sumSz != dstSh)
-          return emitError("The concatenation dimension of the output tensor "
-                           "should be the "
-                           "sum of all the concatenation dimensions of the "
-                           "input tensors.");
+          return emitError(
+              "The concatenation dimension of the output tensor should be the "
+              "sum of all the concatenation dimensions of the input tensors.");
       }
     } else {
       DynSize prev = dstSh;
