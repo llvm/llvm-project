@@ -44,9 +44,8 @@ define i512 @test3(i512 %a) {
 define i64 @sdiv(i64 %a) {
 ; CHECK-LABEL: define i64 @sdiv(
 ; CHECK-SAME: i64 [[A:%.*]]) {
-; CHECK-NEXT:    [[CONST:%.*]] = bitcast i64 4294967087 to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i64 [[A]], [[CONST]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[CONST]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i64 [[A]], 4294967087
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4294967087
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %1 = sdiv i64 %a, 4294967087
@@ -58,9 +57,8 @@ define i64 @sdiv(i64 %a) {
 define i64 @srem(i64 %a) {
 ; CHECK-LABEL: define i64 @srem(
 ; CHECK-SAME: i64 [[A:%.*]]) {
-; CHECK-NEXT:    [[CONST:%.*]] = bitcast i64 4294967087 to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = srem i64 [[A]], [[CONST]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[CONST]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i64 [[A]], 4294967087
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4294967087
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %1 = srem i64 %a, 4294967087
@@ -72,9 +70,8 @@ define i64 @srem(i64 %a) {
 define i64 @udiv(i64 %a) {
 ; CHECK-LABEL: define i64 @udiv(
 ; CHECK-SAME: i64 [[A:%.*]]) {
-; CHECK-NEXT:    [[CONST:%.*]] = bitcast i64 4294967087 to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[A]], [[CONST]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[CONST]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[A]], 4294967087
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4294967087
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %1 = udiv i64 %a, 4294967087
@@ -86,9 +83,8 @@ define i64 @udiv(i64 %a) {
 define i64 @urem(i64 %a) {
 ; CHECK-LABEL: define i64 @urem(
 ; CHECK-SAME: i64 [[A:%.*]]) {
-; CHECK-NEXT:    [[CONST:%.*]] = bitcast i64 4294967087 to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[A]], [[CONST]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[CONST]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i64 [[A]], 4294967087
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4294967087
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %1 = urem i64 %a, 4294967087

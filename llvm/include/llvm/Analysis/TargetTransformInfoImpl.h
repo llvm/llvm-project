@@ -427,6 +427,11 @@ public:
     return TTI::TCC_Free;
   }
 
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const {
+    return false;
+  }
+
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
