@@ -151,6 +151,7 @@ def S_MOV_B64_IMM_PSEUDO : SPseudoInstSI <(outs SReg_64:$sdst),
   let SchedRW = [WriteSALU, Write64Bit];
   let Size = 16; // Needs maximum 2 s_mov_b32 instructions 8 byte long each.
   let Uses = [];
+  let UseNamedOperandTable = 1;
 }
 
 // Pseudoinstruction for @llvm.amdgcn.wqm. It is turned into a copy after the
