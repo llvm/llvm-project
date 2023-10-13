@@ -215,12 +215,7 @@ public:
       : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
 
   IntMatrix(Matrix<MPInt> m)
-      : Matrix<MPInt>(m.getNumRows(), m.getNumColumns(), m.getNumReservedRows(),
-                      m.getNumReservedColumns()) {
-    for (unsigned i = 0; i < m.getNumRows(); i++)
-      for (unsigned j = 0; j < m.getNumColumns(); j++)
-        at(i, j) = m(i, j);
-  };
+      : Matrix<MPInt>(m) {};
 
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
@@ -258,12 +253,7 @@ public:
       : Matrix<Fraction>(rows, columns, reservedRows, reservedColumns){};
 
   FracMatrix(Matrix<Fraction> m)
-      : Matrix<Fraction>(m.getNumRows(), m.getNumColumns(),
-                         m.getNumReservedRows(), m.getNumReservedColumns()) {
-    for (unsigned i = 0; i < m.getNumRows(); i++)
-      for (unsigned j = 0; j < m.getNumColumns(); j++)
-        at(i, j) = m(i, j);
-  };
+      : Matrix<Fraction>(m) {};
 
   /// Return the identity matrix of the specified dimension.
   static FracMatrix identity(unsigned dimension);
