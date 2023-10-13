@@ -5459,9 +5459,8 @@ public:
 /// TemplateArguments, followed by a QualType representing the
 /// non-canonical aliased type when the template is a type alias
 /// template.
-class alignas(8) TemplateSpecializationType
-    : public Type,
-      public llvm::FoldingSetNode {
+class alignas(8) TemplateSpecializationType : public Type,
+                                              public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The name of the template being specialized.  This is
