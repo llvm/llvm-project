@@ -1582,6 +1582,12 @@ void RewriteInstance::adjustFunctionBoundaries() {
       if (!Function.isSymbolValidInScope(Symbol, SymbolSize))
         break;
 
+      // Ignore unnamed symbols. Used, for example, by debugging info on RISC-V.
+      if (cantFail(Symbol.getName()).empty()) {
+        ++NextSymRefI;
+        continue;
+      }
+
       // Skip basic block labels. This happens on RISC-V with linker relaxation
       // enabled because every branch needs a relocation and corresponding
       // symbol. We don't want to add such symbols as entry points.
