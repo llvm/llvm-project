@@ -492,7 +492,7 @@ LLVM_FUNC_ABI void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLo
 /// For trees, a preorder traversal is a viable reverse postorder, so we
 /// actually append using a preorder walk algorithm.
 template <typename RangeT>
-void appendLoopsToWorklist(RangeT &&, SmallPriorityWorklist<Loop *, 4> &);
+LLVM_FUNC_ABI void appendLoopsToWorklist(RangeT &&, SmallPriorityWorklist<Loop *, 4> &);
 /// Utility that implements appending of loops onto a worklist given a range.
 /// It has the same behavior as appendLoopsToWorklist, but assumes the range of
 /// loops has already been reversed, so it processes loops in the given order.
