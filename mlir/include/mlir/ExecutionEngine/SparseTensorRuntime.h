@@ -37,7 +37,6 @@ extern "C" {
 //
 //===----------------------------------------------------------------------===//
 
-/// The @newSparseTensor function for constructing a new sparse tensor.
 /// This is the "swiss army knife" method for materializing sparse
 /// tensors into the computation.  The types of the `ptr` argument and
 /// the result depend on the action, as explained in the following table
@@ -45,14 +44,13 @@ extern "C" {
 /// a coordinate-scheme object, and "Iterator" means an iterator object).
 ///
 /// Action:         `ptr`:          Returns:
-/// kEmpty          unused          STS, empty
-/// kEmptyCOO       unused          COO, empty
-/// kFromFile       char* filename  STS, read from the file
+/// kEmpty          -               STS, empty
+/// kEmptyForward   -               STS, empty, with forwarding COO
 /// kFromCOO        COO             STS, copied from the COO source
-/// kToCOO          STS             COO, copied from the STS source
 /// kSparseToSparse STS             STS, copied from the STS source
-/// kToIterator     STS             Iterator, call @getNext to use and
-///                                 @delSparseTensorIterator to free.
+/// kToCOO          STS             COO, copied from the STS source
+/// kToIterator     STS             Iterator (@getNext/@delSparseTensorIterator)
+/// kPack           buffers         STS, from level buffers
 MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
@@ -84,19 +82,15 @@ MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEPOSITIONS)
 MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSECOORDINATES)
 #undef DECL_SPARSECOORDINATES
 
-/// Coordinate-scheme method for adding a new element.
-/// TODO: remove dim2lvl
-#define DECL_ADDELT(VNAME, V)                                                  \
-  MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_addElt##VNAME(                   \
-      void *lvlCOO, StridedMemRefType<V, 0> *vref,                             \
-      StridedMemRefType<index_type, 1> *dimCoordsRef,                          \
-      StridedMemRefType<index_type, 1> *dim2lvlRef);
-MLIR_SPARSETENSOR_FOREVERY_V(DECL_ADDELT)
-#undef DECL_ADDELT
+/// Tensor-storage method for a dim to lvl forwarding insertion.
+#define DECL_FORWARDINGINSERT(VNAME, V)                                        \
+  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_forwardingInsert##VNAME(          \
+      void *tensor, StridedMemRefType<V, 0> *vref,                             \
+      StridedMemRefType<index_type, 1> *dimCoordsRef);                         \
+  MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
+#undef DECL_FORWARDINGINSERT
 
 /// Coordinate-scheme method for getting the next element while iterating.
-/// The `cref` argument uses the same coordinate-space as the `iter` (which
-/// can be either dim- or lvl-coords, depending on context).
 #define DECL_GETNEXT(VNAME, V)                                                 \
   MLIR_CRUNNERUTILS_EXPORT bool _mlir_ciface_getNext##VNAME(                   \
       void *iter, StridedMemRefType<index_type, 1> *cref,                      \
@@ -185,8 +179,11 @@ MLIR_CRUNNERUTILS_EXPORT index_type sparseLvlSize(void *tensor, index_type l);
 /// Tensor-storage method to get the size of the given dimension.
 MLIR_CRUNNERUTILS_EXPORT index_type sparseDimSize(void *tensor, index_type d);
 
+/// Tensor-storage method to finalize forwarding insertions.
+MLIR_CRUNNERUTILS_EXPORT void endForwardingInsert(void *tensor);
+
 /// Tensor-storage method to finalize lexicographic insertions.
-MLIR_CRUNNERUTILS_EXPORT void endInsert(void *tensor);
+MLIR_CRUNNERUTILS_EXPORT void endLexInsert(void *tensor);
 
 /// Coordinate-scheme method to write to file in extended FROSTT format.
 #define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
