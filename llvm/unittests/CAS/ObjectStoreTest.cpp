@@ -352,12 +352,14 @@ TEST_P(CASTest, BlobsParallel) {
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
 
+#ifdef EXPENSIVE_CHECKS
 TEST_P(CASTest, BlobsBigParallel) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
   // 100k is large enough to be standalone files in our on-disk cas.
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
+#endif
 
 #if LLVM_ENABLE_ONDISK_CAS
 TEST(OnDiskCASTest, BlobsParallelMultiCAS) {

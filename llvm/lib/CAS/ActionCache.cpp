@@ -21,6 +21,9 @@ CacheKey::CacheKey(const ObjectProxy &Proxy)
 CacheKey::CacheKey(const ObjectStore &CAS, const ObjectRef &Ref)
     : Key(toStringRef(CAS.getID(Ref).getHash())) {}
 
+#ifndef _MSC_VER
+/// FIXME: MSVC doesn't compile Error within Promise/Future correctly and will
+/// result in unchecked error. Disable AsyncAPIs when using MSVC for now.
 std::future<AsyncCASIDValue> ActionCache::getFuture(const CacheKey &ActionKey,
                                                     bool Globally) const {
   std::promise<AsyncCASIDValue> Promise;
@@ -44,6 +47,7 @@ std::future<AsyncErrorValue> ActionCache::putFuture(const CacheKey &ActionKey,
            });
   return Future;
 }
+#endif
 
 void ActionCache::getImplAsync(
     ArrayRef<uint8_t> ResolvedKey, bool Globally,

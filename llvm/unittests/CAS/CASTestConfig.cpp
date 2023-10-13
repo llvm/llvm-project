@@ -45,6 +45,7 @@ INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
                          ::testing::Values(createInMemory));
 
 #if LLVM_ENABLE_ONDISK_CAS
+#ifndef _WIN32
 __attribute__((constructor)) static void configureCASTestEnv() {
   // Restrict the size of the on-disk CAS for tests. This allows testing in
   // constrained environments (e.g. small TMPDIR). It also prevents leaving
@@ -57,6 +58,7 @@ __attribute__((constructor)) static void configureCASTestEnv() {
     setenv("LLVM_CAS_MAX_MAPPING_SIZE", LimitStr.c_str(), /*overwrite=*/false);
   });
 }
+#endif
 
 TestingAndDir createOnDisk(int I) {
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);

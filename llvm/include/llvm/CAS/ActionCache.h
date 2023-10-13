@@ -72,18 +72,6 @@ public:
     return getImpl(arrayRefFromStringRef(ActionKey.getKey()), Globally);
   }
 
-  /// Asynchronous version of \c get.
-  std::future<AsyncCASIDValue> getFuture(const CacheKey &ActionKey,
-                                         bool Globally = false) const;
-
-  /// Asynchronous version of \c get.
-  void getAsync(
-      const CacheKey &ActionKey, bool Globally,
-      unique_function<void(Expected<std::optional<CASID>>)> Callback) const {
-    return getImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Globally,
-                        std::move(Callback));
-  }
-
   /// Cache \p Result for the \p ActionKey computation.
   ///
   /// \param Globally if true it is a hint to the underlying implementation that
@@ -95,6 +83,23 @@ public:
                getContext().getHashSchemaIdentifier() &&
            "Hash schema mismatch");
     return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result, Globally);
+  }
+
+
+#ifndef _MSC_VER
+  /// FIXME: MSVC doesn't compile Error within Promise/Future correctly and will
+  /// result in unchecked error. Disable AsyncAPIs when using MSVC for now.
+
+  /// Asynchronous version of \c get.
+  std::future<AsyncCASIDValue> getFuture(const CacheKey &ActionKey,
+                                         bool Globally = false) const;
+
+  /// Asynchronous version of \c get.
+  void getAsync(
+      const CacheKey &ActionKey, bool Globally,
+      unique_function<void(Expected<std::optional<CASID>>)> Callback) const {
+    return getImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Globally,
+                        std::move(Callback));
   }
 
   /// Asynchronous version of \c put.
@@ -111,6 +116,7 @@ public:
     return putImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Result,
                         Globally, std::move(Callback));
   }
+#endif
 
   virtual ~ActionCache() = default;
 

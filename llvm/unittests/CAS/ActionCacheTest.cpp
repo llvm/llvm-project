@@ -109,6 +109,9 @@ TEST(OnDiskActionCache, ActionCacheResultInvalid) {
 }
 #endif
 
+#ifndef _MSC_VER
+/// FIXME: MSVC doesn't compile Error within Promise/Future correctly and will
+/// result in unchecked error. Disable AsyncAPIs when using MSVC for now.
 TEST_P(CASTest, ActionCacheAsync) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
   std::shared_ptr<ActionCache> Cache = createActionCache();
@@ -150,3 +153,4 @@ TEST_P(CASTest, ActionCacheAsync) {
     ASSERT_TRUE(ResultID);
   }
 }
+#endif
