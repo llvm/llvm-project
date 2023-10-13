@@ -97,7 +97,7 @@ public:
 
   /// \returns the value corresponding to string representation \p StrVal
   /// according to the matching format represented by this instance.
-  APInt valueFromStringRepr(StringRef StrVal, const SourceMgr &SM) const;
+  LLVM_FUNC_ABI APInt valueFromStringRepr(StringRef StrVal, const SourceMgr &SM) const;
 };
 
 /// Class to represent an overflow error that might result when manipulating a
