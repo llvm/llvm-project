@@ -642,10 +642,7 @@ get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
-  if (MSVC)
-    target_compile_options(${target} PRIVATE "/Zl")
-    target_link_libraries(${target} PRIVATE "/nodefaultlib")
-  else()
+  if (NOT MSVC)
     target_link_libraries(${target} PRIVATE "-nostdlib++")
   endif()
 
