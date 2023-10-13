@@ -251,7 +251,7 @@ define void @sink_splat_mul_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB7_5
 ; CHECK-NEXT:  .LBB7_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -342,7 +342,7 @@ define void @sink_splat_add_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB8_5
 ; CHECK-NEXT:  .LBB8_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -433,7 +433,7 @@ define void @sink_splat_sub_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB9_5
 ; CHECK-NEXT:  .LBB9_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -524,7 +524,7 @@ define void @sink_splat_rsub_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB10_5
 ; CHECK-NEXT:  .LBB10_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -615,7 +615,7 @@ define void @sink_splat_and_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB11_5
 ; CHECK-NEXT:  .LBB11_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -706,7 +706,7 @@ define void @sink_splat_or_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB12_5
 ; CHECK-NEXT:  .LBB12_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -797,7 +797,7 @@ define void @sink_splat_xor_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB13_5
 ; CHECK-NEXT:  .LBB13_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -990,7 +990,7 @@ define void @sink_splat_shl_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB17_5
 ; CHECK-NEXT:  .LBB17_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -1081,7 +1081,7 @@ define void @sink_splat_lshr_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB18_5
 ; CHECK-NEXT:  .LBB18_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -1172,7 +1172,7 @@ define void @sink_splat_ashr_scalable(ptr nocapture %a) {
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    j .LBB19_5
 ; CHECK-NEXT:  .LBB19_2: # %vector.ph
-; CHECK-NEXT:    addiw a1, a2, -1
+; CHECK-NEXT:    addi a1, a2, -1
 ; CHECK-NEXT:    andi a3, a1, 1024
 ; CHECK-NEXT:    xori a1, a3, 1024
 ; CHECK-NEXT:    slli a4, a4, 1
@@ -1467,7 +1467,7 @@ define void @sink_splat_fmul_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB26_5
 ; CHECK-NEXT:  .LBB26_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
@@ -1557,7 +1557,7 @@ define void @sink_splat_fdiv_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB27_5
 ; CHECK-NEXT:  .LBB27_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
@@ -1647,7 +1647,7 @@ define void @sink_splat_frdiv_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB28_5
 ; CHECK-NEXT:  .LBB28_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
@@ -1737,7 +1737,7 @@ define void @sink_splat_fadd_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB29_5
 ; CHECK-NEXT:  .LBB29_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
@@ -1827,7 +1827,7 @@ define void @sink_splat_fsub_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB30_5
 ; CHECK-NEXT:  .LBB30_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
@@ -1917,7 +1917,7 @@ define void @sink_splat_frsub_scalable(ptr nocapture %a, float %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB31_5
 ; CHECK-NEXT:  .LBB31_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
@@ -2083,7 +2083,7 @@ define void @sink_splat_fma_scalable(ptr noalias nocapture %a, ptr noalias nocap
 ; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    j .LBB34_5
 ; CHECK-NEXT:  .LBB34_2: # %vector.ph
-; CHECK-NEXT:    addiw a4, a3, -1
+; CHECK-NEXT:    addi a4, a3, -1
 ; CHECK-NEXT:    andi a5, a4, 1024
 ; CHECK-NEXT:    xori a4, a5, 1024
 ; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, ma
@@ -2183,7 +2183,7 @@ define void @sink_splat_fma_commute_scalable(ptr noalias nocapture %a, ptr noali
 ; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    j .LBB35_5
 ; CHECK-NEXT:  .LBB35_2: # %vector.ph
-; CHECK-NEXT:    addiw a4, a3, -1
+; CHECK-NEXT:    addi a4, a3, -1
 ; CHECK-NEXT:    andi a5, a4, 1024
 ; CHECK-NEXT:    xori a4, a5, 1024
 ; CHECK-NEXT:    vsetvli a6, zero, e32, m1, ta, ma
@@ -2496,7 +2496,7 @@ define void @sink_splat_udiv_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB42_5
 ; CHECK-NEXT:  .LBB42_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -2587,7 +2587,7 @@ define void @sink_splat_sdiv_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB43_5
 ; CHECK-NEXT:  .LBB43_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -2678,7 +2678,7 @@ define void @sink_splat_urem_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB44_5
 ; CHECK-NEXT:  .LBB44_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1
@@ -2769,7 +2769,7 @@ define void @sink_splat_srem_scalable(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    j .LBB45_5
 ; CHECK-NEXT:  .LBB45_2: # %vector.ph
-; CHECK-NEXT:    addiw a2, a3, -1
+; CHECK-NEXT:    addi a2, a3, -1
 ; CHECK-NEXT:    andi a4, a2, 1024
 ; CHECK-NEXT:    xori a2, a4, 1024
 ; CHECK-NEXT:    slli a5, a5, 1

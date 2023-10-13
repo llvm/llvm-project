@@ -548,15 +548,6 @@ public:
                                     APInt &UndefElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
-  /// Attempts to replace V with a simpler value based on the demanded
-  /// floating-point classes
-  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
-                                    KnownFPClass &Known, unsigned Depth,
-                                    Instruction *CxtI);
-  bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
-                               FPClassTest DemandedMask, KnownFPClass &Known,
-                               unsigned Depth = 0);
-
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
@@ -743,16 +734,13 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const DataLayout &DL;
-  AssumptionCache &AC;
-  const DominatorTree &DT;
+  const SimplifyQuery &SQ;
 
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, AssumptionCache &AC,
-          const DominatorTree &DT, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

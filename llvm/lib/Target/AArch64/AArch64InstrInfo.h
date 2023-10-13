@@ -120,11 +120,17 @@ public:
   /// Returns whether the instruction is in Q form (128 bit operands)
   static bool isQForm(const MachineInstr &MI);
 
+  /// Returns whether the instruction can be compatible with non-zero BTYPE.
+  static bool hasBTISemantics(const MachineInstr &MI);
+
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInst(const MachineInstr &MI);
+
+  /// Returns true if MI is one of the TCRETURN* instructions.
+  static bool isTailCallReturnInst(const MachineInstr &MI);
 
   /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.

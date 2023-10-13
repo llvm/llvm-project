@@ -56,6 +56,7 @@ if(ANDROID)
 endif()
 
 set(SCUDO_HEADERS
+  allocator_common.h
   allocator_config.h
   atomic_helpers.h
   bytemap.h
