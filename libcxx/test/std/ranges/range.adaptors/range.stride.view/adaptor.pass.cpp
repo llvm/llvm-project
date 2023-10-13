@@ -29,8 +29,7 @@ constexpr bool test() {
   int arr[array_n]      = {1, 2, 3};
 
   // Test that `std::views::stride` is a range adaptor.
-  {
-    // Check various forms of
+  { // Check various forms of
     // view | stride
     {
       {
