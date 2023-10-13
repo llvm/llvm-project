@@ -1673,18 +1673,21 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
     return false;
   auto SingleLocElts = *SingleLocEltsOpt;
 
-  if (SingleLocElts.size() == 0) {
+  unsigned FragmentOpsCount = isFragment() ? 3 : 0;
+
+  if (SingleLocElts.size() == FragmentOpsCount) {
     Offset = 0;
     return true;
   }
 
-  if (SingleLocElts.size() == 2 &&
+  if (SingleLocElts.size() == 2 + FragmentOpsCount &&
       SingleLocElts[0] == dwarf::DW_OP_plus_uconst) {
     Offset = SingleLocElts[1];
     return true;
   }
 
-  if (SingleLocElts.size() == 3 && SingleLocElts[0] == dwarf::DW_OP_constu) {
+  if (SingleLocElts.size() == 3 + FragmentOpsCount &&
+      SingleLocElts[0] == dwarf::DW_OP_constu) {
     if (SingleLocElts[2] == dwarf::DW_OP_plus) {
       Offset = SingleLocElts[1];
       return true;

@@ -3511,6 +3511,57 @@ TEST_F(DIExpressionTest, isEqualExpression) {
 #undef GET_EXPR
 }
 
+TEST_F(DIExpressionTest, extractIfOffset) {
+#define GET_EXPR(...) DIExpression::get(Context, {__VA_ARGS__})
+#define GET_FRAG(...)                                                          \
+  DIExpression::get(Context, {__VA_ARGS__, dwarf::DW_OP_LLVM_fragment, 0, 32})
+#define EXPECT_OFFSET_IMPL(Offset, Success, Expr)                              \
+  do {                                                                         \
+    int64_t ActualOffset;                                                      \
+    bool Result = Expr->extractIfOffset(ActualOffset);                         \
+    EXPECT_EQ(Success, Result);                                                \
+    if (Success) {                                                             \
+      EXPECT_EQ(Offset, ActualOffset);                                         \
+    }                                                                          \
+  } while (0)
+#define EXPECT_OFFSET_EQ(Offset, Expr) EXPECT_OFFSET_IMPL(Offset, true, Expr)
+#define EXPECT_NO_OFFSET(Expr) EXPECT_OFFSET_IMPL(0, false, Expr)
+
+  // Check extractIfOffset behaves as expected with and without a fragment
+  // in the expression. extractIfOffset reads a constant offset out from the
+  // expression. It fails for all but exactly these with and without fragments:
+  //   no expression
+  //   DW_OP_plus_uconst, <u>
+  //   DW_OP_constu, <u>, DW_OP_plus/minus
+  EXPECT_OFFSET_EQ(0, GET_EXPR());
+  EXPECT_OFFSET_EQ(0, GET_EXPR(dwarf::DW_OP_LLVM_fragment, 0, 32));
+
+  EXPECT_OFFSET_EQ(1, GET_EXPR(dwarf::DW_OP_plus_uconst, 1));
+  EXPECT_OFFSET_EQ(1, GET_FRAG(dwarf::DW_OP_plus_uconst, 1));
+
+  EXPECT_OFFSET_EQ(2, GET_EXPR(dwarf::DW_OP_constu, 2, dwarf::DW_OP_plus));
+  EXPECT_OFFSET_EQ(2, GET_FRAG(dwarf::DW_OP_constu, 2, dwarf::DW_OP_plus));
+
+  EXPECT_OFFSET_EQ(-3, GET_EXPR(dwarf::DW_OP_constu, 3, dwarf::DW_OP_minus));
+  EXPECT_OFFSET_EQ(-3, GET_FRAG(dwarf::DW_OP_constu, 3, dwarf::DW_OP_minus));
+
+  // Test some failure cases, e.g. unsupported operations and too many
+  // operations.
+  EXPECT_NO_OFFSET(GET_EXPR(dwarf::DW_OP_constu, 3, dwarf::DW_OP_mul));
+  EXPECT_NO_OFFSET(GET_FRAG(dwarf::DW_OP_constu, 3, dwarf::DW_OP_mul));
+
+  EXPECT_NO_OFFSET(
+      GET_EXPR(dwarf::DW_OP_constu, 3, dwarf::DW_OP_plus, dwarf::DW_OP_deref));
+  EXPECT_NO_OFFSET(
+      GET_FRAG(dwarf::DW_OP_constu, 3, dwarf::DW_OP_plus, dwarf::DW_OP_deref));
+
+#undef EXPECT_NO_OFFSET
+#undef EXPECT_OFFSET_EQ
+#undef EXPECT_OFFSET_IMPL
+#undef GET_FRAG
+#undef GET_EXPR
+}
+
 TEST_F(DIExpressionTest, foldConstant) {
   const ConstantInt *Int;
   const ConstantInt *NewInt;
