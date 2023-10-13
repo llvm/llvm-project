@@ -13,13 +13,11 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Install clang-format
+      - name: Install dependencies
         uses: aminya/setup-cpp@v1
         with:
           clangformat: 17.0.1
-
-      - name: Install Ninja
-        run: sudo apt-get install -y ninja-build
+          ninja: true
 
       - name: Check generated files
         run: libcxx/utils/ci/run-buildbot check-generated-output
