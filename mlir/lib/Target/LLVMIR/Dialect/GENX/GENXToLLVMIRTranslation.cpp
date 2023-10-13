@@ -210,14 +210,25 @@ createGenISADPAS(GENX::MatrixDPASOp op, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   TypeRange opTypes = op->getOperandTypes();
+
+  llvm::Value *a = moduleTranslation.lookupValue(op.getA());
+  auto aTy = llvm::FixedVectorType::get(builder.getInt16Ty(), op.getRc());
+  if (a->getType() != aTy)
+    a = builder.CreateBitCast(a, aTy);
+  llvm::Value *b = moduleTranslation.lookupValue(op.getB());
+  auto bTy = llvm::FixedVectorType::get(builder.getInt32Ty(), 8);
+  if (b->getType() != bTy)
+    b = builder.CreateBitCast(b, bTy);
+
   llvm::Function *fn = llvm::GenISAIntrinsic::getDeclaration(
       module, llvm::GenISAIntrinsic::GenISA_sub_group_dpas,
       {moduleTranslation.convertType(op->getResultTypes()[0]),
-       moduleTranslation.convertType(opTypes[0]),
-       moduleTranslation.convertType(opTypes[1]),
-       moduleTranslation.convertType(opTypes[2])});
-  SmallVector<llvm::Value *> args(
-      moduleTranslation.lookupValues(op.getOperands()));
+       moduleTranslation.convertType(opTypes[0]), aTy, bTy});
+  SmallVector<llvm::Value *> args;
+  args.push_back(moduleTranslation.lookupValue(op.getC()));
+  args.push_back(a);
+  args.push_back(b);
+
   auto int32Ty = builder.getInt32Ty();
   auto int1Ty = builder.getInt1Ty();
   args.push_back(llvm::ConstantInt::get(int32Ty, static_cast<int>(op.getPa())));
