@@ -8,7 +8,7 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
-// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
+
 
 // floating-point-type fetch_add(floating-point-type,
 //                               memory_order = memory_order::seq_cst) volatile noexcept;

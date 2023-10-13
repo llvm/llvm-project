@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
+
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;

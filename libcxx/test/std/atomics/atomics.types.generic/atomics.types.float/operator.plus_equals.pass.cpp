@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
-// ADDITIONAL_COMPILE_FLAGS: -Wno-volatile
+
 
 // floating-point-type operator+=(floating-point-type) volatile noexcept;
 // floating-point-type operator+=(floating-point-type) noexcept;
