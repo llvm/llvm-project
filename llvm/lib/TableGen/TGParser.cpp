@@ -4405,6 +4405,11 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
   if (!Message)
     return true;
 
+  // Allow to use dump directly on `defvar` and `def`, by wrapping
+  // them with a `!repl`.
+  if (isa<DefInit>(Message))
+    Message = UnOpInit::get( UnOpInit::REPR, Message, StringRecTy::get(Records))->Fold(CurRec);
+
   std::string Msg;
   if (auto SI = dyn_cast<StringInit>(Message))
     Msg = SI->getValue();

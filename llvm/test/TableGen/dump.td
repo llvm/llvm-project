@@ -21,9 +21,12 @@ def b : A;
 // CHECK-NEXT: string A = "some text";
 // CHECK-NEXT: dag X = (op op);
 // CHECK-NEXT: }
-dump !repr(b) ;
+dump b;
 
 defvar value_A = "some other text";
+// CHECK: [[FILE]]:[[@LINE+1]]:1: note: some other text
+dump value_A;
+
 defvar value_B = 12;
 def X;
 // CHECK: [[FILE]]:[[@LINE+3]]:1: note: got a pair of values ["some other text" : 12], and an empty record:
