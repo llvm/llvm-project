@@ -1851,8 +1851,9 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
   return true;
 }
 
-static const char *fastParseASCIIIdentifier(const char *CurPtr,
-                                            const char *BufferEnd) {
+static const char *
+fastParseASCIIIdentifier(const char *CurPtr,
+                         [[maybe_unused]] const char *BufferEnd) {
 #ifdef __SSE4_2__
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
@@ -1873,8 +1874,6 @@ static const char *fastParseASCIIIdentifier(const char *CurPtr,
       continue;
     return CurPtr;
   }
-#else
-  (void)BufferEnd;
 #endif
 
   unsigned char C = *CurPtr;
