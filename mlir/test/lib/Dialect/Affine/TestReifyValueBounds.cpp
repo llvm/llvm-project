@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Arith/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -186,8 +187,14 @@ static LogicalResult testEquality(func::FuncOp funcOp) {
         op->emitOpError("invalid op");
         return WalkResult::skip();
       }
-      FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
-          op->getOperand(0), op->getOperand(1));
+      FailureOr<bool> equal = failure();
+      if (op->hasAttr("compose")) {
+        equal = affine::fullyComposeAndCheckIfEqual(op->getOperand(0),
+                                                    op->getOperand(1));
+      } else {
+        equal = ValueBoundsConstraintSet::areEqual(op->getOperand(0),
+                                                   op->getOperand(1));
+      }
       if (failed(equal)) {
         op->emitError("could not determine equality");
       } else if (*equal) {

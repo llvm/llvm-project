@@ -58,3 +58,35 @@ func.func @affine_min_lb(%a: index) -> (index) {
   %2 = "test.reify_bound"(%1) {type = "LB"}: (index) -> (index)
   return %2 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @composed_affine_apply(
+//       CHECK:   %[[cst:.*]] = arith.constant -8 : index
+//       CHECK:   return %[[cst]]
+func.func @composed_affine_apply(%i1 : index) -> (index) {
+  // The ValueBoundsOpInterface implementation of affine.apply fully composes
+  // the affine map (and its operands) with other affine.apply ops drawn from
+  // its operands before adding it to the constraint set. This is to work
+  // around a limitation in `FlatLinearConstraints`, which can currently not
+  // compute a constant bound for %s. (The affine map simplification logic can
+  // simplify %s to -8.)
+  %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
+  %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
+  %s = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%i2, %i3]
+  %reified = "test.reify_constant_bound"(%s) {type = "EQ"} : (index) -> (index)
+  return %reified : index
+}
+
+
+// -----
+
+// Test for affine::fullyComposeAndCheckIfEqual
+func.func @composed_are_equal(%i1 : index) {
+  %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
+  %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
+  %s = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%i2, %i3]
+  // expected-remark @below{{different}}
+   "test.are_equal"(%i2, %i3) {compose} : (index, index) -> ()
+  return
+}
