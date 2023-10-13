@@ -11,6 +11,8 @@
 
 #include "__concepts/movable.h"
 #include "__ranges/concepts.h"
+#include "__ranges/enable_view.h"
+#include "__ranges/size.h"
 #include "test_iterators.h"
 #include <iterator>
 #include <ranges>
@@ -260,5 +262,12 @@ static_assert(!std::ranges::common_range<BidirSentView<Copyable>>);
 static_assert(std::ranges::view<BidirSentView<Copyable>>);
 static_assert(std::copyable<BidirSentView<Copyable>>);
 */
+
+struct UnsizedBasicRangeIterator : ForwardIterBase<UnsizedBasicRangeIterator> {};
+
+struct UnsizedBasicRange : std::ranges::view_base {
+  UnsizedBasicRangeIterator begin() const;
+  UnsizedBasicRangeIterator end() const;
+};
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
