@@ -27,6 +27,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -10781,8 +10782,11 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     case ISD::ADD: {
       SDValue N0 = N.getOperand(0);
       SDValue N1 = N.getOperand(1);
-      if (!isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1)) {
-        uint64_t Offset = N.getConstantOperandVal(1);
+      if (!isa<ConstantSDNode>(N0)) {
+        bool RHSConstant = isa<ConstantSDNode>(N1);
+        uint64_t Offset;
+        if (RHSConstant)
+          Offset = N.getConstantOperandVal(1);
 
         // Rewrite an ADD constant node into a DIExpression. Since we are
         // performing arithmetic to compute the variable's *value* in the
@@ -10791,7 +10795,8 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         auto *DIExpr = DV->getExpression();
         auto NewLocOps = DV->copyLocationOps();
         bool Changed = false;
-        for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        size_t OrigLocOpsSize = NewLocOps.size();
+        for (size_t i = 0; i < OrigLocOpsSize; ++i) {
           // We're not given a ResNo to compare against because the whole
           // node is going away. We know that any ISD::ADD only has one
           // result, so we can assume any node match is using the result.
@@ -10799,19 +10804,38 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
               NewLocOps[i].getSDNode() != &N)
             continue;
           NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
-          SmallVector<uint64_t, 3> ExprOps;
-          DIExpression::appendOffset(ExprOps, Offset);
-          DIExpr = DIExpression::appendOpsToArg(DIExpr, ExprOps, i, true);
+          if (RHSConstant) {
+            SmallVector<uint64_t, 3> ExprOps;
+            DIExpression::appendOffset(ExprOps, Offset);
+            DIExpr = DIExpression::appendOpsToArg(DIExpr, ExprOps, i, true);
+          } else {
+            // Convert to a variadic expression (if not already).
+            // convertToVariadicExpression() returns a const pointer, so we use
+            // a temporary const variable here.
+            const auto *TmpDIExpr =
+                DIExpression::convertToVariadicExpression(DIExpr);
+            SmallVector<uint64_t, 3> ExprOps;
+            ExprOps.push_back(dwarf::DW_OP_LLVM_arg);
+            ExprOps.push_back(NewLocOps.size());
+            ExprOps.push_back(dwarf::DW_OP_plus);
+            SDDbgOperand RHS =
+                SDDbgOperand::fromNode(N1.getNode(), N1.getResNo());
+            NewLocOps.push_back(RHS);
+            DIExpr = DIExpression::appendOpsToArg(TmpDIExpr, ExprOps, i, true);
+          }
           Changed = true;
         }
         (void)Changed;
         assert(Changed && "Salvage target doesn't use N");
 
+        bool IsVariadic =
+            DV->isVariadic() || OrigLocOpsSize != NewLocOps.size();
+
         auto AdditionalDependencies = DV->getAdditionalDependencies();
         SDDbgValue *Clone = getDbgValueList(DV->getVariable(), DIExpr,
                                             NewLocOps, AdditionalDependencies,
                                             DV->isIndirect(), DV->getDebugLoc(),
-                                            DV->getOrder(), DV->isVariadic());
+                                            DV->getOrder(), IsVariadic);
         ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
         DV->setIsEmitted();

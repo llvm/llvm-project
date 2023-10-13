@@ -44,9 +44,6 @@ name:            pointer_add_unknown_offset
 alignment:       4
 tracksRegLiveness: true
 body:             |
-  ; FIXME: The DBG_VALUEs describing "p", "q" and "r" are useless with
-  ;        $noreg, $noreg.
-
   ; CHECK-LABEL: name: pointer_add_unknown_offset
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $i0, $i1
@@ -55,9 +52,9 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:i64regs = COPY $i0
   ; CHECK-NEXT:   [[SRAri:%[0-9]+]]:i64regs = SRAri [[COPY]], 0
   ; CHECK-NEXT:   [[SLLXri:%[0-9]+]]:i64regs = SLLXri killed [[SRAri]], 2
+  ; CHECK-NEXT:   DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), [[COPY1]], [[SLLXri]], debug-location !16
+  ; CHECK-NEXT:   DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_plus_uconst, 3, DW_OP_stack_value), [[COPY1]], [[SLLXri]], debug-location !16
+  ; CHECK-NEXT:   DBG_VALUE_LIST !15, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_plus, DW_OP_stack_value), [[COPY1]], [[COPY1]], [[SLLXri]], [[SLLXri]], debug-location !16
   ; CHECK-NEXT:   [[ORri:%[0-9]+]]:intregs = ORri $g0, 42
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !13, !DIExpression(), debug-location !16
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !14, !DIExpression(), debug-location !16
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !15, !DIExpression(), debug-location !16
   ; CHECK-NEXT:   STrr [[COPY1]], killed [[SLLXri]], killed [[ORri]] :: (store (s32) into %ir.add.ptr)
   ; CHECK-NEXT:   RETL 8
