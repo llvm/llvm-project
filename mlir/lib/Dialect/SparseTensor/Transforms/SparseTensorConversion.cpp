@@ -209,27 +209,12 @@ public:
         genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
                       params[kParamDim2Lvl], params[kParamLvl2Dim]);
     // Secondary and primary types encoding.
-    setTemplateTypes(stt);
-    // Finally, make note that initialization is complete.
-    assert(isInitialized() && "Initialization failed");
-    // And return `this` for method chaining.
-    return *this;
-  }
-
-  /// (Re)sets the C++ template type parameters, and returns `this`
-  /// for method chaining. This is already done as part of `genBuffers`,
-  /// but is factored out so that it can also be called independently
-  /// whenever subsequent `genNewCall` calls want to reuse the same
-  /// buffers but different type parameters.
-  //
-  // TODO: This is only ever used by sparse2sparse-viaCOO `ConvertOp`;
-  // is there a better way to handle that than this one-off setter method?
-  NewCallParams &setTemplateTypes(SparseTensorType stt) {
     const auto enc = stt.getEncoding();
     params[kParamPosTp] = constantPosTypeEncoding(builder, loc, enc);
     params[kParamCrdTp] = constantCrdTypeEncoding(builder, loc, enc);
     params[kParamValTp] =
         constantPrimaryTypeEncoding(builder, loc, stt.getElementType());
+    // Return `this` for method chaining.
     return *this;
   }
 
@@ -239,16 +224,6 @@ public:
       if (!params[i])
         return false;
     return true;
-  }
-
-  /// Gets the dimension-to-level mapping.
-  //
-  // TODO: This is only ever used for passing into `genAddEltCall`;
-  // is there a better way to encapsulate that pattern (both to avoid
-  // this one-off getter, and to avoid potential mixups)?
-  Value getDimToLvl() const {
-    assert(isInitialized() && "Must initialize before getDimToLvl");
-    return params[kParamDim2Lvl];
   }
 
   /// Generates a function call, with the current static parameters
@@ -606,7 +581,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getHasInserts()) {
       // Finalize any pending insertions.
-      StringRef name = "endInsert";
+      StringRef name = "endLexInsert";
       createFuncCall(rewriter, op->getLoc(), name, {}, adaptor.getOperands(),
                      EmitCInterface::Off);
     }
