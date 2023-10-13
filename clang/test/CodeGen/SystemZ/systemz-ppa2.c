@@ -10,7 +10,7 @@
 //     .byte (i.e., the one for the 3) would, it seems, also match
 //     the .byte line below for the 34.
 
-// RUN: %clang_cc1 --target=s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
+// RUN: %clang --target=s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
 // CHECK-C:        [[PPA2:(.L)|(@@)PPA2]]:
 // CHECK-C-NEXT:   .byte        3{{[[:space:]]*}}.byte 0
 // CHECK-C-NEXT:   .byte        34{{$}}
