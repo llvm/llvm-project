@@ -28,10 +28,26 @@ constexpr bool test_no_implicit_ctor() {
   return true;
 }
 
+constexpr bool test_move_ctor() {
+  int arr[] = {1, 2, 3};
+  // Test that the stride_view ctor properly moves from the base (and works with a move-only type).
+  static_assert(!std::is_copy_constructible_v<MovedOnlyTrackedBasicView<int>>);
+  static_assert(std::is_move_constructible_v<MovedOnlyTrackedBasicView<int>>);
+
+  bool moved(false), copied(false);
+  MovedOnlyTrackedBasicView<int> mov(arr, arr + 3, &moved, &copied);
+  std::ranges::stride_view<MovedOnlyTrackedBasicView<int>> mosv(std::move(mov), 2);
+  assert(moved);
+  assert(!copied);
+  return true;
+}
+
 int main(int, char**) {
   test_no_implicit_ctor();
   static_assert(test_no_implicit_ctor());
   test_no_default_ctor();
   static_assert(test_no_default_ctor());
+  test_move_ctor();
+  static_assert(test_move_ctor());
   return 0;
 }
