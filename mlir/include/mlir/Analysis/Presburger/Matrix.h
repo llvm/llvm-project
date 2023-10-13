@@ -15,8 +15,8 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
-#include "mlir/Support/LLVM.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -36,9 +36,11 @@ namespace presburger {
 /// This class only works for the types MPInt and Fraction, since the method
 /// implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
-template<typename T>
+template <typename T>
 class Matrix {
-static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
+  static_assert(std::is_same_v<T, MPInt> || std::is_same_v<T, Fraction>,
+                "T must be MPInt or Fraction.");
+
 public:
   Matrix() = delete;
 
@@ -69,9 +71,7 @@ public:
 
   T &operator()(unsigned row, unsigned column) { return at(row, column); }
 
-  T operator()(unsigned row, unsigned column) const {
-    return at(row, column);
-  }
+  T operator()(unsigned row, unsigned column) const { return at(row, column); }
 
   /// Swap the given columns.
   void swapColumns(unsigned column, unsigned otherColumn);
@@ -204,21 +204,20 @@ private:
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).
-class IntMatrix : public Matrix<MPInt>
-{
+class IntMatrix : public Matrix<MPInt> {
 public:
   IntMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
-            unsigned reservedColumns = 0) :
-    Matrix<MPInt>(rows, columns, reservedRows, reservedColumns) {};
+            unsigned reservedColumns = 0)
+      : Matrix<MPInt>(rows, columns, reservedRows, reservedColumns){};
 
-  IntMatrix(Matrix<MPInt> m) :
-    Matrix<MPInt>(m.getNumRows(), m.getNumColumns(), m.getNumReservedRows(), m.getNumReservedColumns())
-  {
+  IntMatrix(Matrix<MPInt> m)
+      : Matrix<MPInt>(m.getNumRows(), m.getNumColumns(), m.getNumReservedRows(),
+                      m.getNumReservedColumns()) {
     for (unsigned i = 0; i < m.getNumRows(); i++)
       for (unsigned j = 0; j < m.getNumColumns(); j++)
         at(i, j) = m(i, j);
   };
-  
+
   /// Return the identity matrix of the specified dimension.
   static IntMatrix identity(unsigned dimension);
 
@@ -240,7 +239,6 @@ public:
   /// Divide the columns of the specified row by their GCD.
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
-
 };
 
 } // namespace presburger

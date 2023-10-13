@@ -502,8 +502,8 @@ void DivisionRepr::print(raw_ostream &os) const {
   os << "Dividends:\n";
   dividends.print(os);
   os << "Denominators\n";
-  for (unsigned i = 0, e = denoms.size(); i < e; ++i)
-    os << denoms[i] << " ";
+  for (const MPInt &denom : denoms)
+    os << denom << " ";
   os << "\n";
 }
 
