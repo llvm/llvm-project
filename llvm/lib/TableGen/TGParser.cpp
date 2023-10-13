@@ -4408,7 +4408,8 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
   // Allow to use dump directly on `defvar` and `def`, by wrapping
   // them with a `!repl`.
   if (isa<DefInit>(Message))
-    Message = UnOpInit::get( UnOpInit::REPR, Message, StringRecTy::get(Records))->Fold(CurRec);
+    Message = UnOpInit::get(UnOpInit::REPR, Message, StringRecTy::get(Records))
+                  ->Fold(CurRec);
 
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
