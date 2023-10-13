@@ -240,7 +240,7 @@ TEST(isRowMajorBatchMatmul, FirstInputSwapped) {
   EXPECT_THAT(maps, Not(Truly(isRowMajorBatchMatmul)));
 }
 
-TEST(isVecMat, Simple) {
+TEST(isVecmat, Simple) {
   MLIRContext context;
 
   AffineExpr k, n;
@@ -250,10 +250,10 @@ TEST(isVecMat, Simple) {
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Truly(isVecMat));
+  EXPECT_THAT(maps, Truly(isVecmat));
 }
 
-TEST(isVecMat, BindingSwapped) {
+TEST(isVecmat, BindingSwapped) {
   MLIRContext context;
 
   AffineExpr k, n;
@@ -263,10 +263,10 @@ TEST(isVecMat, BindingSwapped) {
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Truly(isVecMat));
+  EXPECT_THAT(maps, Truly(isVecmat));
 }
 
-TEST(isVecMat, WrongDimOrderMatrix) {
+TEST(isVecmat, WrongDimOrderMatrix) {
   MLIRContext context;
 
   AffineExpr k, n;
@@ -276,10 +276,10 @@ TEST(isVecMat, WrongDimOrderMatrix) {
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Not(Truly(isVecMat)));
+  EXPECT_THAT(maps, Not(Truly(isVecmat)));
 }
 
-TEST(isMatVec, Simple) {
+TEST(isMatvec, Simple) {
   MLIRContext context;
 
   AffineExpr k, n;
@@ -289,10 +289,10 @@ TEST(isMatVec, Simple) {
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Truly(isMatVec));
+  EXPECT_THAT(maps, Truly(isMatvec));
 }
 
-TEST(isMatVec, BindingSwapped) {
+TEST(isMatvec, BindingSwapped) {
   MLIRContext context;
 
   AffineExpr k, n;
@@ -302,10 +302,10 @@ TEST(isMatVec, BindingSwapped) {
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Truly(isMatVec));
+  EXPECT_THAT(maps, Truly(isMatvec));
 }
 
-TEST(isMatVec, WrongDimOrderMatrix) {
+TEST(isMatvec, WrongDimOrderMatrix) {
   MLIRContext context;
 
   AffineExpr k, n;
@@ -315,10 +315,10 @@ TEST(isMatVec, WrongDimOrderMatrix) {
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Not(Truly(isMatVec)));
+  EXPECT_THAT(maps, Not(Truly(isMatvec)));
 }
 
-TEST(isBatchMatVec, Simple) {
+TEST(isBatchMatvec, Simple) {
   MLIRContext context;
 
   AffineExpr batch, k, n;
@@ -328,10 +328,10 @@ TEST(isBatchMatVec, Simple) {
   auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Truly(isBatchMatVec));
+  EXPECT_THAT(maps, Truly(isBatchMatvec));
 }
 
-TEST(isBatchMatVec, BindingSwapped) {
+TEST(isBatchMatvec, BindingSwapped) {
   MLIRContext context;
 
   AffineExpr batch, k, n;
@@ -341,10 +341,10 @@ TEST(isBatchMatVec, BindingSwapped) {
   auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Truly(isBatchMatVec));
+  EXPECT_THAT(maps, Truly(isBatchMatvec));
 }
 
-TEST(isBatchMatVec, Matmul) {
+TEST(isBatchMatvec, Matmul) {
   MLIRContext context;
 
   AffineExpr m, n, k;
@@ -354,10 +354,10 @@ TEST(isBatchMatVec, Matmul) {
   auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Not(Truly(isBatchMatVec)));
+  EXPECT_THAT(maps, Not(Truly(isBatchMatvec)));
 }
 
-TEST(isBatchMatVec, WrongDimOrderMatrix) {
+TEST(isBatchMatvec, WrongDimOrderMatrix) {
   MLIRContext context;
 
   AffineExpr batch, k, n;
@@ -367,7 +367,7 @@ TEST(isBatchMatVec, WrongDimOrderMatrix) {
   auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));
   auto maps = ArrayAttr::get(&context, {mapA, mapB, mapC});
 
-  EXPECT_THAT(maps, Not(Truly(isBatchMatVec)));
+  EXPECT_THAT(maps, Not(Truly(isBatchMatvec)));
 }
 
 } // namespace

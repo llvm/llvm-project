@@ -92,10 +92,10 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
       vector-matrix multiplication.
     }],
     /*retTy=*/"bool",
-    /*methodName=*/"isVecMat",
+    /*methodName=*/"isVecmat",
     /*args=*/(ins),
     /*methodBody=*/[{
-        return mlir::isVecMat($_op.getIndexingMaps());
+        return mlir::isVecmat($_op.getIndexingMaps());
     }]>,
     InterfaceMethod<
     /*desc=*/[{
@@ -103,10 +103,10 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
       matrix-vector multiplication.
     }],
     /*retTy=*/"bool",
-    /*methodName=*/"isMatVec",
+    /*methodName=*/"isMatvec",
     /*args=*/(ins),
     /*methodBody=*/[{
-        return mlir::isMatVec($_op.getIndexingMaps());
+        return mlir::isMatvec($_op.getIndexingMaps());
     }]>,
     InterfaceMethod<
     /*desc=*/[{
@@ -114,10 +114,10 @@ def LinalgContractionOpInterface : OpInterface<"ContractionOpInterface"> {
       batched matrix-vector multiplication.
     }],
     /*retTy=*/"bool",
-    /*methodName=*/"isBatchMatVec",
+    /*methodName=*/"isBatchMatvec",
     /*args=*/(ins),
     /*methodBody=*/[{
-        return mlir::isBatchMatVec($_op.getIndexingMaps());
+        return mlir::isBatchMatvec($_op.getIndexingMaps());
     }]>,
   ];
 }

@@ -96,7 +96,7 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   return indexingMaps == maps;
 }
 
-bool mlir::isVecMat(ArrayAttr indexingMaps) {
+bool mlir::isVecmat(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
   auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
@@ -120,7 +120,7 @@ bool mlir::isVecMat(ArrayAttr indexingMaps) {
   return indexingMaps == maps;
 }
 
-bool mlir::isMatVec(ArrayAttr indexingMaps) {
+bool mlir::isMatvec(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
   auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
@@ -144,7 +144,7 @@ bool mlir::isMatVec(ArrayAttr indexingMaps) {
   return indexingMaps == maps;
 }
 
-bool mlir::isBatchMatVec(ArrayAttr indexingMaps) {
+bool mlir::isBatchMatvec(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
   auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
