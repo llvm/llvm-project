@@ -8,7 +8,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
-
 // constexpr atomic() noexcept;
 // constexpr atomic(floating-point-type) noexcept;
 

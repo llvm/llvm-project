@@ -8,7 +8,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
-
 //   static constexpr bool is_always_lock_free = implementation-defined;
 //   bool is_lock_free() const volatile noexcept;
 //   bool is_lock_free() const noexcept;
