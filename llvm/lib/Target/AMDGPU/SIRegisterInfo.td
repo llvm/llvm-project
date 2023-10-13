@@ -1263,7 +1263,9 @@ def VSrc_f32 : RegOrF32 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_v2b16 : RegOrV2B16 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_b64 : RegOrB64 <"VS_64", "OPERAND_REG_IMM">;
-def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM">;
+def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM"> {
+  let DecoderMethod = "decodeOperand_VSrc_f64";
+}
 def VSrc_v2b32 : RegOrV2B32 <"VS_64", "OPERAND_REG_IMM">;
 def VSrc_v2f32 : RegOrV2F32 <"VS_64", "OPERAND_REG_IMM">;
 

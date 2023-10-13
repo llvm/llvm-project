@@ -91,8 +91,9 @@ void func() {
   std::numeric_limits<const volatile double>::has_denorm_loss; // expected-warning {{'has_denorm_loss' is deprecated}}
   std::numeric_limits<const volatile double>::denorm_min();
 
-  std::numeric_limits<const volatile long double>::has_denorm;      // expected-warning {{'has_denorm' is deprecated}}
-  std::numeric_limits<const volatile long double>::has_denorm_loss; // expected-warning {{'has_denorm_loss' is deprecated}}
+  std::numeric_limits<const volatile long double>::has_denorm; // expected-warning {{'has_denorm' is deprecated}}
+  std::numeric_limits<
+      const volatile long double>::has_denorm_loss; // expected-warning {{'has_denorm_loss' is deprecated}}
   std::numeric_limits<const volatile long double>::denorm_min();
 
   std::denorm_indeterminate; // expected-warning {{'denorm_indeterminate' is deprecated}}

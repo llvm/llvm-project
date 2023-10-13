@@ -418,4 +418,17 @@ entry:
   ret i1 %res
 }
 
+; FIXME: This is a miscompile.
+define i1 @pr68751(i128 %arg) {
+; CHECK-LABEL: @pr68751(
+; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw nsw i128 [[ARG:%.*]], 32
+; CHECK-NEXT:    [[SHL2:%.*]] = shl nuw nsw i128 [[SHL1]], 32
+; CHECK-NEXT:    ret i1 true
+;
+  %shl1 = shl nuw nsw i128 %arg, 32
+  %shl2 = shl nuw nsw i128 %shl1, 32
+  %cmp = icmp eq i128 %shl2, 0
+  ret i1 %cmp
+}
+
 declare void @llvm.assume(i1)

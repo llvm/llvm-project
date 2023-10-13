@@ -2725,6 +2725,13 @@ bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   return Lo16 == Hi16;
 }
 
+bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
+  if (IsFP64)
+    return !(Val & 0xffffffffu);
+
+  return isUInt<32>(Val) || isInt<32>(Val);
+}
+
 bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 

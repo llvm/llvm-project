@@ -705,6 +705,13 @@ def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf
  [FeatureFlatGlobalInsts]
 >;
 
+def FeatureAtomicCSubNoRtnInsts : SubtargetFeature<"atomic-csub-no-rtn-insts",
+  "HasAtomicCSubNoRtnInsts",
+  "true",
+  "Has buffer_atomic_csub and global_atomic_csub instructions that don't "
+  "return original value"
+>;
+
 def FeatureFlatAtomicFaddF32Inst
   : SubtargetFeature<"flat-atomic-fadd-f32-inst",
   "HasFlatAtomicFaddF32Inst",
@@ -2049,6 +2056,8 @@ def HasGWS : Predicate<"Subtarget->hasGWS()">;
 
 def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
 def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
+
+def HasAtomicCSubNoRtnInsts : Predicate<"Subtarget->hasAtomicCSubNoRtnInsts()">;
 
 def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 

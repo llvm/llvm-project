@@ -394,7 +394,7 @@ static Error writePublics(BinaryStreamWriter &Writer,
 
 static Error writeRecords(BinaryStreamWriter &Writer,
                           ArrayRef<CVSymbol> Records) {
-  BinaryItemStream<CVSymbol> ItemStream(support::endianness::little);
+  BinaryItemStream<CVSymbol> ItemStream(llvm::endianness::little);
   ItemStream.setItems(Records);
   BinaryStreamRef RecordsRef(ItemStream);
   return Writer.writeStreamRef(RecordsRef);

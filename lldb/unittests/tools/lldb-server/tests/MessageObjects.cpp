@@ -42,9 +42,9 @@ Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
   process_info.m_triple = fromHex(elements["triple"]);
   StringRef endian_str = elements["endian"];
   if (endian_str == "little")
-    process_info.m_endian = support::little;
+    process_info.m_endian = llvm::endianness::little;
   else if (endian_str == "big")
-    process_info.m_endian = support::big;
+    process_info.m_endian = llvm::endianness::big;
   else
     return make_parsing_error("ProcessInfo: endian");
 
@@ -53,7 +53,7 @@ Expected<ProcessInfo> ProcessInfo::create(StringRef response) {
 
 lldb::pid_t ProcessInfo::GetPid() const { return m_pid; }
 
-support::endianness ProcessInfo::GetEndian() const { return m_endian; }
+llvm::endianness ProcessInfo::GetEndian() const { return m_endian; }
 
 //====== ThreadInfo ============================================================
 ThreadInfo::ThreadInfo(StringRef name, StringRef reason, RegisterMap registers,
@@ -84,7 +84,7 @@ JThreadsInfo::parseRegisters(const StructuredData::Dictionary &Dict,
       return make_parsing_error("JThreadsInfo: register key[{0}]", i);
 
     auto RegValOr =
-        parseRegisterValue(RegInfos[Register], ValueStr, support::big);
+        parseRegisterValue(RegInfos[Register], ValueStr, llvm::endianness::big);
     if (!RegValOr)
       return RegValOr.takeError();
     Result[Register] = std::move(*RegValOr);
@@ -201,7 +201,7 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
 
 Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
                                            StringRef HexValue,
-                                           llvm::support::endianness Endian,
+                                           llvm::endianness Endian,
                                            bool ZeroPad) {
   SmallString<128> Storage;
   if (ZeroPad && HexValue.size() < Info.byte_size * 2) {
@@ -214,9 +214,10 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
   StringExtractor(HexValue).GetHexBytes(Bytes, '\xcc');
   RegisterValue Value;
   Status ST;
-  Value.SetFromMemoryData(
-      Info, Bytes.data(), Bytes.size(),
-      Endian == support::little ? eByteOrderLittle : eByteOrderBig, ST);
+  Value.SetFromMemoryData(Info, Bytes.data(), Bytes.size(),
+                          Endian == llvm::endianness::little ? eByteOrderLittle
+                                                             : eByteOrderBig,
+                          ST);
   if (ST.Fail())
     return ST.ToError();
   return Value;
@@ -224,7 +225,7 @@ Expected<RegisterValue> parseRegisterValue(const RegisterInfo &Info,
 
 //====== StopReply =============================================================
 Expected<std::unique_ptr<StopReply>>
-StopReply::create(StringRef Response, llvm::support::endianness Endian,
+StopReply::create(StringRef Response, llvm::endianness Endian,
                   ArrayRef<RegisterInfo> RegInfos) {
   if (Response.size() < 3)
     return make_parsing_error("StopReply: Invalid packet");
@@ -237,7 +238,7 @@ StopReply::create(StringRef Response, llvm::support::endianness Endian,
 
 Expected<RegisterMap> StopReplyStop::parseRegisters(
     const StringMap<SmallVector<StringRef, 2>> &Elements,
-    support::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
+    llvm::endianness Endian, ArrayRef<lldb_private::RegisterInfo> RegInfos) {
 
   RegisterMap Result;
   for (const auto &E : Elements) {
@@ -263,7 +264,7 @@ Expected<RegisterMap> StopReplyStop::parseRegisters(
 }
 
 Expected<std::unique_ptr<StopReplyStop>>
-StopReplyStop::create(StringRef Response, support::endianness Endian,
+StopReplyStop::create(StringRef Response, llvm::endianness Endian,
                       ArrayRef<RegisterInfo> RegInfos) {
   unsigned int Signal;
   StringRef SignalStr = Response.take_front(2);

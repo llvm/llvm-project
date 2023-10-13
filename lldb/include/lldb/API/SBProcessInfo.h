@@ -55,6 +55,7 @@ public:
 
 private:
   friend class SBProcess;
+  friend class SBProcessInfoList;
 
   lldb_private::ProcessInstanceInfo &ref();
 

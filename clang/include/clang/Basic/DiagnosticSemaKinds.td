@@ -3864,21 +3864,13 @@ def warn_fun_requires_negative_cap : Warning<
   "calling function %0 requires negative capability '%1'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
 
-// Thread safety warnings on pass/return by reference
+// Thread safety warnings on pass by reference
 def warn_guarded_pass_by_reference : Warning<
   "passing variable %1 by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
 def warn_pt_guarded_pass_by_reference : Warning<
   "passing the value that %1 points to by reference requires holding %0 "
-  "%select{'%2'|'%2' exclusively}3">,
-  InGroup<ThreadSafetyReference>, DefaultIgnore;
-def warn_guarded_return_by_reference : Warning<
-  "returning variable %1 by reference requires holding %0 "
-  "%select{'%2'|'%2' exclusively}3">,
-  InGroup<ThreadSafetyReference>, DefaultIgnore;
-def warn_pt_guarded_return_by_reference : Warning<
-  "returning the value that %1 points to by reference requires holding %0 "
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReference>, DefaultIgnore;
 
@@ -5240,11 +5232,11 @@ def err_explicit_specialization_inconsistent_storage_class : Error<
   "'%select{none|extern|static|__private_extern__|auto|register}0'">;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
-  " friend function template specialization">;
+  " %select{member|friend}0 function template specialization">;
 def note_dependent_function_template_spec_discard_reason : Note<
-  "candidate ignored: %select{not a function template"
-  "|not a member of the enclosing namespace;"
-  " did you mean to explicitly qualify the specialization?}0">;
+  "candidate ignored: %select{not a function template|"
+  "not a member of the enclosing %select{class template|"
+  "namespace; did you mean to explicitly qualify the specialization?}1}0">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -6396,21 +6388,6 @@ def warn_variable_sized_ivar_visibility : Warning<
 def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
-
-def err_counted_by_attr_not_on_flexible_array_member : Error<
-  "'counted_by' only applies to flexible array members">;
-def err_flexible_array_counted_by_attr_field_not_found : Error<
-  "field %0 in 'counted_by' not found">;
-def err_flexible_array_counted_by_attr_field_not_found_suggest : Error<
-  "field %0 in 'counted_by' not found; did you mean %1?">;
-def err_flexible_array_counted_by_attr_field_not_found_in_struct : Error<
-  "field %0 in 'counted_by' is not found in struct">;
-def err_flexible_array_counted_by_attr_refers_to_self : Error<
-  "field %0 in 'counted_by' cannot refer to the flexible array">;
-def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' is not a non-boolean integer type">;
-def note_flexible_array_counted_by_attr_field : Note<
-  "field %0 declared here">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

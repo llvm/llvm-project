@@ -74,7 +74,8 @@ GsymReader::parse() {
       break;
     case GSYM_CIGAM:
       // This is a GSYM file, but not native endianness.
-      Endian = sys::IsBigEndianHost ? support::little : support::big;
+      Endian = sys::IsBigEndianHost ? llvm::endianness::little
+                                    : llvm::endianness::big;
       Swap.reset(new SwappedData);
       break;
     default:
@@ -82,7 +83,7 @@ GsymReader::parse() {
                                "not a GSYM file");
   }
 
-  bool DataIsLittleEndian = HostByteOrder != support::little;
+  bool DataIsLittleEndian = HostByteOrder != llvm::endianness::little;
   // Read a correctly byte swapped header if we need to.
   if (Swap) {
     DataExtractor Data(MemBuffer->getBuffer(), DataIsLittleEndian, 4);
@@ -259,10 +260,11 @@ llvm::Expected<FunctionInfo> GsymReader::getFunctionInfo(uint64_t Addr) const {
   // Address info offsets size should have been checked in parse().
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  assert((Endian == support::big || Endian == support::little) &&
-         "Endian must be either big or little");
+  assert(
+      (Endian == llvm::endianness::big || Endian == llvm::endianness::little) &&
+      "Endian must be either big or little");
   DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
-                     Endian == support::little, 4);
+                     Endian == llvm::endianness::little, 4);
   if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex)) {
     auto ExpectedFI = FunctionInfo::decode(Data, *OptAddr);
     if (ExpectedFI) {
@@ -284,10 +286,11 @@ llvm::Expected<LookupResult> GsymReader::lookup(uint64_t Addr) const {
   // Address info offsets size should have been checked in parse().
   assert(*AddressIndex < AddrInfoOffsets.size());
   auto AddrInfoOffset = AddrInfoOffsets[*AddressIndex];
-  assert((Endian == support::big || Endian == support::little) &&
-         "Endian must be either big or little");
+  assert(
+      (Endian == llvm::endianness::big || Endian == llvm::endianness::little) &&
+      "Endian must be either big or little");
   DataExtractor Data(MemBuffer->getBuffer().substr(AddrInfoOffset),
-                     Endian == support::little, 4);
+                     Endian == llvm::endianness::little, 4);
   if (std::optional<uint64_t> OptAddr = getAddress(*AddressIndex))
     return FunctionInfo::lookup(Data, *this, *OptAddr, Addr);
   return createStringError(std::errc::invalid_argument,
