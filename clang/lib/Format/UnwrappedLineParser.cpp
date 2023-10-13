@@ -640,6 +640,14 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   FormatTok = Tokens->setPosition(StoredPosition);
 }
 
+// Sets the token type of the directly previous right brace.
+void UnwrappedLineParser::setPreviousRBraceType(TokenType Type) {
+  if (auto Prev = FormatTok->getPreviousNonComment();
+      Prev && Prev->is(tok::r_brace)) {
+    Prev->setFinalizedType(Type);
+  }
+}
+
 template <class T>
 static inline void hash_combine(std::size_t &seed, const T &v) {
   std::hash<T> hasher;
@@ -2756,6 +2764,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                /*MunchSemi=*/true, KeepIfBraces, &IfBlockKind);
+    setPreviousRBraceType(TT_ControlStatementRBrace);
     if (Style.BraceWrapping.BeforeElse)
       addUnwrappedLine();
     else
@@ -2794,6 +2803,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       FormatToken *IfLBrace =
           parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                      /*MunchSemi=*/true, KeepElseBraces, &ElseBlockKind);
+      setPreviousRBraceType(TT_ElseRBrace);
       if (FormatTok->is(tok::kw_else)) {
         KeepElseBraces = KeepElseBraces ||
                          ElseBlockKind == IfStmtKind::IfOnly ||
@@ -3057,12 +3067,12 @@ void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
   keepAncestorBraces();
 
   if (isBlockBegin(*FormatTok)) {
-    if (!KeepBraces)
-      FormatTok->setFinalizedType(TT_ControlStatementLBrace);
+    FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     FormatToken *LeftBrace = FormatTok;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                /*MunchSemi=*/true, KeepBraces);
+    setPreviousRBraceType(TT_ControlStatementRBrace);
     if (!KeepBraces) {
       assert(!NestedTooDeep.empty());
       if (!NestedTooDeep.back())
@@ -3196,7 +3206,9 @@ void UnwrappedLineParser::parseSwitch() {
 
   if (FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
+    FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     parseBlock();
+    setPreviousRBraceType(TT_ControlStatementRBrace);
     addUnwrappedLine();
   } else {
     addUnwrappedLine();
@@ -3713,10 +3725,7 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     addUnwrappedLine();
   }
-  if (auto Prev = FormatTok->getPreviousNonComment();
-      Prev && Prev->is(tok::r_brace)) {
-    Prev->setFinalizedType(TT_EnumRBrace);
-  }
+  setPreviousRBraceType(TT_EnumRBrace);
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a
@@ -3950,10 +3959,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
     }
-    if (auto Prev = FormatTok->getPreviousNonComment();
-        Prev && Prev->is(tok::r_brace)) {
-      Prev->setFinalizedType(ClosingBraceType);
-    }
+    setPreviousRBraceType(ClosingBraceType);
   }
   // There is no addUnwrappedLine() here so that we fall through to parsing a
   // structural element afterwards. Thus, in "class A {} n, m;",
