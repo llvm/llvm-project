@@ -202,6 +202,18 @@ static cl::opt<std::string>
                          cl::desc("Path to the profile remapping file."),
                          cl::Hidden);
 
+static cl::opt<PGOOptions::ColdFuncAttr> PGOColdFuncAttr(
+    "pgo-cold-func-attr", cl::init(PGOOptions::ColdFuncAttr::None), cl::Hidden,
+    cl::desc(
+        "Function attribute to apply to cold functions as determined by PGO"),
+    cl::values(clEnumValN(PGOOptions::ColdFuncAttr::None, "none", "None"),
+               clEnumValN(PGOOptions::ColdFuncAttr::OptSize, "optsize",
+                          "Mark cold functions with optsize."),
+               clEnumValN(PGOOptions::ColdFuncAttr::MinSize, "minsize",
+                          "Mark cold functions with minsize."),
+               clEnumValN(PGOOptions::ColdFuncAttr::OptNone, "optnone",
+                          "Mark cold functions with optnone.")));
+
 static cl::opt<bool> DebugInfoForProfiling(
     "debug-info-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit special debug info to enable PGO profile generation."));
@@ -340,22 +352,24 @@ bool llvm::runPassPipeline(
   switch (PGOKindFlag) {
   case InstrGen:
     P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr);
+                   PGOOptions::IRInstr, PGOOptions::NoCSAction,
+                   PGOColdFuncAttr);
     break;
   case InstrUse:
     P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
-                   PGOOptions::IRUse);
+                   PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
     P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
-                   PGOOptions::SampleUse);
+                   PGOOptions::SampleUse, PGOOptions::NoCSAction,
+                   PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
       P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
-                     PGOOptions::NoCSAction, DebugInfoForProfiling,
-                     PseudoProbeForProfiling);
+                     PGOOptions::NoCSAction, PGOColdFuncAttr,
+                     DebugInfoForProfiling, PseudoProbeForProfiling);
     else
       P = std::nullopt;
   }

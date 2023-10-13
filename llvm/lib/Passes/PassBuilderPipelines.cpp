@@ -73,6 +73,7 @@
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+#include "llvm/Transforms/Instrumentation/MarkColdFunctions.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
@@ -211,6 +212,12 @@ static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
                            cl::init(false), cl::Hidden);
+
+// TODO: turn on and remove flag
+static cl::opt<bool>
+    EnableMarkColdFunctions("enable-mark-cold-functions",
+                            cl::desc("Enable pass to mark cold functions"),
+                            cl::init(false));
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -1136,6 +1143,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Synthesize function entry counts for non-PGO compilation.
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
+
+  if (EnableMarkColdFunctions && PGOOpt &&
+      (PGOOpt->Action == PGOOptions::SampleUse ||
+       PGOOpt->Action == PGOOptions::IRUse))
+    MPM.addPass(MarkColdFunctionsPass(PGOOpt->ColdType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 
