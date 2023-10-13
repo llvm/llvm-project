@@ -1803,6 +1803,10 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   if (*NameOrError == "$x" || NameOrError->startswith("$x."))
     return MarkerSymType::CODE;
 
+  // $x<ISA>
+  if (isRISCV() && NameOrError->startswith("$x"))
+    return MarkerSymType::CODE;
+
   if (*NameOrError == "$d" || NameOrError->startswith("$d."))
     return MarkerSymType::DATA;
 
