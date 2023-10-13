@@ -12,7 +12,6 @@ body: |
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT 0
     ; GCN-NEXT: FLAT_STORE_DWORD undef $vgpr4_vgpr5, $vgpr256, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr0 = FLAT_LOAD_DWORD undef $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
