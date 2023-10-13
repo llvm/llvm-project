@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "UniqueDWARFASTType.h"
+#include "lldb/Utility/StructuredData.h"
 
 class SymbolFileDWARF;
 class DWARFCompileUnit;
