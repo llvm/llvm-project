@@ -12,15 +12,15 @@
 
 // std::views::stride_view
 
+#include "test.h"
 #include <concepts>
 #include <ranges>
 #include <utility>
-#include "test.h"
 
 constexpr bool test() {
   int arr[]{1, 2, 3};
 
-  InstrumentedBasicView<int> bv{arr, arr + 3};
+  MovedCopiedTrackedBasicView<int> bv{arr, arr + 3};
   InstrumentedBasicRange<int> br{};
 
   static_assert(std::same_as< decltype(std::ranges::stride_view(bv, 2)), std::ranges::stride_view<decltype(bv)> >);

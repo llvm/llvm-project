@@ -24,40 +24,46 @@ constexpr bool test() {
 
   // Check the const& overload
   {
-    InstrumentedBasicView range(buff, buff + 8);
-    std::ranges::stride_view<InstrumentedBasicView<int>> const view(range, 3);
-    std::same_as<InstrumentedBasicView<int>> decltype(auto) result = view.base();
-    assert(result.wasCopyInitialized);
+    bool moved(false), copied(false);
+    MovedCopiedTrackedBasicView range(buff, buff + 8, &moved, &copied);
+    std::ranges::stride_view<MovedCopiedTrackedBasicView<int>> const view(std::move(range), 3);
+    assert(moved);
+    assert(!copied);
+    std::same_as<MovedCopiedTrackedBasicView<int>> decltype(auto) result = view.base();
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
   }
 
   // Check the && overload
   {
-    InstrumentedBasicView<int> range(buff, buff + 8);
-    std::ranges::stride_view<InstrumentedBasicView<int>> view(range, 3);
-    std::same_as<InstrumentedBasicView<int>> decltype(auto) result = std::move(view).base();
-    assert(result.wasMoveInitialized);
+    bool moved(false), copied(false);
+    MovedCopiedTrackedBasicView range(buff, buff + 8, &moved, &copied);
+    std::ranges::stride_view<MovedCopiedTrackedBasicView<int>> view(std::move(range), 3);
+    assert(moved);
+    assert(!copied);
+    std::same_as<MovedCopiedTrackedBasicView<int>> decltype(auto) result = std::move(view).base();
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
   }
 
   // Check the && overload (again)
   {
-    InstrumentedBasicView range(buff, buff + 8);
-    std::same_as<InstrumentedBasicView<int>> decltype(auto) result =
-        std::ranges::stride_view<InstrumentedBasicView<int>>(range, 3).base();
-    assert(result.wasMoveInitialized);
+    bool moved(false), copied(false);
+    MovedCopiedTrackedBasicView range(buff, buff + 8, &moved, &copied);
+    std::same_as<MovedCopiedTrackedBasicView<int>> decltype(auto) result =
+        std::ranges::stride_view<MovedCopiedTrackedBasicView<int>>(std::move(range), 3).base();
+    assert(moved);
+    assert(!copied);
     assert(result.begin() == buff);
     assert(result.end() == buff + 8);
   }
 
   // Ensure the const& overload is not considered when the base is not copy-constructible
   {
-    static_assert(!can_call_base_on<std::ranges::stride_view<NoCopyView> const&>);
-    static_assert(!can_call_base_on<std::ranges::stride_view<NoCopyView>&>);
-    static_assert(can_call_base_on<std::ranges::stride_view<NoCopyView>&&>);
-    static_assert(can_call_base_on<std::ranges::stride_view<NoCopyView>>);
+    static_assert(!can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>> const&>);
+    static_assert(!can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>>&>);
+    static_assert(can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>>&&>);
+    static_assert(can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>>>);
   }
 
   return true;
