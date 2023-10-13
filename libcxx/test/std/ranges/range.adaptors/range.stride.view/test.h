@@ -26,41 +26,63 @@ struct InstrumentedBasicRange {
   T* end() const;
 };
 
+struct MovedCopiedTrackedView {
+  constexpr explicit MovedCopiedTrackedView(bool* moved = nullptr, bool* copied = nullptr)
+      : wasMoveInitialized_(moved), wasCopyInitialized_(copied) {}
+  constexpr MovedCopiedTrackedView(MovedCopiedTrackedView const& other)
+      : wasMoveInitialized_(other.wasMoveInitialized_), wasCopyInitialized_(other.wasCopyInitialized_) {
+    *wasCopyInitialized_ = true;
+  }
+  constexpr MovedCopiedTrackedView(MovedCopiedTrackedView&& other)
+      : wasMoveInitialized_(other.wasMoveInitialized_), wasCopyInitialized_(other.wasCopyInitialized_) {
+    *wasMoveInitialized_ = true;
+  }
+  MovedCopiedTrackedView& operator=(MovedCopiedTrackedView const&) = default;
+  MovedCopiedTrackedView& operator=(MovedCopiedTrackedView&&)      = default;
+
+  bool* wasMoveInitialized_ = nullptr;
+  bool* wasCopyInitialized_ = nullptr;
+};
+
 template <typename T = int>
-struct InstrumentedBasicView : std::ranges::view_base {
-  constexpr explicit InstrumentedBasicView(T* b, T* e) : begin_(b), end_(e) {}
-  constexpr InstrumentedBasicView(InstrumentedBasicView const& other)
-      : begin_(other.begin_), end_(other.end_), wasCopyInitialized(true) {}
-  constexpr InstrumentedBasicView(InstrumentedBasicView&& other)
-      : begin_(other.begin_), end_(other.end_), wasMoveInitialized(true) {}
-  InstrumentedBasicView& operator=(InstrumentedBasicView const&) = default;
-  InstrumentedBasicView& operator=(InstrumentedBasicView&&)      = default;
+struct MovedCopiedTrackedBasicView : MovedCopiedTrackedView, std::ranges::view_base {
+  constexpr explicit MovedCopiedTrackedBasicView(T* b, T* e, bool* moved = nullptr, bool* copied = nullptr)
+      : MovedCopiedTrackedView(moved, copied), begin_(b), end_(e) {}
+  constexpr MovedCopiedTrackedBasicView(const MovedCopiedTrackedBasicView& other)
+      : MovedCopiedTrackedView(other), begin_(other.begin_), end_(other.end_) {}
+  constexpr MovedCopiedTrackedBasicView(MovedCopiedTrackedBasicView&& other)
+      : MovedCopiedTrackedView(std::move(other)), begin_(other.begin_), end_(other.end_) {}
+  MovedCopiedTrackedBasicView& operator=(MovedCopiedTrackedBasicView const&) = default;
+  MovedCopiedTrackedBasicView& operator=(MovedCopiedTrackedBasicView&&)      = default;
   constexpr T* begin() const { return begin_; }
   constexpr T* end() const { return end_; }
 
   T* begin_;
   T* end_;
-  bool wasCopyInitialized = false;
-  bool wasMoveInitialized = false;
 };
 
 template <typename T>
-InstrumentedBasicView(T, T) -> InstrumentedBasicView<T>;
+MovedCopiedTrackedBasicView(T, T, bool*, bool*) -> MovedCopiedTrackedBasicView<T>;
 
 template <typename T>
-struct InstrumentedBorrowedRange : public InstrumentedBasicView<T> {};
+struct InstrumentedBorrowedRange : public MovedCopiedTrackedBasicView<T> {};
 
 template <typename T>
 inline constexpr bool std::ranges::enable_borrowed_range<InstrumentedBorrowedRange<T>> = true;
 
-struct NoCopyView : std::ranges::view_base {
-  explicit NoCopyView(int*, int*);
-  NoCopyView(NoCopyView const&)            = delete;
-  NoCopyView(NoCopyView&&)                 = default;
-  NoCopyView& operator=(NoCopyView const&) = default;
-  NoCopyView& operator=(NoCopyView&&)      = default;
-  int* begin() const;
-  int* end() const;
+template <typename T = int>
+struct MovedOnlyTrackedBasicView : MovedCopiedTrackedView, std::ranges::view_base {
+  constexpr explicit MovedOnlyTrackedBasicView(T* b, T* e, bool* moved = nullptr, bool* copied = nullptr)
+      : MovedCopiedTrackedView(moved, copied), begin_(b), end_(e) {}
+  constexpr MovedOnlyTrackedBasicView(MovedOnlyTrackedBasicView&& other)
+      : MovedCopiedTrackedView(std::move(other)), begin_(other.begin_), end_(other.end_) {}
+  MovedOnlyTrackedBasicView& operator=(MovedOnlyTrackedBasicView const&) = delete;
+  MovedOnlyTrackedBasicView& operator=(MovedOnlyTrackedBasicView&&)      = default;
+  constexpr T* begin() const { return begin_; }
+  constexpr T* end() const { return end_; }
+
+  T* begin_;
+  T* end_;
 };
 
 template <class Derived>
