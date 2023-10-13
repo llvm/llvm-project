@@ -3543,9 +3543,22 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
     Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
 
-    Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
-    PN->replaceAllUsesWith(Sel);
-    Sel->takeName(PN);
+    Value *ReplaceVal = nullptr;
+    if (isa<UndefValue>(TrueVal) &&
+        isGuaranteedNotToBePoison(FalseVal, /*AC*/ nullptr,
+                                  IfFalse->getTerminator(),
+                                  DTU ? &DTU->getDomTree() : nullptr, 0)) {
+      ReplaceVal = FalseVal;
+    } else if (isa<UndefValue>(FalseVal) &&
+               isGuaranteedNotToBePoison(
+                   TrueVal, /*AC*/ nullptr, IfFalse->getTerminator(),
+                   DTU ? &DTU->getDomTree() : nullptr, 0)) {
+      ReplaceVal = TrueVal;
+    } else {
+      ReplaceVal = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
+      ReplaceVal->takeName(PN);
+    }
+    PN->replaceAllUsesWith(ReplaceVal);
     PN->eraseFromParent();
   }
 

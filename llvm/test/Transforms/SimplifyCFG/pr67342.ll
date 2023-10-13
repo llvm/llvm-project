@@ -8,8 +8,7 @@ define i16 @test1(i32 %err) {
 ; CHECK-NEXT:  bb3:
 ; CHECK-NEXT:    [[_3:%.*]] = icmp slt i32 [[ERR]], 0
 ; CHECK-NEXT:    [[OK:%.*]] = trunc i32 [[ERR]] to i16
-; CHECK-NEXT:    [[R_SROA_3_0:%.*]] = select i1 [[_3]], i16 undef, i16 [[OK]]
-; CHECK-NEXT:    ret i16 [[R_SROA_3_0]]
+; CHECK-NEXT:    ret i16 [[OK]]
 ;
   %_3 = icmp slt i32 %err, 0
   br i1 %_3, label %bb1, label %bb2
@@ -33,8 +32,7 @@ define i16 @test2(i32 %err) {
 ; CHECK-NEXT:  bb3:
 ; CHECK-NEXT:    [[_3:%.*]] = icmp slt i32 [[ERR]], 0
 ; CHECK-NEXT:    [[OK:%.*]] = trunc i32 [[ERR]] to i16
-; CHECK-NEXT:    [[R_SROA_3_0:%.*]] = select i1 [[_3]], i16 [[OK]], i16 undef
-; CHECK-NEXT:    ret i16 [[R_SROA_3_0]]
+; CHECK-NEXT:    ret i16 [[OK]]
 ;
   %_3 = icmp slt i32 %err, 0
   br i1 %_3, label %bb1, label %bb2
