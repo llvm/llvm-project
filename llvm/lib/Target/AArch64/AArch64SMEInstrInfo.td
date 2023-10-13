@@ -203,7 +203,9 @@ def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
 def MSRpstatePseudo :
   Pseudo<(outs),
            (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
-    Sched<[WriteSys]>;
+    Sched<[WriteSys]> {
+  let hasPostISelHook = 1;
+}
 
 def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
           (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;

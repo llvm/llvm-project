@@ -7376,6 +7376,22 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   return ZExtBool;
 }
 
+void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                          SDNode *Node) const {
+  // Live-in physreg copies that are glued to SMSTART are applied as
+  // implicit-def's in the InstrEmitter. Here we remove them, allowing the
+  // register allocator to pass call args in callee saved regs, without extra
+  // copies to avoid these fake clobbers of actually-preserved GPRs.
+  if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 ||
+      MI.getOpcode() == AArch64::MSRpstatePseudo)
+    for (unsigned I = MI.getNumOperands() - 1; I > 0; --I)
+      if (MachineOperand &MO = MI.getOperand(I);
+          MO.isReg() && MO.isImplicit() && MO.isDef() &&
+          (AArch64::GPR32RegClass.contains(MO.getReg()) ||
+           AArch64::GPR64RegClass.contains(MO.getReg())))
+        MI.removeOperand(I);
+}
+
 SDValue AArch64TargetLowering::changeStreamingMode(
     SelectionDAG &DAG, SDLoc DL, bool Enable,
     SDValue Chain, SDValue InGlue, SDValue PStateSM, bool Entry) const {
