@@ -292,6 +292,7 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case TargetOpcode::EH_LABEL:
       OpNum = 0;
       return true;
     case RISCV::AUIPC:
