@@ -125,14 +125,19 @@ RT_API_ATTRS int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
 }
 
 RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+  bool stridesAreContiguous{true};
   CFI_index_t bytes = descriptor->elem_len;
   for (int j{0}; j < descriptor->rank; ++j) {
-    if (bytes != descriptor->dim[j].sm) {
-      return 0;
-    }
+    stridesAreContiguous &= bytes == descriptor->dim[j].sm;
     bytes *= descriptor->dim[j].extent;
   }
-  return 1;
+  // One and zero element arrays are contiguous even if the descriptor
+  // byte strides are not perfect multiples.
+  if (stridesAreContiguous || bytes == 0 ||
+      bytes == static_cast<CFI_index_t>(descriptor->elem_len)) {
+    return 1;
+  }
+  return 0;
 }
 
 RT_API_ATTRS int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
