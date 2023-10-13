@@ -801,7 +801,7 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
 
 static ConstantRange getConstantRangeOrFull(const ValueLatticeElement &Val,
                                             Type *Ty, const DataLayout &DL) {
-  if (Val.isConstantRange())
+  if (Val.isConstantRange(/*UndefAllowed*/ false))
     return Val.getConstantRange();
   return ConstantRange::getFull(DL.getTypeSizeInBits(Ty));
 }

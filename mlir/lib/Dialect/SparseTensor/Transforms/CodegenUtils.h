@@ -19,6 +19,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Builders.h"
 
@@ -220,34 +221,6 @@ Value allocDenseTensor(OpBuilder &builder, Location loc,
 /// Generates code to deallocate a dense buffer.
 void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer);
 
-/// Generates code to read the value from `tensor[ivs]`. The generated code
-/// looks like the following and the insertion point after this routine is
-/// inside the then-branch.
-///    if (tensor[ivs] != 0)
-///      insert_point
-Value genValueForDense(OpBuilder &builder, Location loc, Value tensor,
-                       ValueRange ivs);
-
-/// Generates the loop structure to iterate over a dense tensor or a sparse
-/// tensor constant to support the lowering of dense-to-sparse convert operator.
-//
-// The loop to iterate a dense tensor:
-//   for i1 in dim1
-//    ..
-//     for ik in dimk
-//       val = a[i1,..,ik]
-//       if val != 0
-//         loop-body
-//
-// The loop to iterate a sparse tensor constant:
-//   for i in range(NNZ)
-//     val = values[i]
-//     [i1,..,ik] = coordinates[i]
-//     loop-body
-void genDenseTensorOrSparseConstantIterLoop(
-    OpBuilder &builder, Location loc, Value src, unsigned rank,
-    function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder);
-
 /// Populates given sizes array from dense tensor or sparse tensor constant.
 void sizesFromSrc(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
                   Location loc, Value src);
@@ -340,6 +313,23 @@ Value createOrFoldSliceOffsetOp(OpBuilder &builder, Location loc, Value tensor,
 /// return a constant if the offset is statically known.
 Value createOrFoldSliceStrideOp(OpBuilder &builder, Location loc, Value tensor,
                                 Dimension dim);
+
+/// Populates the array with the dimension-shape of the given
+/// `SparseTensorType`, where dynamic sizes are represented by zero.
+void fillDimShape(OpBuilder &builder, Location loc, SparseTensorType stt,
+                  SmallVectorImpl<Value> &out);
+
+/// Generates code that opens a reader and sets the dimension sizes.
+Value genReader(OpBuilder &builder, Location loc, SparseTensorType stt,
+                Value tensor,
+                /*out*/ SmallVectorImpl<Value> &dimShapeValues,
+                /*out*/ Value &dimSizesBuffer);
+
+/// Generates code to set up the buffer parameters for a map.
+Value genMapBuffers(OpBuilder &builder, Location loc, SparseTensorType stt,
+                    ArrayRef<Value> dimShapeValues, Value dimSizesBuffer,
+                    /*out*/ Value &dim2lvlBuffer,
+                    /*out*/ Value &lvl2dimBuffer);
 
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.

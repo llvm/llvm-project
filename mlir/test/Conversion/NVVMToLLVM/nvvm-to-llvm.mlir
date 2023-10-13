@@ -466,3 +466,17 @@ func.func @wgmma_f32_e5m2_e4m3(%descA : i64, %descB : i64) -> !mat32f32 {
       : !mat32f32 -> !mat32f32
   return %result2 : !mat32f32
 }
+
+// -----
+
+func.func @elect_one_leader_sync() {  
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "{
+  // CHECK-SAME: .reg .u32 rx;
+  // CHECK-SAME: .reg .pred px;
+  // CHECK-SAME: mov.u32 $0, 0;
+  // CHECK-SAME: elect.sync rx | px, 0xFFFFFFFF;
+  // CHECK-SAME: @px mov.u32 $0, 1;
+  // CHECK-SAME: "=b"  : () -> i1
+  %cnd = nvvm.elect.sync -> i1 
+  return 
+}

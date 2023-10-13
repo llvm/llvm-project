@@ -63,6 +63,21 @@ func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
 
 // -----
 
+// CHECK-LABEL: llvm.func @private_callee
+// CHECK-SAME: sym_visibility = "private"
+func.func private @private_callee(%arg1: f32) -> i32 {
+  %0 = arith.constant 0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @caller_private_callee
+func.func @caller_private_callee(%arg1: f32) -> i32 {
+  %0 = call @private_callee(%arg1) : (f32) -> i32
+  return %0 : i32
+}
+
+// -----
+
 func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 } // expected-error {{Contains llvm.linkage attribute not of type LLVM::LinkageAttr}}
 
 // -----

@@ -18,8 +18,9 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Timer.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/Timer.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
 
@@ -1269,6 +1270,42 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
     // this once and can stop after the first iteration hence we return true.
     return true;
   });
+}
+
+bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
+    lldb_private::StructuredData::Dictionary &d) {
+  StructuredData::Array separate_debug_info_files;
+  const uint32_t cu_count = GetNumCompileUnits();
+  for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
+    const auto &info = m_compile_unit_infos[cu_idx];
+    StructuredData::DictionarySP oso_data =
+        std::make_shared<StructuredData::Dictionary>();
+    oso_data->AddStringItem("so_file", info.so_file.GetPath());
+    oso_data->AddStringItem("oso_path", info.oso_path);
+    oso_data->AddIntegerItem("oso_mod_time",
+                             (uint32_t)llvm::sys::toTimeT(info.oso_mod_time));
+
+    bool loaded_successfully = false;
+    if (GetModuleByOSOIndex(cu_idx)) {
+      // If we have a valid pointer to the module, we successfully
+      // loaded the oso if there are no load errors.
+      if (!info.oso_load_error.Fail()) {
+        loaded_successfully = true;
+      }
+    }
+    if (!loaded_successfully) {
+      oso_data->AddStringItem("error", info.oso_load_error.AsCString());
+    }
+    oso_data->AddBooleanItem("loaded", loaded_successfully);
+    separate_debug_info_files.AddItem(oso_data);
+  }
+
+  d.AddStringItem("type", "oso");
+  d.AddStringItem("symfile", GetMainObjectFile()->GetFileSpec().GetPath());
+  d.AddItem("separate-debug-info-files",
+            std::make_shared<StructuredData::Array>(
+                std::move(separate_debug_info_files)));
+  return true;
 }
 
 lldb::CompUnitSP

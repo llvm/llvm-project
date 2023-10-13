@@ -16796,12 +16796,11 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
         LangOpts.CPlusPlus11? diag::ext_offsetof_non_standardlayout_type
                             : diag::ext_offsetof_non_pod_type;
 
-      if (!IsSafe && !DidWarnAboutNonPOD &&
-          DiagRuntimeBehavior(BuiltinLoc, nullptr,
-                              PDiag(DiagID)
-                              << SourceRange(Components[0].LocStart, OC.LocEnd)
-                              << CurrentType))
+      if (!IsSafe && !DidWarnAboutNonPOD && !isUnevaluatedContext()) {
+        Diag(BuiltinLoc, DiagID)
+            << SourceRange(Components[0].LocStart, OC.LocEnd) << CurrentType;
         DidWarnAboutNonPOD = true;
+      }
     }
 
     // Look for the field.
@@ -18409,6 +18408,8 @@ static void EvaluateAndDiagnoseImmediateInvocation(
 
     assert(FD && FD->isImmediateFunction() &&
            "could not find an immediate function in this expression");
+    if (FD->isInvalidDecl())
+      return;
     SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call)
         << FD << FD->isConsteval();
     if (auto Context =
