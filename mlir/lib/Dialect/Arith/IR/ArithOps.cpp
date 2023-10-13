@@ -48,20 +48,17 @@ applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
 
 static IntegerAttr addIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  auto binFn = [](const APInt &a, const APInt &b) -> APInt { return a + b; };
-  return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::plus<APInt>());
 }
 
 static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  auto binFn = [](const APInt &a, const APInt &b) -> APInt { return a - b; };
-  return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::minus<APInt>());
 }
 
 static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
-  auto binFn = [](const APInt &a, const APInt &b) -> APInt { return a * b; };
-  return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
 }
 
 /// Invert an integer comparison predicate.
