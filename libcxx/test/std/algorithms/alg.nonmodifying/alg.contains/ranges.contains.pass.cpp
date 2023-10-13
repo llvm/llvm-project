@@ -60,12 +60,11 @@ static_assert(!HasContainsR<InputRangeNotSentinelEqualityComparableWith, int>);
 template <class Iter, class Sent = Iter>
 constexpr void test_iterators() {
   using ValueT = std::iter_value_t<Iter>;
-  {  // simple tests
+  { // simple tests
     ValueT a[] = {1, 2, 3, 4, 5, 6};
     auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 6)));
     {
-      std::same_as<bool> decltype(auto) ret =
-        std::ranges::contains(whole.begin(), whole.end(), 3);
+      std::same_as<bool> decltype(auto) ret = std::ranges::contains(whole.begin(), whole.end(), 3);
       assert(ret);
     }
     {
@@ -147,36 +146,41 @@ constexpr void test_iterators() {
     }
     {
       auto range = std::ranges::subrange(a, a + 5);
-      bool ret = std::ranges::contains(range, -13, [&](int i) { return i * -1; });
+      bool ret   = std::ranges::contains(range, -13, [&](int i) { return i * -1; });
       assert(ret);
     }
   }
 }
 
 constexpr bool test() {
-  types::for_each(types::type_list<char, short, int, long, long long>{},
-                  []<class T> {
-                    types::for_each(types::cpp20_input_iterator_list<T*>{},
-                      []<class Iter> {
-                      if constexpr (std::forward_iterator<Iter>)
-                        test_iterators<Iter>();
-                      test_iterators<Iter, sentinel_wrapper<Iter>>();
-                      test_iterators<Iter, sized_sentinel<Iter>>();
-                    });
-                  });
+  types::for_each(
+      types::type_list<char, short, int, long, long long>{},
+      []<class T> {
+        types::for_each(types::cpp20_input_iterator_list<T*>{}, []<class Iter> {
+          if constexpr (std::forward_iterator<Iter>)
+            test_iterators<Iter>();
+          test_iterators<Iter, sentinel_wrapper<Iter>>();
+          test_iterators<Iter, sized_sentinel<Iter>>();
+        });
+      });
 
   { // count invocations of the projection
-    int a[] = {1, 9, 0, 13, 25};
+    int a[]              = {1, 9, 0, 13, 25};
     int projection_count = 0;
     {
-      bool ret = std::ranges::contains(a, a + 5, 0,
-                                [&](int i) { ++projection_count; return i; });
+      bool ret = std::ranges::contains(a, a + 5, 0, [&](int i) {
+        ++projection_count;
+        return i;
+      });
       assert(ret);
       assert(projection_count == 3);
       projection_count = 0;
     }
     {
-      bool ret = std::ranges::contains(a, 0, [&](int i) { ++projection_count; return i; });
+      bool ret = std::ranges::contains(a, 0, [&](int i) {
+        ++projection_count;
+        return i;
+      });
       assert(ret);
       assert(projection_count == 3);
     }
