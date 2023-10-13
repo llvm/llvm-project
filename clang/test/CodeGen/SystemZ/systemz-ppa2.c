@@ -10,14 +10,14 @@
 //     .byte (i.e., the one for the 3) would, it seems, also match
 //     the .byte line below for the 34.
 
-// RUN: %clang --target=s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
+// RUN: %clang_cc1 -triple s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
 // CHECK-C:        [[PPA2:(.L)|(@@)PPA2]]:
 // CHECK-C-NEXT:   .byte        3{{[[:space:]]*}}.byte 0
 // CHECK-C-NEXT:   .byte        34{{$}}
 // CHECK-C-NEXT:   .byte        {{4}}
 // CHECK-C-NEXT:   .long        {{(CELQSTRT)}}-[[PPA2]]
 
-// RUN: %clang --target=s390x-ibm-zos -xc++ -S -o - %s | FileCheck %s --check-prefix CHECK-CXX
+// RUN: %clang_cc1 -triple s390x-ibm-zos -xc++ -S -o - %s | FileCheck %s --check-prefix CHECK-CXX
 // CHECK-CXX:        [[PPA2:(.L)|(@@)PPA2]]:
 // CHECK-CXX-NEXT:   .byte      3{{[[:space:]]*}}.byte 1
 // CHECK-CXX-NEXT:   .byte      34{{$}}
