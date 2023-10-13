@@ -39,7 +39,7 @@ using namespace mlir::arith;
 static IntegerAttr
 applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
                     Attribute rhs,
-                    function_ref<APInt(APInt, APInt&)> binFn) {
+                    function_ref<APInt(const APInt&, const APInt&)> binFn) {
   auto lhsVal = llvm::cast<IntegerAttr>(lhs).getValue();
   auto rhsVal = llvm::cast<IntegerAttr>(rhs).getValue();
   auto value = binFn(lhsVal, rhsVal);
@@ -49,7 +49,7 @@ applyToIntegerAttrs(PatternRewriter &builder, Value res, Attribute lhs,
 static IntegerAttr addIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
   auto binFn = [](APInt a, APInt& b) -> APInt {
-    return std::move(a) + b;
+    return a + b;
   };
   return applyToIntegerAttrs(builder, res, lhs, rhs, binFn);
 }
