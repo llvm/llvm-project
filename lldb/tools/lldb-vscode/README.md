@@ -222,9 +222,9 @@ locally on port `2345`.
 {
   "name": "Local Debug Server",
   "type": "lldb-vscode",
-  "request": "launch",
+  "request": "attach",
   "program": "/tmp/a.out",
-  "launchCommands": ["gdb-remote 2345"],
+  "attachCommands": ["gdb-remote 2345"],
 }
 ```
 
@@ -238,9 +238,9 @@ port `5678` of that other machine.
 {
   "name": "Remote Debug Server",
   "type": "lldb-vscode",
-  "request": "launch",
+  "request": "attach",
   "program": "/tmp/a.out",
-  "launchCommands": ["gdb-remote hostname:5678"],
+  "attachCommands": ["gdb-remote hostname:5678"],
 }
 ```
 
