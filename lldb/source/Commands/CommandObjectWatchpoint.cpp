@@ -1133,7 +1133,23 @@ protected:
       size = target->GetArchitecture().GetAddressByteSize();
 
     // Now it's time to create the watchpoint.
-    uint32_t watch_type = m_option_watchpoint.watch_type;
+    uint32_t watch_type;
+    switch (m_option_watchpoint.watch_type) {
+    case OptionGroupWatchpoint::eWatchRead:
+      watch_type = LLDB_WATCH_TYPE_READ;
+      break;
+    case OptionGroupWatchpoint::eWatchWrite:
+      watch_type = LLDB_WATCH_TYPE_WRITE;
+      break;
+    case OptionGroupWatchpoint::eWatchModify:
+      watch_type = LLDB_WATCH_TYPE_MODIFY;
+      break;
+    case OptionGroupWatchpoint::eWatchReadWrite:
+      watch_type = LLDB_WATCH_TYPE_READ | LLDB_WATCH_TYPE_WRITE;
+      break;
+    default:
+      watch_type = LLDB_WATCH_TYPE_MODIFY;
+    }
 
     // Fetch the type from the value object, the type of the watched object is
     // the pointee type

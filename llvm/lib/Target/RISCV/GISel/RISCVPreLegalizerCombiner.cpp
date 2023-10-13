@@ -153,13 +153,13 @@ bool RISCVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
 char RISCVPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVPreLegalizerCombiner, DEBUG_TYPE,
-                      "Combine RISCV machine instrs before legalization", false,
+                      "Combine RISC-V machine instrs before legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(RISCVPreLegalizerCombiner, DEBUG_TYPE,
-                    "Combine RISCV machine instrs before legalization", false,
+                    "Combine RISC-V machine instrs before legalization", false,
                     false)
 
 namespace llvm {

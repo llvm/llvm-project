@@ -1260,10 +1260,6 @@ public:
   /// the language based on the target options where applicable.
   virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
 
-  /// Adjust target options based on codegen options.
-  virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,
-                                   TargetOptions &TargetOpts) const {}
-
   /// Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
   ///

@@ -13,8 +13,11 @@
 // .relr.dyn
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.relr.exe -nostdlib \
 # RUN:   -Wl,-q -Wl,-z,notext -Wl,--pack-dyn-relocs=relr
+# RUN: llvm-objcopy --remove-section .rela.mytext %t.relr.exe
 # RUN: llvm-bolt %t.relr.exe -o %t.relr.bolt --use-old-text=0 --lite=0
 # RUN: llvm-objdump -j .text -d --show-all-symbols %t.relr.bolt | FileCheck %s
+# RUN: llvm-objdump -j .text -d %t.relr.bolt | \
+# RUN:   FileCheck %s --check-prefix=ADDENDCHECK
 # RUN: llvm-readelf -rsW %t.relr.bolt | FileCheck --check-prefix=ELFCHECK %s
 # RUN: llvm-readelf -SW %t.relr.bolt | FileCheck --check-prefix=RELRSZCHECK %s
 
@@ -30,6 +33,11 @@
 # CHECK-NEXT: {{.*}} .word 0x{{[0]+}}[[#ADDR]]
 # CHECK-NEXT: {{.*}} .word 0x00000000
 
+// Check that addend was properly patched in mytextP with stripped relocations
+# ADDENDCHECK: [[#%x,ADDR:]] <exitLocal>:
+# ADDENDCHECK: {{.*}} <mytextP>:
+# ADDENDCHECK-NEXT: {{.*}} .word 0x{{[0]+}}[[#ADDR]]
+# ADDENDCHECK-NEXT: {{.*}} .word 0x00000000
 
 // Check that we've relaxed adr to adrp + add to refer external CI
 # CHECK: <addressDynCi>:
@@ -40,9 +48,10 @@
 # ELFCHECK: [[#%x,OFF:]] [[#%x,INFO_DYN:]] R_AARCH64_RELATIVE
 # ELFCHECK-NEXT: [[#OFF + 8]] {{0*}}[[#INFO_DYN]] R_AARCH64_RELATIVE
 # ELFCHECK-NEXT: [[#OFF + 24]] {{0*}}[[#INFO_DYN]] R_AARCH64_RELATIVE
+# ELFCHECK-NEXT: {{.*}} R_AARCH64_RELATIVE
 # ELFCHECK: {{.*}}[[#OFF]] {{.*}} $d
 
-// Check that .relr.dyn size is 2 bytes to ensure that last 2 relocations were
+// Check that .relr.dyn size is 2 bytes to ensure that last 3 relocations were
 // encoded as a bitmap so the total section size for 3 relocations is 2 bytes.
 # RELRSZCHECK: .relr.dyn RELR [[#%x,ADDR:]] [[#%x,OFF:]] {{0*}}10
 
@@ -81,3 +90,17 @@ addressDynCi:
   adr x1, .Lci
   bl _start
 .size addressDynCi, .-addressDynCi
+
+  .section ".mytext", "ax"
+  .balign 8
+  .global dummy
+  .type dummy, %function
+dummy:
+  nop
+  .word 0
+  .size dummy, .-dummy
+
+  .global mytextP
+mytextP:
+  .xword exitLocal
+  .size mytextP, .-mytextP

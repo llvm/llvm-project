@@ -13,6 +13,7 @@
 
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
@@ -525,7 +526,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOHOSFamily())
+    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
+        TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -541,6 +543,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
+  case llvm::Triple::Haiku:
     if (!MArch.empty() && MArch == "v6")
       return "arm1176jzf-s";
     if (!MArch.empty() && MArch == "v7")
@@ -573,6 +576,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   // If no specific architecture version is requested, return the minimum CPU
   // required by the OS and environment.
   switch (Triple.getOS()) {
+  case llvm::Triple::Haiku:
+    return "arm1176jzf-s";
   case llvm::Triple::NetBSD:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABI:
@@ -600,11 +605,17 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   llvm_unreachable("invalid arch name");
 }
 
-void ARM::PrintSupportedExtensions() {
-  outs() << "All available -march extensions for ARM\n\n";
+void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+  outs() << "All available -march extensions for ARM\n\n"
+         << "    " << left_justify("Name", 20)
+         << (DescMap.empty() ? "\n" : "Description\n");
   for (const auto &Ext : ARCHExtNames) {
     // Extensions without a feature cannot be used with -march.
-    if (!Ext.Feature.empty())
-      outs() << '\t' << Ext.Name << "\n";
+    if (!Ext.Feature.empty()) {
+      std::string Description = DescMap[Ext.Name].str();
+      outs() << "    "
+             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.Name.str().c_str(), Description.c_str());
+    }
   }
 }

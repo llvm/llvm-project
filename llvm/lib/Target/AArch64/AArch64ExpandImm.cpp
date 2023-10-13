@@ -362,6 +362,105 @@ static bool tryAndOfLogicalImmediates(uint64_t UImm,
   return false;
 }
 
+// Check whether the constant can be represented by exclusive-or of two 64-bit
+// logical immediates. If so, materialize it with an ORR instruction followed
+// by an EOR instruction.
+//
+// This encoding allows all remaining repeated byte patterns, and many repeated
+// 16-bit values, to be encoded without needing four instructions. It can also
+// represent some irregular bitmasks (although those would mostly only need
+// three instructions otherwise).
+static bool tryEorOfLogicalImmediates(uint64_t Imm,
+                                      SmallVectorImpl<ImmInsnModel> &Insn) {
+  // Determine the larger repetition size of the two possible logical
+  // immediates, by finding the repetition size of Imm.
+  unsigned BigSize = 64;
+
+  do {
+    BigSize /= 2;
+    uint64_t Mask = (1ULL << BigSize) - 1;
+
+    if ((Imm & Mask) != ((Imm >> BigSize) & Mask)) {
+      BigSize *= 2;
+      break;
+    }
+  } while (BigSize > 2);
+
+  uint64_t BigMask = ((uint64_t)-1LL) >> (64 - BigSize);
+
+  // Find the last bit of each run of ones, circularly. For runs which wrap
+  // around from bit 0 to bit 63, this is the bit before the most-significant
+  // zero, otherwise it is the least-significant bit in the run of ones.
+  uint64_t RunStarts = Imm & ~rotl<uint64_t>(Imm, 1);
+
+  // Find the smaller repetition size of the two possible logical immediates by
+  // counting the number of runs of one-bits within the BigSize-bit value. Both
+  // sizes may be the same. The EOR may add one or subtract one from the
+  // power-of-two count that can be represented by a logical immediate, or it
+  // may be left unchanged.
+  int RunsPerBigChunk = popcount(RunStarts & BigMask);
+
+  static const int8_t BigToSmallSizeTable[32] = {
+      -1, -1, 0,  1,  2,  2,  -1, 3,  3,  3,  -1, -1, -1, -1, -1, 4,
+      4,  4,  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5,
+  };
+
+  int BigToSmallShift = BigToSmallSizeTable[RunsPerBigChunk];
+
+  // Early-exit if the big chunk couldn't be a power-of-two number of runs
+  // EORed with another single run.
+  if (BigToSmallShift == -1)
+    return false;
+
+  unsigned SmallSize = BigSize >> BigToSmallShift;
+
+  // 64-bit values with a bit set every (1 << index) bits.
+  static const uint64_t RepeatedOnesTable[] = {
+      0xffffffffffffffff, 0x5555555555555555, 0x1111111111111111,
+      0x0101010101010101, 0x0001000100010001, 0x0000000100000001,
+      0x0000000000000001,
+  };
+
+  // This RepeatedOnesTable lookup is a faster implementation of the division
+  // 0xffffffffffffffff / ((1 << SmallSize) - 1), and can be thought of as
+  // dividing the 64-bit value into fields of width SmallSize, and placing a
+  // one in the least significant bit of each field.
+  uint64_t SmallOnes = RepeatedOnesTable[countr_zero(SmallSize)];
+
+  // Now we try to find the number of ones in each of the smaller repetitions,
+  // by looking at runs of ones in Imm. This can take three attempts, as the
+  // EOR may have changed the length of the first two runs we find.
+
+  // Rotate a run of ones so we can count the number of trailing set bits.
+  int Rotation = countr_zero(RunStarts);
+  uint64_t RotatedImm = rotr<uint64_t>(Imm, Rotation);
+  for (int Attempt = 0; Attempt < 3; ++Attempt) {
+    unsigned RunLength = countr_one(RotatedImm);
+
+    // Construct candidate values BigImm and SmallImm, such that if these two
+    // values are encodable, we have a solution. (SmallImm is constructed to be
+    // encodable, but this isn't guaranteed when RunLength >= SmallSize)
+    uint64_t SmallImm =
+        rotl<uint64_t>((SmallOnes << RunLength) - SmallOnes, Rotation);
+    uint64_t BigImm = Imm ^ SmallImm;
+
+    uint64_t BigEncoding = 0;
+    uint64_t SmallEncoding = 0;
+    if (AArch64_AM::processLogicalImmediate(BigImm, 64, BigEncoding) &&
+        AArch64_AM::processLogicalImmediate(SmallImm, 64, SmallEncoding)) {
+      Insn.push_back({AArch64::ORRXri, 0, SmallEncoding});
+      Insn.push_back({AArch64::EORXri, 1, BigEncoding});
+      return true;
+    }
+
+    // Rotate to the next run of ones
+    Rotation += countr_zero(rotr<uint64_t>(RunStarts, Rotation) & ~1);
+    RotatedImm = rotr<uint64_t>(Imm, Rotation);
+  }
+
+  return false;
+}
+
 /// \brief Expand a MOVi32imm or MOVi64imm pseudo instruction to a
 /// MOVZ or MOVN of width BitSize followed by up to 3 MOVK instructions.
 static inline void expandMOVImmSimple(uint64_t Imm, unsigned BitSize,
@@ -501,6 +600,10 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
 
   // Attempt to use a sequence of ORR-immediate followed by AND-immediate.
   if (tryAndOfLogicalImmediates(Imm, Insn))
+    return;
+
+  // Attempt to use a sequence of ORR-immediate followed by EOR-immediate.
+  if (tryEorOfLogicalImmediates(UImm, Insn))
     return;
 
   // FIXME: Add more two-instruction sequences.

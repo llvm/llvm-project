@@ -523,9 +523,7 @@ def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     InferTypeOpAdaptorWithIsCompatible]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector, DenseI64ArrayAttr:$position)>,
-    Results<(outs AnyType)> {
+     InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "extract operation";
   let description = [{
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
@@ -534,22 +532,56 @@ def Vector_ExtractOp :
     Example:
 
     ```mlir
-    %1 = vector.extract %0[3]: vector<4x8x16xf32>
-    %2 = vector.extract %0[3, 3, 3]: vector<4x8x16xf32>
-    %3 = vector.extract %1[]: vector<f32>
+    %1 = vector.extract %0[3]: vector<8x16xf32> from vector<4x8x16xf32>
+    %2 = vector.extract %0[2, 1, 3]: f32 from vector<4x8x16xf32>
+    %3 = vector.extract %1[]: vector<f32> from vector<f32>
+    %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
+    %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     ```
   }];
+
+  let arguments = (ins
+    AnyVectorOfAnyRank:$vector,
+    Variadic<Index>:$dynamic_position,
+    DenseI64ArrayAttr:$static_position
+  );
+  let results = (outs AnyType:$result);
+
   let builders = [
-    // Convenience builder which assumes the values in `position` are defined by
-    // ConstantIndexOp.
-    OpBuilder<(ins "Value":$source, "ValueRange":$position)>
+    OpBuilder<(ins "Value":$source, "int64_t":$position)>,
+    OpBuilder<(ins "Value":$source, "OpFoldResult":$position)>,
+    OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$position)>,
+    OpBuilder<(ins "Value":$source, "ArrayRef<OpFoldResult>":$position)>,
   ];
+
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
+
+    /// Return a vector with all the static and dynamic position indices.
+    SmallVector<OpFoldResult> getMixedPosition() {
+      OpBuilder builder(getContext());
+      return getMixedValues(getStaticPosition(), getDynamicPosition(), builder);
+    }
+
+    unsigned getNumIndices() {
+      return getStaticPosition().size();
+    }
+
+    bool hasDynamicPosition() {
+      auto dynPos = getDynamicPosition();
+      return std::any_of(dynPos.begin(), dynPos.end(),
+                         [](Value operand) { return operand != nullptr; });
+    }
   }];
-  let assemblyFormat = "$vector `` $position attr-dict `:` type($vector)";
+
+  let assemblyFormat = [{
+    $vector ``
+    custom<DynamicIndexList>($dynamic_position, $static_position)
+    attr-dict `:` type($result) `from` type($vector)
+  }];
+
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -638,9 +670,7 @@ def Vector_InsertOp :
   Vector_Op<"insert", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     AllTypesMatch<["dest", "res"]>]>,
-     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest, DenseI64ArrayAttr:$position)>,
-     Results<(outs AnyVectorOfAnyRank:$res)> {
+     AllTypesMatch<["dest", "result"]>]> {
   let summary = "insert operation";
   let description = [{
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
@@ -651,24 +681,53 @@ def Vector_InsertOp :
 
     ```mlir
     %2 = vector.insert %0, %1[3] : vector<8x16xf32> into vector<4x8x16xf32>
-    %5 = vector.insert %3, %4[3, 3, 3] : f32 into vector<4x8x16xf32>
+    %5 = vector.insert %3, %4[2, 1, 3] : f32 into vector<4x8x16xf32>
     %8 = vector.insert %6, %7[] : f32 into vector<f32>
-    %11 = vector.insert %9, %10[3, 3, 3] : vector<f32> into vector<4x8x16xf32>
+    %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
+    %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
     ```
   }];
-  let assemblyFormat = [{
-    $source `,` $dest $position attr-dict `:` type($source) `into` type($dest)
-  }];
+
+  let arguments = (ins
+    AnyType:$source,
+    AnyVectorOfAnyRank:$dest,
+    Variadic<Index>:$dynamic_position,
+    DenseI64ArrayAttr:$static_position
+  );
+  let results = (outs AnyVectorOfAnyRank:$result);
 
   let builders = [
-    // Convenience builder which assumes all values are constant indices.
-    OpBuilder<(ins "Value":$source, "Value":$dest, "ValueRange":$position)>
+    OpBuilder<(ins "Value":$source, "Value":$dest, "int64_t":$position)>,
+    OpBuilder<(ins "Value":$source, "Value":$dest, "OpFoldResult":$position)>,
+    OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<int64_t>":$position)>,
+    OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<OpFoldResult>":$position)>,
   ];
+
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
     }
+
+    /// Return a vector with all the static and dynamic position indices.
+    SmallVector<OpFoldResult> getMixedPosition() {
+      OpBuilder builder(getContext());
+      return getMixedValues(getStaticPosition(), getDynamicPosition(), builder);
+    }
+
+    unsigned getNumIndices() {
+      return getStaticPosition().size();
+    }
+
+    bool hasDynamicPosition() {
+      return llvm::any_of(getDynamicPosition(),
+                          [](Value operand) { return operand != nullptr; });
+    }
+  }];
+
+  let assemblyFormat = [{
+    $source `,` $dest custom<DynamicIndexList>($dynamic_position, $static_position)
+    attr-dict `:` type($source) `into` type($dest)
   }];
 
   let hasCanonicalizer = 1;
@@ -1330,8 +1389,8 @@ def Vector_TransferReadOp :
     // MaskableOpInterface methods.
     bool supportsPassthru() { return true; }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {0, 0};  // empty range (no init operands)
+    MutableOperandRange getDpsInitsMutable() {
+      return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
     }
   }];
 
@@ -1494,9 +1553,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {1, 2};  // `source` operand
-    }
+    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
   }];
 
   let hasFolder = 1;

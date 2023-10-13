@@ -2978,9 +2978,7 @@ static Address EmitX86_64VAArgFromMemory(CodeGenFunction &CGF,
 
   // AMD64-ABI 3.5.7p5: Step 8. Fetch type from l->overflow_arg_area.
   llvm::Type *LTy = CGF.ConvertTypeForMem(Ty);
-  llvm::Value *Res =
-    CGF.Builder.CreateBitCast(overflow_arg_area,
-                              llvm::PointerType::getUnqual(LTy));
+  llvm::Value *Res = overflow_arg_area;
 
   // AMD64-ABI 3.5.7p5: Step 9. Set l->overflow_arg_area to:
   // l->overflow_arg_area + sizeof(type).
@@ -3083,8 +3081,6 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     llvm::Type *TyHi = ST->getElementType(1);
     assert((TyLo->isFPOrFPVectorTy() ^ TyHi->isFPOrFPVectorTy()) &&
            "Unexpected ABI info for mixed regs");
-    llvm::Type *PTyLo = llvm::PointerType::getUnqual(TyLo);
-    llvm::Type *PTyHi = llvm::PointerType::getUnqual(TyHi);
     llvm::Value *GPAddr =
         CGF.Builder.CreateGEP(CGF.Int8Ty, RegSaveArea, gp_offset);
     llvm::Value *FPAddr =
@@ -3095,13 +3091,13 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // Copy the first element.
     // FIXME: Our choice of alignment here and below is probably pessimistic.
     llvm::Value *V = CGF.Builder.CreateAlignedLoad(
-        TyLo, CGF.Builder.CreateBitCast(RegLoAddr, PTyLo),
+        TyLo, RegLoAddr,
         CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyLo)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
 
     // Copy the second element.
     V = CGF.Builder.CreateAlignedLoad(
-        TyHi, CGF.Builder.CreateBitCast(RegHiAddr, PTyHi),
+        TyHi, RegHiAddr,
         CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyHi)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 

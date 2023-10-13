@@ -201,7 +201,7 @@ void SUnit::removePred(const SDep &D) {
   }
   if (!isScheduled) {
     if (D.isWeak()) {
-      assert(WeakSuccsLeft > 0 && "WeakSuccsLeft will underflow!");
+      assert(N->WeakSuccsLeft > 0 && "WeakSuccsLeft will underflow!");
       --N->WeakSuccsLeft;
     } else {
       assert(N->NumSuccsLeft > 0 && "NumSuccsLeft will underflow!");

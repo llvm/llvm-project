@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_ENDIAN_H
 #define LLVM_SUPPORT_ENDIAN_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
@@ -24,7 +25,12 @@
 namespace llvm {
 namespace support {
 
-enum endianness {big, little, native};
+// TODO: Remove the following once we are done migrating to llvm::endianness,
+// llvm::endianness::big, etc.
+using endianness = llvm::endianness;
+constexpr llvm::endianness big = llvm::endianness::big;
+constexpr llvm::endianness little = llvm::endianness::little;
+constexpr llvm::endianness native = llvm::endianness::native;
 
 // These are named values for common alignments.
 enum {aligned = 0, unaligned = 1};
@@ -41,26 +47,26 @@ struct PickAlignment {
 
 namespace endian {
 
-constexpr endianness system_endianness() {
-  return sys::IsBigEndianHost ? big : little;
-}
+LLVM_DEPRECATED("Use llvm::endianness::native instead",
+                "llvm::endianness::native")
+constexpr endianness system_endianness() { return llvm::endianness::native; }
 
 template <typename value_type>
-inline value_type byte_swap(value_type value, endianness endian) {
-  if ((endian != native) && (endian != system_endianness()))
+[[nodiscard]] inline value_type byte_swap(value_type value, endianness endian) {
+  if (endian != native)
     sys::swapByteOrder(value);
   return value;
 }
 
 /// Swap the bytes of value to match the given endianness.
-template<typename value_type, endianness endian>
-inline value_type byte_swap(value_type value) {
+template <typename value_type, endianness endian>
+[[nodiscard]] inline value_type byte_swap(value_type value) {
   return byte_swap(value, endian);
 }
 
 /// Read a value of a particular endianness from memory.
 template <typename value_type, std::size_t alignment = unaligned>
-inline value_type read(const void *memory, endianness endian) {
+[[nodiscard]] inline value_type read(const void *memory, endianness endian) {
   value_type ret;
 
   memcpy(&ret,
@@ -70,25 +76,24 @@ inline value_type read(const void *memory, endianness endian) {
   return byte_swap<value_type>(ret, endian);
 }
 
-template<typename value_type,
-         endianness endian,
-         std::size_t alignment>
-inline value_type read(const void *memory) {
+template <typename value_type, endianness endian, std::size_t alignment>
+[[nodiscard]] inline value_type read(const void *memory) {
   return read<value_type, alignment>(memory, endian);
 }
 
 /// Read a value of a particular endianness from a buffer, and increment the
 /// buffer past that value.
 template <typename value_type, std::size_t alignment, typename CharT>
-inline value_type readNext(const CharT *&memory, endianness endian) {
+[[nodiscard]] inline value_type readNext(const CharT *&memory,
+                                         endianness endian) {
   value_type ret = read<value_type, alignment>(memory, endian);
   memory += sizeof(value_type);
   return ret;
 }
 
-template<typename value_type, endianness endian, std::size_t alignment,
-         typename CharT>
-inline value_type readNext(const CharT *&memory) {
+template <typename value_type, endianness endian, std::size_t alignment,
+          typename CharT>
+[[nodiscard]] inline value_type readNext(const CharT *&memory) {
   return readNext<value_type, alignment, CharT>(memory, endian);
 }
 
@@ -114,7 +119,8 @@ using make_unsigned_t = std::make_unsigned_t<value_type>;
 /// Read a value of a particular endianness from memory, for a location
 /// that starts at the given bit offset within the first byte.
 template <typename value_type, endianness endian, std::size_t alignment>
-inline value_type readAtBitAlignment(const void *memory, uint64_t startBit) {
+[[nodiscard]] inline value_type readAtBitAlignment(const void *memory,
+                                                   uint64_t startBit) {
   assert(startBit < 8);
   if (startBit == 0)
     return read<value_type, endian, alignment>(memory);
@@ -349,36 +355,42 @@ using aligned_big_t = detail::packed_endian_specific_integral<T, big, aligned>;
 
 namespace endian {
 
-template <typename T, endianness E> inline T read(const void *P) {
+template <typename T, endianness E> [[nodiscard]] inline T read(const void *P) {
   return *(const detail::packed_endian_specific_integral<T, E, unaligned> *)P;
 }
 
-inline uint16_t read16(const void *P, endianness E) {
+[[nodiscard]] inline uint16_t read16(const void *P, endianness E) {
   return read<uint16_t>(P, E);
 }
-inline uint32_t read32(const void *P, endianness E) {
+[[nodiscard]] inline uint32_t read32(const void *P, endianness E) {
   return read<uint32_t>(P, E);
 }
-inline uint64_t read64(const void *P, endianness E) {
+[[nodiscard]] inline uint64_t read64(const void *P, endianness E) {
   return read<uint64_t>(P, E);
 }
 
-template <endianness E> inline uint16_t read16(const void *P) {
+template <endianness E> [[nodiscard]] inline uint16_t read16(const void *P) {
   return read<uint16_t, E>(P);
 }
-template <endianness E> inline uint32_t read32(const void *P) {
+template <endianness E> [[nodiscard]] inline uint32_t read32(const void *P) {
   return read<uint32_t, E>(P);
 }
-template <endianness E> inline uint64_t read64(const void *P) {
+template <endianness E> [[nodiscard]] inline uint64_t read64(const void *P) {
   return read<uint64_t, E>(P);
 }
 
-inline uint16_t read16le(const void *P) { return read16<little>(P); }
-inline uint32_t read32le(const void *P) { return read32<little>(P); }
-inline uint64_t read64le(const void *P) { return read64<little>(P); }
-inline uint16_t read16be(const void *P) { return read16<big>(P); }
-inline uint32_t read32be(const void *P) { return read32<big>(P); }
-inline uint64_t read64be(const void *P) { return read64<big>(P); }
+[[nodiscard]] inline uint16_t read16le(const void *P) {
+  return read16<little>(P);
+}
+[[nodiscard]] inline uint32_t read32le(const void *P) {
+  return read32<little>(P);
+}
+[[nodiscard]] inline uint64_t read64le(const void *P) {
+  return read64<little>(P);
+}
+[[nodiscard]] inline uint16_t read16be(const void *P) { return read16<big>(P); }
+[[nodiscard]] inline uint32_t read32be(const void *P) { return read32<big>(P); }
+[[nodiscard]] inline uint64_t read64be(const void *P) { return read64<big>(P); }
 
 template <typename T, endianness E> inline void write(void *P, T V) {
   *(detail::packed_endian_specific_integral<T, E, unaligned> *)P = V;

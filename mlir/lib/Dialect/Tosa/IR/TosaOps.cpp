@@ -39,6 +39,8 @@ using namespace mlir::tosa;
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
 
 namespace {
+#include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
+
 //===----------------------------------------------------------------------===//
 // Dialect Function Inliner Interface.
 //===----------------------------------------------------------------------===//
@@ -62,6 +64,53 @@ struct TosaInlinerInterface : public DialectInlinerInterface {
             isa<tosa::WhileOp>(dest->getParentOp()));
   }
 };
+
+/// This class implements the bytecode interface for the Tosa dialect.
+struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
+  TosaDialectBytecodeInterface(Dialect *dialect)
+      : BytecodeDialectInterface(dialect) {}
+
+  //===--------------------------------------------------------------------===//
+  // Attributes
+
+  Attribute readAttribute(DialectBytecodeReader &reader) const override {
+    return ::readAttribute(getContext(), reader);
+  }
+
+  LogicalResult writeAttribute(Attribute attr,
+                               DialectBytecodeWriter &writer) const override {
+    return ::writeAttribute(attr, writer);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Types
+
+  Type readType(DialectBytecodeReader &reader) const override {
+    return ::readType(getContext(), reader);
+  }
+
+  LogicalResult writeType(Type type,
+                          DialectBytecodeWriter &writer) const override {
+    return ::writeType(type, writer);
+  }
+
+  void writeVersion(DialectBytecodeWriter &writer) const final {
+    // TODO: Populate.
+  }
+
+  std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const final {
+    // TODO: Populate
+    reader.emitError("Dialect does not support versioning");
+    return nullptr;
+  }
+
+  LogicalResult upgradeFromVersion(Operation *topLevelOp,
+                                   const DialectVersion &version_) const final {
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -84,7 +133,7 @@ void TosaDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
       >();
-  addInterfaces<TosaInlinerInterface>();
+  addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
 }
 
 Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
@@ -158,6 +207,21 @@ template <typename T> static LogicalResult verifyConvOp(T op) {
                    "allowed for float type");
     return failure();
   }
+
+  return success();
+}
+
+LogicalResult tosa::ArgMaxOp::verify() {
+  // Ensure output is of 32-bit integer
+  const auto resultETy = llvm::cast<ShapedType>(getType()).getElementType();
+  if (!resultETy.isIntOrIndex())
+    return emitOpError("result tensor is not of integer type");
+
+  // Ensure axis is within the tensor rank
+  const auto inputType = llvm::cast<ShapedType>(getInput().getType());
+  const int64_t axis = getAxisAttr().getInt();
+  if (inputType.hasRank() && ((axis < 0) || axis >= inputType.getRank()))
+    return emitOpError("specified axis is outside the rank of the tensor");
 
   return success();
 }

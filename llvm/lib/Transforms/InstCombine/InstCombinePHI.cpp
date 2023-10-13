@@ -825,8 +825,8 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
       NumZexts++;
     } else if (auto *C = dyn_cast<Constant>(V)) {
       // Make sure that constants can fit in the new type.
-      Constant *Trunc = ConstantExpr::getTrunc(C, NarrowType);
-      if (ConstantExpr::getZExt(Trunc, C->getType()) != C)
+      Constant *Trunc = getLosslessUnsignedTrunc(C, NarrowType);
+      if (!Trunc)
         return nullptr;
       NewIncoming.push_back(Trunc);
       NumConsts++;
@@ -996,8 +996,8 @@ static bool isDeadPHICycle(PHINode *PN,
 /// Return true if this phi node is always equal to NonPhiInVal.
 /// This happens with mutually cyclic phi nodes like:
 ///   z = some value; x = phi (y, z); y = phi (x, z)
-static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
-                           SmallPtrSetImpl<PHINode*> &ValueEqualPHIs) {
+static bool PHIsEqualValue(PHINode *PN, Value *&NonPhiInVal,
+                           SmallPtrSetImpl<PHINode *> &ValueEqualPHIs) {
   // See if we already saw this PHI node.
   if (!ValueEqualPHIs.insert(PN).second)
     return true;
@@ -1010,8 +1010,11 @@ static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
   // the value.
   for (Value *Op : PN->incoming_values()) {
     if (PHINode *OpPN = dyn_cast<PHINode>(Op)) {
-      if (!PHIsEqualValue(OpPN, NonPhiInVal, ValueEqualPHIs))
-        return false;
+      if (!PHIsEqualValue(OpPN, NonPhiInVal, ValueEqualPHIs)) {
+        if (NonPhiInVal)
+          return false;
+        NonPhiInVal = OpPN;
+      }
     } else if (Op != NonPhiInVal)
       return false;
   }
@@ -1478,7 +1481,9 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   //   z = some value; x = phi (y, z); y = phi (x, z)
   // where the phi nodes don't necessarily need to be in the same block.  Do a
   // quick check to see if the PHI node only contains a single non-phi value, if
-  // so, scan to see if the phi cycle is actually equal to that value.
+  // so, scan to see if the phi cycle is actually equal to that value. If the
+  // phi has no non-phi values then allow the "NonPhiInVal" to be set later if
+  // one of the phis itself does not have a single input.
   {
     unsigned InValNo = 0, NumIncomingVals = PN.getNumIncomingValues();
     // Scan for the first non-phi operand.
@@ -1486,25 +1491,25 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
            isa<PHINode>(PN.getIncomingValue(InValNo)))
       ++InValNo;
 
-    if (InValNo != NumIncomingVals) {
-      Value *NonPhiInVal = PN.getIncomingValue(InValNo);
+    Value *NonPhiInVal =
+        InValNo != NumIncomingVals ? PN.getIncomingValue(InValNo) : nullptr;
 
-      // Scan the rest of the operands to see if there are any conflicts, if so
-      // there is no need to recursively scan other phis.
+    // Scan the rest of the operands to see if there are any conflicts, if so
+    // there is no need to recursively scan other phis.
+    if (NonPhiInVal)
       for (++InValNo; InValNo != NumIncomingVals; ++InValNo) {
         Value *OpVal = PN.getIncomingValue(InValNo);
         if (OpVal != NonPhiInVal && !isa<PHINode>(OpVal))
           break;
       }
 
-      // If we scanned over all operands, then we have one unique value plus
-      // phi values.  Scan PHI nodes to see if they all merge in each other or
-      // the value.
-      if (InValNo == NumIncomingVals) {
-        SmallPtrSet<PHINode*, 16> ValueEqualPHIs;
-        if (PHIsEqualValue(&PN, NonPhiInVal, ValueEqualPHIs))
-          return replaceInstUsesWith(PN, NonPhiInVal);
-      }
+    // If we scanned over all operands, then we have one unique value plus
+    // phi values.  Scan PHI nodes to see if they all merge in each other or
+    // the value.
+    if (InValNo == NumIncomingVals) {
+      SmallPtrSet<PHINode *, 16> ValueEqualPHIs;
+      if (PHIsEqualValue(&PN, NonPhiInVal, ValueEqualPHIs))
+        return replaceInstUsesWith(PN, NonPhiInVal);
     }
   }
 
@@ -1512,11 +1517,12 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // the blocks in the same order. This will help identical PHIs be eliminated
   // by other passes. Other passes shouldn't depend on this for correctness
   // however.
-  PHINode *FirstPN = cast<PHINode>(PN.getParent()->begin());
-  if (&PN != FirstPN)
-    for (unsigned I = 0, E = FirstPN->getNumIncomingValues(); I != E; ++I) {
+  auto Res = PredOrder.try_emplace(PN.getParent());
+  if (!Res.second) {
+    const auto &Preds = Res.first->second;
+    for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
       BasicBlock *BBA = PN.getIncomingBlock(I);
-      BasicBlock *BBB = FirstPN->getIncomingBlock(I);
+      BasicBlock *BBB = Preds[I];
       if (BBA != BBB) {
         Value *VA = PN.getIncomingValue(I);
         unsigned J = PN.getBasicBlockIndex(BBB);
@@ -1531,6 +1537,10 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         // this in this case.
       }
     }
+  } else {
+    // Remember the block order of the first encountered phi node.
+    append_range(Res.first->second, PN.blocks());
+  }
 
   // Is there an identical PHI node in this basic block?
   for (PHINode &IdenticalPN : PN.getParent()->phis()) {

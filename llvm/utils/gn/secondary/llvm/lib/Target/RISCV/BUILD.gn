@@ -50,6 +50,15 @@ tablegen("RISCVGenPreLegalizeGICombiner") {
   td_file = "RISCVGISel.td"
 }
 
+tablegen("RISCVGenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=RISCVPostLegalizerCombiner",
+  ]
+  td_file = "RISCVGISel.td"
+}
+
 tablegen("RISCVGenRegisterBank") {
   visibility = [ ":LLVMRISCVCodeGen" ]
   args = [ "-gen-register-bank" ]
@@ -63,6 +72,7 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenGlobalISel",
     ":RISCVGenMCPseudoLowering",
     ":RISCVGenO0PreLegalizeGICombiner",
+    ":RISCVGenPostLegalizeGICombiner",
     ":RISCVGenPreLegalizeGICombiner",
     ":RISCVGenRegisterBank",
 
@@ -88,6 +98,7 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVInstructionSelector.cpp",
     "GISel/RISCVLegalizerInfo.cpp",
     "GISel/RISCVO0PreLegalizerCombiner.cpp",
+    "GISel/RISCVPostLegalizerCombiner.cpp",
     "GISel/RISCVPreLegalizerCombiner.cpp",
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",

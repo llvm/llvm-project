@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   VEDesc
   VEInfo
   CodeGen
+  Core
   GlobalISel
   MC
   SelectionDAG

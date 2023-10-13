@@ -1,0 +1,54 @@
+Test creating ARM64EC importlib.
+
+RUN: split-file %s %t.dir && cd %t.dir
+RUN: llvm-lib -machine:arm64ec -def:test.def -out:test.lib
+
+RUN: llvm-nm --print-armap test.lib | FileCheck -check-prefix=ARMAP %s
+
+ARMAP:      Archive EC map
+ARMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
+ARMAP-NEXT: __imp_dataexp in test.dll
+ARMAP-NEXT: __imp_funcexp in test.dll
+ARMAP-NEXT: funcexp in test.dll
+ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
+
+RUN: llvm-readobj test.lib | FileCheck -check-prefix=READOBJ %s
+
+READOBJ:      File: test.lib(test.dll)
+READOBJ-NEXT: Format: COFF-ARM64EC
+READOBJ-NEXT: Arch: aarch64
+READOBJ-NEXT: AddressSize: 64bit
+READOBJ-EMPTY:
+READOBJ-NEXT: File: test.lib(test.dll)
+READOBJ-NEXT: Format: COFF-ARM64EC
+READOBJ-NEXT: Arch: aarch64
+READOBJ-NEXT: AddressSize: 64bit
+READOBJ-EMPTY:
+READOBJ-NEXT: File: test.lib(test.dll)
+READOBJ-NEXT: Format: COFF-ARM64
+READOBJ-NEXT: Arch: aarch64
+READOBJ-NEXT: AddressSize: 64bit
+READOBJ-EMPTY:
+READOBJ-NEXT: File: test.dll
+READOBJ-NEXT: Format: COFF-import-file
+READOBJ-NEXT: Type: code
+READOBJ-NEXT: Name type: name
+READOBJ-NEXT: Symbol: __imp_funcexp
+READOBJ-NEXT: Symbol: funcexp
+READOBJ-EMPTY:
+READOBJ-NEXT: File: test.dll
+READOBJ-NEXT: Format: COFF-import-file
+READOBJ-NEXT: Type: data
+READOBJ-NEXT: Name type: name
+READOBJ-NEXT: Symbol: __imp_dataexp
+
+Creating a new lib containing the existing lib:
+RUN: llvm-lib -machine:arm64ec test.lib -out:test2.lib
+RUN: llvm-nm --print-armap test2.lib | FileCheck -check-prefix=ARMAP %s
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS
+    funcexp
+    dataexp DATA

@@ -38,7 +38,7 @@ enum class TestResult {
 
 inline TestResult test_vals(const char *fmt, double num, int prec, int width) {
   // Call snprintf on a nullptr to get the buffer size.
-  int buffer_size = __llvm_libc::snprintf(nullptr, 0, fmt, width, prec, num);
+  int buffer_size = LIBC_NAMESPACE::snprintf(nullptr, 0, fmt, width, prec, num);
 
   if (buffer_size < 0) {
     return TestResult::BufferSizeFailed;
@@ -50,8 +50,8 @@ inline TestResult test_vals(const char *fmt, double num, int prec, int width) {
   int test_result = 0;
   int reference_result = 0;
 
-  test_result =
-      __llvm_libc::snprintf(test_buff, buffer_size + 1, fmt, width, prec, num);
+  test_result = LIBC_NAMESPACE::snprintf(test_buff, buffer_size + 1, fmt, width,
+                                         prec, num);
   reference_result =
       mpfr_snprintf(reference_buff, buffer_size + 1, fmt, width, prec, num);
 
@@ -84,7 +84,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   int prec = 0;
   int width = 0;
 
-  __llvm_libc::fputil::FPBits<double>::UIntType raw_num = 0;
+  LIBC_NAMESPACE::fputil::FPBits<double>::UIntType raw_num = 0;
 
   // Copy as many bytes of data as will fit into num, prec, and with. Any extras
   // are ignored.
@@ -98,7 +98,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
   }
 
-  num = __llvm_libc::fputil::FPBits<double>(raw_num).get_val();
+  num = LIBC_NAMESPACE::fputil::FPBits<double>(raw_num).get_val();
 
   if (width > MAX_SIZE) {
     width = MAX_SIZE;

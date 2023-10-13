@@ -318,19 +318,16 @@ private:
   /// A list of timestamps paired with a function name reference.
   std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
-  // The value of the version field of the raw profile data header. The lower 56
-  // bits specifies the format version and the most significant 8 bits specify
+  // The value of the version field of the raw profile data header. The lower 32
+  // bits specifies the format version and the most significant 32 bits specify
   // the variant types of the profile.
   uint64_t Version;
   uint64_t CountersDelta;
-  uint64_t BitmapDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
   const char *CountersStart;
   const char *CountersEnd;
-  const char *BitmapStart;
-  const char *BitmapEnd;
   const char *NamesStart;
   const char *NamesEnd;
   // After value profile is all read, this pointer points to
@@ -412,14 +409,13 @@ private:
   Error readHeader(const RawInstrProf::Header &Header);
 
   template <class IntT> IntT swap(IntT Int) const {
-    return ShouldSwapBytes ? sys::getSwappedBytes(Int) : Int;
+    return ShouldSwapBytes ? llvm::byteswap(Int) : Int;
   }
 
-  support::endianness getDataEndianness() const {
-    support::endianness HostEndian = getHostEndianness();
+  llvm::endianness getDataEndianness() const {
     if (!ShouldSwapBytes)
-      return HostEndian;
-    if (HostEndian == support::little)
+      return llvm::endianness::native;
+    if (llvm::endianness::native == llvm::endianness::little)
       return support::big;
     else
       return support::little;
@@ -432,7 +428,6 @@ private:
   Error readName(NamedInstrProfRecord &Record);
   Error readFuncHash(NamedInstrProfRecord &Record);
   Error readRawCounts(InstrProfRecord &Record);
-  Error readRawBitmapBytes(InstrProfRecord &Record);
   Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
 
@@ -445,7 +440,6 @@ private:
       // As we advance to the next record, we maintain the correct CountersDelta
       // with respect to the next record.
       CountersDelta -= sizeof(*Data);
-      BitmapDelta -= sizeof(*Data);
     }
     Data++;
     ValueDataStart += CurValueDataSize;
@@ -457,7 +451,7 @@ private:
   }
 
   StringRef getName(uint64_t NameRef) const {
-    return Symtab->getFuncName(swap(NameRef));
+    return Symtab->getFuncOrVarName(swap(NameRef));
   }
 
   int getCounterTypeSize() const {
@@ -483,7 +477,7 @@ class InstrProfLookupTrait {
   // Endianness of the input value profile data.
   // It should be LE by default, but can be changed
   // for testing purpose.
-  support::endianness ValueProfDataEndianness = support::little;
+  llvm::endianness ValueProfDataEndianness = support::little;
 
 public:
   InstrProfLookupTrait(IndexedInstrProf::HashT HashType, unsigned FormatVersion)
@@ -520,7 +514,7 @@ public:
   data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
 
   // Used for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness) {
+  void setValueProfDataEndianness(llvm::endianness Endianness) {
     ValueProfDataEndianness = Endianness;
   }
 };
@@ -537,7 +531,7 @@ struct InstrProfReaderIndexBase {
                                      ArrayRef<NamedInstrProfRecord> &Data) = 0;
   virtual void advanceToNextKey() = 0;
   virtual bool atEnd() const = 0;
-  virtual void setValueProfDataEndianness(support::endianness Endianness) = 0;
+  virtual void setValueProfDataEndianness(llvm::endianness Endianness) = 0;
   virtual uint64_t getVersion() const = 0;
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
@@ -586,7 +580,7 @@ public:
     return RecordIterator == HashTable->data_end();
   }
 
-  void setValueProfDataEndianness(support::endianness Endianness) override {
+  void setValueProfDataEndianness(llvm::endianness Endianness) override {
     HashTable->getInfoObj().setValueProfDataEndianness(Endianness);
   }
 
@@ -737,10 +731,6 @@ public:
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                           std::vector<uint64_t> &Counts);
 
-  /// Fill Bitmap Bytes with the profile data for the given function name.
-  Error getFunctionBitmapBytes(StringRef FuncName, uint64_t FuncHash,
-                               std::vector<uint8_t> &BitmapBytes);
-
   /// Return the maximum of all known function counts.
   /// \c UseCS indicates whether to use the context-sensitive count.
   uint64_t getMaximumFunctionCount(bool UseCS) {
@@ -763,7 +753,7 @@ public:
          std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr);
 
   // Used for testing purpose only.
-  void setValueProfDataEndianness(support::endianness Endianness) {
+  void setValueProfDataEndianness(llvm::endianness Endianness) {
     Index->setValueProfDataEndianness(Endianness);
   }
 

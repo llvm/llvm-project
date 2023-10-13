@@ -27,7 +27,7 @@ public:
   LogicalResult
   matchAndRewrite(test::TestTypeProducerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::NullOp>(op, getVoidPtrType());
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, getVoidPtrType());
     return success();
   }
 };

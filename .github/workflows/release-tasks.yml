@@ -24,6 +24,9 @@ jobs:
           release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
           echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -31,14 +34,9 @@ jobs:
               doxygen \
               graphviz \
               python3-github \
-              python3-recommonmark \
-              python3-sphinx \
               ninja-build \
               texlive-font-utils
-          pip3 install --user sphinx-markdown-tables
-
-      - name: Checkout LLVM
-        uses: actions/checkout@v4
+          pip3 install --user -r ./llvm/docs/requirements.txt
 
       - name: Create Release
         run: |
@@ -83,13 +81,24 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@v4
 
+      - name: Setup Cpp
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: llvm-16.0.6
+          cmake: true
+          ninja: true
+
       - name: Install dependencies
-        run: sudo apt-get install -y python3-setuptools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-setuptools python3-psutil
 
       - name: Test lit
         run: |
-          cd llvm/utils/lit
-          python3 lit.py tests
+          mkdir build && cd build
+          export FILECHECK_OPTS='-dump-input-filter=all -vv -color'
+          cmake ../llvm -DCMAKE_BUILD_TYPE=Release -G Ninja
+          ninja -v -j $(nproc) check-lit
 
       - name: Package lit
         run: |

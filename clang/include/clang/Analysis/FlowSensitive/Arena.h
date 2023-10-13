@@ -11,6 +11,7 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang::dataflow {
@@ -108,6 +109,10 @@ public:
   const Formula &makeLiteral(bool Value) {
     return makeAtomRef(Value ? True : False);
   }
+
+  // Parses a formula from its textual representation.
+  // This may refer to atoms that were not produced by makeAtom() yet!
+  llvm::Expected<const Formula &> parseFormula(llvm::StringRef);
 
   /// Returns a new atomic boolean variable, distinct from any other.
   Atom makeAtom() { return static_cast<Atom>(NextAtom++); };

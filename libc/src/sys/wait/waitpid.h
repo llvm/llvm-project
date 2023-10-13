@@ -11,10 +11,10 @@
 
 #include <sys/wait.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 pid_t waitpid(pid_t pid, int *waitstatus, int options);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_WAIT_WAITPID_H

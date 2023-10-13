@@ -114,7 +114,7 @@ private:
   }
 };
 
-template <support::endianness DataEndianness>
+template <llvm::endianness DataEndianness>
 class ELFLinkGraphBuilder_aarch32
     : public ELFLinkGraphBuilder<ELFType<DataEndianness, false>> {
 private:

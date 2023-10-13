@@ -13,6 +13,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
 #include <atomic>
@@ -74,6 +75,8 @@ public:
            m_unit_type == llvm::dwarf::DW_UT_split_type;
   }
   uint32_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
+
+  llvm::Error ApplyIndexEntry(const llvm::DWARFUnitIndex::Entry *index_entry);
 
   static llvm::Expected<DWARFUnitHeader>
   extract(const lldb_private::DWARFDataExtractor &data, DIERef::Section section,
@@ -153,7 +156,7 @@ public:
   // Size of the CU data incl. header but without initial length.
   uint32_t GetLength() const { return m_header.GetLength(); }
   uint16_t GetVersion() const { return m_header.GetVersion(); }
-  const DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
+  const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const { return m_header.GetAddressByteSize(); }
   dw_addr_t GetAddrBase() const { return m_addr_base.value_or(0); }
@@ -291,7 +294,7 @@ public:
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
-            const DWARFAbbreviationDeclarationSet &abbrevs,
+            const llvm::DWARFAbbreviationDeclarationSet &abbrevs,
             DIERef::Section section, bool is_dwo);
 
   llvm::Error ExtractHeader(SymbolFileDWARF &dwarf,
@@ -323,7 +326,7 @@ protected:
   SymbolFileDWARF &m_dwarf;
   std::shared_ptr<DWARFUnit> m_dwo;
   DWARFUnitHeader m_header;
-  const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
+  const llvm::DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   void *m_user_data = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;

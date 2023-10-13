@@ -150,8 +150,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   // fully dynamic at construction time.
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
-  for (OpOperand *operand : producer.getDpsInitOperands()) {
-    auto tensorType = dyn_cast<RankedTensorType>(operand->get().getType());
+  for (Value operand : producer.getDpsInits()) {
+    auto tensorType = dyn_cast<RankedTensorType>(operand.getType());
     if (!tensorType)
       continue;
     unsigned rank = tensorType.getRank();

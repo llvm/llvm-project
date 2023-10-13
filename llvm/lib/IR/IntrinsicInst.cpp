@@ -270,13 +270,13 @@ int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
   return -1;
 }
 
-ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
+ConstantInt *InstrProfInstBase::getNumCounters() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("InstrProfValueProfileInst does not have counters!");
   return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
 }
 
-ConstantInt *InstrProfCntrInstBase::getIndex() const {
+ConstantInt *InstrProfInstBase::getIndex() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("Please use InstrProfValueProfileInst::getIndex()");
   return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));

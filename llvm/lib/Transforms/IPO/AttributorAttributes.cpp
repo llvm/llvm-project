@@ -10353,8 +10353,22 @@ struct AANoFPClassImpl : AANoFPClass {
                             /*Depth=*/0, TLI, AC, I, DT);
     State.addKnownBits(~KnownFPClass.KnownFPClasses);
 
-    bool TrackUse = false;
-    return TrackUse;
+    if (auto *CI = dyn_cast<CallInst>(UseV)) {
+      // Special case FP intrinsic with struct return type.
+      switch (CI->getIntrinsicID()) {
+      case Intrinsic::frexp:
+        return true;
+      case Intrinsic::not_intrinsic:
+        // TODO: Could recognize math libcalls
+        return false;
+      default:
+        break;
+      }
+    }
+
+    if (!UseV->getType()->isFPOrFPVectorTy())
+      return false;
+    return !isa<LoadInst, AtomicRMWInst>(UseV);
   }
 
   const std::string getAsStr(Attributor *A) const override {
@@ -12552,7 +12566,7 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
         return true;
       if (isa<LoadInst>(Inst))
         MakeChange(Inst, const_cast<Use &>(U));
-      if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+      if (isa<StoreInst>(Inst)) {
         // We only make changes if the use is the pointer operand.
         if (U.getOperandNo() == 1)
           MakeChange(Inst, const_cast<Use &>(U));

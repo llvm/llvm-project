@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 
 using namespace mlir;
@@ -41,4 +42,17 @@ bool mlir::arm_sme::isValidSMETileVectorType(VectorType vType) {
     return false;
 
   return true;
+}
+
+Value mlir::arm_sme::castTileIDToI32(Value tile, Location loc,
+                                     RewriterBase &rewriter) {
+  assert((isa<arm_sme::GetTileID, arm_sme::CastVectorToTile>(
+             tile.getDefiningOp())) &&
+         "expected ArmSME GetTileID or CastVectorToTile op!");
+  unsigned tileElementWidth = tile.getType().getIntOrFloatBitWidth();
+  if (tileElementWidth < 32)
+    return rewriter.create<arith::ExtUIOp>(loc, rewriter.getI32Type(), tile);
+  if (tileElementWidth > 32)
+    return rewriter.create<arith::TruncIOp>(loc, rewriter.getI32Type(), tile);
+  return tile;
 }

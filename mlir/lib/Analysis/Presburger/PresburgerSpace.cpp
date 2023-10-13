@@ -161,6 +161,26 @@ void PresburgerSpace::convertVarKind(VarKind srcKind, unsigned srcPos,
   assert(dstPos <= getNumVarKind(dstKind) &&
          "invalid position for destination variables");
 
+  // Move identifiers if `usingIds` and variables moved are not locals.
+  unsigned srcOffset = getVarKindOffset(srcKind) + srcPos;
+  unsigned dstOffset = getVarKindOffset(dstKind) + dstPos;
+  if (isUsingIds() && srcKind != VarKind::Local && dstKind != VarKind::Local) {
+    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
+    // Update srcOffset if insertion of new elements invalidates it.
+    if (dstOffset < srcOffset)
+      srcOffset += num;
+    std::move(identifiers.begin() + srcOffset,
+              identifiers.begin() + srcOffset + num,
+              identifiers.begin() + dstOffset);
+    identifiers.erase(identifiers.begin() + srcOffset,
+                      identifiers.begin() + srcOffset + num);
+  } else if (isUsingIds() && srcKind != VarKind::Local) {
+    identifiers.erase(identifiers.begin() + srcOffset,
+                      identifiers.begin() + srcOffset + num);
+  } else if (isUsingIds() && dstKind != VarKind::Local) {
+    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
+  }
+
   auto addVars = [&](VarKind kind, int num) {
     switch (kind) {
     case VarKind::Domain:
@@ -180,22 +200,6 @@ void PresburgerSpace::convertVarKind(VarKind srcKind, unsigned srcPos,
 
   addVars(srcKind, -(signed)num);
   addVars(dstKind, num);
-
-  // Move identifiers if `usingIds` and variables moved are not locals.
-  unsigned srcOffset = getVarKindOffset(srcKind) + srcPos;
-  unsigned dstOffset = getVarKindOffset(dstKind) + dstPos;
-  if (isUsingIds() && srcKind != VarKind::Local && dstKind != VarKind::Local) {
-    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
-    for (unsigned i = 0; i < num; ++i)
-      identifiers[dstOffset + i] = identifiers[srcOffset + i];
-    identifiers.erase(identifiers.begin() + srcOffset,
-                      identifiers.begin() + srcOffset + num);
-  } else if (isUsingIds() && srcKind != VarKind::Local) {
-    identifiers.erase(identifiers.begin() + srcOffset,
-                      identifiers.begin() + srcOffset + num);
-  } else if (isUsingIds() && dstKind != VarKind::Local) {
-    identifiers.insert(identifiers.begin() + dstOffset, num, Identifier());
-  }
 }
 
 void PresburgerSpace::swapVar(VarKind kindA, VarKind kindB, unsigned posA,

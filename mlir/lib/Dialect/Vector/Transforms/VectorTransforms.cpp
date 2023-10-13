@@ -561,11 +561,11 @@ static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
 //
 // This transforms IR like:
 //   %0 = vector.bitcast %src : vector<4xf32> to vector<8xf16>
-//   %1 = vector.extract %0[3] : vector<8xf16>
+//   %1 = vector.extract %0[3] : f16 from vector<8xf16>
 // Into:
-//   %0 = vector.extract %src[1] : vector<4xf32>
+//   %0 = vector.extract %src[1] : f32 from vector<4xf32>
 //   %1 = vector.bitcast %0: vector<1xf32> to vector<2xf16>
-//   %2 = vector.extract %1[1] : vector<2xf16>
+//   %2 = vector.extract %1[1] : f16 from vector<2xf16>
 struct BubbleDownVectorBitCastForExtract
     : public OpRewritePattern<vector::ExtractOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -598,27 +598,34 @@ struct BubbleDownVectorBitCastForExtract
     unsigned expandRatio =
         castDstType.getNumElements() / castSrcType.getNumElements();
 
-    uint64_t index = extractOp.getPosition()[0];
+    auto getFirstIntValue = [](ArrayRef<OpFoldResult> values) -> uint64_t {
+      assert(values[0].is<Attribute>() && "Unexpected non-constant index");
+      return cast<IntegerAttr>(values[0].get<Attribute>()).getInt();
+    };
+
+    uint64_t index = getFirstIntValue(extractOp.getMixedPosition());
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
-    VectorType oneScalarType =
-        VectorType::get({1}, castSrcType.getElementType());
+    Location loc = extractOp.getLoc();
     Value packedValue = rewriter.create<vector::ExtractOp>(
-        extractOp.getLoc(), oneScalarType, castOp.getSource(),
-        index / expandRatio);
+        loc, castOp.getSource(), index / expandRatio);
+    Type packedVecType = VectorType::get(/*shape=*/{1}, packedValue.getType());
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, packedVecType, rewriter.getZeroAttr(packedVecType));
+    packedValue = rewriter.create<vector::InsertOp>(loc, packedValue, zero,
+                                                    /*position=*/0);
 
     // Cast it to a vector with the desired scalar's type.
     // E.g. f32 -> vector<2xf16>
     VectorType packedType =
         VectorType::get({expandRatio}, castDstType.getElementType());
-    Value castedValue = rewriter.create<vector::BitCastOp>(
-        extractOp.getLoc(), packedType, packedValue);
+    Value castedValue =
+        rewriter.create<vector::BitCastOp>(loc, packedType, packedValue);
 
     // Finally extract the desired scalar.
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, extractOp.getType(), castedValue, index % expandRatio);
-
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, castedValue,
+                                                   index % expandRatio);
     return success();
   }
 };
@@ -905,6 +912,15 @@ struct ReorderElementwiseOpsOnBroadcast final
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return failure();
+    if (op->getNumOperands() == 0 ||
+        op->getResults()[0].getType() != op->getOperand(0).getType()) {
+      return failure();
+    }
+    // Avoid operations that only accept vector types, since broadcast
+    // source might be scalar types.
+    if (isa<vector::FMAOp>(op)) {
+      return failure();
+    }
 
     // Get the type of the lhs operand
     auto *lhsBcastOrSplat = op->getOperand(0).getDefiningOp();
@@ -1440,8 +1456,8 @@ void mlir::vector::
 
 void mlir::vector::populateSinkVectorBroadcastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
-                                                 benefit);
+  patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
+      patterns.getContext(), benefit);
 }
 
 //===----------------------------------------------------------------------===//

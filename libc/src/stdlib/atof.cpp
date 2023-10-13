@@ -11,7 +11,7 @@
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, atof, (const char *str)) {
   auto result = internal::strtofloatingpoint<double>(str);
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(double, atof, (const char *str)) {
   return result.value;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

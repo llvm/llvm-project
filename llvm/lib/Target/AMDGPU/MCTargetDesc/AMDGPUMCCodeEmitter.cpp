@@ -49,6 +49,14 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
 
+  void getMachineOpValueT16(const MCInst &MI, unsigned OpNo, APInt &Op,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
+
+  void getMachineOpValueT16Lo128(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -403,6 +411,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
+    if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
+      Imm = Hi_32(Imm);
+
     support::endian::write<uint32_t>(CB, Imm, support::endianness::little);
 
     // Only one literal value allowed
@@ -544,6 +555,28 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     return;
   }
   unsigned OpNo = &MO - MI.begin();
+  getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
+void AMDGPUMCCodeEmitter::getMachineOpValueT16(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  llvm_unreachable("TODO: Implement getMachineOpValueT16().");
+}
+
+void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg()) {
+    uint16_t Encoding = MRI.getEncodingValue(MO.getReg());
+    unsigned RegIdx = Encoding & AMDGPU::EncValues::REG_IDX_MASK;
+    bool IsHi = Encoding & AMDGPU::EncValues::IS_HI;
+    bool IsVGPR = Encoding & AMDGPU::EncValues::IS_VGPR;
+    assert((!IsVGPR || isUInt<7>(RegIdx)) && "VGPR0-VGPR127 expected!");
+    Op = (IsVGPR ? 0x100 : 0) | (IsHi ? 0x80 : 0) | RegIdx;
+    return;
+  }
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
 }
 

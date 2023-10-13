@@ -18,9 +18,9 @@ void local_assign_both_span() {
 void local_assign_rhs_span() {
   int tmp;
   int* p = new int[10];
-  int* q = new int[10];  // expected-warning{{'q' is an unsafe pointer used for buffer access}} expected-note{{change type of 'q' to 'std::span' to preserve bounds information}}
+  int* q = new int[10];  // expected-warning{{'q' is an unsafe pointer used for buffer access}}
   tmp = q[4];  // expected-note{{used in buffer access here}}
-  p = q;
+  p = q;  // FIXME: we do not fix `p = q` here as the `.data()` fix-it is not generally correct
 }
 
 void local_assign_no_span() {
@@ -49,10 +49,10 @@ void lhs_span_multi_assign() {
 
 void rhs_span() {
   int *x = new int[3];
-  int *y;  // expected-warning{{'y' is an unsafe pointer used for buffer access}} expected-note{{change type of 'y' to 'std::span' to preserve bounds information}}
+  int *y;  // expected-warning{{'y' is an unsafe pointer used for buffer access}}
   y[5] = 10;  // expected-note{{used in buffer access here}}
 
-  x = y;
+  x = y; // FIXME: we do not fix `x = y` here as the `.data()` fix-it is not generally correct
 }
 
 void rhs_span1() {
@@ -65,43 +65,43 @@ void rhs_span1() {
 
 void rhs_span2() {
   int *q = new int[6];
-  int *p = q;  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
+  int *p = q; // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   p[5] = 10;  // expected-note{{used in buffer access here}}
-  int *r = q;
+  int *r = q; // FIXME: we do not fix `int *r = q` here as the `.data()` fix-it is not generally correct
 }
 
 void test_grouping() {
   int *z = new int[8];
   int tmp;
-  int *y = new int[10];  // expected-warning{{'y' is an unsafe pointer used for buffer access}} expected-note{{change type of 'y' to 'std::span' to preserve bounds information}}
+  int *y = new int[10];  // expected-warning{{'y' is an unsafe pointer used for buffer access}}
   tmp = y[5]; // expected-note{{used in buffer access here}}
 
   int *x = new int[10];
-  x = y;
+  x = y;      // FIXME: we do not fix `x = y` here as the `.data()` fix-it is not generally correct
 
   int *w = z;
 }
 
 void test_grouping1() {
   int tmp;
-  int *y = new int[10];  // expected-warning{{'y' is an unsafe pointer used for buffer access}} expected-note{{change type of 'y' to 'std::span' to preserve bounds information}}
+  int *y = new int[10];  // expected-warning{{'y' is an unsafe pointer used for buffer access}}
   tmp = y[5];  // expected-note{{used in buffer access here}}
   int *x = new int[10];
-  x = y;
+  x = y;       // FIXME: we do not fix `x = y` here as the `.data()` fix-it is not generally correct
 
-  int *w = new int[10];  // expected-warning{{'w' is an unsafe pointer used for buffer access}} expected-note{{change type of 'w' to 'std::span' to preserve bounds information}}
+  int *w = new int[10];  // expected-warning{{'w' is an unsafe pointer used for buffer access}}
   tmp = w[5];  // expected-note{{used in buffer access here}}
   int *z = new int[10];
-  z = w;
+  z = w;       // FIXME: we do not fix `z = w` here as the `.data()` fix-it is not generally correct
 }
 
 void foo1a() {
   int *r = new int[7];
-  int *p = new int[4];  // expected-warning{{'p' is an unsafe pointer used for buffer access}} expected-note{{change type of 'p' to 'std::span' to preserve bounds information, and change 'r' to 'std::span' to propagate bounds information between them}}
+  int *p = new int[4];  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   p = r;
   int tmp = p[9];  // expected-note{{used in buffer access here}}
   int *q;
-  q = r;
+  q = r;  // FIXME: we do not fix `q = r` here as the `.data()` fix-it is not generally correct
 }
 
 void foo1b() {
@@ -115,12 +115,12 @@ void foo1b() {
 }
 
 void foo1c() {
-  int *r = new int[7];  // expected-warning{{'r' is an unsafe pointer used for buffer access}} expected-note{{change type of 'r' to 'std::span' to preserve bounds information, and change 'q' to 'std::span' to propagate bounds information between them}}
+  int *r = new int[7];  // expected-warning{{'r' is an unsafe pointer used for buffer access}}
   int *p = new int[4];
-  p = r;
+  p = r;   // FIXME: we do not fix `p = r` here as the `.data()` fix-it is not generally correct
   int tmp = r[9];  // expected-note{{used in buffer access here}}
-  int *q;  // expected-warning{{'q' is an unsafe pointer used for buffer access}} expected-note{{change type of 'q' to 'std::span' to preserve bounds information, and change 'r' to 'std::span' to propagate bounds information between them}}
-  q = r;
+  int *q;  // expected-warning{{'q' is an unsafe pointer used for buffer access}}
+  q = r;   // FIXME: we do not fix `q = r` here as the `.data()` fix-it is not generally correct
   tmp = q[9];  // expected-note{{used in buffer access here}}
 }
 
@@ -136,8 +136,8 @@ void foo2a() {
 void foo2b() {
   int *r = new int[7];
   int *p = new int[5];
-  int *q = new int[4];  // expected-warning{{'q' is an unsafe pointer used for buffer access}} expected-note{{change type of 'q' to 'std::span' to preserve bounds information, and change 'r' to 'std::span' to propagate bounds information between them}}
-  p = q;
+  int *q = new int[4];  // expected-warning{{'q' is an unsafe pointer used for buffer access}}
+  p = q;           // FIXME: we do not fix `p = q` here as the `.data()` fix-it is not generally correct
   int tmp = q[8];  // expected-note{{used in buffer access here}}
   q = r;
 }
@@ -154,9 +154,9 @@ void foo2c() {
 
 void foo3a() {
   int *r = new int[7];
-  int *p = new int[5];  // expected-warning{{'p' is an unsafe pointer used for buffer access}} expected-note{{change type of 'p' to 'std::span' to preserve bounds information}}
+  int *p = new int[5];  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   int *q = new int[4];
-  q = p;
+  q = p;           // FIXME: we do not fix `q = p` here as the `.data()` fix-it is not generally correct
   int tmp = p[8];  // expected-note{{used in buffer access here}}
   q = r;
 }

@@ -254,7 +254,6 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
               });
             }),
         std::make_unique<AddressesMap>(*this, *ErrorOrObj, Obj),
-        Obj.empty() ? Obj.getWarnings() : EmptyWarnings,
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
 
     Error E = RL.link(*ErrorOrObj);
@@ -791,8 +790,7 @@ bool DwarfLinkerForBinary::linkImpl(
                                    OnCUDieLoaded);
     } else {
       ObjectsForLinking.push_back(std::make_unique<OutDwarfFile>(
-          Obj->getObjectFilename(), nullptr, nullptr,
-          Obj->empty() ? Obj->getWarnings() : EmptyWarnings));
+          Obj->getObjectFilename(), nullptr, nullptr));
       GeneralLinker->addObjectFile(*ObjectsForLinking.back());
     }
   }

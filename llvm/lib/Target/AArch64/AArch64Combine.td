@@ -156,6 +156,13 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def lower_mull : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_MUL):$root,
+          [{ return matchExtMulToMULL(*${root}, MRI); }]),
+  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer); }])
+>;
+
 def build_vector_to_dup : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BUILD_VECTOR):$root,
@@ -232,7 +239,7 @@ def AArch64PostLegalizerLowering
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge]> {
+                        unmerge_ext_to_unmerge, lower_mull]> {
 }
 
 // Post-legalization combines which are primarily optimizations.

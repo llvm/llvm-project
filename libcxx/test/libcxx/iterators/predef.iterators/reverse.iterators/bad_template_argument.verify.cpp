@@ -18,5 +18,5 @@
 
 void f() {
   using BadIter = std::reverse_iterator<forward_iterator<int*>>;
-  BadIter i; //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed{{.*}}reverse_iterator<It> requires It to be a bidirectional iterator.}}
+  BadIter i; //expected-error-re@*:* {{static assertion failed{{.*}}reverse_iterator<It> requires It to be a bidirectional iterator.}}
 }

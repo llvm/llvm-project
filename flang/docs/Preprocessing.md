@@ -8,9 +8,10 @@
 
 # Fortran Preprocessing
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Behavior common to (nearly) all compilers:

@@ -551,6 +551,8 @@ set(aarch64_SOURCES
   ${GENERIC_SOURCES}
   cpu_model.c
   aarch64/fp_mode.c
+  aarch64/sme-abi.S
+  aarch64/sme-abi-init.c
 )
 
 # Generate outline atomics helpers from lse.S base
@@ -567,9 +569,13 @@ foreach(pat cas swp ldadd ldclr ldeor ldset)
   foreach(size 1 2 4 8 16)
     foreach(model 1 2 3 4 5)
       if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
+        set(source_asm "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S")
         set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
-        list(APPEND lse_builtins "${helper_asm}")
-        list(APPEND arm64_lse_commands COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S" "${helper_asm}")
+        add_custom_command(
+          OUTPUT "${helper_asm}"
+          COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${source_asm}" "${helper_asm}"
+          DEPENDS "${source_asm}"
+        )
         set_source_files_properties("${helper_asm}"
           PROPERTIES
           COMPILE_DEFINITIONS "L_${pat};SIZE=${size};MODEL=${model}"
@@ -776,6 +782,7 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
+  append_list_if(COMPILER_RT_HAS_ASM_SME HAS_ASM_SME BUILTIN_DEFS)
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
@@ -825,16 +832,6 @@ else ()
       # double routines.
       if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32")
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
-      endif()
-
-      if(arch STREQUAL "aarch64")
-        add_custom_target(
-          lse_builtin_symlinks
-          BYPRODUCTS ${lse_builtins}
-          ${arm64_lse_commands}
-        )
-
-        set(deps_aarch64 lse_builtin_symlinks)
       endif()
 
       add_compiler_rt_runtime(clang_rt.builtins

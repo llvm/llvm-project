@@ -43,6 +43,10 @@ public:
     case ELF::R_RISCV_PCREL_HI20:
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
+    case ELF::R_RISCV_HI20:
+    case ELF::R_RISCV_LO12_I:
+    case ELF::R_RISCV_LO12_S:
+    case ELF::R_RISCV_TLS_GOT_HI20:
       return true;
     default:
       llvm_unreachable("Unexpected RISCV relocation type in code");
@@ -83,6 +87,7 @@ public:
       return false;
     case RISCV::JALR:
     case RISCV::C_JALR:
+    case RISCV::C_JR:
       return true;
     }
   }
@@ -154,6 +159,17 @@ public:
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
+
+    // Check for the following long tail call sequence:
+    // 1: auipc xi, %pcrel_hi(sym)
+    // jalr zero, %pcrel_lo(1b)(xi)
+    if (Instruction.getOpcode() == RISCV::JALR && Begin != End) {
+      MCInst &PrevInst = *std::prev(End);
+      if (isRISCVCall(PrevInst, Instruction) &&
+          Instruction.getOperand(0).getReg() == RISCV::X0)
+        return IndirectBranchType::POSSIBLE_TAIL_CALL;
+    }
+
     return IndirectBranchType::UNKNOWN;
   }
 
@@ -393,12 +409,18 @@ public:
     default:
       return Expr;
     case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
+    case ELF::R_RISCV_HI20:
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_HI, Ctx);
+    case ELF::R_RISCV_LO12_I:
+    case ELF::R_RISCV_LO12_S:
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_LO, Ctx);
     case ELF::R_RISCV_CALL:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL, Ctx);
     case ELF::R_RISCV_CALL_PLT:
@@ -449,8 +471,9 @@ namespace bolt {
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *Analysis,
                                         const MCInstrInfo *Info,
-                                        const MCRegisterInfo *RegInfo) {
-  return new RISCVMCPlusBuilder(Analysis, Info, RegInfo);
+                                        const MCRegisterInfo *RegInfo,
+                                        const MCSubtargetInfo *STI) {
+  return new RISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt

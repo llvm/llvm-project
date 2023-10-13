@@ -127,14 +127,18 @@ class OMPEarlyOutliningPass
     llvm::SetVector<mlir::Value> inputs;
     mlir::Region &targetRegion = targetOp.getRegion();
     mlir::getUsedValuesDefinedAbove(targetRegion, inputs);
-
+    
     // filter out declareTarget and map entries which are specially handled
     // at the moment, so we do not wish these to end up as function arguments
     // which would just be more noise in the IR.
-    for (mlir::Value value : inputs)
-      if (mlir::isa_and_nonnull<mlir::omp::MapInfoOp>(value.getDefiningOp()) ||
-          isAddressOfGlobalDeclareTarget(value))
-        inputs.remove(value);
+    for (llvm::SetVector<mlir::Value>::iterator iter = inputs.begin(); iter != inputs.end();) {
+      if (mlir::isa_and_nonnull<mlir::omp::MapInfoOp>(iter->getDefiningOp()) ||
+          isAddressOfGlobalDeclareTarget(*iter)) {
+        iter = inputs.erase(iter);
+      } else {
+        ++iter;
+      }
+    }
 
     // Create new function and initialize
     mlir::FunctionType funcType = builder.getFunctionType(

@@ -67,9 +67,7 @@ if (LIBCXXABI_ENABLE_FORGIVING_DYNAMIC_CAST)
   add_definitions(-D_LIBCXXABI_FORGIVING_DYNAMIC_CAST)
 endif()
 
-if (APPLE)
-  add_library_flags_if(LIBCXXABI_HAS_SYSTEM_LIB System)
-else()
+if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
   if (LIBCXXABI_ENABLE_THREADS)
     add_library_flags_if(LIBCXXABI_HAS_PTHREAD_LIB pthread)
   endif()

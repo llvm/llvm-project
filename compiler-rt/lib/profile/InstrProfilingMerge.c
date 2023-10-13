@@ -66,9 +66,6 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
       Header->NumCounters !=
           __llvm_profile_get_num_counters(__llvm_profile_begin_counters(),
                                           __llvm_profile_end_counters()) ||
-      Header->NumBitmapBytes !=
-          __llvm_profile_get_num_bitmap_bytes(__llvm_profile_begin_bitmap(),
-                                              __llvm_profile_end_bitmap()) ||
       Header->NamesSize != (uint64_t)(__llvm_profile_end_names() -
                                       __llvm_profile_begin_names()) ||
       Header->ValueKindLast != IPVK_Last)
@@ -77,8 +74,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   if (ProfileSize <
       sizeof(__llvm_profile_header) + Header->BinaryIdsSize +
           Header->NumData * sizeof(__llvm_profile_data) + Header->NamesSize +
-          Header->NumCounters * __llvm_profile_counter_entry_size() +
-          Header->NumBitmapBytes)
+          Header->NumCounters * __llvm_profile_counter_entry_size())
     return 1;
 
   for (SrcData = SrcDataStart,
@@ -86,8 +82,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
        SrcData < SrcDataEnd; ++SrcData, ++DstData) {
     if (SrcData->NameRef != DstData->NameRef ||
         SrcData->FuncHash != DstData->FuncHash ||
-        SrcData->NumCounters != DstData->NumCounters ||
-        SrcData->NumBitmapBytes != DstData->NumBitmapBytes)
+        SrcData->NumCounters != DstData->NumCounters)
       return 1;
   }
 
@@ -117,11 +112,9 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   char *SrcCountersStart, *DstCounter;
   const char *SrcCountersEnd, *SrcCounter;
-  const char *SrcBitmapStart;
   const char *SrcNameStart;
   const char *SrcValueProfDataStart, *SrcValueProfData;
   uintptr_t CountersDelta = Header->CountersDelta;
-  uintptr_t BitmapDelta = Header->BitmapDelta;
 
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
@@ -130,12 +123,11 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   SrcCountersStart = (char *)SrcDataEnd;
   SrcCountersEnd = SrcCountersStart +
                    Header->NumCounters * __llvm_profile_counter_entry_size();
-  SrcBitmapStart = SrcCountersEnd;
-  SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
+  SrcNameStart = SrcCountersEnd;
   SrcValueProfDataStart =
       SrcNameStart + Header->NamesSize +
       __llvm_profile_get_num_padding_bytes(Header->NamesSize);
-  if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
+  if (SrcNameStart < SrcCountersStart)
     return 1;
 
   // Merge counters by iterating the entire counter section when debug info
@@ -165,8 +157,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     // extend CounterPtr to get the original value.
     char *DstCounters =
         (char *)((uintptr_t)DstData + signextIfWin64(DstData->CounterPtr));
-    char *DstBitmap =
-        (char *)((uintptr_t)DstData + signextIfWin64(DstData->BitmapPtr));
     unsigned NVK = 0;
 
     // SrcData is a serialized representation of the memory image. We need to
@@ -194,21 +184,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
       } else {
         ((uint64_t *)DstCounters)[I] += ((uint64_t *)SrcCounters)[I];
       }
-    }
-
-    const char *SrcBitmap =
-        SrcBitmapStart + ((uintptr_t)SrcData->BitmapPtr - BitmapDelta);
-    // BitmapDelta also needs to be decreased as we advance to the next data
-    // record.
-    BitmapDelta -= sizeof(*SrcData);
-    unsigned NB = SrcData->NumBitmapBytes;
-    // NumBitmapBytes may legitimately be 0. Just keep going.
-    if (NB != 0) {
-      if (SrcBitmap < SrcBitmapStart || (SrcBitmap + NB) > SrcNameStart)
-        return 1;
-      // Merge Src and Dst Bitmap bytes by simply ORing them together.
-      for (unsigned I = 0; I < NB; I++)
-        DstBitmap[I] |= SrcBitmap[I];
     }
 
     /* Now merge value profile data. */

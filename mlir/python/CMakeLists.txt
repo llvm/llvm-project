@@ -49,6 +49,16 @@ declare_mlir_python_sources(MLIRPythonCAPI.HeaderSources
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/AffineOps.td
+  SOURCES
+    dialects/affine.py
+    dialects/_affine_ops_ext.py
+  DIALECT_NAME affine
+  GEN_ENUM_BINDINGS)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/AMDGPUOps.td
   SOURCES
     dialects/amdgpu.py
@@ -199,6 +209,15 @@ declare_mlir_dialect_extension_python_bindings(
     dialects/transform/memref.py
   DIALECT_NAME transform
   EXTENSION_NAME memref_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/NVGPUTransformOps.td
+  SOURCES
+    dialects/transform/nvgpu.py
+  DIALECT_NAME transform
+  EXTENSION_NAME nvgpu_transform)
 
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -381,7 +400,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/VectorOps.td
   SOURCES dialects/vector.py
   DIALECT_NAME vector
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS_TD_FILE
+    "dialects/VectorAttributes.td")
 
 ################################################################################
 # Python extensions.

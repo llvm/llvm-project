@@ -13,7 +13,7 @@ define float @foo(float %arg) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
 ; RV32-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset fs0, -4
+; RV32-NEXT:    .cfi_offset fs0, -20
 ; RV32-NEXT:    fmv.s fs0, fa0
 ; RV32-NEXT:    call callee@plt
 ; RV32-NEXT:    fmv.s fa0, fs0
@@ -26,7 +26,7 @@ define float @foo(float %arg) {
 ; RV64-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset fs0, -4
+; RV64-NEXT:    .cfi_offset fs0, -20
 ; RV64-NEXT:    fmv.s fs0, fa0
 ; RV64-NEXT:    call callee@plt
 ; RV64-NEXT:    fmv.s fa0, fs0
@@ -36,3 +36,46 @@ entry:
   call void @callee()
   ret float %arg
 }
+
+define void @foo2(i32 %x, float %y) {
+; RV32-LABEL: foo2:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    cm.push {ra, s0}, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -8
+; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset fs0, -20
+; RV32-NEXT:    fmv.s fs0, fa0
+; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    call bar@plt
+; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    fmv.s fa0, fs0
+; RV32-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    cm.pop {ra, s0}, 32
+; RV32-NEXT:    tail func@plt
+;
+; RV64-LABEL: foo2:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    cm.push {ra, s0}, -32
+; RV64-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NEXT:    fsw fs0, 12(sp) # 4-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -16
+; RV64-NEXT:    .cfi_offset s0, -8
+; RV64-NEXT:    .cfi_offset fs0, -20
+; RV64-NEXT:    fmv.s fs0, fa0
+; RV64-NEXT:    mv s0, a0
+; RV64-NEXT:    call bar@plt
+; RV64-NEXT:    mv a0, s0
+; RV64-NEXT:    fmv.s fa0, fs0
+; RV64-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
+; RV64-NEXT:    cm.pop {ra, s0}, 32
+; RV64-NEXT:    tail func@plt
+entry:
+  tail call void @bar()
+  tail call void @func(i32 %x, float %y)
+  ret void
+}
+
+declare void @bar()
+declare void @func(i32, float)

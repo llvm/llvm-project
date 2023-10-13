@@ -21,7 +21,7 @@ namespace llvm {
 namespace msgpack {
 
 /// The endianness of all multi-byte encoded values in MessagePack.
-constexpr support::endianness Endianness = support::big;
+constexpr llvm::endianness Endianness = support::big;
 
 /// The first byte identifiers of MessagePack object formats.
 namespace FirstByte {

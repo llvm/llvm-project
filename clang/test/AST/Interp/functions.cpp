@@ -332,3 +332,21 @@ namespace InvalidReclRefs {
   }
 #endif
 }
+
+namespace TemplateUndefined {
+  template<typename T> constexpr int consume(T);
+  // ok, not a constant expression.
+  const int k = consume(0);
+
+  template<typename T> constexpr int consume(T) { return 0; }
+  // ok, constant expression.
+  constexpr int l = consume(0);
+  static_assert(l == 0, "");
+}
+
+namespace PtrReturn {
+  constexpr void *a() {
+    return nullptr;
+  }
+  static_assert(a() == nullptr, "");
+}

@@ -1235,7 +1235,6 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
   const VBOffsets &VBaseMap = Layout.getVBaseOffsetsMap();
   CGBuilderTy &Builder = CGF.Builder;
 
-  unsigned AS = getThisAddress(CGF).getAddressSpace();
   llvm::Value *Int8This = nullptr;  // Initialize lazily.
 
   for (const CXXBaseSpecifier &S : RD->vbases()) {
@@ -1256,14 +1255,12 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
     VtorDispValue = Builder.CreateTruncOrBitCast(VtorDispValue, CGF.Int32Ty);
 
     if (!Int8This)
-      Int8This = Builder.CreateBitCast(getThisValue(CGF),
-                                       CGF.Int8Ty->getPointerTo(AS));
+      Int8This = getThisValue(CGF);
+
     llvm::Value *VtorDispPtr =
         Builder.CreateInBoundsGEP(CGF.Int8Ty, Int8This, VBaseOffset);
     // vtorDisp is always the 32-bits before the vbase in the class layout.
     VtorDispPtr = Builder.CreateConstGEP1_32(CGF.Int8Ty, VtorDispPtr, -4);
-    VtorDispPtr = Builder.CreateBitCast(
-        VtorDispPtr, CGF.Int32Ty->getPointerTo(AS), "vtordisp.ptr");
 
     Builder.CreateAlignedStore(VtorDispValue, VtorDispPtr,
                                CharUnits::fromQuantity(4));
@@ -1568,14 +1565,9 @@ void MicrosoftCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
   if (!CGF.CurFuncIsThunk && MD->isVirtual()) {
     CharUnits Adjustment = getVirtualFunctionPrologueThisAdjustment(CGF.CurGD);
     if (!Adjustment.isZero()) {
-      unsigned AS = cast<llvm::PointerType>(This->getType())->getAddressSpace();
-      llvm::Type *charPtrTy = CGF.Int8Ty->getPointerTo(AS),
-                 *thisTy = This->getType();
-      This = CGF.Builder.CreateBitCast(This, charPtrTy);
       assert(Adjustment.isPositive());
       This = CGF.Builder.CreateConstInBoundsGEP1_32(CGF.Int8Ty, This,
                                                     -Adjustment.getQuantity());
-      This = CGF.Builder.CreateBitCast(This, thisTy, "this.adjusted");
     }
   }
   setCXXABIThisValue(CGF, This);
@@ -2511,9 +2503,6 @@ LValue MicrosoftCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Type *RealVarTy = CGF.getTypes().ConvertTypeForMem(VD->getType());
 
-  unsigned AS = cast<llvm::PointerType>(V->getType())->getAddressSpace();
-  V = CGF.Builder.CreateBitCast(V, RealVarTy->getPointerTo(AS));
-
   CharUnits Alignment = CGF.getContext().getDeclAlign(VD);
   Address Addr(V, RealVarTy, Alignment);
 
@@ -3226,9 +3215,6 @@ llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
     const MemberPointerType *MPT) {
   assert(MPT->isMemberDataPointer());
-  unsigned AS = Base.getAddressSpace();
-  llvm::Type *PType =
-      CGF.ConvertTypeForMem(MPT->getPointeeType())->getPointerTo(AS);
   CGBuilderTy &Builder = CGF.Builder;
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
   MSInheritanceModel Inheritance = RD->getMSInheritanceModel();
@@ -3256,16 +3242,9 @@ llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     Addr = Base.getPointer();
   }
 
-  // Cast to char*.
-  Addr = Builder.CreateBitCast(Addr, CGF.Int8Ty->getPointerTo(AS));
-
   // Apply the offset, which we assume is non-null.
-  Addr = Builder.CreateInBoundsGEP(CGF.Int8Ty, Addr, FieldOffset,
+  return Builder.CreateInBoundsGEP(CGF.Int8Ty, Addr, FieldOffset,
                                    "memptr.offset");
-
-  // Cast the address to the appropriate pointer type, adopting the address
-  // space of the base pointer.
-  return Builder.CreateBitCast(Addr, PType);
 }
 
 llvm::Value *
@@ -3522,8 +3501,6 @@ CGCallee MicrosoftCXXABI::EmitLoadOfMemberFunctionPointer(
   const FunctionProtoType *FPT =
     MPT->getPointeeType()->castAs<FunctionProtoType>();
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
-  llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(
-      CGM.getTypes().arrangeCXXMethodType(RD, FPT, /*FD=*/nullptr));
   CGBuilderTy &Builder = CGF.Builder;
 
   MSInheritanceModel Inheritance = RD->getMSInheritanceModel();
@@ -3553,16 +3530,10 @@ CGCallee MicrosoftCXXABI::EmitLoadOfMemberFunctionPointer(
     ThisPtrForCall = This.getPointer();
   }
 
-  if (NonVirtualBaseAdjustment) {
-    // Apply the adjustment and cast back to the original struct type.
-    llvm::Value *Ptr = Builder.CreateBitCast(ThisPtrForCall, CGF.Int8PtrTy);
-    Ptr = Builder.CreateInBoundsGEP(CGF.Int8Ty, Ptr, NonVirtualBaseAdjustment);
-    ThisPtrForCall = Builder.CreateBitCast(Ptr, ThisPtrForCall->getType(),
-                                           "this.adjusted");
-  }
+  if (NonVirtualBaseAdjustment)
+    ThisPtrForCall = Builder.CreateInBoundsGEP(CGF.Int8Ty, ThisPtrForCall,
+                                               NonVirtualBaseAdjustment);
 
-  FunctionPointer =
-    Builder.CreateBitCast(FunctionPointer, FTy->getPointerTo());
   CGCallee Callee(FPT, FunctionPointer);
   return Callee;
 }

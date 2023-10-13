@@ -15,34 +15,34 @@
 #define __AS_STRING(val) #val
 #define __CHECK_TRUE(file, line, val, should_exit)                             \
   if (!(val)) {                                                                \
-    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be true, but is false\n");             \
     if (should_exit)                                                           \
-      __llvm_libc::quick_exit(127);                                            \
+      LIBC_NAMESPACE::quick_exit(127);                                         \
   }
 
 #define __CHECK_FALSE(file, line, val, should_exit)                            \
   if (val) {                                                                   \
-    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val "' to be false, but is true\n");             \
     if (should_exit)                                                           \
-      __llvm_libc::quick_exit(127);                                            \
+      LIBC_NAMESPACE::quick_exit(127);                                         \
   }
 
 #define __CHECK_EQ(file, line, val1, val2, should_exit)                        \
   if ((val1) != (val2)) {                                                      \
-    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val1 "' to be equal to '" #val2 "'\n");          \
     if (should_exit)                                                           \
-      __llvm_libc::quick_exit(127);                                            \
+      LIBC_NAMESPACE::quick_exit(127);                                         \
   }
 
 #define __CHECK_NE(file, line, val1, val2, should_exit)                        \
   if ((val1) == (val2)) {                                                      \
-    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+    LIBC_NAMESPACE::write_to_stderr(file ":" __AS_STRING(                      \
         line) ": Expected '" #val1 "' to not be equal to '" #val2 "'\n");      \
     if (should_exit)                                                           \
-      __llvm_libc::quick_exit(127);                                            \
+      LIBC_NAMESPACE::quick_exit(127);                                         \
   }
 
 #define EXPECT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, false)

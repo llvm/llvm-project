@@ -30,7 +30,7 @@
 #include <sys/mman.h>    // For PROT_* and MAP_* definitions.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -57,7 +57,7 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #define CLONE_RESULT_REGISTER "x0"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #define CLONE_RESULT_REGISTER "t0"
 #elif defined(LIBC_TARGET_ARCH_IS_X86_64)
 #define CLONE_RESULT_REGISTER "rax"
@@ -92,7 +92,7 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
 
   // TODO: Maybe add MAP_STACK? Currently unimplemented on linux but helps
   // future-proof.
-  long mmap_result = __llvm_libc::syscall_impl<long>(
+  long mmap_result = LIBC_NAMESPACE::syscall_impl<long>(
       MMAP_SYSCALL_NUMBER,
       0, // No special address
       size, prot,
@@ -106,9 +106,9 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
   if (guardsize) {
     // Give read/write permissions to actual stack.
     // TODO: We are assuming stack growsdown here.
-    long result =
-        __llvm_libc::syscall_impl<long>(SYS_mprotect, mmap_result + guardsize,
-                                        stacksize, PROT_READ | PROT_WRITE);
+    long result = LIBC_NAMESPACE::syscall_impl<long>(
+        SYS_mprotect, mmap_result + guardsize, stacksize,
+        PROT_READ | PROT_WRITE);
 
     if (result != 0)
       return Error{int(-result)};
@@ -125,7 +125,7 @@ free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
   stack = reinterpret_cast<void *>(stackaddr);
-  __llvm_libc::syscall_impl<long>(SYS_munmap, stack, stacksize + guardsize);
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_munmap, stack, stacksize + guardsize);
 }
 
 struct Thread;
@@ -169,7 +169,7 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
   // is set to the stack pointer where start args are stored. So, we fetch
   // from there.
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(1));
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   // The current frame pointer is the previous stack pointer where the start
   // args are stored.
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
@@ -299,16 +299,16 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // variables from this function will not be availalbe to the child thread.
 #if defined(LIBC_TARGET_ARCH_IS_X86_64)
   long register clone_result asm(CLONE_RESULT_REGISTER);
-  clone_result = __llvm_libc::syscall_impl<long>(
+  clone_result = LIBC_NAMESPACE::syscall_impl<long>(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
       &attrib->tid,    // The address where the child tid is written
       &clear_tid->val, // The futex where the child thread status is signalled
       tls.tp           // The thread pointer value for the new thread.
   );
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
-    defined(LIBC_TARGET_ARCH_IS_RISCV64)
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   long register clone_result asm(CLONE_RESULT_REGISTER);
-  clone_result = __llvm_libc::syscall_impl<long>(
+  clone_result = LIBC_NAMESPACE::syscall_impl<long>(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
       &attrib->tid,   // The address where the child tid is written
       tls.tp,         // The thread pointer value for the new thread.
@@ -379,8 +379,8 @@ void Thread::wait() {
   while (clear_tid->load() != 0) {
     // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
     // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
-    __llvm_libc::syscall_impl<long>(FUTEX_SYSCALL_ID, &clear_tid->val,
-                                    FUTEX_WAIT, CLEAR_TID_VALUE, nullptr);
+    LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &clear_tid->val,
+                                       FUTEX_WAIT, CLEAR_TID_VALUE, nullptr);
   }
 }
 
@@ -409,7 +409,7 @@ int Thread::set_name(const cpp::string_view &name) {
     // If we are setting the name of the current thread, then we can
     // use the syscall to set the name.
     int retval =
-        __llvm_libc::syscall_impl<int>(SYS_prctl, PR_SET_NAME, name.data());
+        LIBC_NAMESPACE::syscall_impl<int>(SYS_prctl, PR_SET_NAME, name.data());
     if (retval < 0)
       return -retval;
     else
@@ -420,17 +420,18 @@ int Thread::set_name(const cpp::string_view &name) {
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall_impl<int>(SYS_open, path_name_buffer, O_RDWR);
+  int fd =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDWR);
 #else
-  int fd = __llvm_libc::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                          path_name_buffer, O_RDWR);
+  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
+                                             path_name_buffer, O_RDWR);
 #endif
   if (fd < 0)
     return -fd;
 
-  int retval =
-      __llvm_libc::syscall_impl<int>(SYS_write, fd, name.data(), name.size());
-  __llvm_libc::syscall_impl<long>(SYS_close, fd);
+  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_write, fd, name.data(),
+                                                 name.size());
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
 
   if (retval < 0)
     return -retval;
@@ -450,7 +451,7 @@ int Thread::get_name(cpp::StringStream &name) const {
     // If we are getting the name of the current thread, then we can
     // use the syscall to get the name.
     int retval =
-        __llvm_libc::syscall_impl<int>(SYS_prctl, PR_GET_NAME, name_buffer);
+        LIBC_NAMESPACE::syscall_impl<int>(SYS_prctl, PR_GET_NAME, name_buffer);
     if (retval < 0)
       return -retval;
     name << name_buffer << cpp::StringStream::ENDS;
@@ -461,17 +462,18 @@ int Thread::get_name(cpp::StringStream &name) const {
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall_impl<int>(SYS_open, path_name_buffer, O_RDONLY);
+  int fd =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path_name_buffer, O_RDONLY);
 #else
-  int fd = __llvm_libc::syscall_impl<int>(SYS_openat, AT_FDCWD,
-                                          path_name_buffer, O_RDONLY);
+  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD,
+                                             path_name_buffer, O_RDONLY);
 #endif
   if (fd < 0)
     return -fd;
 
-  int retval =
-      __llvm_libc::syscall_impl<int>(SYS_read, fd, name_buffer, NAME_SIZE_MAX);
-  __llvm_libc::syscall_impl<long>(SYS_close, fd);
+  int retval = LIBC_NAMESPACE::syscall_impl<int>(SYS_read, fd, name_buffer,
+                                                 NAME_SIZE_MAX);
+  LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd);
   if (retval < 0)
     return -retval;
   if (retval == NAME_SIZE_MAX)
@@ -505,19 +507,19 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
 
     // Set the CLEAR_TID address to nullptr to prevent the kernel
     // from signalling at a non-existent futex location.
-    __llvm_libc::syscall_impl<long>(SYS_set_tid_address, 0);
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_set_tid_address, 0);
     // Return value for detached thread should be unused. We need to avoid
     // referencing `style` or `retval.*` because they may be stored on the stack
     // and we have deallocated our stack!
-    __llvm_libc::syscall_impl<long>(SYS_exit, 0);
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, 0);
     __builtin_unreachable();
   }
 
   if (style == ThreadStyle::POSIX)
-    __llvm_libc::syscall_impl<long>(SYS_exit, retval.posix_retval);
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, retval.posix_retval);
   else
-    __llvm_libc::syscall_impl<long>(SYS_exit, retval.stdc_retval);
+    LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, retval.stdc_retval);
   __builtin_unreachable();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

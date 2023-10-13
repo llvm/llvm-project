@@ -314,14 +314,14 @@ static unsigned getHashValueImpl(SimpleValue Val) {
          "Invalid/unknown instruction");
 
   // Handle intrinsics with commutative operands.
-  // TODO: Extend this to handle intrinsics with >2 operands where the 1st
-  //       2 operands are commutative.
   auto *II = dyn_cast<IntrinsicInst>(Inst);
-  if (II && II->isCommutative() && II->arg_size() == 2) {
+  if (II && II->isCommutative() && II->arg_size() >= 2) {
     Value *LHS = II->getArgOperand(0), *RHS = II->getArgOperand(1);
     if (LHS > RHS)
       std::swap(LHS, RHS);
-    return hash_combine(II->getOpcode(), LHS, RHS);
+    return hash_combine(
+        II->getOpcode(), LHS, RHS,
+        hash_combine_range(II->value_op_begin() + 2, II->value_op_end()));
   }
 
   // gc.relocate is 'special' call: its second and third operands are
@@ -396,13 +396,14 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
            LHSCmp->getSwappedPredicate() == RHSCmp->getPredicate();
   }
 
-  // TODO: Extend this for >2 args by matching the trailing N-2 args.
   auto *LII = dyn_cast<IntrinsicInst>(LHSI);
   auto *RII = dyn_cast<IntrinsicInst>(RHSI);
   if (LII && RII && LII->getIntrinsicID() == RII->getIntrinsicID() &&
-      LII->isCommutative() && LII->arg_size() == 2) {
+      LII->isCommutative() && LII->arg_size() >= 2) {
     return LII->getArgOperand(0) == RII->getArgOperand(1) &&
-           LII->getArgOperand(1) == RII->getArgOperand(0);
+           LII->getArgOperand(1) == RII->getArgOperand(0) &&
+           std::equal(LII->arg_begin() + 2, LII->arg_end(),
+                      RII->arg_begin() + 2, RII->arg_end());
   }
 
   // See comment above in `getHashValue()`.
