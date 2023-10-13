@@ -87,7 +87,7 @@ struct Filters {
     Filter.ArgFilter = std::move(ArgFilter);
     Filter.RemarkTypeFilter = std::move(RemarkTypeFilter);
     if (auto E = Filter.regexArgumentsValid())
-      return E;
+      return std::move(E);
     return Filter;
   }
   /// Returns true if \p Remark satisfies all the provided filters.
@@ -165,11 +165,11 @@ struct ArgumentCounter : Counter {
     for (auto &Arg : Arguments) {
       if (Arg.IsRegex) {
         if (auto E = checkRegex(Arg.FilterRE))
-          return E;
+          return std::move(E);
       }
     }
     if (auto E = AC.getAllMatchingArgumentsInRemark(Buffer, Arguments, Filter))
-      return E;
+      return std::move(E);
     return AC;
   }
 
