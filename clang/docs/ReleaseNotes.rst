@@ -185,6 +185,9 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 
+* ``-Wbitfield-conversion`` was added to detect assignments of integral
+  types to a bitfield that may change the value.
+
 Deprecated Compiler Flags
 -------------------------
 
