@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileExchange = requires(volatile std::atomic<T> a, T t) { a.exchange(t); };
+concept HasVolatileExchange = requires(volatile std::atomic<T>& a, T t) { a.exchange(t); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileLoad = requires(volatile std::atomic<T> a, T t) { a.load(); };
+concept HasVolatileLoad = requires(volatile std::atomic<T>& a, T t) { a.load(); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

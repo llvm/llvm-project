@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileFetchSub = requires(volatile std::atomic<T> a, T t) { a.fetch_sub(t); };
+concept HasVolatileFetchSub = requires(volatile std::atomic<T>& a, T t) { a.fetch_sub(t); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

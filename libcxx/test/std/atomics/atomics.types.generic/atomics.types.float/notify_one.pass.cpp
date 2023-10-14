@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileNotifyOne = requires(volatile std::atomic<T> a, T t) { a.notify_one(); };
+concept HasVolatileNotifyOne = requires(volatile std::atomic<T>& a, T t) { a.notify_one(); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileFetchAdd = requires(volatile std::atomic<T> a, T t) { a.fetch_add(t); };
+concept HasVolatileFetchAdd = requires(volatile std::atomic<T>& a, T t) { a.fetch_add(t); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

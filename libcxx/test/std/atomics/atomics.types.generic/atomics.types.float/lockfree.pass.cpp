@@ -26,8 +26,8 @@ concept isLockFreeNoexcept = requires(T t) {
 
 template <class T>
 void test() {
-  static_assert(isLockFreeNoexcept<const std::atomic<T>>);
-  static_assert(isLockFreeNoexcept<const volatile std::atomic<T>>);
+  static_assert(isLockFreeNoexcept<const std::atomic<T>&>);
+  static_assert(isLockFreeNoexcept<const volatile std::atomic<T>&>);
 
   //   static constexpr bool is_always_lock_free = implementation-defined;
   { [[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) r = std::atomic<T>::is_always_lock_free; }

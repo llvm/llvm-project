@@ -28,10 +28,10 @@
 
 template <class T, class... Args>
 concept HasVolatileCompareExchangeStrong =
-    requires(volatile std::atomic<T> a, T t, Args... args) { a.compare_exchange_strong(t, t, args...); };
+    requires(volatile std::atomic<T>& a, T t, Args... args) { a.compare_exchange_strong(t, t, args...); };
 
 template <class T, template <class> class MaybeVolatile, class... Args>
-concept HasNoexceptCompareExchangeStrong = requires(MaybeVolatile<std::atomic<T>> a, T t, Args... args) {
+concept HasNoexceptCompareExchangeStrong = requires(MaybeVolatile<std::atomic<T>>& a, T t, Args... args) {
   { a.compare_exchange_strong(t, t, args...) } noexcept;
 };
 
