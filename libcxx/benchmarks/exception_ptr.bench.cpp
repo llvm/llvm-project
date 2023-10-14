@@ -15,7 +15,6 @@ void bm_make_exception_ptr(benchmark::State& state) {
     benchmark::DoNotOptimize(std::make_exception_ptr(std::runtime_error{"Some error"}));
   }
 }
-BENCHMARK(bm_make_exception_ptr);
-BENCHMARK(bm_make_exception_ptr)->Threads(8)->UseRealTime();
+BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);
 
 BENCHMARK_MAIN();
