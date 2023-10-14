@@ -69,7 +69,6 @@ int f7(union U *u, int i) {
   return u->c[i];
 }
 
-
 char B[10];
 char B2[10];
 // CHECK-LABEL: @f8
@@ -81,4 +80,13 @@ void f8(int i, int k) {
   // NOOPTLOCAL: call void @llvm.ubsantrap(i8 5)
   // NOOPTARRAY: call void @llvm.ubsantrap(i8 4)
   B2[k] = '\0';
+}
+
+// See commit 9a954c6 that caused a SEGFAULT in this code.
+struct S {
+  __builtin_va_list ap;
+} *s;
+// CHECK-LABEL: @f9
+struct S *f9(int i) {
+  return &s[i];
 }
