@@ -192,7 +192,8 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-dangling-handle
   <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
-  casting during type conversions at variable initialization.
+  casting during type conversions at variable initialization, now with improved
+  compatibility for C++17 and later versions.
 
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
