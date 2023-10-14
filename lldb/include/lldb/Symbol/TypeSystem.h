@@ -142,6 +142,10 @@ public:
 
   virtual lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) = 0;
 
+  /// Returns the direct parent context of specified type
+  virtual CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type);
+
   // Tests
 #ifndef NDEBUG
   /// Verify the integrity of the type to catch CompilerTypes that mix
