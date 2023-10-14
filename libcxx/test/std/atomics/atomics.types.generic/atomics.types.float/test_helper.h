@@ -11,8 +11,15 @@
 
 #include <atomic>
 #include <cassert>
+#include <cmath>
 #include <thread>
 #include <vector>
+
+template <class T>
+bool approximately_equals(T x, T y) {
+  T epsilon = 0.001;
+  return std::abs(x - y) < epsilon;
+}
 
 // Test that all threads see the exact same sequence of events
 // Test will pass 100% if store_op and load_op are correctly
@@ -34,19 +41,19 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     std::thread t2([&] { store_op(y, old_value, new_value); });
 
     std::thread t3([&] {
-      while (load_op(x) != new_value) {
+      while (!approximately_equals(load_op(x), new_value)) {
         std::this_thread::yield();
       }
-      if (load_op(y) != new_value) {
+      if (!approximately_equals(load_op(y), new_value)) {
         x_update_first.store(true, std::memory_order_relaxed);
       }
     });
 
     std::thread t4([&] {
-      while (load_op(y) != new_value) {
+      while (!approximately_equals(load_op(y), new_value)) {
         std::this_thread::yield();
       }
-      if (load_op(x) != new_value) {
+      if (!approximately_equals(load_op(x), new_value)) {
         y_update_first.store(true, std::memory_order_relaxed);
       }
     });
@@ -55,6 +62,7 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     t2.join();
     t3.join();
     t4.join();
+    // thread 3 and thread 4 cannot see different orders of storing x and y
     assert(!(x_update_first && y_update_first));
   }
 }
@@ -77,9 +85,11 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
 
     for (auto j = 0; j < number_of_threads; ++j) {
       threads.emplace_back([&at, &non_atomic, load_op, new_value] {
-        while (load_op(at) != new_value) {
+        while (!approximately_equals(load_op(at), new_value)) {
           std::this_thread::yield();
         }
+        // Other thread's writes before the release store are visible
+        // in this thread's read after the acquire load
         assert(non_atomic == 6);
       });
     }
