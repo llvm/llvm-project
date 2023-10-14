@@ -2458,7 +2458,8 @@ bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
 bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                                CorrectionCandidateCallback &CCC,
                                TemplateArgumentListInfo *ExplicitTemplateArgs,
-                               ArrayRef<Expr *> Args, TypoExpr **Out) {
+                               ArrayRef<Expr *> Args, DeclContext *LookupCtx,
+                               TypoExpr **Out) {
   DeclarationName Name = R.getLookupName();
 
   unsigned diagnostic = diag::err_undeclared_var_use;
@@ -2474,7 +2475,8 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   // unqualified lookup.  This is useful when (for example) the
   // original lookup would not have found something because it was a
   // dependent name.
-  DeclContext *DC = SS.isEmpty() ? CurContext : nullptr;
+  DeclContext *DC =
+      LookupCtx ? LookupCtx : (SS.isEmpty() ? CurContext : nullptr);
   while (DC) {
     if (isa<CXXRecordDecl>(DC)) {
       LookupQualifiedName(R, DC);
@@ -2517,12 +2519,12 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
           emitEmptyLookupTypoDiagnostic(TC, *this, SS, Name, TypoLoc, Args,
                                         diagnostic, diagnostic_suggest);
         },
-        nullptr, CTK_ErrorRecovery);
+        nullptr, CTK_ErrorRecovery, LookupCtx);
     if (*Out)
       return true;
-  } else if (S &&
-             (Corrected = CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(),
-                                      S, &SS, CCC, CTK_ErrorRecovery))) {
+  } else if (S && (Corrected =
+                       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S,
+                                   &SS, CCC, CTK_ErrorRecovery, LookupCtx))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;
@@ -2812,7 +2814,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            std::nullopt, &TE)) {
+                            std::nullopt, nullptr, &TE)) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
