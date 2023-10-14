@@ -632,7 +632,6 @@ SetVector<int> IRNormalizer::getOutputFootprint(
 
 PreservedAnalyses IRNormalizerPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
-  errs() << F.getName() << "\n";
   IRNormalizer{}.runOnFunction(F);
   return PreservedAnalyses::all();
 }
