@@ -352,8 +352,8 @@ public:
                              dimShapesValues, dimSizesBuffer);
     // Use the `reader` to parse the file.
     Value tensor = NewCallParams(rewriter, loc)
-                 .genBuffers(stt, dimShapesValues, dimSizesBuffer)
-                 .genNewCall(Action::kFromReader, reader);
+                       .genBuffers(stt, dimShapesValues, dimSizesBuffer)
+                       .genNewCall(Action::kFromReader, reader);
     // Free the memory for `reader`.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
                    EmitCInterface::Off);

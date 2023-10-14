@@ -142,7 +142,7 @@ extern "C" {
       assert(ptr && "Received nullptr for SparseTensorReader object");         \
       SparseTensorReader &reader = *static_cast<SparseTensorReader *>(ptr);    \
       return static_cast<void *>(reader.readSparseTensor<P, C, V>(             \
-        lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim));                       \
+          lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim));                     \
     }                                                                          \
     case Action::kToCOO: {                                                     \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
