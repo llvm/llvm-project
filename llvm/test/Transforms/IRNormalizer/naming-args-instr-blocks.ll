@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=canon --rename-all --preserve-order < %s | FileCheck %s
+; RUN: opt -S -passes=normalize --rename-all --preserve-order < %s | FileCheck %s
 
 
 ; CHECK: @foo(i32 %a0)

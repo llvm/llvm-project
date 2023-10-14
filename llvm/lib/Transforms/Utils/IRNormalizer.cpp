@@ -1,4 +1,4 @@
-//===--------------- IRCanonicalizer.cpp - IR Canonicalizer ---------------===//
+//===--------------- IRNormalizer.cpp - IR Canonicalizer ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file implements the IRCanonicalizer class which aims to transform LLVM
+/// This file implements the IRNormalizer class which aims to transform LLVM
 /// Modules into a canonical form by reordering and renaming instructions while
-/// preserving the same semantics. The canonicalizer makes it easier to spot
+/// preserving the same semantics. The normalizer makes it easier to spot
 /// semantic differences while diffing two modules which have undergone
 /// different passes.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/IRCanonicalizer.h"
+#include "llvm/Transforms/Utils/IRNormalizer.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -32,13 +32,13 @@
 #include <algorithm>
 #include <vector>
 
-#define DEBUG_TYPE "canon"
+#define DEBUG_TYPE "normalize"
 
 using namespace llvm;
 
 namespace {
-/// IRCanonicalizer aims to transform LLVM IR into canonical form.
-class IRCanonicalizer {
+/// IRNormalizer aims to transform LLVM IR into canonical form.
+class IRNormalizer {
 public:
   /// \name Canonicalizer flags.
   /// @{
@@ -91,23 +91,23 @@ private:
 };
 } // namespace
 
-cl::opt<bool> IRCanonicalizer::PreserveOrder(
+cl::opt<bool> IRNormalizer::PreserveOrder(
     "preserve-order", cl::Hidden,
     cl::desc("Preserves original instruction order"));
-cl::opt<bool> IRCanonicalizer::RenameAll(
+cl::opt<bool> IRNormalizer::RenameAll(
     "rename-all", cl::Hidden,
     cl::desc("Renames all instructions (including user-named)"));
-cl::opt<bool> IRCanonicalizer::FoldPreoutputs(
+cl::opt<bool> IRNormalizer::FoldPreoutputs(
     "fold-all", cl::Hidden,
     cl::desc("Folds all regular instructions (including pre-outputs)"));
-cl::opt<bool> IRCanonicalizer::ReorderOperands(
+cl::opt<bool> IRNormalizer::ReorderOperands(
     "reorder-operands", cl::Hidden,
     cl::desc("Sorts and reorders operands in commutative instructions"));
 
-/// Entry method to the IRCanonicalizer.
+/// Entry method to the IRNormalizer.
 ///
 /// \param M Module to canonicalize.
-bool IRCanonicalizer::runOnFunction(Function &F) {
+bool IRNormalizer::runOnFunction(Function &F) {
   nameFunctionArguments(F);
   nameBasicBlocks(F);
 
@@ -137,7 +137,7 @@ bool IRCanonicalizer::runOnFunction(Function &F) {
 /// Numbers arguments.
 ///
 /// \param F Function whose arguments will be renamed.
-void IRCanonicalizer::nameFunctionArguments(Function &F) {
+void IRNormalizer::nameFunctionArguments(Function &F) {
   int ArgumentCounter = 0;
   for (auto &A : F.args()) {
     if (RenameAll || A.getName().empty()) {
@@ -151,7 +151,7 @@ void IRCanonicalizer::nameFunctionArguments(Function &F) {
 /// a function considering the opcode and the order of output instructions.
 ///
 /// \param F Function containing basic blocks to rename.
-void IRCanonicalizer::nameBasicBlocks(Function &F) {
+void IRNormalizer::nameBasicBlocks(Function &F) {
   for (auto &B : F) {
     // Initialize to a magic constant, so the state isn't zero.
     uint64_t Hash = MagicHashConstant;
@@ -173,7 +173,7 @@ void IRCanonicalizer::nameBasicBlocks(Function &F) {
 /// the output (top-most user) instructions (depth-first).
 ///
 /// \param I Instruction to be renamed.
-void IRCanonicalizer::nameInstruction(Instruction *I) {
+void IRNormalizer::nameInstruction(Instruction *I) {
   // Ensure instructions are not renamed. This is done
   // to prevent situation where instructions are used
   // before their definition (in phi nodes)
@@ -203,7 +203,7 @@ void IRCanonicalizer::nameInstruction(Instruction *I) {
 ///
 /// \see getOutputFootprint()
 /// \param I Instruction to be renamed.
-void IRCanonicalizer::nameAsInitialInstruction(Instruction *I) {
+void IRNormalizer::nameAsInitialInstruction(Instruction *I) {
   if (I->getType()->isVoidTy() || (!I->getName().empty() && !RenameAll))
     return;
 
@@ -279,7 +279,7 @@ void IRCanonicalizer::nameAsInitialInstruction(Instruction *I) {
 ///
 /// \see getOutputFootprint()
 /// \param I Instruction to be renamed.
-void IRCanonicalizer::nameAsRegularInstruction(Instruction *I) {
+void IRNormalizer::nameAsRegularInstruction(Instruction *I) {
   // Instruction operands for further sorting.
   SmallVector<SmallString<128>, 4> Operands;
 
@@ -362,7 +362,7 @@ void IRCanonicalizer::nameAsRegularInstruction(Instruction *I) {
 /// does not affect user named instructions.
 ///
 /// \param I Instruction whose name will be folded.
-void IRCanonicalizer::foldInstructionName(Instruction *I) {
+void IRNormalizer::foldInstructionName(Instruction *I) {
   // If this flag is raised, fold all regular
   // instructions (including pre-outputs).
   if (!FoldPreoutputs) {
@@ -416,7 +416,7 @@ void IRCanonicalizer::foldInstructionName(Instruction *I) {
 ///
 /// \see reorderInstruction()
 /// \param Outputs Vector of pointers to output instructions collected top-down.
-void IRCanonicalizer::reorderInstructions(
+void IRNormalizer::reorderInstructions(
     SmallVector<Instruction *, 16> &Outputs) {
   // This method assumes output instructions were collected top-down,
   // otherwise the def-use chain may be broken.
@@ -438,7 +438,7 @@ void IRCanonicalizer::reorderInstructions(
 /// \param Used Pointer to the instruction whose value is used by the \p User.
 /// \param User Pointer to the instruction which uses the \p Used.
 /// \param Visited Set of visited instructions.
-void IRCanonicalizer::reorderInstruction(
+void IRNormalizer::reorderInstruction(
     Instruction *Used, Instruction *User,
     SmallPtrSet<const Instruction *, 32> &Visited) {
   if (isa<PHINode>(Used))
@@ -468,7 +468,7 @@ void IRCanonicalizer::reorderInstruction(
 /// in other instructions may change the semantics.
 ///
 /// \param I Instruction whose operands will be reordered.
-void IRCanonicalizer::reorderInstructionOperandsByNames(Instruction *I) {
+void IRNormalizer::reorderInstructionOperandsByNames(Instruction *I) {
   // This method assumes that passed I is commutative,
   // changing the order of operands in other instructions
   // may change the semantics.
@@ -507,7 +507,7 @@ void IRCanonicalizer::reorderInstructionOperandsByNames(Instruction *I) {
 /// blocks.
 ///
 /// \param PN PHI node to canonicalize.
-void IRCanonicalizer::reorderPHIIncomingValues(PHINode *PN) {
+void IRNormalizer::reorderPHIIncomingValues(PHINode *PN) {
   // Values for further sorting.
   SmallVector<std::pair<Value *, BasicBlock *>, 2> Values;
 
@@ -536,7 +536,7 @@ void IRCanonicalizer::reorderPHIIncomingValues(PHINode *PN) {
 /// \see isOutput()
 /// \param F Function to collect outputs from.
 SmallVector<Instruction *, 16>
-IRCanonicalizer::collectOutputInstructions(Function &F) {
+IRNormalizer::collectOutputInstructions(Function &F) {
   // Output instructions are collected top-down in each function,
   // any change may break the def-use chain in reordering methods.
   SmallVector<Instruction *, 16> Outputs;
@@ -552,7 +552,7 @@ IRCanonicalizer::collectOutputInstructions(Function &F) {
 /// ReturnInst.
 ///
 /// \param I Considered instruction.
-bool IRCanonicalizer::isOutput(const Instruction *I) {
+bool IRNormalizer::isOutput(const Instruction *I) {
   // Outputs are such instructions which may have side effects or is ReturnInst.
   if (I->mayHaveSideEffects() || isa<ReturnInst>(I))
     return true;
@@ -564,7 +564,7 @@ bool IRCanonicalizer::isOutput(const Instruction *I) {
 /// immediate operands.
 ///
 /// \param I Considered instruction.
-bool IRCanonicalizer::isInitialInstruction(const Instruction *I) {
+bool IRNormalizer::isInitialInstruction(const Instruction *I) {
   // Initial instructions are such instructions whose values are used by
   // other instructions, yet they only depend on immediate values.
   return !I->user_empty() && hasOnlyImmediateOperands(I);
@@ -573,7 +573,7 @@ bool IRCanonicalizer::isInitialInstruction(const Instruction *I) {
 /// Helper method checking whether the instruction has only immediate operands.
 ///
 /// \param I Considered instruction.
-bool IRCanonicalizer::hasOnlyImmediateOperands(const Instruction *I) {
+bool IRNormalizer::hasOnlyImmediateOperands(const Instruction *I) {
   for (const auto &OP : I->operands())
     if (isa<Instruction>(OP))
       return false; // Found non-immediate operand (instruction).
@@ -587,7 +587,7 @@ bool IRCanonicalizer::hasOnlyImmediateOperands(const Instruction *I) {
 ///
 /// \param I Considered instruction.
 /// \param Visited Set of visited instructions.
-SetVector<int> IRCanonicalizer::getOutputFootprint(
+SetVector<int> IRNormalizer::getOutputFootprint(
     Instruction *I, SmallPtrSet<const Instruction *, 32> &Visited) {
 
   // Vector containing indexes of outputs (no repetitions),
@@ -630,9 +630,9 @@ SetVector<int> IRCanonicalizer::getOutputFootprint(
   return Outputs;
 }
 
-PreservedAnalyses IRCanonicalizerPass::run(Function &F,
+PreservedAnalyses IRNormalizerPass::run(Function &F,
                                            FunctionAnalysisManager &AM) {
   errs() << F.getName() << "\n";
-  IRCanonicalizer{}.runOnFunction(F);
+  IRNormalizer{}.runOnFunction(F);
   return PreservedAnalyses::all();
 }
