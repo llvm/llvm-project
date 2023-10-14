@@ -1170,8 +1170,13 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   }
 
   // And store the result in LHS.
-  if (DiscardResult)
+  if (DiscardResult) {
+    if (LHS->refersToBitField())
+      return this->emitStoreBitFieldPop(*ResultT, E);
     return this->emitStorePop(*ResultT, E);
+  }
+  if (LHS->refersToBitField())
+    return this->emitStoreBitField(*ResultT, E);
   return this->emitStore(*ResultT, E);
 }
 
