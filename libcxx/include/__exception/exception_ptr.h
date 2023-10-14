@@ -73,6 +73,14 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
+  if (__ex == nullptr) {
+    try {
+      throw __e;
+    } catch (...) {
+      return current_exception();
+    }
+  }
+
   try {
     ::new (__ex) _Ep2(__e);
     return exception_ptr::__from_native_exception_pointer(__ex);
