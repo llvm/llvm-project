@@ -16,5 +16,6 @@ void bm_make_exception_ptr(benchmark::State& state) {
   }
 }
 BENCHMARK(bm_make_exception_ptr);
+BENCHMARK(bm_make_exception_ptr)->Threads(8)->UseRealTime();
 
 BENCHMARK_MAIN();
