@@ -405,7 +405,8 @@ def warn_fixedpoint_constant_overflow : Warning<
   InGroup<DiagGroup<"fixed-point-overflow">>;
 def warn_constexpr_unscoped_enum_out_of_range : Warning<
   "integer value %0 is outside the valid range of values [%1, %2] for the "
-  "enumeration type %3">, DefaultError, InGroup<DiagGroup<"enum-constexpr-conversion">>;
+  "enumeration type %3">, DefaultError, ShowInSystemHeader, ShowInSystemMacro,
+  InGroup<DiagGroup<"enum-constexpr-conversion">>;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs
