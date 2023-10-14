@@ -3376,7 +3376,8 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL) {
+                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                AssumptionCache *AC) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -3545,14 +3546,12 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
     Value *ReplaceVal = nullptr;
     if (isa<UndefValue>(TrueVal) &&
-        isGuaranteedNotToBePoison(FalseVal, /*AC*/ nullptr,
-                                  IfFalse->getTerminator(),
-                                  DTU ? &DTU->getDomTree() : nullptr, 0)) {
+        isGuaranteedNotToBePoison(FalseVal, AC, IfFalse->getTerminator(),
+                                  /*DT*/ nullptr, /*Depth*/ 0)) {
       ReplaceVal = FalseVal;
     } else if (isa<UndefValue>(FalseVal) &&
-               isGuaranteedNotToBePoison(
-                   TrueVal, /*AC*/ nullptr, IfFalse->getTerminator(),
-                   DTU ? &DTU->getDomTree() : nullptr, 0)) {
+               isGuaranteedNotToBePoison(TrueVal, AC, IfTrue->getTerminator(),
+                                         /*DT*/ nullptr, /*Depth*/ 0)) {
       ReplaceVal = TrueVal;
     } else {
       ReplaceVal = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
@@ -7419,7 +7418,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL))
+        if (FoldTwoEntryPHINode(PN, TTI, DTU, DL, Options.AC))
           return true;
   }
 
