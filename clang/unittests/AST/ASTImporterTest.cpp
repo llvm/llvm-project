@@ -12,7 +12,6 @@
 
 #include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 #include "clang/AST/DeclContextInternals.h"
@@ -26,7 +25,6 @@ namespace ast_matchers {
 
 using internal::Matcher;
 using internal::BindableMatcher;
-using llvm::StringMap;
 
 static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
   QualType Ty = FD->getFriendType()->getType().getCanonicalType();
