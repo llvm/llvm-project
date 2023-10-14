@@ -80,7 +80,8 @@ public:
       std::string &Data = SOStream.str(); // with flush
       for (int K = 0; K < NItems; K++) {
         for (int I = 0; I < P[K].N; I++) {
-          uint64_t Bytes = endian::byte_swap<uint64_t, little>(P[K].D[I]);
+          uint64_t Bytes =
+              endian::byte_swap<uint64_t, llvm::endianness::little>(P[K].D[I]);
           Data.replace(P[K].Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                        (const char *)&Bytes, sizeof(uint64_t));
         }
@@ -120,7 +121,7 @@ public:
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
-    endian::Writer LE(Out, little);
+    endian::Writer LE(Out, llvm::endianness::little);
 
     offset_type N = K.size();
     LE.write<offset_type>(N);
@@ -147,7 +148,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
     using namespace support;
 
-    endian::Writer LE(Out, little);
+    endian::Writer LE(Out, llvm::endianness::little);
     for (const auto &ProfileData : *V) {
       const InstrProfRecord &ProfRecord = ProfileData.second;
       if (NamedInstrProfRecord::hasCSFlagInHash(ProfileData.first))

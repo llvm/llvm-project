@@ -20,7 +20,7 @@ TEST(EndianStream, WriteInt32LE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     LE.write(static_cast<int32_t>(-1362446643));
   }
 
@@ -35,7 +35,7 @@ TEST(EndianStream, WriteInt32BE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer BE(OS, big);
+    endian::Writer BE(OS, llvm::endianness::big);
     BE.write(static_cast<int32_t>(-1362446643));
   }
 
@@ -51,7 +51,7 @@ TEST(EndianStream, WriteFloatLE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     LE.write(12345.0f);
   }
 
@@ -66,7 +66,7 @@ TEST(EndianStream, WriteFloatBE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer BE(OS, big);
+    endian::Writer BE(OS, llvm::endianness::big);
     BE.write(12345.0f);
   }
 
@@ -81,7 +81,7 @@ TEST(EndianStream, WriteInt64LE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     LE.write(static_cast<int64_t>(-136244664332342323));
   }
 
@@ -100,7 +100,7 @@ TEST(EndianStream, WriteInt64BE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer BE(OS, big);
+    endian::Writer BE(OS, llvm::endianness::big);
     BE.write(static_cast<int64_t>(-136244664332342323));
   }
 
@@ -119,7 +119,7 @@ TEST(EndianStream, WriteDoubleLE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     LE.write(-2349214918.58107);
   }
 
@@ -138,7 +138,7 @@ TEST(EndianStream, WriteDoubleBE) {
 
   {
     raw_svector_ostream OS(data);
-    endian::Writer BE(OS, big);
+    endian::Writer BE(OS, llvm::endianness::big);
     BE.write(-2349214918.58107);
   }
 
@@ -157,7 +157,7 @@ TEST(EndianStream, WriteArrayLE) {
 
   {
     raw_svector_ostream OS(Data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     LE.write<uint16_t>({0x1234, 0x5678});
   }
 
@@ -172,7 +172,7 @@ TEST(EndianStream, WriteVectorLE) {
 
   {
     raw_svector_ostream OS(Data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     std::vector<uint16_t> Vec{0x1234, 0x5678};
     LE.write<uint16_t>(Vec);
   }
@@ -188,7 +188,7 @@ TEST(EndianStream, WriteFloatArrayLE) {
 
   {
     raw_svector_ostream OS(Data);
-    endian::Writer LE(OS, little);
+    endian::Writer LE(OS, llvm::endianness::little);
     LE.write<float>({12345.0f, 12346.0f});
   }
 
