@@ -176,3 +176,58 @@ Predefined Macros
    * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
+Support for Deduction Guides
+============================
+
+Explicit Deduction Guides
+-------------------------
+
+Explicit deduction guides in HIP can be annotated with either the
+``__host__`` or ``__device__`` attributes. If no attribute is provided,
+it defaults to ``__host__``.
+
+.. code-block:: cpp
+
+   template <typename T>
+   class MyArray {
+       //...
+   };
+
+   template <typename T>
+   MyArray(T)->MyArray<T>;
+
+   __device__ MyArray(float)->MyArray<int>;
+
+   // Uses of the deduction guides
+   MyArray arr1 = 10;      // Uses the default host guide
+   __device__ void foo() {
+       MyArray arr2 = 3.14f; // Uses the device guide
+   }
+
+Implicit Deduction Guides
+-------------------------
+Implicit deduction guides derived from constructors inherit the same host or
+device attributes as the originating constructor.
+
+.. code-block:: cpp
+
+   template <typename T>
+   class MyVector {
+   public:
+       __device__ MyVector(T) { /* ... */ }
+       //...
+   };
+
+   // The implicit deduction guide for MyVector will be `__device__` due to the device constructor
+
+   __device__ void foo() {
+       MyVector vec(42);  // Uses the implicit device guide derived from the constructor
+   }
+
+Availability Checks
+--------------------
+When a deduction guide (either explicit or implicit) is used, HIP checks its
+availability based on its host/device attributes and the context in a similar
+way as checking a function. Utilizing a deduction guide in an incompatible context
+results in a compile-time error.
+

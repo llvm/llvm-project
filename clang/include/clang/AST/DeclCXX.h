@@ -1948,14 +1948,7 @@ private:
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                        CXXConstructorDecl *Ctor, DeductionCandidate Kind)
-      : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
-                     SC_None, false, false, ConstexprSpecKind::Unspecified),
-        Ctor(Ctor), ExplicitSpec(ES) {
-    if (EndLocation.isValid())
-      setRangeEnd(EndLocation);
-    setDeductionCandidateKind(Kind);
-  }
+                        CXXConstructorDecl *Ctor, DeductionCandidate Kind);
 
   CXXConstructorDecl *Ctor;
   ExplicitSpecifier ExplicitSpec;

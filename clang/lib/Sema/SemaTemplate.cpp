@@ -2685,19 +2685,27 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
     AddedAny = true;
   }
 
+  // Build simple deduction guide and set CUDA host/device attributes.
+  auto BuildSimpleDeductionGuide = [&](auto T) {
+    auto *DG = cast<CXXDeductionGuideDecl>(
+        cast<FunctionTemplateDecl>(Transform.buildSimpleDeductionGuide(T))
+            ->getTemplatedDecl());
+    if (LangOpts.CUDA) {
+      DG->addAttr(CUDAHostAttr::CreateImplicit(getASTContext()));
+      DG->addAttr(CUDADeviceAttr::CreateImplicit(getASTContext()));
+    }
+    return DG;
+  };
   // C++17 [over.match.class.deduct]
   //    --  If C is not defined or does not declare any constructors, an
   //    additional function template derived as above from a hypothetical
   //    constructor C().
   if (!AddedAny)
-    Transform.buildSimpleDeductionGuide(std::nullopt);
+    BuildSimpleDeductionGuide(std::nullopt);
 
   //    -- An additional function template derived as above from a hypothetical
   //    constructor C(C), called the copy deduction candidate.
-  cast<CXXDeductionGuideDecl>(
-      cast<FunctionTemplateDecl>(
-          Transform.buildSimpleDeductionGuide(Transform.DeducedType))
-          ->getTemplatedDecl())
+  BuildSimpleDeductionGuide(Transform.DeducedType)
       ->setDeductionCandidateKind(DeductionCandidate::Copy);
 }
 

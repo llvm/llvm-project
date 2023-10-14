@@ -2113,6 +2113,27 @@ ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
   }
 }
 
+CXXDeductionGuideDecl::CXXDeductionGuideDecl(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
+    TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
+    DeductionCandidate Kind)
+    : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
+                   SC_None, false, false, ConstexprSpecKind::Unspecified),
+      Ctor(Ctor), ExplicitSpec(ES) {
+  if (EndLocation.isValid())
+    setRangeEnd(EndLocation);
+  setDeductionCandidateKind(Kind);
+  // If Ctor is not nullptr, this deduction guide is implicitly derived from
+  // the ctor, therefore it should have the same host/device attribute.
+  if (Ctor && C.getLangOpts().CUDA) {
+    if (Ctor->hasAttr<CUDAHostAttr>())
+      this->addAttr(CUDAHostAttr::CreateImplicit(C));
+    if (Ctor->hasAttr<CUDADeviceAttr>())
+      this->addAttr(CUDADeviceAttr::CreateImplicit(C));
+  }
+}
+
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
