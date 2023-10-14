@@ -13,7 +13,6 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "DwarfCompileUnit.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
