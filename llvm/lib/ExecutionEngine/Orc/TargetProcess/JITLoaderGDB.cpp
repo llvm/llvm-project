@@ -49,7 +49,7 @@ struct jit_descriptor {
 // We put information about the JITed function in this global, which the
 // debugger reads.  Make sure to specify the version statically, because the
 // debugger checks the version before we can set it during runtime.
-struct jit_descriptor __jit_debug_descriptor = {JitDescriptorVersion, 0,
+LLVM_FUNC_ABI struct jit_descriptor __jit_debug_descriptor = {JitDescriptorVersion, 0,
                                                 nullptr, nullptr};
 
 // Debuggers that implement the GDB JIT interface put a special breakpoint in
