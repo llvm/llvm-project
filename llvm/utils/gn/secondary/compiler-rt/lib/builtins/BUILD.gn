@@ -473,7 +473,6 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "aarch64/fp_mode.c",
-      "aarch64/sme-abi-init.c",
       "aarch64/sme-abi.S",
       "cpu_model.c",
     ]
