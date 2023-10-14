@@ -939,4 +939,13 @@ void fundamentalTypesTest() {
   // CHECK-FIXES: for (double Double : Doubles)
 }
 
+template <unsigned int p> void test() {
+  unsigned int test[3][p];
+  // Initialize to zero
+  for (unsigned int i = 0; i < p; ++i)
+    for (unsigned int j = 0; j < 3; ++j) // CHECK-MESSAGES: warning: use range-based for loop instead
+  // CHECK-FIXES: (auto & j : test)
+      test[j][i] = 0;
+}
+
 } // namespace PseudoArray
