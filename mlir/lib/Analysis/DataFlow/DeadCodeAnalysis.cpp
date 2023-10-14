@@ -378,7 +378,7 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   }
 }
 
-void DeadCodeAnalysis::visitRegionTerminator(Operation *op, 
+void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
                                              RegionBranchOpInterface branch) {
   std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
