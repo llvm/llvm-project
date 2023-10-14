@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=canon --rename-all < %s | FileCheck %s
+; RUN: opt -S -passes=normalize --rename-all < %s | FileCheck %s
 
 define i32 @foo(i32 %a0) {
 entry:

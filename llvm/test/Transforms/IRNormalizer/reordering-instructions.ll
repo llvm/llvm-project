@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=canon < %s | FileCheck %s
+; RUN: opt -S -passes=normalize < %s | FileCheck %s
 
 define double @foo(double %a0, double %a1) {
 entry:

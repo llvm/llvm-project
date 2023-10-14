@@ -543,7 +543,7 @@ variables with initializers are marked as internal.
 An interprocedural variant of :ref:`Sparse Conditional Constant Propagation
 <passes-sccp>`.
 
-``-ir-canonicalizer``: Transforms IR into canonical form
+``ir-normalizer``: Transforms IR into a canonical form that's easier to diff
 --------------------------------------------------------
 
 This pass aims to transform LLVM Modules into a canonical form by reordering and
