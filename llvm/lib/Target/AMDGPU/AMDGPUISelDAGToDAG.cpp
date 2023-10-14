@@ -666,9 +666,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::FP_EXTEND:
     SelectFP_EXTEND(N);
     return;
-  case AMDGPUISD::BRCONDZ:
-    SelectBRCONDZ(N);
-    return;
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
   case AMDGPUISD::CVT_PKNORM_I16_F32:
   case AMDGPUISD::CVT_PKNORM_U16_F32:
@@ -2307,34 +2304,6 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   CurDAG->SelectNodeTo(N, BrOp, MVT::Other,
                        N->getOperand(2), // Basic Block
                        VCC.getValue(0));
-}
-
-void AMDGPUDAGToDAGISel::SelectBRCONDZ(SDNode *N) {
-  const SIRegisterInfo *TRI =
-      static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
-
-  SDValue Cond = N->getOperand(1);
-
-  // BRCONDZ condition is either AMDGPUISD::SETCC or i1 value that comes from
-  // ISD::SETCC node or logical combination of ISD::SETCCs therefore we don't
-  // need to AND the condition with execmask.
-
-  // TODO: AMDGPUISD::SETCC is always selected as V_CMP so use VCC condition.
-  // This might change later.
-  bool UseSCCBr = Cond->getOpcode() != AMDGPUISD::SETCC && !Cond->isDivergent();
-
-  auto CondCode = cast<CondCodeSDNode>(N->getOperand(3))->get();
-  assert(CondCode == ISD::SETEQ || CondCode == ISD::SETNE);
-
-  bool EqZero = CondCode == ISD::SETEQ;
-  unsigned BrOp =
-      UseSCCBr ? (EqZero ? AMDGPU::S_CBRANCH_SCC0 : AMDGPU::S_CBRANCH_SCC1)
-               : (EqZero ? AMDGPU::S_CBRANCH_VCCZ : AMDGPU::S_CBRANCH_VCCNZ);
-
-  SDValue CondCopy = CurDAG->getCopyToReg(
-      N->getOperand(0), SDLoc(N), UseSCCBr ? AMDGPU::SCC : TRI->getVCC(),
-      N->getOperand(1));
-  CurDAG->SelectNodeTo(N, BrOp, MVT::Other, N->getOperand(2), CondCopy);
 }
 
 void AMDGPUDAGToDAGISel::SelectFP_EXTEND(SDNode *N) {

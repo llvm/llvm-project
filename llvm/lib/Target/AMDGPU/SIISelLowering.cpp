@@ -798,8 +798,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::SIGN_EXTEND_INREG,
                        ISD::EXTRACT_VECTOR_ELT,
                        ISD::INSERT_VECTOR_ELT,
-                       ISD::FCOPYSIGN,
-                       ISD::BRCOND});
+                       ISD::FCOPYSIGN});
 
   if (Subtarget->has16BitInsts() && !Subtarget->hasMed3_16())
     setTargetDAGCombine(ISD::FP_ROUND);
@@ -13585,56 +13584,6 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return SDValue(CSrc, 0);
 }
 
-SDValue SITargetLowering::performBRCondCombine(SDNode *N,
-                                               DAGCombinerInfo &DCI) const {
-  if (!DCI.isAfterLegalizeDAG())
-    return SDValue(N, 0);
-
-  SDValue Cond = N->getOperand(1);
-  if (Cond.getOpcode() == ISD::SETCC &&
-      Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
-
-    // %VCMP = i32/i64 AMDGPUISD::SETCC ...
-    // %C = ISD::SETCC %VCMP, 0, setne/seteq
-    // BRCOND %BB, %C
-    // =>
-    // %VCMP = i32/i64 AMDGPUISD::SETCC ...
-    // BRCONDZ %BB, %VCMP, setne/seteq
-
-    auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
-    auto *CRHS = dyn_cast<ConstantSDNode>(Cond->getOperand(1));
-    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero()) {
-
-      auto VCMP = Cond->getOperand(0);
-      auto VCMP_CC = cast<CondCodeSDNode>(VCMP.getOperand(2))->get();
-      auto *VCMP_CRHS = dyn_cast<ConstantSDNode>(VCMP.getOperand(1));
-      auto Src = VCMP;
-      if (VCMP_CC == ISD::SETNE && VCMP_CRHS && VCMP_CRHS->isZero()) {
-
-        // Special case for amdgcn.ballot:
-        // %VCMPSrc = ISD::SETCC or a logical combination of ISD::SETCCs
-        // %VCMP = i32/i64 AMDGPUISD::SETCC (ext %VCMPSrc), 0, setne
-        // %C = ISD::SETCC %VCMP, 0, setne/seteq
-        // BRCOND %BB, %C
-        // =>
-        // BRCONDZ %BB, %VCMPSrc, setne/seteq
-
-        auto VCMPSrc = VCMP.getOperand(0);
-        if (ISD::isExtOpcode(VCMPSrc->getOpcode())) // Skip extension.
-          VCMPSrc = VCMPSrc.getOperand(0);
-
-        if (isBoolSGPR(VCMPSrc))
-          Src = VCMPSrc;
-      }
-      return DCI.DAG.getNode(AMDGPUISD::BRCONDZ, SDLoc(N), N->getVTList(),
-                             N->getOperand(0), // Chain
-                             Src,
-                             N->getOperand(2),         // BB
-                             DCI.DAG.getCondCode(CC)); // SETEQ|SETNE
-    }
-  }
-  return SDValue(N, 0);
-}
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
@@ -13745,8 +13694,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
-  case ISD::BRCOND:
-    return performBRCondCombine(N, DCI);
   case ISD::LOAD: {
     if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widended;

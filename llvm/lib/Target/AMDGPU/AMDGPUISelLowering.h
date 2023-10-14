@@ -422,20 +422,6 @@ enum NodeType : unsigned {
   // This is SETCC with the full mask result which is used for a compare with a
   // result bit per item in the wavefront.
   SETCC,
-
-  // Conditional branch on comparison of CondWaveMask operand to zero.
-  //   BRCONDZ CondWaveMask, BB, CondCode
-  // where:
-  //   - CondWaveMask - is either:
-  //     * the i32/i64 result of AMDGPUISD::SETCC node,
-  //     * i1 value that comes from ISD::SETCC node or logical combination of
-  //       ISD::SETCCs. For a divergent node this becomes a i32/i64 value after
-  //       selection.
-  //   - BB is the target basic block,
-  //   - CondCode is either SETEQ or SETNE meaning that the branch should happen
-  //     if the CondWaveMask is either equal to zero or not.
-  BRCONDZ,
-
   SETREG,
 
   DENORM_MODE,
