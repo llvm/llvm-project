@@ -191,6 +191,10 @@ Changes to LLDB
 
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
+* ``SBType::FindDirectNestedType`` function is added. It's useful
+  for formatters to quickly find directly nested type when it's known
+  where to search for it, avoiding more expensive global search via
+  ``SBTarget::FindFirstType``.
 
 Changes to Sanitizers
 ---------------------
