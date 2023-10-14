@@ -1280,10 +1280,14 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   //      divide result.
   //   2. It helps to clean up some loop-invariant code created by the loop
   //      unroll pass when IsFullLTO=false.
-  FPM.addPass(createFunctionToLoopPassAdaptor(
-      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-               /*AllowSpeculation=*/true),
-      /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+  //   3. It deletes dead loops exposed by instcombine.
+  LoopPassManager LPM;
+  LPM.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+                       /*AllowSpeculation=*/true));
+  LPM.addPass(LoopDeletionPass());
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
+                                              /*UseMemorySSA=*/true,
+                                              /*UseBlockFrequencyInfo=*/false));
 
   // Now that we've vectorized and unrolled loops, we may have more refined
   // alignment information, try to re-derive it here.

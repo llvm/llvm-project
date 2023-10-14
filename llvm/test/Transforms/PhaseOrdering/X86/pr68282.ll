@@ -24,14 +24,7 @@ define i32 @pr68282() {
 ; CHECK-LABEL: define i32 @pr68282(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret i32 -134744073
-; CHECK:       for.body:
-; CHECK-NEXT:    [[X_02:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_7:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[INC_7]] = add nuw nsw i32 [[X_02]], 8
-; CHECK-NEXT:    [[EXITCOND_NOT_7:%.*]] = icmp eq i32 [[INC_7]], 1048576
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_7]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ;
 entry:
   br label %for.cond
