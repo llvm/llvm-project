@@ -4640,8 +4640,8 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
   }
 
-  // For f16 require arcp only.
-  // For f32 require afn+arcp.
+  // For f16 require afn or arcp.
+  // For f32 require afn.
   if (!AllowInaccurateRcp && (ResTy != LLT::scalar(16) ||
                               !MI.getFlag(MachineInstr::FmArcp)))
     return false;

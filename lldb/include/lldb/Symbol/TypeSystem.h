@@ -28,11 +28,17 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/lldb-private.h"
 
-class DWARFDIE;
-class DWARFASTParser;
 class PDBASTParser;
 
 namespace lldb_private {
+
+namespace plugin {
+namespace dwarf {
+class DWARFDIE;
+class DWARFASTParser;
+} // namespace dwarf
+} // namespace plugin
+
 namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
@@ -93,7 +99,8 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
-  virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
+  virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
+
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
   virtual npdb::PdbAstBuilder *GetNativePDBParser() { return nullptr; }
 
@@ -384,14 +391,6 @@ public:
   dump(lldb::opaque_compiler_type_t type) const = 0;
 #endif
 
-  virtual void DumpValue(lldb::opaque_compiler_type_t type,
-                         ExecutionContext *exe_ctx, Stream &s,
-                         lldb::Format format, const DataExtractor &data,
-                         lldb::offset_t data_offset, size_t data_byte_size,
-                         uint32_t bitfield_bit_size,
-                         uint32_t bitfield_bit_offset, bool show_types,
-                         bool show_summary, bool verbose, uint32_t depth) = 0;
-
   virtual bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                              lldb::Format format, const DataExtractor &data,
                              lldb::offset_t data_offset, size_t data_byte_size,
@@ -418,15 +417,8 @@ public:
   /// This should not modify the state of the TypeSystem if possible.
   virtual void Dump(llvm::raw_ostream &output) = 0;
 
-  // TODO: These methods appear unused. Should they be removed?
-
+  /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;
-
-  virtual void DumpSummary(lldb::opaque_compiler_type_t type,
-                           ExecutionContext *exe_ctx, Stream &s,
-                           const DataExtractor &data,
-                           lldb::offset_t data_offset,
-                           size_t data_byte_size) = 0;
 
   // TODO: Determine if these methods should move to TypeSystemClang.
 
@@ -434,9 +426,6 @@ public:
                                         CompilerType *pointee_type) = 0;
 
   virtual unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) = 0;
-
-  virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
-                             uint32_t &length) = 0;
 
   virtual std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
@@ -581,6 +570,6 @@ private:
       std::optional<CreateCallback> create_callback = std::nullopt);
   };
 
-} // namespace lldb_private
+  } // namespace lldb_private
 
 #endif // LLDB_SYMBOL_TYPESYSTEM_H
