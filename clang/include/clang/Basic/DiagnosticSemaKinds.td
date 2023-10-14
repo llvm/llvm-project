@@ -6389,6 +6389,17 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
+def err_counted_by_attr_not_on_flexible_array_member : Error<
+  "'counted_by' only applies to flexible array members">;
+def err_counted_by_attr_refers_to_flexible_array : Error<
+  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_must_be_in_structure : Error<
+  "field %0 in 'counted_by' not inside structure">;
+def err_flexible_array_counted_by_attr_field_not_integer : Error<
+  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def note_flexible_array_counted_by_attr_field : Note<
+  "field %0 declared here">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.
