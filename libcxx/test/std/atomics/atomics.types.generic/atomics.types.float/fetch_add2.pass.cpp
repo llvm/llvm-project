@@ -5,11 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
-// floating-point-type operator+=(floating-point-type) volatile noexcept;
-// floating-point-type operator+=(floating-point-type) noexcept;
+// floating-point-type fetch_add(floating-point-type,
+//                               memory_order = memory_order::seq_cst) volatile noexcept;
+// floating-point-type fetch_add(floating-point-type,
+//                               memory_order = memory_order::seq_cst) noexcept;
 
 #include <atomic>
 #include <cassert>
@@ -22,22 +25,14 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatilePlusEquals = requires(volatile std::atomic<T>& a, T t) { a += t; };
+concept HasVolatileFetchAdd = requires(volatile std::atomic<T>& a, T t) { a.fetch_add(t); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {
-  static_assert(HasVolatilePlusEquals<T> == std::atomic<T>::is_always_lock_free);
-  static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>() += T(0)));
+  static_assert(HasVolatileFetchAdd<T> == std::atomic<T>::is_always_lock_free);
+  static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().fetch_add(T(0))));
 
-  // +=
-  {
-    MaybeVolatile<std::atomic<T>> a(3.1);
-    std::same_as<T> decltype(auto) r = a += T(1.2);
-    assert(r == T(3.1) + T(1.2));
-    assert(a.load() == T(3.1) + T(1.2));
-  }
-
-  // += concurrent
+  // fetch_add concurrent
   {
     constexpr auto number_of_threads = 4;
     constexpr auto loop              = 1000;
@@ -49,7 +44,7 @@ void testImpl() {
     for (auto i = 0; i < number_of_threads; ++i) {
       threads.emplace_back([&at]() {
         for (auto j = 0; j < loop; ++j) {
-          at += T(1.234);
+          at.fetch_add(T(1.234), std::memory_order::relaxed);
         }
       });
     }
@@ -67,13 +62,6 @@ void testImpl() {
     };
 
     assert(at.load() == times(1.234, number_of_threads * loop));
-  }
-
-  // memory_order::seq_cst
-  {
-    auto plus_equals = [](MaybeVolatile<std::atomic<T>>& x, T old_value, T new_val) { x += (new_val - old_value); };
-    auto load        = [](MaybeVolatile<std::atomic<T>>& x) { return x.load(); };
-    test_seq_cst<T, MaybeVolatile>(plus_equals, load);
   }
 }
 

@@ -24,7 +24,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileWait = requires(volatile std::atomic<T> a, T t) { a.wait(T()); };
+concept HasVolatileWait = requires(volatile std::atomic<T>& a, T t) { a.wait(T()); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

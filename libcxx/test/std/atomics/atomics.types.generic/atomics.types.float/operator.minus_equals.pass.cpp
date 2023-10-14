@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileMinusEquals = requires(volatile std::atomic<T> a, T t) { a -= t; };
+concept HasVolatileMinusEquals = requires(volatile std::atomic<T>& a, T t) { a -= t; };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {

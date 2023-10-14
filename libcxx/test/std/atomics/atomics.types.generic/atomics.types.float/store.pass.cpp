@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 template <class T>
-concept HasVolatileStore = requires(volatile std::atomic<T> a, T t) { a.store(t); };
+concept HasVolatileStore = requires(volatile std::atomic<T>& a, T t) { a.store(t); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void testImpl() {
