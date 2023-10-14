@@ -1648,7 +1648,8 @@ void VarArgsLoweringHelper::forwardMustTailParameters(SDValue &Chain) {
   // FIXME: Only some x86_32 calling conventions support AVX512.
   if (Subtarget.useAVX512Regs() &&
       (is64Bit() || (CallConv == CallingConv::X86_VectorCall ||
-                     CallConv == CallingConv::Intel_OCL_BI)))
+                     CallConv == CallingConv::Intel_OCL_BI ||
+                     CallConv == CallingConv::Intel_SVML512)))
     VecVT = MVT::v16f32;
   else if (Subtarget.hasAVX())
     VecVT = MVT::v8f32;

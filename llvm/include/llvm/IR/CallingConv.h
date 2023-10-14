@@ -245,6 +245,11 @@ namespace CallingConv {
     /// placement. Preserves active lane values for input VGPRs.
     AMDGPU_CS_ChainPreserve = 105,
 
+    /// Intel_SVML - Calling conventions for Intel Short Math Vector Library
+    Intel_SVML128 = 106,
+    Intel_SVML256 = 107,
+    Intel_SVML512 = 108,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

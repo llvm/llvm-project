@@ -274,6 +274,46 @@ X86RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
+static std::pair<const uint32_t *, const MCPhysReg *>
+getSVMLRegMaskAndSaveList(bool Is64Bit, bool IsWin64, CallingConv::ID CC) {
+  assert(CC >= CallingConv::Intel_SVML128 && CC <= CallingConv::Intel_SVML512);
+  unsigned Abi = CC - CallingConv::Intel_SVML128; // 0 - 128, 1 - 256, 2 - 512
+
+  const std::pair<const uint32_t *, const MCPhysReg *> Abi64[] = {
+      std::make_pair(CSR_64_Intel_SVML_RegMask, CSR_64_Intel_SVML_SaveList),
+      std::make_pair(CSR_64_Intel_SVML_AVX_RegMask,
+                     CSR_64_Intel_SVML_AVX_SaveList),
+      std::make_pair(CSR_64_Intel_SVML_AVX512_RegMask,
+                     CSR_64_Intel_SVML_AVX512_SaveList),
+  };
+
+  const std::pair<const uint32_t *, const MCPhysReg *> AbiWin64[] = {
+      std::make_pair(CSR_Win64_Intel_SVML_RegMask,
+                     CSR_Win64_Intel_SVML_SaveList),
+      std::make_pair(CSR_Win64_Intel_SVML_AVX_RegMask,
+                     CSR_Win64_Intel_SVML_AVX_SaveList),
+      std::make_pair(CSR_Win64_Intel_SVML_AVX512_RegMask,
+                     CSR_Win64_Intel_SVML_AVX512_SaveList),
+  };
+
+  const std::pair<const uint32_t *, const MCPhysReg *> Abi32[] = {
+      std::make_pair(CSR_32_Intel_SVML_RegMask, CSR_32_Intel_SVML_SaveList),
+      std::make_pair(CSR_32_Intel_SVML_RegMask, CSR_32_Intel_SVML_SaveList),
+      std::make_pair(CSR_32_Intel_SVML_AVX512_RegMask,
+                     CSR_32_Intel_SVML_AVX512_SaveList),
+  };
+
+  if (Is64Bit) {
+    if (IsWin64) {
+      return AbiWin64[Abi];
+    } else {
+      return Abi64[Abi];
+    }
+  } else {
+    return Abi32[Abi];
+  }
+}
+
 const MCPhysReg *
 X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "MachineFunction required");
@@ -328,6 +368,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (!HasAVX && !IsWin64 && Is64Bit)
       return CSR_64_Intel_OCL_BI_SaveList;
     break;
+  }
+  case CallingConv::Intel_SVML128:
+  case CallingConv::Intel_SVML256:
+  case CallingConv::Intel_SVML512: {
+    return getSVMLRegMaskAndSaveList(Is64Bit, IsWin64, CC).second;
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
@@ -448,6 +493,11 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (!HasAVX && !IsWin64 && Is64Bit)
       return CSR_64_Intel_OCL_BI_RegMask;
     break;
+  }
+  case CallingConv::Intel_SVML128:
+  case CallingConv::Intel_SVML256:
+  case CallingConv::Intel_SVML512: {
+    return getSVMLRegMaskAndSaveList(Is64Bit, IsWin64, CC).first;
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
