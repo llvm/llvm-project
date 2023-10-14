@@ -123,7 +123,7 @@ initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
 
     cantFail(Obj.getSectionContents(COFFSection, sectionData));
 
-    BinaryStreamReader Reader(sectionData, support::little);
+    BinaryStreamReader Reader(sectionData, llvm::endianness::little);
     uint32_t Magic;
 
     Err(Reader.readInteger(Magic));

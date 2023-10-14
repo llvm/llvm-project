@@ -4,7 +4,6 @@
 
 declare void @use(i32)
 
-; FIXME: This is a miscompile.
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  entry:
@@ -14,7 +13,7 @@ define void @test() {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    br i1 false, label [[LOOP2]], label [[LOOP_LATCH:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    call void @use(i32 4)
+; CHECK-NEXT:    call void @use(i32 3)
 ; CHECK-NEXT:    br label [[LOOP2_1:%.*]]
 ; CHECK:       loop2.1:
 ; CHECK-NEXT:    br i1 false, label [[LOOP2_1]], label [[LOOP_LATCH_1:%.*]], !llvm.loop [[LOOP0]]

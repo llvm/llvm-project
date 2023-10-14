@@ -7435,15 +7435,20 @@ TemplateArgumentLoc ASTRecordReader::readTemplateArgumentLoc() {
   return TemplateArgumentLoc(Arg, readTemplateArgumentLocInfo(Arg.getKind()));
 }
 
+void ASTRecordReader::readTemplateArgumentListInfo(
+    TemplateArgumentListInfo &Result) {
+  Result.setLAngleLoc(readSourceLocation());
+  Result.setRAngleLoc(readSourceLocation());
+  unsigned NumArgsAsWritten = readInt();
+  for (unsigned i = 0; i != NumArgsAsWritten; ++i)
+    Result.addArgument(readTemplateArgumentLoc());
+}
+
 const ASTTemplateArgumentListInfo *
 ASTRecordReader::readASTTemplateArgumentListInfo() {
-  SourceLocation LAngleLoc = readSourceLocation();
-  SourceLocation RAngleLoc = readSourceLocation();
-  unsigned NumArgsAsWritten = readInt();
-  TemplateArgumentListInfo TemplArgsInfo(LAngleLoc, RAngleLoc);
-  for (unsigned i = 0; i != NumArgsAsWritten; ++i)
-    TemplArgsInfo.addArgument(readTemplateArgumentLoc());
-  return ASTTemplateArgumentListInfo::Create(getContext(), TemplArgsInfo);
+  TemplateArgumentListInfo Result;
+  readTemplateArgumentListInfo(Result);
+  return ASTTemplateArgumentListInfo::Create(getContext(), Result);
 }
 
 Decl *ASTReader::GetExternalDecl(uint32_t ID) {

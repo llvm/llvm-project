@@ -39,6 +39,7 @@ cc_test(
     ]),
     deps = [
         "//llvm:Support",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Support",
