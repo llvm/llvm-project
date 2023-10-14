@@ -476,13 +476,13 @@ public:
     // If we fail to add the note section, we just pass through the original
     // ELF image for wrapping. At some point we should enforce the note section
     // and start emitting errors vs warnings.
-    support::endianness Endianness;
+    llvm::endianness Endianness;
     if (isa<ELF64LEObjectFile>(BinOrErr->get()) ||
         isa<ELF32LEObjectFile>(BinOrErr->get())) {
-      Endianness = support::little;
+      Endianness = llvm::endianness::little;
     } else if (isa<ELF64BEObjectFile>(BinOrErr->get()) ||
                isa<ELF32BEObjectFile>(BinOrErr->get())) {
-      Endianness = support::big;
+      Endianness = llvm::endianness::big;
     } else {
       warningOS() << OriginalFileName
                   << " is an ELF image of unrecognized format.\n";

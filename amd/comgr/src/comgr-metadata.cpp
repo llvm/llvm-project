@@ -1013,7 +1013,7 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
 
   int Seen = 0;
   BinaryStreamReader Reader(StringRef(DataP->Data, DataP->Size),
-                            support::little);
+                            llvm::endianness::little);
 
   StringRef Magic;
   if (auto EC = Reader.readFixedString(Magic, OffloadBundleMagicLen)) {
