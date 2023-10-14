@@ -1424,6 +1424,46 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   return true;
 }
 
+namespace {
+
+using InsertionPt = PointerUnion<Instruction *, BasicBlock *>;
+/// Find the nearest Instruction or BasicBlock that dominates both I1 and
+/// I2.
+static InsertionPt findNearestCommonDominator(InsertionPt I1, InsertionPt I2,
+                                              DominatorTree *DT) {
+  auto GetParent = [](InsertionPt I) {
+    if (auto *BB = dyn_cast<BasicBlock *>(I))
+      return BB;
+    return cast<Instruction *>(I)->getParent();
+  };
+  BasicBlock *BB1 = GetParent(I1);
+  BasicBlock *BB2 = GetParent(I2);
+  if (BB1 == BB2) {
+    // BasicBlock InsertionPt means the terminator.
+    if (isa<BasicBlock *>(I1))
+      return I2;
+    if (isa<BasicBlock *>(I2))
+      return I1;
+    return cast<Instruction *>(I1)->comesBefore(cast<Instruction *>(I2)) ? I1
+                                                                         : I2;
+  }
+
+  // These checks are necessary, because findNearestCommonDominator for NodeT
+  // doesn't handle these.
+  if (!DT->isReachableFromEntry(BB2))
+    return I1;
+  if (!DT->isReachableFromEntry(BB1))
+    return I2;
+
+  BasicBlock *DomBB = DT->findNearestCommonDominator(BB1, BB2);
+  if (BB2 == DomBB)
+    return I2;
+  if (BB1 == DomBB)
+    return I1;
+  return DomBB;
+}
+
+} // namespace
 // Attempts to optimize the pattern whereby memory is copied from an alloca to
 // another alloca, where the two allocas don't have conflicting mod/ref. If
 // successful, the two allocas can be merged into one and the transfer can be
@@ -1466,13 +1506,27 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
 
   // Check that src and dest are never captured, unescaped allocas. Also
-  // find the nearest common dominator and postdominator for all users in
+  // find the nearest common dominator and post-dominator for all users in
   // order to shrink wrap the lifetimes, and instructions with noalias metadata
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
+  InsertionPt StartPt = nullptr;
+  SmallSet<Instruction *, 4> EndPts;
   SmallSet<Instruction *, 4> NoAliasInstrs;
   bool SrcNotDom = false;
+  auto InsertIfNotPDom = [&](Instruction *I) {
+    for (auto EndPt : EndPts) {
+      if (PDT->dominates(EndPt, I))
+        return;
+      else if (PDT->dominates(I, EndPt)) {
+        EndPt = I;
+        return;
+      }
+    }
+    EndPts.insert(I);
+    return;
+  };
 
   // Recursively track the user and check whether modified alias exist.
   auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
@@ -1514,6 +1568,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           Worklist.push_back(UI);
           continue;
         case UseCaptureKind::NO_CAPTURE: {
+          if (!StartPt) {
+            StartPt = UI;
+            EndPts.insert(UI);
+          } else {
+            StartPt = findNearestCommonDominator(StartPt, UI, DT);
+            InsertIfNotPDom(UI);
+          }
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
@@ -1623,12 +1684,38 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Drop metadata on the source alloca.
   SrcAlloca->dropUnknownNonDebugMetadata();
 
-  // TODO: Reconstruct merged lifetime markers.
-  // Remove all other lifetime markers. if the original lifetime intrinsics
-  // exists.
+  // Reconstruction of lifetime markers.
+  // 1. Insert new lifetime.start to the dominator for all src and dest uses.
+  // 2. Remove original markers except possibly last lifetime.end.
   if (!LifetimeMarkers.empty()) {
-    for (Instruction *I : LifetimeMarkers)
-      eraseInstruction(I);
+    LLVMContext &C = SrcAlloca->getContext();
+    IRBuilder<> Builder(C);
+    ConstantInt *AllocaSize = ConstantInt::get(Type::getInt64Ty(C), -1);
+    if (!Size.isScalable())
+      AllocaSize = ConstantInt::get(Type::getInt64Ty(C), Size);
+    // Create a new lifetime start marker before the first user of src or alloca
+    // users.
+    MemoryAccess *StartMA;
+    if (auto *DomI = dyn_cast_if_present<Instruction *>(StartPt)) {
+      Builder.SetInsertPoint(DomI->getParent(), DomI->getIterator());
+      auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
+      StartMA = MSSAU->createMemoryAccessBefore(Start, nullptr,
+                                                MSSA->getMemoryAccess(DomI));
+    } else {
+      auto *DomB = cast<BasicBlock *>(StartPt);
+      Builder.SetInsertPoint(DomB->getTerminator());
+      auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
+      StartMA = MSSAU->createMemoryAccessInBB(
+          Start, nullptr, Start->getParent(), MemorySSA::BeforeTerminator);
+    }
+    MSSAU->insertDef(cast<MemoryDef>(StartMA), /*RenameUses=*/true);
+
+    // Remove all lifetime markers except . if the original lifetime intrinsics
+    // exists.
+    for (Instruction *I : LifetimeMarkers) {
+      if (EndPts.find(I) == EndPts.end())
+        eraseInstruction(I);
+    }
   }
 
   // As this transformation can cause memory accesses that didn't previously
