@@ -11,6 +11,8 @@
 #error this header may only be used with libc++abi or libcxxrt
 #endif
 
+#include <dlfcn.h>
+
 namespace std {
 
 exception_ptr::~exception_ptr() noexcept
@@ -38,8 +40,16 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
+    using CxaInitPrimaryExceptionPrototype = void *(*)(void *, type_info *, void(*)(void *));
+    static CxaInitPrimaryExceptionPrototype cxa_init_primary_exception_fn = reinterpret_cast<CxaInitPrimaryExceptionPrototype>(
+        dlsym(RTLD_DEFAULT, "__cxa_init_primary_exception"));
+
+    if (cxa_init_primary_exception_fn == nullptr) {
+        return nullptr;
+    }
+
     void *__ex = __cxa_allocate_exception(size);
-    (void)__cxa_init_primary_exception(__ex, tinfo, dest);
+    (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
     return __ex;
 }
 
