@@ -2141,8 +2141,20 @@ LegalizerHelper::widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
   auto LeftOperand = MIRBuilder.buildInstr(ExtOp, {WideTy}, {LHS});
   auto RightOperand = MIRBuilder.buildInstr(ExtOp, {WideTy}, {RHS});
 
-  auto Mulo = MIRBuilder.buildInstr(MI.getOpcode(), {WideTy, OverflowTy},
-                                    {LeftOperand, RightOperand});
+  // Multiplication cannot overflow if the WideTy is >= 2 * original width,
+  // so we don't need to check the overflow result of larger type Mulo.
+  bool WideMulCanOverflow = WideTy.getScalarSizeInBits() < 2 * SrcBitWidth;
+
+  unsigned MulOpc =
+      WideMulCanOverflow ? MI.getOpcode() : (unsigned)TargetOpcode::G_MUL;
+
+  MachineInstrBuilder Mulo;
+  if (WideMulCanOverflow)
+    Mulo = MIRBuilder.buildInstr(MulOpc, {WideTy, OverflowTy},
+                                 {LeftOperand, RightOperand});
+  else
+    Mulo = MIRBuilder.buildInstr(MulOpc, {WideTy}, {LeftOperand, RightOperand});
+
   auto Mul = Mulo->getOperand(0);
   MIRBuilder.buildTrunc(Result, Mul);
 
@@ -2160,9 +2172,7 @@ LegalizerHelper::widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
     ExtResult = MIRBuilder.buildZExtInReg(WideTy, Mul, SrcBitWidth);
   }
 
-  // Multiplication cannot overflow if the WideTy is >= 2 * original width,
-  // so we don't need to check the overflow result of larger type Mulo.
-  if (WideTy.getScalarSizeInBits() < 2 * SrcBitWidth) {
+  if (WideMulCanOverflow) {
     auto Overflow =
         MIRBuilder.buildICmp(CmpInst::ICMP_NE, OverflowTy, Mul, ExtResult);
     // Finally check if the multiplication in the larger type itself overflowed.
