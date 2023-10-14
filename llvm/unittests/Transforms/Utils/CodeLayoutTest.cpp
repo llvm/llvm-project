@@ -1,4 +1,5 @@
 #include "llvm/Transforms/Utils/CodeLayout.h"
+#include "llvm/Support/CommandLine.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <vector>
@@ -6,6 +7,10 @@
 using namespace llvm;
 using namespace llvm::codelayout;
 using testing::ElementsAreArray;
+
+namespace llvm::codelayout {
+extern cl::opt<unsigned> CDMaxChainSize;
+}
 
 namespace {
 TEST(CodeLayout, ThreeFunctions) {
@@ -40,6 +45,14 @@ TEST(CodeLayout, HotChain) {
     const std::vector<uint64_t> CallOffsets(std::size(Edges), 5);
     auto Order = computeCacheDirectedLayout(Sizes, Counts, Edges, CallOffsets);
     EXPECT_THAT(Order, ElementsAreArray({0, 3, 4, 2, 1}));
+
+    // -cdsort-max-chain-size disables forming a larger chain and therefore may
+    // change the result.
+    unsigned Saved = CDMaxChainSize;
+    CDMaxChainSize.setValue(3);
+    Order = computeCacheDirectedLayout(Sizes, Counts, Edges, CallOffsets);
+    EXPECT_THAT(Order, ElementsAreArray({0, 3, 4, 1, 2}));
+    CDMaxChainSize.setValue(Saved);
   }
 }
 

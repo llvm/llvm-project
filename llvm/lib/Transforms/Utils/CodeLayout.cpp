@@ -62,6 +62,12 @@ cl::opt<bool> ApplyExtTspWithoutProfile(
     "ext-tsp-apply-without-profile",
     cl::desc("Whether to apply ext-tsp placement for instances w/o profile"),
     cl::init(true), cl::Hidden);
+
+namespace codelayout {
+cl::opt<unsigned>
+    CDMaxChainSize("cdsort-max-chain-size", cl::Hidden, cl::init(128),
+                   cl::desc("The maximum size of a chain to create"));
+}
 } // namespace llvm
 
 // Algorithm-specific params for Ext-TSP. The values are tuned for the best
@@ -1155,6 +1161,9 @@ private:
       for (const auto &[_, Edge] : BestSrcChain->Edges) {
         // Ignore loop edges.
         if (Edge->isSelfEdge())
+          continue;
+        if (Edge->srcChain()->numBlocks() + Edge->dstChain()->numBlocks() >
+            CDMaxChainSize)
           continue;
 
         // Compute the gain of merging the two chains.
