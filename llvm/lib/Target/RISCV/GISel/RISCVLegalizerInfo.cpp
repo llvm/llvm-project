@@ -163,7 +163,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
         // the low bits for the mul result and high bits to do the overflow
         // check.
         .widenScalarIf(
-            [=, &ST](const LegalityQuery &Query) {
+            [=](const LegalityQuery &Query) {
               return Query.Types[0] == XLenLLT;
             },
             [=](const LegalityQuery &Query) {
