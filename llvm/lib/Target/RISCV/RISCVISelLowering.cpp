@@ -11999,7 +11999,7 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold (xor (setcc constant, y, setlt), 1) -> (setcc y, constant + 1, setlt)
-  if (N0.hasOneUse() && N0.getOpcode() == ISD::SETCC && isOneConstant(N1)) {
+  if (N0.getOpcode() == ISD::SETCC && isOneConstant(N1) && N0.hasOneUse()) {
     auto *ConstN00 = dyn_cast<ConstantSDNode>(N0.getOperand(0));
     ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
     if (ConstN00 && CC == ISD::SETLT) {
