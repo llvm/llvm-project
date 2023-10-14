@@ -19447,6 +19447,20 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+
+  // Check the "counted_by" attribute to ensure that the count field exists in
+  // the struct. Make sure we're performing this check on the outer-most
+  // record.  This is a C-only feature.
+  if (!getLangOpts().CPlusPlus && Record &&
+      !isa<RecordDecl>(Record->getParent())) {
+    auto Pred = [](const Decl *D) {
+      if (const auto *FD = dyn_cast_if_present<FieldDecl>(D))
+        return FD->hasAttr<CountedByAttr>();
+      return false;
+    };
+    if (const FieldDecl *FD = Record->findFieldIf(Pred))
+      CheckCountedByAttr(S, FD);
+  }
 }
 
 /// Determine whether the given integral value is representable within
