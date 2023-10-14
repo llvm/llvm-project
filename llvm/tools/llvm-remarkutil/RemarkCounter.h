@@ -88,7 +88,7 @@ struct Filters {
     Filter.RemarkTypeFilter = std::move(RemarkTypeFilter);
     if (auto E = Filter.regexArgumentsValid())
       return std::move(E);
-    return Filter;
+    return std::move(Filter);
   }
   /// Returns true if \p Remark satisfies all the provided filters.
   bool filterRemark(const Remark &Remark);
@@ -110,15 +110,15 @@ inline Error checkRegex(const Regex &Regex) {
 /// Abstract counter class used to define the general required methods for
 /// counting a remark.
 struct Counter {
-  GroupBy _GroupBy;
-  Counter(){};
-  Counter(enum GroupBy GroupBy) : _GroupBy(GroupBy) {}
+  GroupBy Group = GroupBy::TOTAL;
+  Counter() = default;
+  Counter(enum GroupBy GroupBy) : Group(GroupBy) {}
   /// Obtain the field for collecting remark info based on how we are
   /// collecting. Remarks are grouped by FunctionName, Source, Source and
   /// Function or collect by file.
   std::optional<std::string> getGroupByKey(const Remark &Remark);
 
-  /// Collect count information from \p Remark organized based on \p GroupBy
+  /// Collect count information from \p Remark organized based on \p Group
   /// property.
   virtual void collect(const Remark &) = 0;
   /// Output the final count to the file \p OutputFileName
@@ -158,10 +158,10 @@ struct ArgumentCounter : Counter {
   /// vector then we need to check that the provided regular expressions are
   /// valid if not we return an Error.
   static Expected<ArgumentCounter>
-  createArgumentCounter(enum GroupBy GroupBy, ArrayRef<FilterMatcher> Arguments,
+  createArgumentCounter(GroupBy Group, ArrayRef<FilterMatcher> Arguments,
                         StringRef Buffer, Filters &Filter) {
     ArgumentCounter AC;
-    AC._GroupBy = GroupBy;
+    AC.Group = Group;
     for (auto &Arg : Arguments) {
       if (Arg.IsRegex) {
         if (auto E = checkRegex(Arg.FilterRE))
@@ -178,7 +178,7 @@ struct ArgumentCounter : Counter {
   void collect(const Remark &) override;
 
   /// Print a CSV table consisting of an index which is specified by \p
-  /// `GroupBy` and can be a function name, source file name or function name
+  /// `Group` and can be a function name, source file name or function name
   /// with the full source path and columns of user specified remark arguments
   /// to collect the count for.
   Error print(StringRef OutputFileName) override;
@@ -194,19 +194,19 @@ private:
 };
 
 /// Collect remarks based by counting the existance of individual remarks. The
-/// reported table will be structured based on the provided \p GroupBy argument
+/// reported table will be structured based on the provided \p Group argument
 /// by reporting count for functions, source or total count for the provided
 /// remark file.
 struct RemarkCounter : Counter {
   std::map<std::string, unsigned> CountedByRemarksMap;
-  RemarkCounter(enum GroupBy GroupBy) : Counter(GroupBy) {}
+  RemarkCounter(GroupBy Group) : Counter(Group) {}
 
-  /// Advance the internal map count broken by \p GroupBy when
+  /// Advance the internal map count broken by \p Group when
   /// seeing \p Remark.
   void collect(const Remark &) override;
 
   /// Print a CSV table consisting of an index which is specified by \p
-  /// `GroupBy` and can be a function name, source file name or function name
+  /// `Group` and can be a function name, source file name or function name
   /// with the full source path and a counts column corresponding to the count
   /// of each individual remark at th index.
   Error print(StringRef OutputFileName) override;
