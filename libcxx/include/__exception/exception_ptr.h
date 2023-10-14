@@ -29,7 +29,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if defined(LIBCXX_BUILDING_LIBCXXABI)
+#    if defined(LIBCXXRT) || defined(LIBCXX_BUILDING_LIBCXXABI)
   template <class _Ep>
   static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
@@ -69,7 +69,7 @@ public:
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if defined(LIBCXX_BUILDING_LIBCXXABI)
+#    if defined(LIBCXXRT) || defined(LIBCXX_BUILDING_LIBCXXABI)
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
