@@ -108,6 +108,14 @@ void Positives() {
   std::string_view view4(ReturnsAString());
   // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives
   // CHECK-MESSAGES-CXX17: [[@LINE-2]]:26: warning: std::basic_string_view outlives
+
+  std::string_view view5 = std::string("test");
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:28: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+
+  std::string_view view6 = std::string{"test"};
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:28: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
 }
 
 void OtherTypes() {
