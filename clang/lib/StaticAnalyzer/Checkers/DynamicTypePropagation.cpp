@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -392,10 +393,6 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
   }
 }
 
-/// TODO: Handle explicit casts.
-///       Handle C++ casts.
-///
-/// Precondition: the cast is between ObjCObjectPointers.
 ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
     const CastExpr *CE, ProgramStateRef &State, CheckerContext &C) const {
   // We only track type info for regions.
@@ -403,8 +400,19 @@ ExplodedNode *DynamicTypePropagation::dynamicTypePropagationOnCasts(
   if (!ToR)
     return C.getPredecessor();
 
-  if (isa<ExplicitCastExpr>(CE))
+  if (CE->getCastKind() == CK_BaseToDerived) {
+    bool CastSucceeds = true;
+    QualType FromTy = CE->getSubExpr()->getType();
+    QualType ToTy = CE->getType();
+    ToR = ToR->StripCasts(/*StripBaseAndDerivedCasts=*/true);
+    State = setDynamicTypeAndCastInfo(State, ToR, FromTy, ToTy, CastSucceeds);
+    return C.addTransition(State);
+  }
+
+  // TODO: Handle the rest of explicit casts, inluding the regular C++ casts.
+  if (isa<ExplicitCastExpr>(CE)) {
     return C.getPredecessor();
+  }
 
   if (const Type *NewTy = getBetterObjCType(CE, C)) {
     State = setDynamicTypeInfo(State, ToR, QualType(NewTy, 0));
@@ -609,9 +617,13 @@ storeWhenMoreInformative(ProgramStateRef &State, SymbolRef Sym,
 /// symbol and the destination type of the cast are unrelated, report an error.
 void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
                                            CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  ExplodedNode *AfterTypeProp = dynamicTypePropagationOnCasts(CE, State, C);
+
   if (CE->getCastKind() != CK_BitCast)
     return;
 
+  ASTContext &ASTCtxt = C.getASTContext();
   QualType OriginType = CE->getSubExpr()->getType();
   QualType DestType = CE->getType();
 
@@ -620,11 +632,6 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
 
   if (!OrigObjectPtrType || !DestObjectPtrType)
     return;
-
-  ProgramStateRef State = C.getState();
-  ExplodedNode *AfterTypeProp = dynamicTypePropagationOnCasts(CE, State, C);
-
-  ASTContext &ASTCtxt = C.getASTContext();
 
   // This checker detects the subtyping relationships using the assignment
   // rules. In order to be able to do this the kindofness must be stripped
