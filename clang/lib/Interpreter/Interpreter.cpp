@@ -248,7 +248,6 @@ Interpreter::~Interpreter() {
 // can't find the precise resource directory in unittests so we have to hard
 // code them.
 const char *const Runtimes = R"(
-    void* operator new(__SIZE_TYPE__, void* __p) noexcept;
     void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*);
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, void*);
@@ -257,14 +256,9 @@ const char *const Runtimes = R"(
     void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, long double);
     void __clang_Interpreter_SetValueNoAlloc(void*,void*,void*,unsigned long long);
     template <class T, class = T (*)() /*disable for arrays*/>
-    void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size) {
-      for (auto Idx = 0; Idx < Size; ++Idx)
-        new ((void*)(((T*)Placement) + Idx)) T(Src[Idx]);
-    }
+    void __clang_Interpreter_SetValueCopyArr(T* Src, void* Placement, unsigned long Size);
     template <class T, unsigned long N>
-    void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size) {
-      __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
-    }
+    void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size);
 )";
 
 llvm::Expected<std::unique_ptr<Interpreter>>
@@ -760,6 +754,20 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal,
                                     void *OpaqueType) {
   Value &VRef = *(Value *)OutVal;
   VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
+}
+
+template <class T, class>
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueCopyArr(T *Src, void *Placement,
+                                    unsigned long Size) {
+  for (unsigned long Idx = 0; Idx < Size; ++Idx)
+    new ((void *)(((T *)Placement) + Idx)) T(Src[Idx]);
+}
+template <class T, unsigned long N>
+REPL_EXTERNAL_VISIBILITY void
+__clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void *Placement,
+                                    unsigned long Size) {
+  __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
 }
 
 static void SetValueDataBasedOnQualType(Value &V, unsigned long long Data) {

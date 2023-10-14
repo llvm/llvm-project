@@ -24,6 +24,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -45,13 +46,25 @@ static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
+  if (llvm::Triple(llvm::sys::getProcessTriple()).isOSDarwin()) {
+    Args macOsArgs = {"-Xcc", "-isysroot",
+                      "/Applications/Xcode.app/Contents/Developer/Platforms/"
+                      "MacOSX.platform/Developer/SDKs/MacOSX.sdk"};
+    ClangArgs.insert(ClangArgs.end(), macOsArgs.begin(), macOsArgs.end());
+  }
   ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   auto CI = cantFail(CB.CreateCpp());
   if (Client)
     CI->getDiagnostics().setClient(Client, /*ShouldOwnClient=*/false);
-  return cantFail(clang::Interpreter::create(std::move(CI)));
+  auto interp = cantFail(clang::Interpreter::create(std::move(CI)));
+  if (llvm::Triple(llvm::sys::getProcessTriple()).isOSDarwin())
+    (void)cantFail(interp->Parse("#include <new>"));
+  else
+    (void)cantFail(interp->Parse(
+        "void* operator new(__SIZE_TYPE__, void* __p) noexcept;"));
+  return interp;
 }
 
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
@@ -148,12 +161,12 @@ TEST(InterpreterTest, UndoCommand) {
   auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
 
   // Fail to undo.
-  auto Err1 = Interp->Undo();
+  auto Err1 = Interp->Undo(2);
   EXPECT_EQ("Operation failed. Too many undos",
             llvm::toString(std::move(Err1)));
   auto Err2 = Interp->Parse("int foo = 42;");
   EXPECT_TRUE(!!Err2);
-  auto Err3 = Interp->Undo(2);
+  auto Err3 = Interp->Undo(3);
   EXPECT_EQ("Operation failed. Too many undos",
             llvm::toString(std::move(Err3)));
 
