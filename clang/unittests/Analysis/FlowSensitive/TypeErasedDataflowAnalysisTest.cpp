@@ -47,7 +47,6 @@ using namespace test;
 using namespace ast_matchers;
 using llvm::IsStringMapEntry;
 using ::testing::DescribeMatcher;
-using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::NotNull;
 using ::testing::Test;
