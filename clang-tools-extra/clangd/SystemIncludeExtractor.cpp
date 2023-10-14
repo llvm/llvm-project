@@ -88,12 +88,14 @@ struct DriverArgs {
   std::string Sysroot;
   std::string ISysroot;
   std::string Target;
+  std::string Stdlib;
 
   bool operator==(const DriverArgs &RHS) const {
     return std::tie(Driver, StandardIncludes, StandardCXXIncludes, Lang,
-                    Sysroot, ISysroot, Target) ==
+                    Sysroot, ISysroot, Target, Stdlib) ==
            std::tie(RHS.Driver, RHS.StandardIncludes, RHS.StandardCXXIncludes,
-                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target);
+                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target,
+                    RHS.Stdlib);
   }
 
   DriverArgs(const tooling::CompileCommand &Cmd, llvm::StringRef File) {
@@ -136,6 +138,13 @@ struct DriverArgs {
       } else if (Arg.consume_front("-target")) {
         if (Arg.empty() && I + 1 < E)
           Target = Cmd.CommandLine[I + 1];
+      } else if (Arg.consume_front("--stdlib")) {
+        if (Arg.consume_front("="))
+          Stdlib = Arg.str();
+        else if (Arg.empty() && I + 1 < E)
+          Stdlib = Cmd.CommandLine[I + 1];
+      } else if (Arg.consume_front("-stdlib=")) {
+        Stdlib = Arg.str();
       }
     }
 
@@ -175,6 +184,8 @@ struct DriverArgs {
       Args.append({"-isysroot", ISysroot});
     if (!Target.empty())
       Args.append({"-target", Target});
+    if (!Stdlib.empty())
+      Args.append({"--stdlib", Stdlib});
     return Args;
   }
 
@@ -203,6 +214,7 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Driver,
         Val.StandardIncludes,
         Val.StandardCXXIncludes,
+        Val.Stdlib,
         Val.Lang,
         Val.Sysroot,
         Val.ISysroot,
