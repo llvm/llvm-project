@@ -7219,6 +7219,18 @@ its underlying representation to be a WebAssembly ``funcref``.
   }];
 }
 
+def DebugInfoTypeDocumentation : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+This attribute allows to alter type of a bitfield in debug information.
+Such a need might arise when bitfield is intended to store an enumeration value,
+but has to be specified as having enumeration's underlying type, in order to
+facilitate compiler optimizations. But this also causes underlying type to be
+emitted in debug information, making it hard for debuggers to map bitfield's
+value back to enumeration. This attribute helps with this.
+  }];
+}
+
 def CleanupDocs : Documentation {
   let Category = DocCatType;
   let Content = [{

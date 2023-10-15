@@ -5910,6 +5910,28 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) BuiltinAliasAttr(S.Context, AL, Ident));
 }
 
+static void handleDebugInfoTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.hasParsedType()) {
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  TypeSourceInfo *ParmTSI = nullptr;
+  QualType type = S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
+  assert(ParmTSI && "no type source info for attribute argument");
+
+  if (type->isEnumeralType()) {
+    QualType BitfieldType = llvm::cast<FieldDecl>(D)->getType();
+    QualType EnumUnderlyingType = type->getAs<EnumType>()->getDecl()->getIntegerType();
+    if (EnumUnderlyingType != BitfieldType) {
+      S.Diag(AL.getLoc(), diag::warn_attribute_underlying_type_mismatch) << EnumUnderlyingType << type << BitfieldType;
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) DebugInfoTypeAttr(S.Context, AL, ParmTSI));
+}
+
 //===----------------------------------------------------------------------===//
 // Checker-specific attribute handlers.
 //===----------------------------------------------------------------------===//
@@ -9627,6 +9649,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_BuiltinAlias:
     handleBuiltinAliasAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_DebugInfoType:
+    handleDebugInfoTypeAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_UsingIfExists:

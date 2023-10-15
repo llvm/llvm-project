@@ -107,6 +107,10 @@ def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
 
+def BitField : SubsetSubject<Field,
+                             [{S->isBitField()}],
+                             "bit-field non-static data members">;
+
 def NonStaticCXXMethod : SubsetSubject<CXXMethod,
                                        [{!S->isStatic()}],
                                        "non-static member functions">;
@@ -4263,4 +4267,11 @@ def CountedBy : InheritableAttr {
       SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
       void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
+}
+
+def DebugInfoType: InheritableAttr {
+  let Spellings = [Clang<"debug_info_type">];
+  let Subjects = SubjectList<[BitField], ErrorDiag>;
+  let Args = [TypeArgument<"Type", 1>];
+  let Documentation = [DebugInfoTypeDocumentation];
 }
