@@ -4422,6 +4422,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowInterfaces",
@@ -4436,6 +4437,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TensorDialect",
+        ":ValueBoundsOpInterface",
         ":VectorAttributesIncGen",
         ":VectorDialectIncGen",
         ":VectorInterfaces",
