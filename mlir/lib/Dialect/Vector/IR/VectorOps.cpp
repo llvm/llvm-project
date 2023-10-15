@@ -218,14 +218,13 @@ bool mlir::vector::isDisjointTransferIndices(
         // expression as a fast track.
         FailureOr<int64_t> delta =
             affine::fullyComposeAndComputeConstantDelta(indexA, indexB);
-        if (succeeded(delta) && *delta >= vectorDim)
+        if (succeeded(delta) && std::abs(*delta) >= vectorDim)
           return true;
 
         FailureOr<int64_t> computeDelta =
             ValueBoundsConstraintSet::computeConstantDelta(indexA, indexB);
         if (succeeded(computeDelta)) {
-          int64_t delta = std::abs(computeDelta.value());
-          if (delta >= vectorDim)
+          if (std::abs(computeDelta.value()) >= vectorDim)
             return true;
         }
       }
