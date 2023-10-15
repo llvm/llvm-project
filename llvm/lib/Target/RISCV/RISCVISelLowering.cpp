@@ -14303,6 +14303,27 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         }
       }
     }
+
+    // Similarly, we can also optimize the zext nodes for the srl here
+    // trunc (srl zext (X), zext (Y)) -> srl (X, umin (Y, scalarsize(Y) - 1))
+    if (Op.getOpcode() == ISD::SRL && Op.hasOneUse()) {
+      SDValue N0 = Op.getOperand(0);
+      SDValue N1 = Op.getOperand(1);
+      if (N0.getOpcode() == ISD::ZERO_EXTEND && N0.hasOneUse() &&
+          N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse()) {
+        SDValue N00 = N0.getOperand(0);
+        SDValue N10 = N1.getOperand(0);
+        if (N00.getValueType().isVector() &&
+            N00.getValueType() == N10.getValueType() &&
+            N->getValueType(0) == N10.getValueType()) {
+          unsigned MaxShAmt = N10.getValueType().getScalarSizeInBits() - 1;
+          SDValue UMin = DAG.getNode(
+              ISD::UMIN, SDLoc(N1), N->getValueType(0), N10,
+              DAG.getConstant(MaxShAmt, SDLoc(N1), N->getValueType(0)));
+          return DAG.getNode(ISD::SRL, SDLoc(N), N->getValueType(0), N00, UMin);
+        }
+      }
+    }
     break;
   }
   case ISD::TRUNCATE:
