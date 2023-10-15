@@ -409,7 +409,3 @@ char X86PreAMXConfigPass::ID = 0;
 INITIALIZE_PASS_BEGIN(X86PreAMXConfigPass, DEBUG_TYPE, PassName, false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(X86PreAMXConfigPass, DEBUG_TYPE, PassName, false, false)
-
-FunctionPass *llvm::createX86PreAMXConfigPass() {
-  return new X86PreAMXConfigPass();
-}
