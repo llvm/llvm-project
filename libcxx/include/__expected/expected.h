@@ -119,7 +119,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr expected()
     noexcept(is_nothrow_default_constructible_v<_Tp>) // strengthened
     requires is_default_constructible_v<_Tp>
-      : __union_(__construct_in_place_tag{}), __has_val_(true) {}
+      : __union_(std::in_place), __has_val_(true) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected(const expected&) = delete;
 
@@ -200,47 +200,47 @@ public:
              (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected<remove_cvref_t<_Up>>::value))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
       expected(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
-      : __union_(__construct_in_place_tag{}, std::forward<_Up>(__u)), __has_val_(true) {}
+      : __union_(std::in_place, std::forward<_Up>(__u)), __has_val_(true) {}
 
   template <class _OtherErr>
     requires is_constructible_v<_Err, const _OtherErr&>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<const _OtherErr&, _Err>)
   expected(const unexpected<_OtherErr>& __unex)
     noexcept(is_nothrow_constructible_v<_Err, const _OtherErr&>) // strengthened
-      : __union_(__construct_unexpected_tag{}, __unex.error()), __has_val_(false) {}
+      : __union_(std::unexpect, __unex.error()), __has_val_(false) {}
 
   template <class _OtherErr>
     requires is_constructible_v<_Err, _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherErr, _Err>)
   expected(unexpected<_OtherErr>&& __unex)
     noexcept(is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
-      : __union_(__construct_unexpected_tag{}, std::move(__unex.error())), __has_val_(false) {}
+      : __union_(std::unexpect, std::move(__unex.error())), __has_val_(false) {}
 
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(in_place_t, _Args&&... __args)
     noexcept(is_nothrow_constructible_v<_Tp, _Args...>) // strengthened
-      : __union_(__construct_in_place_tag{}, std::forward<_Args>(__args)...), __has_val_(true) {}
+      : __union_(std::in_place, std::forward<_Args>(__args)...), __has_val_(true) {}
 
   template <class _Up, class... _Args>
     requires is_constructible_v< _Tp, initializer_list<_Up>&, _Args... >
   _LIBCPP_HIDE_FROM_ABI constexpr explicit
   expected(in_place_t, initializer_list<_Up> __il, _Args&&... __args)
     noexcept(is_nothrow_constructible_v<_Tp, initializer_list<_Up>&, _Args...>) // strengthened
-      : __union_(__construct_in_place_tag{}, __il, std::forward<_Args>(__args)...), __has_val_(true) {}
+      : __union_(std::in_place, __il, std::forward<_Args>(__args)...), __has_val_(true) {}
 
   template <class... _Args>
     requires is_constructible_v<_Err, _Args...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(unexpect_t, _Args&&... __args)
     noexcept(is_nothrow_constructible_v<_Err, _Args...>) // strengthened
-      : __union_(__construct_unexpected_tag{}, std::forward<_Args>(__args)...), __has_val_(false) {}
+      : __union_(std::unexpect, std::forward<_Args>(__args)...), __has_val_(false) {}
 
   template <class _Up, class... _Args>
     requires is_constructible_v< _Err, initializer_list<_Up>&, _Args... >
   _LIBCPP_HIDE_FROM_ABI constexpr explicit
   expected(unexpect_t, initializer_list<_Up> __il, _Args&&... __args)
     noexcept(is_nothrow_constructible_v<_Err, initializer_list<_Up>&, _Args...>) // strengthened
-      : __union_(__construct_unexpected_tag{}, __il, std::forward<_Args>(__args)...), __has_val_(false) {}
+      : __union_(std::unexpect, __il, std::forward<_Args>(__args)...), __has_val_(false) {}
 
   // [expected.object.dtor], destructor
 
@@ -855,19 +855,17 @@ public:
 
 private:
   struct __empty_t {};
-  struct __construct_in_place_tag {};
-  struct __construct_unexpected_tag {};
 
   template <class _ValueType, class _ErrorType>
   union __union_t {
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t() {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(__construct_in_place_tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::in_place_t, _Args&&... __args)
         : __val_(std::forward<_Args>(__args)...) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(__construct_unexpected_tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::unexpect_t, _Args&&... __args)
         : __unex_(std::forward<_Args>(__args)...) {}
 
     template <class _Func, class... _Args>
@@ -903,11 +901,11 @@ private:
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t& operator=(const __union_t&) = default;
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(__construct_in_place_tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::in_place_t, _Args&&... __args)
         : __val_(std::forward<_Args>(__args)...) {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(__construct_unexpected_tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::unexpect_t, _Args&&... __args)
         : __unex_(std::forward<_Args>(__args)...) {}
 
     template <class _Func, class... _Args>
@@ -936,14 +934,14 @@ private:
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Tp, _Err> __union_from_expected(const expected<_Up, _OtherErr>& __other) {
-    return __other.__has_val_ ? __union_t<_Tp, _Err>(__construct_in_place_tag{}, __other.__union_.__val_)
-                              : __union_t<_Tp, _Err>(__construct_unexpected_tag{}, __other.__union_.__unex_);
+    return __other.__has_val_ ? __union_t<_Tp, _Err>(std::in_place, __other.__union_.__val_)
+                              : __union_t<_Tp, _Err>(std::unexpect, __other.__union_.__unex_);
   }
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Tp, _Err> __union_from_expected(expected<_Up, _OtherErr>&& __other) {
-    return __other.__has_val_ ? __union_t<_Tp, _Err>(__construct_in_place_tag{}, std::move(__other.__union_.__val_))
-                              : __union_t<_Tp, _Err>(__construct_unexpected_tag{}, std::move(__other.__union_.__unex_));
+    return __other.__has_val_ ? __union_t<_Tp, _Err>(std::in_place, std::move(__other.__union_.__val_))
+                              : __union_t<_Tp, _Err>(std::unexpect, std::move(__other.__union_.__unex_));
   }
 
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
@@ -1019,14 +1017,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<const _OtherErr&, _Err>)
   expected(const unexpected<_OtherErr>& __unex)
     noexcept(is_nothrow_constructible_v<_Err, const _OtherErr&>) // strengthened
-      : __union_(__construct_unexpected_tag{}, __unex.error()), __has_val_(false) {}
+      : __union_(std::unexpect, __unex.error()), __has_val_(false) {}
 
   template <class _OtherErr>
     requires is_constructible_v<_Err, _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherErr, _Err>)
   expected(unexpected<_OtherErr>&& __unex)
     noexcept(is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
-      : __union_(__construct_unexpected_tag{}, std::move(__unex.error())), __has_val_(false) {}
+      : __union_(std::unexpect, std::move(__unex.error())), __has_val_(false) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(in_place_t) noexcept : __has_val_(true) {}
 
@@ -1034,13 +1032,13 @@ public:
     requires is_constructible_v<_Err, _Args...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(unexpect_t, _Args&&... __args)
     noexcept(is_nothrow_constructible_v<_Err, _Args...>) // strengthened
-      : __union_(__construct_unexpected_tag{}, std::forward<_Args>(__args)...), __has_val_(false) {}
+      : __union_(std::unexpect, std::forward<_Args>(__args)...), __has_val_(false) {}
 
   template <class _Up, class... _Args>
     requires is_constructible_v< _Err, initializer_list<_Up>&, _Args... >
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(unexpect_t, initializer_list<_Up> __il, _Args&&... __args)
     noexcept(is_nothrow_constructible_v<_Err, initializer_list<_Up>&, _Args...>) // strengthened
-      : __union_(__construct_unexpected_tag{}, __il, std::forward<_Args>(__args)...), __has_val_(false) {}
+      : __union_(std::unexpect, __il, std::forward<_Args>(__args)...), __has_val_(false) {}
 
 private:
   template <class _Func>
@@ -1469,14 +1467,13 @@ public:
 
 private:
   struct __empty_t {};
-  struct __construct_unexpected_tag {};
 
   template <class _ErrorType>
   union __union_t {
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t() : __empty_() {}
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(__construct_unexpected_tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::unexpect_t, _Args&&... __args)
         : __unex_(std::forward<_Args>(__args)...) {}
 
     template <class _Func, class... _Args>
@@ -1507,7 +1504,7 @@ private:
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t& operator=(const __union_t&) = default;
 
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(__construct_unexpected_tag, _Args&&... __args)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::unexpect_t, _Args&&... __args)
         : __unex_(std::forward<_Args>(__args)...) {}
 
     template <class _Func, class... _Args>
@@ -1531,13 +1528,13 @@ private:
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Err> __union_from_expected(const expected<_Up, _OtherErr>& __other) {
     return __other.__has_val_ ? __union_t<_Err>()
-                              : __union_t<_Err>(__construct_unexpected_tag{}, __other.__union_.__unex_);
+                              : __union_t<_Err>(std::unexpect, __other.__union_.__unex_);
   }
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Err> __union_from_expected(expected<_Up, _OtherErr>&& __other) {
     return __other.__has_val_ ? __union_t<_Err>()
-                              : __union_t<_Err>(__construct_unexpected_tag{}, std::move(__other.__union_.__unex_));
+                              : __union_t<_Err>(std::unexpect, std::move(__other.__union_.__unex_));
   }
 
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Err> __union_;
