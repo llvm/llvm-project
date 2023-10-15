@@ -16,10 +16,10 @@ int (S::*mp1) = 0; // expected-warning{{zero as null pointer constant}}
 void (*fp1)() = 0; // expected-warning{{zero as null pointer constant}}
 void* p1 = 0; // expected-warning{{zero as null pointer constant}}
 
-// NULL is an integer constant expression, so warn on it too:
-void* p2 = __null; // expected-warning{{zero as null pointer constant}}
-void (*fp2)() = __null; // expected-warning{{zero as null pointer constant}}
-int (S::*mp2) = __null; // expected-warning{{zero as null pointer constant}}
+// __null is not treated as an integer constant expression for GCC compatibility
+void* p2 = __null;
+void (*fp2)() = __null;
+int (S::*mp2) = __null;
 
 void f0(void* v = MACRO); // expected-warning{{zero as null pointer constant}}
 void f1(void* v = NULL); // expected-warning{{zero as null pointer constant}}
