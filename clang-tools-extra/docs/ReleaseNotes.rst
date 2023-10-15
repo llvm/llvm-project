@@ -267,11 +267,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
-  iterators initialized by free functions like ``begin``, ``end``, or ``size``.
-
-- Improved :doc:`modernize-loop-convert
-   <clang-tidy/checks/modernize/loop-convert>` to avoid crash dor dependent
-   array.
+  iterators initialized by free functions like ``begin``, ``end``, or ``size``
+  and avoid crash for array of dependent array.
 
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
