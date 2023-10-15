@@ -934,14 +934,18 @@ private:
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Tp, _Err> __union_from_expected(const expected<_Up, _OtherErr>& __other) {
-    return __other.__has_val_ ? __union_t<_Tp, _Err>(std::in_place, __other.__union_.__val_)
-                              : __union_t<_Tp, _Err>(std::unexpect, __other.__union_.__unex_);
+    if (__other.__has_val_)
+      return __union_t<_Tp, _Err>(std::in_place, __other.__union_.__val_);
+    else
+      return __union_t<_Tp, _Err>(std::unexpect, __other.__union_.__unex_);
   }
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Tp, _Err> __union_from_expected(expected<_Up, _OtherErr>&& __other) {
-    return __other.__has_val_ ? __union_t<_Tp, _Err>(std::in_place, std::move(__other.__union_.__val_))
-                              : __union_t<_Tp, _Err>(std::unexpect, std::move(__other.__union_.__unex_));
+    if (__other.__has_val_)
+      return __union_t<_Tp, _Err>(std::in_place, std::move(__other.__union_.__val_));
+    else
+      return __union_t<_Tp, _Err>(std::unexpect, std::move(__other.__union_.__unex_));
   }
 
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
@@ -1527,14 +1531,18 @@ private:
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Err> __union_from_expected(const expected<_Up, _OtherErr>& __other) {
-    return __other.__has_val_ ? __union_t<_Err>()
-                              : __union_t<_Err>(std::unexpect, __other.__union_.__unex_);
+    if (__other.__has_val_)
+      return __union_t<_Err>();
+    else
+      return __union_t<_Err>(std::unexpect, __other.__union_.__unex_);
   }
 
   template <class _Up, class _OtherErr>
   _LIBCPP_HIDE_FROM_ABI constexpr __union_t<_Err> __union_from_expected(expected<_Up, _OtherErr>&& __other) {
-    return __other.__has_val_ ? __union_t<_Err>()
-                              : __union_t<_Err>(std::unexpect, std::move(__other.__union_.__unex_));
+    if (__other.__has_val_)
+      return __union_t<_Err>();
+    else
+      return __union_t<_Err>(std::unexpect, std::move(__other.__union_.__unex_));
   }
 
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Err> __union_;
