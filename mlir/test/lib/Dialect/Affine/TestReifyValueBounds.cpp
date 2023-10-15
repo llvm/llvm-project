@@ -187,20 +187,26 @@ static LogicalResult testEquality(func::FuncOp funcOp) {
         op->emitOpError("invalid op");
         return WalkResult::skip();
       }
-      FailureOr<bool> equal = failure();
       if (op->hasAttr("compose")) {
-        equal = affine::fullyComposeAndCheckIfEqual(op->getOperand(0),
-                                                    op->getOperand(1));
+        FailureOr<int64_t> equal = affine::fullyComposeAndComputeConstantDelta(
+            op->getOperand(0), op->getOperand(1));
+        if (failed(equal)) {
+          op->emitError("could not determine equality");
+        } else if (*equal == 0) {
+          op->emitRemark("equal");
+        } else {
+          op->emitRemark("different");
+        }
       } else {
-        equal = ValueBoundsConstraintSet::areEqual(op->getOperand(0),
-                                                   op->getOperand(1));
-      }
-      if (failed(equal)) {
-        op->emitError("could not determine equality");
-      } else if (*equal) {
-        op->emitRemark("equal");
-      } else {
-        op->emitRemark("different");
+        FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
+            op->getOperand(0), op->getOperand(1));
+        if (failed(equal)) {
+          op->emitError("could not determine equality");
+        } else if (*equal) {
+          op->emitRemark("equal");
+        } else {
+          op->emitRemark("different");
+        }
       }
     }
     return WalkResult::advance();
