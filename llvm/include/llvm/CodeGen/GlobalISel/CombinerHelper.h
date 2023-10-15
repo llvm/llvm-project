@@ -378,7 +378,6 @@ public:
 
   /// Transform anyext(trunc(x)) to x.
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
-  void applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
 
   /// Transform zext(trunc(x)) to x.
   bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
