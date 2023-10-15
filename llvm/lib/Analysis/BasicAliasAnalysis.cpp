@@ -417,7 +417,8 @@ static LinearExpression GetLinearExpression(
                                 Depth + 1, AC, DT);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
-        E.IsNSW &= NSW;
+        // The nsw flag has different semantics for shift and mul.
+        E.IsNSW = false;
         break;
       }
       return E;
@@ -1184,7 +1185,11 @@ AliasResult BasicAAResult::aliasGEP(
   APInt ModOffset = DecompGEP1.Offset.srem(GCD);
   if (ModOffset.isNegative())
     ModOffset += GCD; // We want mod, not rem.
-  if (ModOffset.uge(V2Size.getValue()) &&
+  unsigned PtrBW =
+      DL.getPointerSizeInBits(GEP1->getType()->getPointerAddressSpace());
+  if ((GCD.isPowerOf2() || !OffsetRange.sextOrTrunc(PtrBW).isFullSet() ||
+       (*DecompGEP1.InBounds && DecompGEP2.InBounds == true)) &&
+      ModOffset.uge(V2Size.getValue()) &&
       (GCD - ModOffset).uge(V1Size.getValue()))
     return AliasResult::NoAlias;
 

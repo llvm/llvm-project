@@ -90,7 +90,7 @@ define void @nuw_nsw_mul_sub_i64(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_mul_sub_i64: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
 ; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
-; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   load [16 x i8], ptr %ptr
   %mul = mul nuw nsw i64 %idx, 5
@@ -106,7 +106,7 @@ define void @only_nsw_mul_sub_i64(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: only_nsw_mul_sub_i64: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
 ; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
-; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   load [16 x i8], ptr %ptr
   %mul = mul nsw i64 %idx, 5

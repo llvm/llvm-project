@@ -116,7 +116,7 @@ define void @shl_of_non_negative(ptr %ptr, i64 %a) {
 define void @shl_nsw_of_non_negative(ptr %ptr, i64 %a) {
 ; CHECK-LABEL: Function: shl_nsw_of_non_negative
 ; CHECK: NoAlias: i8* %ptr.a, i8* %ptr.neg
-; CHECK: NoAlias: i8* %ptr.neg, i8* %ptr.shl
+; CHECK: MayAlias: i8* %ptr.neg, i8* %ptr.shl
 ;
   %a.cmp = icmp sge i64 %a, 0
   call void @llvm.assume(i1 %a.cmp)
