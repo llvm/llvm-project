@@ -980,6 +980,28 @@ static Instruction *foldIDivShl(BinaryOperator &I,
       Ret = BinaryOperator::CreateSDiv(X, Y);
   }
 
+  // If X << Y and X << Z does not overflow, then:
+  // (X << Y) / (X << Z) -> (1 << Y) / (1 << Z) -> 1 << Y >> Z
+  if (match(Op0, m_Shl(m_Value(X), m_Value(Y))) &&
+      match(Op1, m_Shl(m_Specific(X), m_Value(Z)))) {
+    auto *Shl0 = cast<OverflowingBinaryOperator>(Op0);
+    auto *Shl1 = cast<OverflowingBinaryOperator>(Op1);
+
+    if (IsSigned ? (Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap())
+                 : (Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap())) {
+      Constant *One = ConstantInt::get(X->getType(), 1);
+      // Only preserve the nsw flag if dividend has nsw
+      // or divisor has nsw and operator is sdiv.
+      Value *Dividend = Builder.CreateShl(
+          One, Y, "shl.dividend",
+          /*HasNUW*/ true,
+          /*HasNSW*/
+          IsSigned ? (Shl0->hasNoUnsignedWrap() || Shl1->hasNoUnsignedWrap())
+                   : Shl0->hasNoSignedWrap());
+      Ret = BinaryOperator::CreateLShr(Dividend, Z);
+    }
+  }
+
   if (!Ret)
     return nullptr;
 
