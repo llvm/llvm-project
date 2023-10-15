@@ -554,8 +554,18 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back("--end-group");
 
-    // Add user specified linker script.
-    Args.AddAllArgs(CmdArgs, options::OPT_T);
+    // Add avr-libc's linker script to lld by default, if it exists.
+    if (!Args.hasArg(options::OPT_T) &&
+        Linker.find("lld") != std::string::npos) {
+      std::string Path(*AVRLibcRoot + "/lib/ldscripts/");
+      Path += *FamilyName;
+      Path += ".x";
+      if (llvm::sys::fs::exists(Path))
+        CmdArgs.push_back(Args.MakeArgString("-T" + Path));
+    }
+    // Otherwise add user specified linker script to either avr-ld or lld.
+    else
+      Args.AddAllArgs(CmdArgs, options::OPT_T);
 
     if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
       CmdArgs.push_back("--relax");
