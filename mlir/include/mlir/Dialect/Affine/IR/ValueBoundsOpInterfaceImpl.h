@@ -19,7 +19,7 @@ namespace affine {
 void registerValueBoundsOpInterfaceExternalModels(DialectRegistry &registry);
 
 /// Compute a constant delta of the given two values. Return "failure" if we
-/// cannot determine. / `value1`/`value2` must be index-typed.
+/// cannot determine a constant delta. `value1`/`value2` must be index-typed.
 ///
 /// This function is similar to
 /// `ValueBoundsConstraintSet::computeConstantDistance`. To work around
