@@ -969,7 +969,7 @@ transform.sequence failures(propagate) {
 
 //   CHECK-LABEL: func.func @hoist_vector_transfer_pairs_disjoint_dynamic
 // CHECK-COUNT-3:   vector.transfer_read
-// CHECK-COUNT-2:   %{{.+}}:2 = scf.for {{.+}} -> (vector<16x8xf32>, vector<16x8xf32>, vector<16x8xf32)
+// CHECK-COUNT-2:   %{{.+}}:3 = scf.for {{.+}} -> (vector<16x8xf32>, vector<16x8xf32>, vector<16x8xf32>)
 // CHECK-COUNT-2:   scf.yield {{.+}} : vector<16x8xf32>, vector<16x8xf32>, vector<16x8xf32>
 // CHECK-COUNT-3:   vector.transfer_write
 //         CHECK:   return
