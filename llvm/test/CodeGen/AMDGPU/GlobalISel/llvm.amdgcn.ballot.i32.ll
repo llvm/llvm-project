@@ -393,3 +393,29 @@ true:
 false:
   ret i32 33
 }
+
+define amdgpu_cs i32 @branch_uniform_ballot_sgt_N_compare(i32 inreg %v) {
+; CHECK-LABEL: branch_uniform_ballot_sgt_N_compare:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_cmp_lt_u32 s0, 12
+; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
+; CHECK-NEXT:    s_and_b32 s0, 1, s0
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, s0
+; CHECK-NEXT:    s_cmp_le_i32 s0, 22
+; CHECK-NEXT:    s_cbranch_scc1 .LBB19_2
+; CHECK-NEXT:  ; %bb.1: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB19_3
+; CHECK-NEXT:  .LBB19_2: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB19_3
+; CHECK-NEXT:  .LBB19_3:
+  %c = icmp ult i32 %v, 12
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %c)
+  %bc = icmp sgt i32 %ballot, 22
+  br i1 %bc, label %true, label %false
+true:
+  ret i32 42
+false:
+  ret i32 33
+}
