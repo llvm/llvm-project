@@ -17,31 +17,31 @@ define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-NEXT:  @ %bb.0: @ %bb
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    add r7, sp, #12
-; CHECK-NEXT:    str r8, [sp, #-4]!
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    mov.w r9, #1
-; CHECK-NEXT:    movw r12, #4100
+; CHECK-NEXT:    movw r12, #4104
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:  LBB0_1: @ %bb3
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    adds r5, r3, #1
+; CHECK-NEXT:    lsl.w r6, r9, r3
+; CHECK-NEXT:    add.w r4, r0, r3, lsl #2
+; CHECK-NEXT:    ands r6, r3
+; CHECK-NEXT:    adds r3, #1
 ; CHECK-NEXT:    str.w lr, [r2]
+; CHECK-NEXT:    add r4, r12
+; CHECK-NEXT:    add.w r3, r1, r3, lsl #2
 ; CHECK-NEXT:    cmp.w lr, #0
-; CHECK-NEXT:    add.w r4, r0, r5, lsl #2
-; CHECK-NEXT:    add.w r8, r4, r12
-; CHECK-NEXT:    lsl.w r4, r9, r3
-; CHECK-NEXT:    and.w r3, r3, r4
-; CHECK-NEXT:    add.w r4, r1, r5, lsl #2
+; CHECK-NEXT:    @DEBUG_VALUE: test:this <- [DW_OP_LLVM_arg 0, DW_OP_plus_uconst 135168, DW_OP_LLVM_arg 0, DW_OP_constu 4, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst 4, DW_OP_stack_value] undef
 ; CHECK-NEXT:    itte ne
-; CHECK-NEXT:    movne r6, #0
+; CHECK-NEXT:    movne r5, #0
 ; CHECK-NEXT:  Ltmp0:
-; CHECK-NEXT:    @DEBUG_VALUE: test:this <- [DW_OP_LLVM_arg 0, DW_OP_plus_uconst 135168, DW_OP_LLVM_arg 1, DW_OP_constu 4, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst 4, DW_OP_stack_value] $r0, $r5
 ; CHECK-NEXT:    .loc 1 28 24 prologue_end @ test.cpp:28:24
-; CHECK-NEXT:    strne.w r6, [r8]
-; CHECK-NEXT:    moveq r6, #1
-; CHECK-NEXT:    ldr r4, [r4, #4]
-; CHECK-NEXT:    orrs r4, r6
-; CHECK-NEXT:    str.w r4, [r8]
+; CHECK-NEXT:    strne r5, [r4]
+; CHECK-NEXT:    moveq r5, #1
+; CHECK-NEXT:    ldr r3, [r3, #4]
+; CHECK-NEXT:    orrs r3, r5
+; CHECK-NEXT:    str r3, [r4]
+; CHECK-NEXT:    mov r3, r6
 ; CHECK-NEXT:    b LBB0_1
 ; CHECK-NEXT:  Ltmp1:
 ; CHECK-NEXT:  Lfunc_end0:

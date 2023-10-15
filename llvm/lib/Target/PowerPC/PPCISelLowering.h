@@ -1053,6 +1053,9 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+    bool isDesirableToCommuteWithShift(const SDNode *N,
+                                       CombineLevel Level) const override;
+
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,
                             const CallInst &I,
                             MachineFunction &MF,

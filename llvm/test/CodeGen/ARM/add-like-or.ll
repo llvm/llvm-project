@@ -249,27 +249,28 @@ entry:
 define i32 @multiuse(i32 %i, ptr %x, ptr %y) {
 ; CHECK-T1-LABEL: multiuse:
 ; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    lsls r2, r0, #3
+; CHECK-T1-NEXT:    adds r1, r1, r2
+; CHECK-T1-NEXT:    ldr r1, [r1, #4]
 ; CHECK-T1-NEXT:    lsls r0, r0, #1
+; CHECK-T1-NEXT:    adds r0, r1, r0
 ; CHECK-T1-NEXT:    adds r0, r0, #1
-; CHECK-T1-NEXT:    lsls r2, r0, #2
-; CHECK-T1-NEXT:    ldr r1, [r1, r2]
-; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: multiuse:
 ; CHECK-T2:       @ %bb.0: @ %entry
-; CHECK-T2-NEXT:    lsls r0, r0, #1
+; CHECK-T2-NEXT:    add.w r1, r1, r0, lsl #3
+; CHECK-T2-NEXT:    ldr r1, [r1, #4]
+; CHECK-T2-NEXT:    add.w r0, r1, r0, lsl #1
 ; CHECK-T2-NEXT:    adds r0, #1
-; CHECK-T2-NEXT:    ldr.w r1, [r1, r0, lsl #2]
-; CHECK-T2-NEXT:    add r0, r1
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-A-LABEL: multiuse:
 ; CHECK-A:       @ %bb.0: @ %entry
-; CHECK-A-NEXT:    mov r2, #1
-; CHECK-A-NEXT:    orr r0, r2, r0, lsl #1
-; CHECK-A-NEXT:    ldr r1, [r1, r0, lsl #2]
-; CHECK-A-NEXT:    add r0, r0, r1
+; CHECK-A-NEXT:    add r1, r1, r0, lsl #3
+; CHECK-A-NEXT:    ldr r1, [r1, #4]
+; CHECK-A-NEXT:    add r0, r1, r0, lsl #1
+; CHECK-A-NEXT:    add r0, r0, #1
 ; CHECK-A-NEXT:    bx lr
 entry:
   %mul = shl i32 %i, 1

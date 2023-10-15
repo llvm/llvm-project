@@ -2140,6 +2140,16 @@ bool HexagonTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return X.getValueType().isScalarInteger(); // 'tstbit'
 }
 
+bool HexagonTargetLowering::isDesirableToCommuteWithShift(
+    const SDNode *N, CombineLevel Level) const {
+  assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SRL) &&
+         "Expected shift op");
+
+  if (!N->getOperand(0)->hasOneUse())
+    return false;
+  return true;
+}
 bool HexagonTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
   return isTruncateFree(EVT::getEVT(Ty1), EVT::getEVT(Ty2));
 }
