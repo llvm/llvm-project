@@ -60,7 +60,17 @@ constexpr bool test() {
     assert(!e.has_value());
   }
 
-  // See https://github.com/llvm/llvm-project/issues/68552
+  // The following tests check that the "has_value" flag is not overwritten
+  // by the constructor of the value. This could happen because the flag is
+  // stored in the tail padding of the value.
+  //
+  // The first test is a simplified version of the real code where this was
+  // first observed.
+  //
+  // The other tests use a synthetic struct that clobbers its tail padding
+  // on construction, making the issue easier to reproduce.
+  //
+  // See https://github.com/llvm/llvm-project/issues/68552 and the linked PR.
   {
     static constexpr auto f1 = [] -> std::expected<std::optional<int>, long> { return 0; };
 
