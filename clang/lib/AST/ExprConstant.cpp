@@ -1912,7 +1912,6 @@ APValue &CallStackFrame::createLocal(APValue::LValueBase Base, const void *Key,
   assert(Base.getCallIndex() == Index && "lvalue for wrong frame");
   unsigned Version = Base.getVersion();
   APValue &Result = Temporaries[MapKeyTy(Key, Version)];
-  assert(Result.isAbsent() && "local created multiple times");
 
   // If we're creating a local immediately in the operand of a speculative
   // evaluation, don't register a cleanup to be run outside the speculative

@@ -393,6 +393,9 @@ Bug Fixes in This Version
   operator in C. No longer issuing a confusing diagnostic along the lines of
   "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
   types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
+- Fix a crash when evaluating comparasion between the field from the same variable
+  which initialized from compound literals in C. Fixes
+  (`#69065 <https://github.com/llvm/llvm-project/issues/69065>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
