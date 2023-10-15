@@ -3,8 +3,8 @@
 target datalayout = "p:64:64:64"
 
 ; CHECK-LABEL: Function: pr69096
-; FIXME: This should be MayAlias. %p == %scevgep.i when %a == -1.
-; CHECK: NoAlias:     i8* %p, i16* %scevgep.i
+; %p == %scevgep.i when %a == -1.
+; CHECK: MayAlias:     i8* %p, i16* %scevgep.i
 
 define i32 @pr69096(i16 %a, ptr %p) {
 entry:
