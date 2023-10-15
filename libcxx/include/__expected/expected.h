@@ -18,6 +18,7 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/conjunction.h>
+#include <__type_traits/datasizeof.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
@@ -123,7 +124,7 @@ public:
   = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected(const expected& __other) noexcept(
-      is_nothrow_copy_constructible_v<_Tp> && is_nothrow_copy_constructible_v<_Err>) // strengthened
+      is_nothrow_copy_constructible_v<_Tp>&& is_nothrow_copy_constructible_v<_Err>) // strengthened
     requires(is_copy_constructible_v<_Tp> && is_copy_constructible_v<_Err> &&
              !(is_trivially_copy_constructible_v<_Tp> && is_trivially_copy_constructible_v<_Err>))
       : __union_(__other.__has_val_, __other.__union_), __has_val_(__other.__has_val_) {}
@@ -134,7 +135,7 @@ public:
   = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected(expected&& __other) noexcept(
-      is_nothrow_move_constructible_v<_Tp> && is_nothrow_move_constructible_v<_Err>)
+      is_nothrow_move_constructible_v<_Tp>&& is_nothrow_move_constructible_v<_Err>)
     requires(is_move_constructible_v<_Tp> && is_move_constructible_v<_Err> &&
              !(is_trivially_move_constructible_v<_Tp> && is_trivially_move_constructible_v<_Err>))
       : __union_(__other.__has_val_, std::move(__other.__union_)), __has_val_(__other.__has_val_) {}
@@ -175,15 +176,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<const _Up&, _Tp> ||
                                            !is_convertible_v<const _OtherErr&, _Err>)
       expected(const expected<_Up, _OtherErr>& __other) noexcept(
-          is_nothrow_constructible_v<_Tp, const _Up&> &&
-          is_nothrow_constructible_v<_Err, const _OtherErr&>) // strengthened
+          is_nothrow_constructible_v<_Tp, const _Up&>&&
+              is_nothrow_constructible_v<_Err, const _OtherErr&>) // strengthened
       : __union_(__other.__has_val_, __other.__union_), __has_val_(__other.__has_val_) {}
 
   template <class _Up, class _OtherErr>
     requires __can_convert<_Up, _OtherErr, _Up, _OtherErr>::value
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp> || !is_convertible_v<_OtherErr, _Err>)
       expected(expected<_Up, _OtherErr>&& __other) noexcept(
-          is_nothrow_constructible_v<_Tp, _Up> && is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
+          is_nothrow_constructible_v<_Tp, _Up>&& is_nothrow_constructible_v<_Err, _OtherErr>) // strengthened
       : __union_(__other.__has_val_, std::move(__other.__union_)), __has_val_(__other.__has_val_) {}
 
   template <class _Up = _Tp>
@@ -275,8 +276,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected& __rhs) noexcept(
-      is_nothrow_copy_assignable_v<_Tp> && is_nothrow_copy_constructible_v<_Tp> && is_nothrow_copy_assignable_v<_Err> &&
-      is_nothrow_copy_constructible_v<_Err>) // strengthened
+      is_nothrow_copy_assignable_v<_Tp>&& is_nothrow_copy_constructible_v<_Tp>&& is_nothrow_copy_assignable_v<_Err>&&
+          is_nothrow_copy_constructible_v<_Err>) // strengthened
     requires(is_copy_assignable_v<_Tp> && is_copy_constructible_v<_Tp> && is_copy_assignable_v<_Err> &&
              is_copy_constructible_v<_Err> &&
              (is_nothrow_move_constructible_v<_Tp> || is_nothrow_move_constructible_v<_Err>))
@@ -296,8 +297,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected&
-  operator=(expected&& __rhs) noexcept(is_nothrow_move_assignable_v<_Tp> && is_nothrow_move_constructible_v<_Tp> &&
-                                       is_nothrow_move_assignable_v<_Err> && is_nothrow_move_constructible_v<_Err>)
+  operator=(expected&& __rhs) noexcept(is_nothrow_move_assignable_v<_Tp>&& is_nothrow_move_constructible_v<_Tp>&&
+                                           is_nothrow_move_assignable_v<_Err>&& is_nothrow_move_constructible_v<_Err>)
     requires(is_move_constructible_v<_Tp> && is_move_assignable_v<_Tp> && is_move_constructible_v<_Err> &&
              is_move_assignable_v<_Err> &&
              (is_nothrow_move_constructible_v<_Tp> || is_nothrow_move_constructible_v<_Err>))
@@ -396,8 +397,8 @@ public:
 public:
   // [expected.object.swap], swap
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  swap(expected& __rhs) noexcept(is_nothrow_move_constructible_v<_Tp> && is_nothrow_swappable_v<_Tp> &&
-                                 is_nothrow_move_constructible_v<_Err> && is_nothrow_swappable_v<_Err>)
+  swap(expected& __rhs) noexcept(is_nothrow_move_constructible_v<_Tp>&& is_nothrow_swappable_v<_Tp>&&
+                                     is_nothrow_move_constructible_v<_Err>&& is_nothrow_swappable_v<_Err>)
     requires(is_swappable_v<_Tp> && is_swappable_v<_Err> && is_move_constructible_v<_Tp> &&
              is_move_constructible_v<_Err> &&
              (is_nothrow_move_constructible_v<_Tp> || is_nothrow_move_constructible_v<_Err>))
@@ -912,8 +913,17 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __calculate_padding() {
+    struct __calc_expected {
+      _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
+      bool __has_val_;
+    };
+    return sizeof(__calc_expected) - __libcpp_datasizeof<__calc_expected>::value;
+  }
+
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Tp, _Err> __union_;
   bool __has_val_;
+  char __padding_[__calculate_padding()]{};
 };
 
 template <class _Tp, class _Err>
@@ -1036,7 +1046,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(const expected& __rhs) noexcept(
-      is_nothrow_copy_assignable_v<_Err> && is_nothrow_copy_constructible_v<_Err>) // strengthened
+      is_nothrow_copy_assignable_v<_Err>&& is_nothrow_copy_constructible_v<_Err>) // strengthened
     requires(is_copy_assignable_v<_Err> && is_copy_constructible_v<_Err>)
   {
     if (__has_val_) {
@@ -1058,7 +1068,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(expected&&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI constexpr expected&
-  operator=(expected&& __rhs) noexcept(is_nothrow_move_assignable_v<_Err> && is_nothrow_move_constructible_v<_Err>)
+  operator=(expected&& __rhs) noexcept(is_nothrow_move_assignable_v<_Err>&& is_nothrow_move_constructible_v<_Err>)
     requires(is_move_assignable_v<_Err> && is_move_constructible_v<_Err>)
   {
     if (__has_val_) {
@@ -1110,7 +1120,7 @@ public:
 
   // [expected.void.swap], swap
   _LIBCPP_HIDE_FROM_ABI constexpr void
-  swap(expected& __rhs) noexcept(is_nothrow_move_constructible_v<_Err> && is_nothrow_swappable_v<_Err>)
+  swap(expected& __rhs) noexcept(is_nothrow_move_constructible_v<_Err>&& is_nothrow_swappable_v<_Err>)
     requires(is_swappable_v<_Err> && is_move_constructible_v<_Err>)
   {
     auto __swap_val_unex_impl = [&](expected& __with_val, expected& __with_err) {
@@ -1504,8 +1514,17 @@ private:
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
 
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __calculate_padding() {
+    struct __calc_expected {
+      _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Err> __union_;
+      bool __has_val_;
+    };
+    return sizeof(__calc_expected) - __libcpp_datasizeof<__calc_expected>::value;
+  }
+
   _LIBCPP_NO_UNIQUE_ADDRESS __union_t<_Err> __union_;
   bool __has_val_;
+  char __padding_[__calculate_padding()]{};
 };
 
 _LIBCPP_END_NAMESPACE_STD
