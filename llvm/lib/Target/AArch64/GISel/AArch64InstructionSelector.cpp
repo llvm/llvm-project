@@ -5641,24 +5641,34 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
   Register WriteBack = Ld.getWritebackReg();
   Register Base = Ld.getBaseReg();
   Register Offset = Ld.getOffsetReg();
-
-  if (Ld.isPre())
-    return false; // TODO: add pre-inc support
+  LLT Ty = MRI.getType(Dst);
+  assert(Ty.getSizeInBits() <= 128);
+  unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
 
   unsigned Opc = 0;
-  static constexpr unsigned GPROpcodes[] = {
-      AArch64::LDRBBpost, AArch64::LDRHHpost, AArch64::LDRWpost,
-      AArch64::LDRXpost};
-  static constexpr unsigned FPROpcodes[] = {
-      AArch64::LDRBpost, AArch64::LDRHpost, AArch64::LDRSpost,
-      AArch64::LDRDpost, AArch64::LDRQpost};
-
-  unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
-  if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
-    Opc = FPROpcodes[Log2_32(MemSize)];
-  else
-    Opc = GPROpcodes[Log2_32(MemSize)];
-
+  if (Ld.isPre()) {
+    static constexpr unsigned GPROpcodes[] = {
+        AArch64::LDRBBpre, AArch64::LDRHHpre, AArch64::LDRWpre,
+        AArch64::LDRXpre};
+    static constexpr unsigned FPROpcodes[] = {
+        AArch64::LDRBpre, AArch64::LDRHpre, AArch64::LDRSpre, AArch64::LDRDpre,
+        AArch64::LDRQpre};
+    if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+      Opc = FPROpcodes[Log2_32(MemSize)];
+    else
+      Opc = GPROpcodes[Log2_32(MemSize)];
+  } else {
+    static constexpr unsigned GPROpcodes[] = {
+        AArch64::LDRBBpost, AArch64::LDRHHpost, AArch64::LDRWpost,
+        AArch64::LDRXpost};
+    static constexpr unsigned FPROpcodes[] = {
+        AArch64::LDRBpost, AArch64::LDRHpost, AArch64::LDRSpost,
+        AArch64::LDRDpost, AArch64::LDRQpost};
+    if (RBI.getRegBank(Dst, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+      Opc = FPROpcodes[Log2_32(MemSize)];
+    else
+      Opc = GPROpcodes[Log2_32(MemSize)];
+  }
   auto Cst = getIConstantVRegVal(Offset, MRI);
   if (!Cst)
     return false; // Shouldn't happen, but just in case.
@@ -5677,23 +5687,34 @@ bool AArch64InstructionSelector::selectIndexedStore(GIndexedStore &I,
   Register Base = I.getBaseReg();
   Register Offset = I.getOffsetReg();
   LLT ValTy = MRI.getType(Val);
-
-  if (I.isPre())
-    return false; // TODO: add pre-inc support
+  assert(ValTy.getSizeInBits() <= 128);
 
   unsigned Opc = 0;
-  static constexpr unsigned GPROpcodes[] = {
-      AArch64::STRBBpost, AArch64::STRHHpost, AArch64::STRWpost,
-      AArch64::STRXpost};
-  static constexpr unsigned FPROpcodes[] = {
-      AArch64::STRBpost, AArch64::STRHpost, AArch64::STRSpost,
-      AArch64::STRDpost, AArch64::STRQpost};
+  if (I.isPre()) {
+    static constexpr unsigned GPROpcodes[] = {
+        AArch64::STRBBpre, AArch64::STRHHpre, AArch64::STRWpre,
+        AArch64::STRXpre};
+    static constexpr unsigned FPROpcodes[] = {
+        AArch64::STRBpre, AArch64::STRHpre, AArch64::STRSpre, AArch64::STRDpre,
+        AArch64::STRQpre};
 
-  assert(ValTy.getSizeInBits() <= 128);
-  if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID)
-    Opc = FPROpcodes[Log2_32(ValTy.getSizeInBytes())];
-  else
-    Opc = GPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+    if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+      Opc = FPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+    else
+      Opc = GPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+  } else {
+    static constexpr unsigned GPROpcodes[] = {
+        AArch64::STRBBpost, AArch64::STRHHpost, AArch64::STRWpost,
+        AArch64::STRXpost};
+    static constexpr unsigned FPROpcodes[] = {
+        AArch64::STRBpost, AArch64::STRHpost, AArch64::STRSpost,
+        AArch64::STRDpost, AArch64::STRQpost};
+
+    if (RBI.getRegBank(Val, MRI, TRI)->getID() == AArch64::FPRRegBankID)
+      Opc = FPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+    else
+      Opc = GPROpcodes[Log2_32(ValTy.getSizeInBytes())];
+  }
 
   auto Cst = getIConstantVRegVal(Offset, MRI);
   if (!Cst)

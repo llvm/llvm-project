@@ -23620,10 +23620,6 @@ bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
                                             Register Offset, bool IsPre,
                                             MachineRegisterInfo &MRI) const {
-  // HACK
-  if (IsPre)
-    return false; // Until we implement.
-  
   auto CstOffset = getIConstantVRegVal(Offset, MRI);
   if (!CstOffset || CstOffset->isZero())
     return false;

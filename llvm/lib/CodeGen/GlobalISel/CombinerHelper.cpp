@@ -1148,11 +1148,29 @@ bool CombinerHelper::findPreIndexCandidate(GLoadStore &LdSt, Register &Addr,
       return false;
   }
 
+  // Avoid increasing cross-block register pressure.
+  for (auto &AddrUse : MRI.use_nodbg_instructions(Addr)) {
+    if (AddrUse.getParent() != LdSt.getParent())
+      return false;
+  }
+
   // FIXME: check whether all uses of the base pointer are constant PtrAdds.
   // That might allow us to end base's liveness here by adjusting the constant.
+  bool RealUse = false;
+  for (auto &PtrUse : MRI.use_nodbg_instructions(Addr)) {
+    if (!dominates(LdSt, PtrUse))
+      return false; // All use must be dominated by the load/store.
 
-  return all_of(MRI.use_nodbg_instructions(Addr),
-                [&](MachineInstr &UseMI) { return dominates(LdSt, UseMI); });
+    // If Ptr may be folded in addressing mode of other use, then it's
+    // not profitable to do this transformation.
+    if (auto *UseLdSt = dyn_cast<GLoadStore>(&PtrUse)) {
+      if (!canFoldInAddressingMode(UseLdSt, TLI, MRI))
+        RealUse = true;
+    } else {
+      RealUse = true;
+    }
+  }
+  return RealUse;
 }
 
 bool CombinerHelper::matchCombineIndexedLoadStore(
