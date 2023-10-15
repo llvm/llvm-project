@@ -124,3 +124,114 @@ llvm.func @omp_teams_branching_shared(%condition: i1, %arg0: i32, %arg1: f32, %a
 // CHECK-NEXT: br label
 // CHECK: ret void
 
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @omp_teams_thread_limit
+// CHECK-SAME: (i32 [[THREAD_LIMIT:.+]])
+llvm.func @omp_teams_thread_limit(%threadLimit: i32) {
+    // CHECK-NEXT: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 0, i32 0, i32 [[THREAD_LIMIT]])
+    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @1, i32 0, ptr [[OUTLINED_FN:.+]])
+    omp.teams thread_limit(%threadLimit : i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams
+    llvm.call @afterTeams() : () -> ()
+    // CHECK: ret void
+    llvm.return
+}
+
+// CHECK: define internal void [[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK: call void @duringTeams()
+// CHECK: ret void
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @omp_teams_num_teams_upper
+// CHECK-SAME: (i32 [[NUM_TEAMS_UPPER:.+]])
+llvm.func @omp_teams_num_teams_upper(%numTeamsUpper: i32) {
+    // CHECK-NEXT: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 [[NUM_TEAMS_UPPER]], i32 [[NUM_TEAMS_UPPER]], i32 0)
+    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @1, i32 0, ptr [[OUTLINED_FN:.+]])
+    omp.teams num_teams(to %numTeamsUpper : i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams
+    llvm.call @afterTeams() : () -> ()
+    // CHECK: ret void
+    llvm.return
+}
+
+// CHECK: define internal void [[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK: call void @duringTeams()
+// CHECK: ret void
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @omp_teams_num_teams_lower_and_upper
+// CHECK-SAME: (i32 [[NUM_TEAMS_LOWER:.+]], i32 [[NUM_TEAMS_UPPER:.+]])
+llvm.func @omp_teams_num_teams_lower_and_upper(%numTeamsLower: i32, %numTeamsUpper: i32) {
+    // CHECK-NEXT: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 [[NUM_TEAMS_LOWER]], i32 [[NUM_TEAMS_UPPER]], i32 0)
+    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @1, i32 0, ptr [[OUTLINED_FN:.+]])
+    omp.teams num_teams(%numTeamsLower : i32 to %numTeamsUpper: i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams
+    llvm.call @afterTeams() : () -> ()
+    // CHECK: ret void
+    llvm.return
+}
+
+// CHECK: define internal void [[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK: call void @duringTeams()
+// CHECK: ret void
+
+// -----
+
+llvm.func @beforeTeams()
+llvm.func @duringTeams()
+llvm.func @afterTeams()
+
+// CHECK-LABEL: @omp_teams_num_teams_and_thread_limit
+// CHECK-SAME: (i32 [[NUM_TEAMS_LOWER:.+]], i32 [[NUM_TEAMS_UPPER:.+]], i32 [[THREAD_LIMIT:.+]])
+llvm.func @omp_teams_num_teams_and_thread_limit(%numTeamsLower: i32, %numTeamsUpper: i32, %threadLimit: i32) {
+    // CHECK-NEXT: call void @beforeTeams()
+    llvm.call @beforeTeams() : () -> ()
+    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 [[NUM_TEAMS_LOWER]], i32 [[NUM_TEAMS_UPPER]], i32 [[THREAD_LIMIT]])
+    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @1, i32 0, ptr [[OUTLINED_FN:.+]])
+    omp.teams num_teams(%numTeamsLower : i32 to %numTeamsUpper: i32) thread_limit(%threadLimit: i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    // CHECK: call void @afterTeams
+    llvm.call @afterTeams() : () -> ()
+    // CHECK: ret void
+    llvm.return
+}
+
+// CHECK: define internal void [[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK: call void @duringTeams()
+// CHECK: ret void
