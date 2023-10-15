@@ -5922,9 +5922,11 @@ static void handleDebugInfoTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   if (type->isEnumeralType()) {
     QualType BitfieldType = llvm::cast<FieldDecl>(D)->getType();
-    QualType EnumUnderlyingType = type->getAs<EnumType>()->getDecl()->getIntegerType();
+    QualType EnumUnderlyingType =
+        type->getAs<EnumType>()->getDecl()->getIntegerType();
     if (EnumUnderlyingType != BitfieldType) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_underlying_type_mismatch) << EnumUnderlyingType << type << BitfieldType;
+      S.Diag(AL.getLoc(), diag::warn_attribute_underlying_type_mismatch)
+          << EnumUnderlyingType << type << BitfieldType;
       return;
     }
   }
