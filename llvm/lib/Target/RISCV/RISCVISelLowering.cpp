@@ -16443,7 +16443,7 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     } else {
       unsigned StackOffset = State.AllocateStack(4, Align(4));
       State.addLoc(
-          CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+          CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     }
     return false;
   }
