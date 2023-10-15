@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -13804,8 +13805,18 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   using PtrDiff = std::pair<SDValue, bool>;
-  auto GetPtrDiff = [](LoadSDNode *Ld1,
-                       LoadSDNode *Ld2) -> std::optional<PtrDiff> {
+  auto GetPtrDiff = [&DAG, &DL](LoadSDNode *Ld1,
+                                LoadSDNode *Ld2) -> std::optional<PtrDiff> {
+    // If the load ptrs can be decomposed into a common (Base + Index) with a
+    // common constant stride, then return the constant stride.
+    BaseIndexOffset BIO1 = BaseIndexOffset::match(Ld1, DAG);
+    BaseIndexOffset BIO2 = BaseIndexOffset::match(Ld2, DAG);
+    if (BIO1.equalBaseIndex(BIO2, DAG))
+      return {{DAG.getConstant(BIO2.getOffset() - BIO1.getOffset(), DL,
+                               Ld1->getOffset().getValueType()),
+               false}};
+
+    // Otherwise try to match (add LastPtr, Stride) or (add NextPtr, Stride)
     SDValue P1 = Ld1->getBasePtr();
     SDValue P2 = Ld2->getBasePtr();
     if (P2.getOpcode() == ISD::ADD && P2.getOperand(0) == P1)
