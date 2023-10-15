@@ -11,6 +11,12 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+namespace {
+
+AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
+  return Node.getLanguage() == clang::LinkageSpecDecl::lang_c;
+}
+} // namespace
 
 namespace clang::tidy::modernize {
 
@@ -27,10 +33,12 @@ void UseUsingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(typedefDecl(unless(isInstantiated()),
-                                 hasParent(decl().bind(ParentDeclName)))
-                         .bind(TypedefName),
-                     this);
+  Finder->addMatcher(
+      typedefDecl(unless(anyOf(isInstantiated(), hasAncestor(linkageSpecDecl(
+                                                     isExternCLinkage())))),
+                  hasParent(decl().bind(ParentDeclName)))
+          .bind(TypedefName),
+      this);
 
   // This matcher is used to find tag declarations in source code within
   // typedefs. They appear in the AST just *prior* to the typedefs.
