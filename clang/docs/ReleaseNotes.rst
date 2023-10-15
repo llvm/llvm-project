@@ -96,6 +96,10 @@ C++ Specific Potentially Breaking Changes
   Clang as a compiler, but it may break assumptions in Clang-based tools
   iterating over the AST.
 
+- The warning `-Wenum-constexpr-conversion` is now also enabled by default on
+  system headers and macros. It will be turned into a hard (non-downgradable)
+  error in the next Clang release.
+
 ABI Changes in This Version
 ---------------------------
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
@@ -157,6 +161,11 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
+- Clang now supports the C-only attribute ``counted_by``. When applied to a
+  struct's flexible array member, it points to the struct field that holds the
+  number of elements in the flexible array member. This information can improve
+  the results of the array bound sanitizer and the
+  ``__builtin_dynamic_object_size`` builtin.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -377,10 +386,13 @@ Bug Fixes in This Version
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 - Fix crash in evaluating ``constexpr`` value for invalid template function.
   Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
-
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
+- Fixed an issue with computing the common type for the LHS and RHS of a `?:`
+  operator in C. No longer issuing a confusing diagnostic along the lines of
+  "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
+  types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

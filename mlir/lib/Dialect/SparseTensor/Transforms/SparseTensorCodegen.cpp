@@ -679,6 +679,46 @@ public:
   }
 };
 
+// TODO: use a new SortCOO operation here instead of reusing convert op.
+struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ReorderCOOOp op, ReorderCOOOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    MLIRContext *ctx = op.getContext();
+
+    SparseTensorType srcStt = getSparseTensorType(op.getInputCoo());
+    SparseTensorType dstStt = getSparseTensorType(op.getResultCoo());
+
+    // Should have been verified.
+    assert(dstStt.isAllOrdered() && !srcStt.isAllOrdered() &&
+           isUniqueCOOType(srcStt.getRankedTensorType()) &&
+           isUniqueCOOType(dstStt.getRankedTensorType()));
+    assert(dstStt.hasSameDimToLvl(srcStt));
+
+    // We don't need a mutable descriptor here as we perform sorting in-place.
+    auto nnz = genValMemSize(rewriter, op.getLoc(), adaptor.getInputCoo());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getInputCoo());
+    auto crd = desc.getAOSMemRef();
+    auto val = desc.getValMemRef();
+
+    // Otherwise we need another data shuffle and a non-identity map.
+    assert(dstStt.hasSameDimToLvl(srcStt));
+    (void)dstStt; // to silence warning when assertion is disabled
+
+    auto id = AffineMap::getMultiDimIdentityMap(srcStt.getLvlRank(), ctx);
+
+    rewriter.create<SortOp>(loc, nnz, crd, ValueRange{val}, id,
+                            rewriter.getIndexAttr(0), op.getAlgorithm());
+
+    // Since we do in-place sorting, the destinate tensor will have the same set
+    // of memrefs as the source tensor.
+    rewriter.replaceOp(op, adaptor.getInputCoo());
+    return success();
+  }
+};
+
 template <typename Op, StorageSpecifierKind kind>
 class SparseSliceGetterOpConverter : public OpConversionPattern<Op> {
 public:
@@ -1554,6 +1594,7 @@ void mlir::populateSparseTensorCodegenPatterns(
                SparseCastConverter, SparseExtractSliceConverter,
                SparseTensorLoadConverter, SparseExpandConverter,
                SparseCompressConverter, SparseInsertConverter,
+               SparseReorderCOOConverter,
                SparseSliceGetterOpConverter<ToSliceOffsetOp,
                                             StorageSpecifierKind::DimOffset>,
                SparseSliceGetterOpConverter<ToSliceStrideOp,

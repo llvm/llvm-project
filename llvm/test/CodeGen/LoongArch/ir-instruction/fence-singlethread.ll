@@ -5,12 +5,12 @@
 define void @fence_singlethread() {
 ; LA32-LABEL: fence_singlethread:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    dbar 0
+; LA32-NEXT:    #MEMBARRIER
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: fence_singlethread:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    dbar 0
+; LA64-NEXT:    #MEMBARRIER
 ; LA64-NEXT:    ret
   fence syncscope("singlethread") seq_cst
   ret void

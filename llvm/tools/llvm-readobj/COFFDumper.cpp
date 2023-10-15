@@ -1106,7 +1106,7 @@ void COFFDumper::initializeFileAndStringTables(BinaryStreamReader &Reader) {
     if (Error E = Reader.readFixedString(Contents, SubSectionSize))
       reportError(std::move(E), Obj->getFileName());
 
-    BinaryStreamRef ST(Contents, support::little);
+    BinaryStreamRef ST(Contents, llvm::endianness::little);
     switch (DebugSubsectionKind(SubType)) {
     case DebugSubsectionKind::FileChecksums:
       if (Error E = CVFileChecksumTable.initialize(ST))
@@ -1148,7 +1148,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     reportError(errorCodeToError(object_error::parse_failed),
                 Obj->getFileName());
 
-  BinaryStreamReader FSReader(Data, support::little);
+  BinaryStreamReader FSReader(Data, llvm::endianness::little);
   initializeFileAndStringTables(FSReader);
 
   // TODO: Convert this over to using ModuleSubstreamVisitor.
@@ -1302,7 +1302,8 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     ListScope S(W, "FunctionLineTable");
     W.printString("LinkageName", Name);
 
-    BinaryStreamReader Reader(FunctionLineTables[Name], support::little);
+    BinaryStreamReader Reader(FunctionLineTables[Name],
+                              llvm::endianness::little);
 
     DebugLinesSubsectionRef LineInfo;
     if (Error E = LineInfo.initialize(Reader))
@@ -2091,10 +2092,10 @@ void COFFDumper::printStackMap() const {
 
   if (Obj->isLittleEndian())
     prettyPrintStackMap(
-        W, StackMapParser<support::little>(StackMapContentsArray));
+        W, StackMapParser<llvm::endianness::little>(StackMapContentsArray));
   else
     prettyPrintStackMap(
-        W, StackMapParser<support::big>(StackMapContentsArray));
+        W, StackMapParser<llvm::endianness::big>(StackMapContentsArray));
 }
 
 void COFFDumper::printAddrsig() {

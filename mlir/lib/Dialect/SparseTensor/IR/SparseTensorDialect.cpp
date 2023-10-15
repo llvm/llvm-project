@@ -336,6 +336,10 @@ bool SparseTensorEncodingAttr::isAllDense() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isDenseDLT);
 }
 
+bool SparseTensorEncodingAttr::isCOO() const {
+  return getImpl() && isCOOType(*this, 0, true);
+}
+
 bool SparseTensorEncodingAttr::isAllOrdered() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedDLT);
 }
@@ -1056,14 +1060,35 @@ LogicalResult ConvertOp::verify() {
 }
 
 OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
-  Type dstType = getType();
-  // Fold trivial dense-to-dense convert and leave trivial sparse-to-sparse
-  // convert for codegen to remove. This is because we use trivial
-  // sparse-to-sparse convert to tell bufferization that the sparse codegen
-  // will expand the tensor buffer into sparse tensor storage.
-  if (!getSparseTensorEncoding(dstType) && dstType == getSource().getType())
+  if (getType() == getSource().getType())
     return getSource();
   return {};
+}
+
+bool ConvertOp::directConvertable() {
+  SparseTensorType srcStt = getSparseTensorType(getSource());
+  SparseTensorType dstStt = getSparseTensorType(getDest());
+
+  // We can always directly convert to unordered sparse tensor or dense tensor
+  // since dense tensor support random access.
+  if (dstStt.isAllDense() || !dstStt.isAllOrdered())
+    return true;
+
+  if (srcStt.isAllOrdered() && dstStt.isAllOrdered() &&
+      srcStt.hasSameDimToLvl(dstStt)) {
+    return true;
+  }
+
+  // Source and dest tensors are ordered in different ways. We only do direct
+  // dense to sparse conversion when the dense input is defined by a sparse
+  // constant. Note that we can theoretically always directly convert from dense
+  // inputs by rotating dense loops but it leads to bad cache locality and hurt
+  // performance.
+  if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())
+    if (isa<SparseElementsAttr>(constOp.getValue()))
+      return true;
+
+  return false;
 }
 
 LogicalResult ToPositionsOp::verify() {
@@ -1376,6 +1401,29 @@ LogicalResult ForeachOp::verify() {
     emitError(llvm::formatv("Unmatched element type between input tensor and "
                             "block argument, expected:{0}, got: {1}",
                             elemTp, valueTp));
+  return success();
+}
+
+OpFoldResult ReorderCOOOp::fold(FoldAdaptor adaptor) {
+  if (getSparseTensorEncoding(getInputCoo().getType()) ==
+      getSparseTensorEncoding(getResultCoo().getType()))
+    return getInputCoo();
+
+  return {};
+}
+
+LogicalResult ReorderCOOOp::verify() {
+  SparseTensorType srcStt = getSparseTensorType(getInputCoo());
+  SparseTensorType dstStt = getSparseTensorType(getResultCoo());
+
+  if (!srcStt.hasSameDimToLvl(dstStt))
+    emitError("Unmatched dim2lvl map between input and result COO");
+
+  if (srcStt.getPosType() != dstStt.getPosType() ||
+      srcStt.getCrdType() != dstStt.getCrdType() ||
+      srcStt.getElementType() != dstStt.getElementType()) {
+    emitError("Unmatched storage format between input and result COO");
+  }
   return success();
 }
 

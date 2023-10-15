@@ -35,9 +35,9 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addPass(createSparsificationAndBufferizationPass(
       getBufferizationOptionsForSparsification(
           options.testBufferizationAnalysisOnly),
-      options.sparsificationOptions(), options.sparseTensorConversionOptions(),
-      options.createSparseDeallocs, options.enableRuntimeLibrary,
-      options.enableBufferInitialization, options.vectorLength,
+      options.sparsificationOptions(), options.createSparseDeallocs,
+      options.enableRuntimeLibrary, options.enableBufferInitialization,
+      options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
       /*enableSIMDIndex32=*/options.force32BitVectorIndices));
   if (options.testBufferizationAnalysisOnly)
