@@ -15,6 +15,15 @@
 #include <dlfcn.h>
 #endif
 
+#if defined(LIBCXXRT)
+extern "C" {
+    // Although libcxxrt defines these two (as an ABI-library should),
+    // it doesn't declare them in some versions.
+    void *__cxa_allocate_exception(size_t thrown_size);
+    void __cxa_free_exception(void* thrown_exception);
+}
+#endif
+
 namespace std {
 
 exception_ptr::~exception_ptr() noexcept
@@ -43,6 +52,10 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 void *exception_ptr::__init_native_exception(size_t size, type_info *tinfo, void (*dest)(void *)) noexcept
 {
     #if !defined(_WIN32)
+    // We perform a runtime lookup of __cxa_init_primary_exception to
+    // preserve compability with older versions of libcxxrt/libcxxabi.
+    // If the function is not present we return nullptr because no meaningful work can be done,
+    // and the caller knows how to handle this (it fallbacks to throw + catch).
     using CxaInitPrimaryExceptionPrototype = void *(*)(void *, type_info *, void(*)(void *));
     static CxaInitPrimaryExceptionPrototype cxa_init_primary_exception_fn = reinterpret_cast<CxaInitPrimaryExceptionPrototype>(
         dlsym(RTLD_DEFAULT, "__cxa_init_primary_exception"));
