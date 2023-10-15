@@ -380,8 +380,7 @@ define i8 @test27(i8 %x) {
 
 define i1 @pr59887(i1 %x, i1 %c) {
 ; CHECK-LABEL: @pr59887(
-; CHECK-NEXT:    [[ABS:%.*]] = call i1 @llvm.abs.i1(i1 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C:%.*]], i1 [[ABS]], i1 false
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C:%.*]], i1 [[X:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %abs = call i1 @llvm.abs.i1(i1 %x, i1 false)
@@ -402,7 +401,8 @@ define i32 @pr68381_undef_abs_false(i1 %c0, i1 %c1, i8 %v1) {
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[V1_I32]], [[BB0]] ], [ undef, [[START:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB0]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
 start:
   br i1 %c0, label %bb0, label %bb1
@@ -466,8 +466,8 @@ define i32 @pr68381_undef_abs_false_sub(i1 %c0, i1 %c1, i32 %v1, i32 %v2) {
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[V3]], [[BB0]] ], [ undef, [[START:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB0]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[Z1:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    ret i32 [[Z1]]
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
 start:
   br i1 %c0, label %bb0, label %bb1
