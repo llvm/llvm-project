@@ -678,15 +678,15 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
   };
 
   llvm::Value *numTeamsLower = nullptr;
-  if (auto numTeamsLowerVar = op.getNumTeamsLower())
+  if (Value numTeamsLowerVar = op.getNumTeamsLower())
     numTeamsLower = moduleTranslation.lookupValue(numTeamsLowerVar);
 
   llvm::Value *numTeamsUpper = nullptr;
-  if (auto numTeamsUpperVar = op.getNumTeamsUpper())
+  if (Value numTeamsUpperVar = op.getNumTeamsUpper())
     numTeamsUpper = moduleTranslation.lookupValue(numTeamsUpperVar);
 
   llvm::Value *threadLimit = nullptr;
-  if (auto threadLimitVar = op.getThreadLimit())
+  if (Value threadLimitVar = op.getThreadLimit())
     threadLimit = moduleTranslation.lookupValue(threadLimitVar);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
