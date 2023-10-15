@@ -16452,13 +16452,13 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     // stack. LowerCall/LowerFormalArguments/LowerReturn must recognise these
     // cases.
     Register Reg = State.AllocateReg(ArgGPRs);
-    LocVT = MVT::i32;
     if (!Reg) {
       unsigned StackOffset = State.AllocateStack(8, Align(8));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
       return false;
     }
+    LocVT = MVT::i32;
     if (!State.AllocateReg(ArgGPRs))
       State.AllocateStack(4, Align(4));
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -16776,15 +16776,6 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
-
-  if (VA.isMemLoc()) {
-    // f64 is passed on the stack.
-    int FI =
-        MFI.CreateFixedObject(8, VA.getLocMemOffset(), /*IsImmutable=*/true);
-    SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
-    return DAG.getLoad(MVT::f64, DL, Chain, FIN,
-                       MachinePointerInfo::getFixedStack(MF, FI));
-  }
 
   assert(VA.isRegLoc() && "Expected register VA assignment");
 
@@ -17300,7 +17291,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Handle passing f64 on RV32D with a soft float ABI as a special case.
     bool IsF64OnRV32DSoftABI =
         VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64;
-    if (IsF64OnRV32DSoftABI && VA.isRegLoc()) {
+    if (IsF64OnRV32DSoftABI) {
+      assert(VA.isRegLoc() && "Expected register VA assignment");
       SDValue SplitF64 = DAG.getNode(
           RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32), ArgValue);
       SDValue Lo = SplitF64.getValue(0);
