@@ -271,6 +271,7 @@ func.func @forward_dead_store_dynamic_same_index(
   %c0 = arith.constant 0 : index
   %cf0 = arith.constant 0.0 : f32
   vector.transfer_write %v0, %buffer[%i, %i] {in_bounds = [true]} : vector<4xf32>, memref<?x?xf32>
+  // The following transfer op reads/writes to the same address so that we can forward.
   %0 = vector.transfer_read %buffer[%i, %i], %cf0 {in_bounds = [true]} : memref<?x?xf32>, vector<4xf32>
   %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0) -> (vector<4xf32>) {
     %1 = arith.addf %acc, %acc : vector<4xf32>
