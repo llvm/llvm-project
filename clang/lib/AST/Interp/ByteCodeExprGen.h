@@ -36,7 +36,6 @@ template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
-template <class Emitter> class StoredOpaqueValueScope;
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -221,7 +220,6 @@ private:
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
-  friend class StoredOpaqueValueScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -479,43 +477,6 @@ public:
 private:
   ByteCodeExprGen<Emitter> *Ctx;
   bool Enabled = false;
-};
-
-template <class Emitter> class StoredOpaqueValueScope final {
-public:
-  StoredOpaqueValueScope(ByteCodeExprGen<Emitter> *Ctx) : Ctx(Ctx) {}
-
-  bool VisitAndStoreOpaqueValue(const OpaqueValueExpr *Ove) {
-    assert(Ove && "OpaqueValueExpr is a nullptr!");
-    assert(!Ctx->OpaqueExprs.contains(Ove) &&
-           "OpaqueValueExpr already stored!");
-
-    std::optional<PrimType> CommonTy = Ctx->classify(Ove);
-    std::optional<unsigned> LocalIndex = Ctx->allocateLocalPrimitive(
-        Ove, *CommonTy, Ove->getType().isConstQualified());
-    if (!LocalIndex)
-      return false;
-
-    if (!Ctx->visit(Ove))
-      return false;
-
-    if (!Ctx->emitSetLocal(*CommonTy, *LocalIndex, Ove))
-      return false;
-
-    Ctx->OpaqueExprs.insert({Ove, *LocalIndex});
-    StoredValues.emplace_back(Ove);
-
-    return true;
-  }
-
-  ~StoredOpaqueValueScope() {
-    for (const auto *SV : StoredValues)
-      Ctx->OpaqueExprs.erase(SV);
-  }
-
-private:
-  ByteCodeExprGen<Emitter> *Ctx;
-  std::vector<const OpaqueValueExpr *> StoredValues;
 };
 
 } // namespace interp

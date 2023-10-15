@@ -811,10 +811,6 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   assert(Initializing);
   assert(!DiscardResult);
 
-  StoredOpaqueValueScope<Emitter> StoredOpaqueScope(this);
-  if (!StoredOpaqueScope.VisitAndStoreOpaqueValue(E->getCommonExpr()))
-    return false;
-
   const Expr *SubExpr = E->getSubExpr();
   size_t Size = E->getArraySize().getZExtValue();
   std::optional<PrimType> ElemT = classify(SubExpr->getType());
@@ -847,12 +843,35 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
-  if (OpaqueExprs.contains(E))
-    return this->emitGetLocal(*classify(E), OpaqueExprs[E], E);
-
   if (Initializing)
     return this->visitInitializer(E->getSourceExpr());
-  return this->visit(E->getSourceExpr());
+
+  PrimType CacheVariableTy = classify(E).value_or(PT_Ptr);
+  if (OpaqueExprs.contains(E))
+    return this->emitGetLocal(CacheVariableTy, OpaqueExprs[E], E);
+
+  if (!this->visit(E->getSourceExpr()))
+    return false;
+
+  // At this point we either have the evaluated source expression or a pointer
+  // to an object on the stack. We want to create a local variable that stores
+  // this value.
+  std::optional<unsigned> LocalIndex =
+      allocateLocalPrimitive(E, CacheVariableTy, true);
+  if (!LocalIndex)
+    return false;
+  if (!this->emitSetLocal(CacheVariableTy, *LocalIndex, E))
+    return false;
+
+  // Here the local variable is created but the value is removed from the stack,
+  // so we put it back, because the caller might need it.
+  if (!this->emitGetLocal(CacheVariableTy, *LocalIndex, E))
+    return false;
+
+  // FIXME: Ideally the cached value should be cleaned up later.
+  OpaqueExprs.insert({E, *LocalIndex});
+
+  return true;
 }
 
 template <class Emitter>

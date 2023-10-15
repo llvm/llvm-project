@@ -363,7 +363,7 @@ namespace ArrayInitLoop {
       auto [a, b, c] = f(n).arr;
       return a + b + c;
   }
-  static_assert(g() == 6);
+  static_assert(g() == 6, "");
 }
 
 namespace StringZeroFill {
