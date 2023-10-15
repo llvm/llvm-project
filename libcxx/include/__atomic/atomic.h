@@ -166,9 +166,10 @@ struct atomic<_Tp> : public __atomic_base<_Tp> {
         _Tp __new = __operation(__old, __operand);
 
         if constexpr (std::is_same_v<_Tp, long double>) {
-          // https://github.com/llvm/llvm-project/issues/47978
-          // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_strong
           while (!__self.compare_exchange_strong(__old, __new, __m, memory_order_relaxed)) {
+            // https://github.com/llvm/llvm-project/issues/47978
+            // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_strong
+            __old = __self.load(memory_order_relaxed);
             __new = __operation(__old, __operand);
           }
         } else {
