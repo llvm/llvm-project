@@ -1336,9 +1336,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
         PreviousNonComment->isOneOf(
-            TT_AttributeRParen, TT_AttributeMacro, TT_AttributeSquare,
-            TT_FunctionAnnotationRParen, TT_JavaAnnotation,
-            TT_LeadingJavaAnnotation))) ||
+            TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
+            TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
     return std::max(CurrentState.LastSpace, CurrentState.Indent);
