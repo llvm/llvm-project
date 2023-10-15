@@ -26,6 +26,25 @@ define <vscale x 1 x i8> @vsrl_vx_nxv1i8_0(<vscale x 1 x i8> %va) {
   ret <vscale x 1 x i8> %vc
 }
 
+define <vscale x 1 x i8> @vsrl_vv_nxv1i8_zext_zext(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv1i8_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf4 v10, v8
+; CHECK-NEXT:    vzext.vf4 v8, v9
+; CHECK-NEXT:    vsrl.vv v8, v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 1 x i8> %va to <vscale x 1 x i32>
+  %zexted_vb = zext <vscale x 1 x i8> %vb to <vscale x 1 x i32>
+  %expand = lshr <vscale x 1 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 1 x i32> %expand to <vscale x 1 x i8>
+  ret <vscale x 1 x i8> %vc
+}
+
 define <vscale x 2 x i8> @vsrl_vx_nxv2i8(<vscale x 2 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vsrl_vx_nxv2i8:
 ; CHECK:       # %bb.0:
@@ -47,6 +66,25 @@ define <vscale x 2 x i8> @vsrl_vx_nxv2i8_0(<vscale x 2 x i8> %va) {
   %head = insertelement <vscale x 2 x i8> poison, i8 6, i32 0
   %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   %vc = lshr <vscale x 2 x i8> %va, %splat
+  ret <vscale x 2 x i8> %vc
+}
+
+define <vscale x 2 x i8> @vsrl_vv_nxv2i8_zext_zext(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv2i8_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v10, v8
+; CHECK-NEXT:    vzext.vf4 v8, v9
+; CHECK-NEXT:    vsrl.vv v8, v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 2 x i8> %va to <vscale x 2 x i32>
+  %zexted_vb = zext <vscale x 2 x i8> %vb to <vscale x 2 x i32>
+  %expand = lshr <vscale x 2 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 2 x i32> %expand to <vscale x 2 x i8>
   ret <vscale x 2 x i8> %vc
 }
 
@@ -74,6 +112,25 @@ define <vscale x 4 x i8> @vsrl_vx_nxv4i8_0(<vscale x 4 x i8> %va) {
   ret <vscale x 4 x i8> %vc
 }
 
+define <vscale x 4 x i8> @vsrl_vv_nxv4i8_zext_zext(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv4i8_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vzext.vf4 v10, v8
+; CHECK-NEXT:    vzext.vf4 v12, v9
+; CHECK-NEXT:    vsrl.vv v8, v10, v12
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 4 x i8> %va to <vscale x 4 x i32>
+  %zexted_vb = zext <vscale x 4 x i8> %vb to <vscale x 4 x i32>
+  %expand = lshr <vscale x 4 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 4 x i32> %expand to <vscale x 4 x i8>
+  ret <vscale x 4 x i8> %vc
+}
+
 define <vscale x 8 x i8> @vsrl_vx_nxv8i8(<vscale x 8 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vsrl_vx_nxv8i8:
 ; CHECK:       # %bb.0:
@@ -98,6 +155,25 @@ define <vscale x 8 x i8> @vsrl_vx_nxv8i8_0(<vscale x 8 x i8> %va) {
   ret <vscale x 8 x i8> %vc
 }
 
+define <vscale x 8 x i8> @vsrl_vv_nxv8i8_zext_zext(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv8i8_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vzext.vf4 v12, v8
+; CHECK-NEXT:    vzext.vf4 v16, v9
+; CHECK-NEXT:    vsrl.vv v8, v12, v16
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v12, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 8 x i8> %va to <vscale x 8 x i32>
+  %zexted_vb = zext <vscale x 8 x i8> %vb to <vscale x 8 x i32>
+  %expand = lshr <vscale x 8 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 8 x i32> %expand to <vscale x 8 x i8>
+  ret <vscale x 8 x i8> %vc
+}
+
 define <vscale x 16 x i8> @vsrl_vx_nxv16i8(<vscale x 16 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vsrl_vx_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -119,6 +195,25 @@ define <vscale x 16 x i8> @vsrl_vx_nxv16i8_0(<vscale x 16 x i8> %va) {
   %head = insertelement <vscale x 16 x i8> poison, i8 6, i32 0
   %splat = shufflevector <vscale x 16 x i8> %head, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   %vc = lshr <vscale x 16 x i8> %va, %splat
+  ret <vscale x 16 x i8> %vc
+}
+
+define <vscale x 16 x i8> @vsrl_vv_nxv16i8_zext_zext(<vscale x 16 x i8> %va, <vscale x 16 x i8> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv16i8_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vzext.vf4 v16, v8
+; CHECK-NEXT:    vzext.vf4 v24, v10
+; CHECK-NEXT:    vsrl.vv v8, v16, v24
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v16, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v16, 0
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 16 x i8> %va to <vscale x 16 x i32>
+  %zexted_vb = zext <vscale x 16 x i8> %vb to <vscale x 16 x i32>
+  %expand = lshr <vscale x 16 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 16 x i32> %expand to <vscale x 16 x i8>
   ret <vscale x 16 x i8> %vc
 }
 
@@ -194,6 +289,21 @@ define <vscale x 1 x i16> @vsrl_vx_nxv1i16_0(<vscale x 1 x i16> %va) {
   ret <vscale x 1 x i16> %vc
 }
 
+define <vscale x 1 x i16> @vsrl_vv_nxv1i16_zext_zext(<vscale x 1 x i16> %va, <vscale x 1 x i16> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv1i16_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wv v8, v10, v9
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 1 x i16> %va to <vscale x 1 x i32>
+  %zexted_vb = zext <vscale x 1 x i16> %vb to <vscale x 1 x i32>
+  %expand = lshr <vscale x 1 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 1 x i32> %expand to <vscale x 1 x i16>
+  ret <vscale x 1 x i16> %vc
+}
+
 define <vscale x 2 x i16> @vsrl_vx_nxv2i16(<vscale x 2 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vsrl_vx_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -215,6 +325,21 @@ define <vscale x 2 x i16> @vsrl_vx_nxv2i16_0(<vscale x 2 x i16> %va) {
   %head = insertelement <vscale x 2 x i16> poison, i16 6, i32 0
   %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   %vc = lshr <vscale x 2 x i16> %va, %splat
+  ret <vscale x 2 x i16> %vc
+}
+
+define <vscale x 2 x i16> @vsrl_vv_nxv2i16_zext_zext(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv2i16_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wv v8, v10, v9
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 2 x i16> %va to <vscale x 2 x i32>
+  %zexted_vb = zext <vscale x 2 x i16> %vb to <vscale x 2 x i32>
+  %expand = lshr <vscale x 2 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 2 x i32> %expand to <vscale x 2 x i16>
   ret <vscale x 2 x i16> %vc
 }
 
@@ -242,6 +367,21 @@ define <vscale x 4 x i16> @vsrl_vx_nxv4i16_0(<vscale x 4 x i16> %va) {
   ret <vscale x 4 x i16> %vc
 }
 
+define <vscale x 4 x i16> @vsrl_vv_nxv4i16_zext_zext(<vscale x 4 x i16> %va, <vscale x 4 x i16> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv4i16_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wv v8, v10, v9
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 4 x i16> %va to <vscale x 4 x i32>
+  %zexted_vb = zext <vscale x 4 x i16> %vb to <vscale x 4 x i32>
+  %expand = lshr <vscale x 4 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 4 x i32> %expand to <vscale x 4 x i16>
+  ret <vscale x 4 x i16> %vc
+}
+
 define <vscale x 8 x i16> @vsrl_vx_nxv8i16(<vscale x 8 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vsrl_vx_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -266,6 +406,21 @@ define <vscale x 8 x i16> @vsrl_vx_nxv8i16_0(<vscale x 8 x i16> %va) {
   ret <vscale x 8 x i16> %vc
 }
 
+define <vscale x 8 x i16> @vsrl_vv_nxv8i16_zext_zext(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv8i16_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wv v8, v12, v10
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 8 x i16> %va to <vscale x 8 x i32>
+  %zexted_vb = zext <vscale x 8 x i16> %vb to <vscale x 8 x i32>
+  %expand = lshr <vscale x 8 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 8 x i32> %expand to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %vc
+}
+
 define <vscale x 16 x i16> @vsrl_vx_nxv16i16(<vscale x 16 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vsrl_vx_nxv16i16:
 ; CHECK:       # %bb.0:
@@ -287,6 +442,21 @@ define <vscale x 16 x i16> @vsrl_vx_nxv16i16_0(<vscale x 16 x i16> %va) {
   %head = insertelement <vscale x 16 x i16> poison, i16 6, i32 0
   %splat = shufflevector <vscale x 16 x i16> %head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
   %vc = lshr <vscale x 16 x i16> %va, %splat
+  ret <vscale x 16 x i16> %vc
+}
+
+define <vscale x 16 x i16> @vsrl_vv_nxv16i16_zext_zext(<vscale x 16 x i16> %va, <vscale x 16 x i16> %vb) {
+; CHECK-LABEL: vsrl_vv_nxv16i16_zext_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vzext.vf2 v16, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wv v8, v16, v12
+; CHECK-NEXT:    ret
+  %zexted_va = zext <vscale x 16 x i16> %va to <vscale x 16 x i32>
+  %zexted_vb = zext <vscale x 16 x i16> %vb to <vscale x 16 x i32>
+  %expand = lshr <vscale x 16 x i32> %zexted_va, %zexted_vb
+  %vc = trunc <vscale x 16 x i32> %expand to <vscale x 16 x i16>
   ret <vscale x 16 x i16> %vc
 }
 
