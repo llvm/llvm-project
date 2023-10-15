@@ -145,8 +145,8 @@ template <class _Tp>
   requires is_floating_point_v<_Tp>
 struct atomic<_Tp> : public __atomic_base<_Tp> {
   private:
-    // The builtin __cxx_atomic_fetch_add does not work for
-    // long double on some platforms with fp80 type
+    // The builtin __cxx_atomic_fetch_add errors during compilation for
+    // long double on some platforms with fp80 type.
     // There is no way on the libc++ side to test whether it is
     // ok to use the builtin for a certain type.
     // Therefore, we do not use the builtin here
@@ -164,13 +164,17 @@ struct atomic<_Tp> : public __atomic_base<_Tp> {
     _LIBCPP_HIDE_FROM_ABI static _Tp __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation) {
         _Tp __old = __self.load(memory_order_relaxed);
         _Tp __new = __operation(__old, __operand);
-        while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-          if constexpr (std::is_same_v<_Tp, long double>) {
-            // https://github.com/llvm/llvm-project/issues/47978
-            // clang bug: __old is not updated on failure for atomic<long double>
-            __old = __self.load(memory_order_relaxed);
+
+        if constexpr (std::is_same_v<_Tp, long double>) {
+          // https://github.com/llvm/llvm-project/issues/47978
+          // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_strong
+          while (!__self.compare_exchange_strong(__old, __new, __m, memory_order_relaxed)) {
+            __new = __operation(__old, __operand);
           }
-          __new = __operation(__old, __operand);
+        } else {
+          while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
+            __new = __operation(__old, __operand);
+          }
         }
         return __old;
     }
