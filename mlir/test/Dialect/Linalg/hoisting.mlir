@@ -968,10 +968,10 @@ transform.sequence failures(propagate) {
 // Test that we can hoist out 2-D read-write pairs whose indices are dynamic values.
 
 //   CHECK-LABEL: func.func @hoist_vector_transfer_pairs_disjoint_dynamic
-// CHECK-COUNT-2:   vector.transfer_read
-// CHECK-COUNT-2:   %{{.+}}:2 = scf.for {{.+}} -> (vector<16x8xf32>, vector<16x8xf32>)
-// CHECK-COUNT-2:   scf.yield {{.+}} : vector<16x8xf32>, vector<16x8xf32>
-// CHECK-COUNT-2:   vector.transfer_write
+// CHECK-COUNT-3:   vector.transfer_read
+// CHECK-COUNT-2:   %{{.+}}:2 = scf.for {{.+}} -> (vector<16x8xf32>, vector<16x8xf32>, vector<16x8xf32)
+// CHECK-COUNT-2:   scf.yield {{.+}} : vector<16x8xf32>, vector<16x8xf32>, vector<16x8xf32>
+// CHECK-COUNT-3:   vector.transfer_write
 //         CHECK:   return
 
 func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
@@ -979,15 +979,19 @@ func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
   %cst = arith.constant 0.0 : f32
   %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
   %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
+  %i4 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 16)>(%i1)
 
   scf.for %i = %lb to %ub step %step {
     scf.for %j = %lb to %ub step %step {
       %r0 = vector.transfer_read %buffer[%i0, %i2], %cst: memref<?x?xf32>, vector<16x8xf32>
       %r1 = vector.transfer_read %buffer[%i0, %i3], %cst: memref<?x?xf32>, vector<16x8xf32>
+      %r2 = vector.transfer_read %buffer[%i0, %i4], %cst: memref<?x?xf32>, vector<16x8xf32>
       %u0 = "some_use"(%r0) : (vector<16x8xf32>) -> vector<16x8xf32>
       %u1 = "some_use"(%r1) : (vector<16x8xf32>) -> vector<16x8xf32>
-      vector.transfer_write %u0, %buffer[%i0, %i2] : vector<16x8xf32>, memref<?x?xf32>
+      %u2 = "some_use"(%r2) : (vector<16x8xf32>) -> vector<16x8xf32>
+      vector.transfer_write %u2, %buffer[%i0, %i4] : vector<16x8xf32>, memref<?x?xf32>
       vector.transfer_write %u1, %buffer[%i0, %i3] : vector<16x8xf32>, memref<?x?xf32>
+      vector.transfer_write %u0, %buffer[%i0, %i2] : vector<16x8xf32>, memref<?x?xf32>
     }
   }
   return
