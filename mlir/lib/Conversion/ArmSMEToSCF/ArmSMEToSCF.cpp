@@ -60,6 +60,7 @@ void getMemrefIndices(ValueRange indices, unsigned rank, Value tileSliceIndex,
 ///
 ///  AFTER:
 ///  ```mlir
+///  %ptrue_s = arith.constant dense<true> : vector<[4]xi1>
 ///  %tile_id = arm_sme.get_tile_id : i32
 ///  %tile = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
 ///  %vscale = vector.vscale
@@ -69,7 +70,8 @@ void getMemrefIndices(ValueRange indices, unsigned rank, Value tileSliceIndex,
 ///  %svl_s = arith.muli %min_svl_s, %vscale : index
 ///  scf.for %tile_slice_idx = %c0 to %svl_s step %c1 {
 ///    %tile_update = arm_sme.load_tile_slice %src[%tile_slice_idx],
-///      %tile, %tile_slice_idx : memref<?x?xi32>, vector<[4]x[4]xi32>
+///      %ptrue_s, %tile, %tile_slice_idx
+///        : memref<?x?xi32>, vector<[4]xi1>, vector<[4]x[4]xi32>
 ///  }
 ///  ```
 struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
@@ -77,6 +79,10 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 
   LogicalResult matchAndRewrite(arm_sme::TileLoadOp tileLoadOp,
                                 PatternRewriter &rewriter) const override {
+    if (tileLoadOp.getMask())
+      return rewriter.notifyMatchFailure(
+          tileLoadOp, "op has mask, needs masked pattern(s)");
+
     OpBuilder::InsertionGuard g(rewriter);
     auto loc = tileLoadOp.getLoc();
     auto tileType = tileLoadOp.getVectorType();
@@ -109,6 +115,12 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 
     rewriter.setInsertionPointToStart(forOp.getBody());
 
+    // Create an 'all true' predicate for the tile slice.
+    auto predicateType =
+        VectorType::get(tileType.getDimSize(1), rewriter.getI1Type(), true);
+    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(predicateType, true));
+
     // Create 'arm_sme.load_tile_slice' to load tile slice from memory into
     // tile.
     SmallVector<Value> memrefIndices;
@@ -117,8 +129,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
                      tileLoadOp.getMemRefType().getRank(), tileSliceIndex,
                      numTileSlices, memrefIndices, loc, rewriter);
     rewriter.create<arm_sme::LoadTileSliceOp>(
-        loc, tileType, tileLoadOp.getBase(), tile, memrefIndices,
-        tileSliceIndex, tileLoadOp.getLayout());
+        loc, tileType, tileLoadOp.getBase(), allTruePredicate, tile,
+        memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
 

@@ -367,7 +367,15 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
 }
 
 def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
-    AllTypesMatch<["tile", "result"]>
+    AllTypesMatch<["tile", "result"]>,
+    TypesMatchWith<
+      "mask has i1 element type and same shape as result",
+      "result", "mask",
+      "VectorType("
+        "VectorType::Builder("
+          "::llvm::cast<mlir::VectorType>($_self)"
+        ").dropDim(0).setElementType(IntegerType::get($_self.getContext(), 1))"
+      ")">,
 ]> {
   let summary = "Tile slice load and update operation";
   let description = [{
@@ -383,23 +391,27 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the result.
 
+    An SSA value `mask` specifies to mask out elements read from the MemRef.
+    The `mask` type is an `i1` vector with a shape that matches how elements
+    are read from the MemRef.
+
     Example 1: Load a vector<[16]xi8> tile slice from memory into tile horizontally (default) at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index : memref<?x?xi8>, vector<[16]x[16]xi8>
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %mask, %tile, %tile_slice_index : memref<?x?xi8>, vector<[16]xi1>, vector<[16]x[16]xi8>
     ```
 
     Example 2: Load a vector<[4]xf32> tile slice from memory into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %mask, %tile, %tile_slice_index layout<vertical> : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
     ```
 
     Example 3: Load a vector<[1]xi128> tile slice from memory into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %mask, %tile, %tile_slice_index layout<vertical> : memref<?x?xi128>, vector<[1]xi1>, vector<[1]x[1]xi128>
     ```
   }];
   let arguments = (ins
-    Arg<AnyMemRef, "the reference to load from">:$base,
+    Arg<AnyMemRef, "the reference to load from">:$base, AnyVector:$mask,
     SMETile:$tile, Variadic<Index>:$indices, Index:$tile_slice_index,
     ArmSME_TileSliceLayoutAttr:$layout
   );
@@ -415,8 +427,9 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
   }];
 
   let assemblyFormat = [{
-    $base `[` $indices `]` `,` $tile `,` $tile_slice_index (`layout` `` $layout^)?
-      attr-dict `:` type($base) `,` type($result)
+    $base `[` $indices `]` `,` $mask `,` $tile `,` $tile_slice_index
+      (`layout` `` $layout^)? attr-dict `:` type($base) `,` type($mask) `,`
+                                            type($result)
   }];
 }
 
