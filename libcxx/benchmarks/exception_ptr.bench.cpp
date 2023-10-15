@@ -8,11 +8,10 @@
 
 #include <benchmark/benchmark.h>
 #include <exception>
-#include <stdexcept>
 
 void bm_make_exception_ptr(benchmark::State& state) {
   for (auto _ : state) {
-    benchmark::DoNotOptimize(std::make_exception_ptr(std::runtime_error{"Some error"}));
+    benchmark::DoNotOptimize(std::make_exception_ptr(42));
   }
 }
 BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);
