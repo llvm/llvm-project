@@ -60,15 +60,30 @@ getSMETileAndCastToVector(PatternRewriter &rewriter, Location loc,
 
 namespace {
 
-/// Conversion pattern for vector.transfer_read op with transpose permutation
-/// map to vertical arm_sme.tile_load (in-flight transpose).
+/// Conversion pattern for vector.transfer_read.
+///
+/// ---
+///
+/// Example 1: op with identity permutation map to horizontal
+///            arm_sme.tile_load:
+///
+///   vector.transfer_read ...  permutation_map: (d0, d1) -> (d0, d1)
+///
+/// is converted to:
+///
+///   arm_sme.tile_load ...
+///
+/// ---
+///
+/// Example 2: op with transpose permutation map to vertical arm_sme.tile_load
+///            (in-flight transpose):
 ///
 ///   vector.transfer_read ...  permutation_map: (d0, d1) -> (d1, d0)
 ///
 /// is converted to:
 ///
 ///   arm_sme.tile_load ... layout<vertical>
-struct TransferReadPermutationToArmSMELowering
+struct TransferReadToArmSMELowering
     : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
 
@@ -79,15 +94,6 @@ struct TransferReadPermutationToArmSMELowering
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not a 2 result permutation map");
 
-    AffineMap map = transferReadOp.getPermutationMap();
-
-    // Permutation map doesn't perform permutation, can be lowered to
-    // vector.load by TransferReadToVectorLoadLowering and then
-    // arm_sme.tile_load by VectorLoadToArmSMELowering.
-    if (map.isIdentity())
-      return rewriter.notifyMatchFailure(
-          transferReadOp, "map is an identity, apply another pattern");
-
     auto vectorType = transferReadOp.getVectorType();
     if (!arm_sme::isValidSMETileVectorType(vectorType))
       return rewriter.notifyMatchFailure(transferReadOp,
@@ -96,26 +102,33 @@ struct TransferReadPermutationToArmSMELowering
     if (!llvm::isa<MemRefType>(transferReadOp.getSource().getType()))
       return rewriter.notifyMatchFailure(transferReadOp, "not a memref source");
 
-    if (transferReadOp.getMask())
-      // TODO: support masking.
-      return rewriter.notifyMatchFailure(transferReadOp,
-                                         "masking not yet supported");
-
     // Out-of-bounds dims are not supported.
     if (transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not inbounds transfer read");
 
+    arm_sme::TileSliceLayout layout;
+
     AffineExpr d0, d1;
     bindDims(transferReadOp.getContext(), d0, d1);
-    if (map != AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                              transferReadOp.getContext()))
+    AffineMap map = transferReadOp.getPermutationMap();
+    if (map.isIdentity())
+      layout = arm_sme::TileSliceLayout::Horizontal;
+    else if (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
+                                   transferReadOp.getContext()))
+      layout = arm_sme::TileSliceLayout::Vertical;
+    else
       return rewriter.notifyMatchFailure(transferReadOp,
-                                         "not true 2-D matrix transpose");
+                                         "unsupported permutation map");
 
+    // Padding isn't optional for transfer_read, but is only used in the case
+    // of out-of-bounds accesses (not supported here) and/or masking. Mask is
+    // optional, if it's not present don't pass padding.
+    auto mask = transferReadOp.getMask();
+    auto padding = mask ? transferReadOp.getPadding() : nullptr;
     rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
         transferReadOp, vectorType, transferReadOp.getSource(),
-        transferReadOp.getIndices(), arm_sme::TileSliceLayout::Vertical);
+        transferReadOp.getIndices(), padding, mask, layout);
 
     return success();
   }
@@ -432,7 +445,7 @@ struct TransposeOpToArmSMELowering
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
   patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
-               SplatOpToArmSMELowering, TransferReadPermutationToArmSMELowering,
+               SplatOpToArmSMELowering, TransferReadToArmSMELowering,
                TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
                VectorLoadToArmSMELowering, VectorStoreToArmSMELowering>(&ctx);
 }
