@@ -39,8 +39,6 @@ template <int c>
 struct tail_clobberer {
   constexpr tail_clobberer() {
     if (!std::is_constant_evaluated()) {
-      // This `memset` might actually be UB (?) but suffices to reproduce bugs
-      // related to the "has value" flag.
       std::memset(this, c, sizeof(*this));
     }
   }
