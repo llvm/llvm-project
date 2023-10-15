@@ -437,6 +437,12 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 
     rewriter.setInsertionPointToStart(forOp.getBody());
 
+    // Create an 'all true' predicate for the tile slice.
+    auto predicateType =
+        VectorType::get(tileType.getDimSize(1), rewriter.getI1Type(), true);
+    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(predicateType, true));
+
     SmallVector<Value> memrefIndices;
     auto tileSliceIndex = forOp.getInductionVar();
     getMemrefIndices(tileStoreOp.getIndices(),
@@ -444,7 +450,8 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
                      numTileSlices, memrefIndices, loc, rewriter);
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
         tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex,
-        tileStoreOp.getBase(), memrefIndices, tileStoreOp.getLayout());
+        allTruePredicate, tileStoreOp.getBase(), memrefIndices,
+        tileStoreOp.getLayout());
 
     return success();
   }
