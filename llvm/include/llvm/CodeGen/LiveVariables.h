@@ -182,10 +182,6 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  /// RegisterDefIsDead - Return true if the specified instruction defines the
-  /// specified register, but that definition is dead.
-  bool RegisterDefIsDead(MachineInstr &MI, Register Reg) const;
-
   //===--------------------------------------------------------------------===//
   //  API to update live variable information
 
