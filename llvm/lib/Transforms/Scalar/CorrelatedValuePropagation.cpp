@@ -480,9 +480,7 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
       II->getOperandUse(0), /*UndefAllowed*/ IsIntMinPoison);
 
   // Is X in [0, IntMin]?  NOTE: INT_MIN is fine!
-  ConstantRange ZeroIntMinRange =
-      ConstantRange::makeExactICmpRegion(CmpInst::Predicate::ICMP_ULE, IntMin);
-  if (ZeroIntMinRange.contains(Range)) {
+  if (Range.icmp(CmpInst::ICMP_ULE, IntMin)) {
     ++NumAbs;
     II->replaceAllUsesWith(X);
     II->eraseFromParent();
