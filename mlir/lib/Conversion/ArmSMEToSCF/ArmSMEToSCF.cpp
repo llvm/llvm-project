@@ -420,38 +420,59 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
     auto tileType = tileStoreOp.getVectorType();
     auto tileElementType = tileType.getElementType();
 
-    // Create a loop that stores each ZA tile slice from memory.
-    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
-        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
-    auto vscale =
-        rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    // This describes both the number of ZA tile slices and the number of
-    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
-    // ..., SVL_Q).
-    auto numTileSlices =
-        rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
-    auto forOp =
-        rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step);
-
-    rewriter.setInsertionPointToStart(forOp.getBody());
-
-    // Create an 'all true' predicate for the tile slice.
     auto predicateType =
         VectorType::get(tileType.getDimSize(1), rewriter.getI1Type(), true);
-    auto allTruePredicate = rewriter.create<arith::ConstantOp>(
-        loc, DenseElementsAttr::get(predicateType, true));
+
+    Value maskCols;
+    Value upperBound;
+    auto maskOp = tileStoreOp.getMask();
+    if (maskOp) {
+      auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>();
+      if (!createMaskOp)
+        return rewriter.notifyMatchFailure(
+            tileStoreOp, "unsupported mask op, only 'vector.create_mask' is "
+                         "currently supported");
+
+      auto numRows = createMaskOp.getOperands()[0];
+      auto numCols = createMaskOp.getOperands()[1];
+
+      upperBound = numRows;
+      maskCols =
+          rewriter.create<vector::CreateMaskOp>(loc, predicateType, numCols);
+    } else {
+      // Store all tile slices if no mask.
+      auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
+          loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
+      auto vscale =
+          rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+      // This describes both the number of ZA tile slices and the number of
+      // elements in a vector of SVL bits for a given element type (SVL_B,
+      // SVL_H,
+      // ..., SVL_Q).
+      auto numTileSlices =
+          rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+
+      upperBound = numTileSlices;
+      // Create an 'all true' predicate for the tile slice.
+      maskCols = rewriter.create<arith::ConstantOp>(
+          loc, DenseElementsAttr::get(predicateType, true));
+    }
+
+    // Create a loop that stores each (active) active ZA tile slice from memory.
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+
+    rewriter.setInsertionPointToStart(forOp.getBody());
 
     SmallVector<Value> memrefIndices;
     auto tileSliceIndex = forOp.getInductionVar();
     getMemrefIndices(tileStoreOp.getIndices(),
                      tileStoreOp.getMemRefType().getRank(), tileSliceIndex,
-                     numTileSlices, memrefIndices, loc, rewriter);
+                     upperBound, memrefIndices, loc, rewriter);
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
-        tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex,
-        allTruePredicate, tileStoreOp.getBase(), memrefIndices,
-        tileStoreOp.getLayout());
+        tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex, maskCols,
+        tileStoreOp.getBase(), memrefIndices, tileStoreOp.getLayout());
 
     return success();
   }
