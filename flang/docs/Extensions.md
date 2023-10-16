@@ -612,6 +612,21 @@ end module
   associated objects and do not elicit errors about improper redeclarations
   of implicitly typed entities.
 
+* Standard Fortran allows forward references to derived types, which
+  can lead to ambiguity when combined with host association.
+  Some Fortran compilers resolve the type name to the host type,
+  others to the forward-referenced local type; this compiler diagnoses
+  an error.
+```
+module m
+  type ambiguous; integer n; end type
+ contains
+  subroutine s
+    type(ambiguous), pointer :: ptr
+    type ambiguous; real a; end type
+  end
+end
+```
 
 ## De Facto Standard Features
 
