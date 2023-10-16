@@ -2346,11 +2346,6 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i1 (mul i1:$src0, i1:$src1)),
-  (S_AND_B64 $src0, $src1)
->;
-
-def : GCNPat <
   (i1 (or i1:$src0, i1:$src1)),
   (S_OR_B64 $src0, $src1)
 >;
@@ -2386,11 +2381,6 @@ def : GCNPat <
 let WaveSizePredicate = isWave32 in {
 def : GCNPat <
   (i1 (and i1:$src0, i1:$src1)),
-  (S_AND_B32 $src0, $src1)
->;
-
-def : GCNPat <
-  (i1 (mul i1:$src0, i1:$src1)),
   (S_AND_B32 $src0, $src1)
 >;
 
