@@ -56,12 +56,14 @@ public:
 std::optional<std::pair<const SubRegion *, NonLoc>>
 computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
   QualType T = SVB.getArrayIndexType();
-  auto Calc = [&SVB, State, T](BinaryOperatorKind Op, NonLoc LHS, NonLoc RHS) {
+  auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc LHS, NonLoc RHS) {
     // We will use this utility to add and multiply values.
     return SVB.evalBinOpNN(State, Op, LHS, RHS, T).getAs<NonLoc>();
   };
 
   const auto *Region = dyn_cast_or_null<SubRegion>(Location.getAsRegion());
+  // This is initialized to nullopt instead of 0 becasue we want to discard the
+  // situations when there are no ElementRegion layers.
   std::optional<NonLoc> Offset = std::nullopt;
 
   while (const auto *ERegion = dyn_cast_or_null<ElementRegion>(Region)) {
@@ -70,22 +72,24 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
       return std::nullopt;
 
     QualType ElemType = ERegion->getElementType();
-    // If the element is an incomplete type, go no further.
+
+    // Paranoia: getTypeSizeInChars() doesn't handle incomplete types.
     if (ElemType->isIncompleteType())
       return std::nullopt;
 
     // Calculate Delta = Index * sizeof(ElemType).
     NonLoc Size = SVB.makeArrayIndex(
         SVB.getContext().getTypeSizeInChars(ElemType).getQuantity());
-    auto Delta = Calc(BO_Mul, *Index, Size);
+    auto Delta = EvalBinOp(BO_Mul, *Index, Size);
     if (!Delta)
       return std::nullopt;
 
-    // Perform Offset += Delta, handling the initial nullopt as 0.
     if (!Offset) {
+      // Store Delta as the first non-nullopt Offset value.
       Offset = Delta;
     } else {
-      Offset = Calc(BO_Add, *Offset, *Delta);
+      // Update the previous offset with Offset += Delta.
+      Offset = EvalBinOp(BO_Add, *Offset, *Delta);
       if (!Offset)
         return std::nullopt;
     }
