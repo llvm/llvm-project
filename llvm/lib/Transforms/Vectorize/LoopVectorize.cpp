@@ -10389,8 +10389,9 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
       PA.preserve<DominatorTreeAnalysis>();
       PA.preserve<ScalarEvolutionAnalysis>();
 
-#ifdef EXPENSIVE_CHECKS
-      SE.verify();
+#ifndef NDEBUG
+      if (VerifySCEV)
+        SE.verify();
 #endif
     }
 
