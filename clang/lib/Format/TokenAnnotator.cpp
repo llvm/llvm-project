@@ -3503,9 +3503,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         if (!Next || Next->isNot(tok::l_paren))
           continue;
         Tok = Next->MatchingParen;
-        if (Tok)
-          continue;
-        break;
+        if (!Tok)
+          break;
       }
     }
   }
