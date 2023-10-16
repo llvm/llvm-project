@@ -1,0 +1,10 @@
+// REQUIRES: x86
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-debug-names-type-comdat-main.s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-debug-names-type-comdat-helper.s -o %t1.o
+// RUN: ld.lld %t.o %t1.o -o %t1
+// RUN: llvm-dwarfdump --debug-names %t1 | FileCheck %s
+
+// Test checks that LLD tombstones TU section that was de-duplicated using COMDAT to the maxium value.
+
+// CHECK: LocalTU[0]: 0x00000000
+// CHECK: LocalTU[0]: 0xffffffff

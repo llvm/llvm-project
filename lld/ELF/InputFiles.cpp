@@ -1158,10 +1158,11 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     StringRef name(stringTable.data() + eSym.st_name);
 
     symbols[i] = reinterpret_cast<Symbol *>(locals + i);
-    if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
+    if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded) {
+      StringRef name = CHECK(eSym.getName(stringTable), this);
       new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
                                  /*discardedSecIdx=*/secIdx);
-    else
+    } else
       new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->partition = 1;

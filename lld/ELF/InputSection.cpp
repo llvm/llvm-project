@@ -20,8 +20,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
-#include <algorithm>
-#include <mutex>
 #include <vector>
 
 using namespace llvm;
@@ -888,6 +886,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLocOrRanges =
       isDebug && (name == ".debug_loc" || name == ".debug_ranges");
+  const bool isDebugNames = isDebug && name == ".debug_names";
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
@@ -918,7 +917,8 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       continue;
 
     if (tombstone ||
-        (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
+        ((isDebug && (type == target.symbolicRel || expr == R_DTPREL))) ||
+        isDebugNames) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -948,6 +948,21 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
       auto *ds = dyn_cast<Defined>(&sym);
+      if (isDebugNames && dyn_cast<Undefined>(&sym)) {
+        uint64_t maxVal = 0;
+        switch (type) {
+        case R_X86_64_64:
+          maxVal = llvm::maxUIntN(64);
+          break;
+        case R_X86_64_32:
+          maxVal = llvm::maxUIntN(32);
+          break;
+        default:
+          llvm_unreachable("Unsupported relocation type in .debug_names.");
+        }
+        target.relocateNoSym(bufLoc, type, SignExtend64<bits>(maxVal));
+        continue;
+      }
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
         const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
