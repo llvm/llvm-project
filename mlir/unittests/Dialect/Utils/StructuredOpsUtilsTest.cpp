@@ -257,7 +257,7 @@ TEST(isVecmat, BindingSwapped) {
   MLIRContext context;
 
   AffineExpr k, n;
-  bindDims(&context, k, n); // bind in different order
+  bindDims(&context, n, k); // bind in different order
   auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
   auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k, n}, &context));
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
@@ -296,7 +296,7 @@ TEST(isMatvec, BindingSwapped) {
   MLIRContext context;
 
   AffineExpr k, n;
-  bindDims(&context, k, n); // bind in different order
+  bindDims(&context, n, k); // bind in different order
   auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {n, k}, &context));
   auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k}, &context));
   auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, &context));
@@ -335,7 +335,7 @@ TEST(isBatchMatvec, BindingSwapped) {
   MLIRContext context;
 
   AffineExpr batch, k, n;
-  bindDims(&context, batch, k, n); // bind in different order
+  bindDims(&context, batch, n, k); // bind in different order
   auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n, k}, &context));
   auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {batch, k}, &context));
   auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {batch, n}, &context));

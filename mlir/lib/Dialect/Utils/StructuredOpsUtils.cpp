@@ -21,9 +21,9 @@ bool mlir::isRowMajorMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
@@ -47,9 +47,9 @@ bool mlir::isColumnMajorMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
@@ -73,9 +73,9 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 3 || map1.getNumResults() != 3 ||
       map2.getNumResults() != 3 || map0.getNumInputs() != 4 ||
@@ -99,9 +99,9 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
 bool mlir::isVecmat(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 1 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 1 || map0.getNumInputs() != 2 ||
@@ -123,9 +123,9 @@ bool mlir::isVecmat(ArrayAttr indexingMaps) {
 bool mlir::isMatvec(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 1 ||
       map2.getNumResults() != 1 || map0.getNumInputs() != 2 ||
@@ -147,9 +147,9 @@ bool mlir::isMatvec(ArrayAttr indexingMaps) {
 bool mlir::isBatchMatvec(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 3 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
