@@ -905,7 +905,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 
     ForeachOp foreachOp;
     for (Value input : op.getInputs()) {
-      // Build a for op for each input tensor to append new values into the
+      // Builds a for op for each input tensor to append new values into the
       // output tensor.
       foreachOp = rewriter.create<ForeachOp>(
           loc, input, iterArg ? ValueRange{iterArg} : ValueRange{},
@@ -914,7 +914,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
             SmallVector<Value> dstLcvs(dstTp.getLvlRank());
             for (Dimension d = 0; d < dimRank; d++) {
               Value crd = dcvs[d];
-              // Transform coordinates for the concatenating dim.
+              // Transforms coordinates for the concatenating dim.
               if (d == conDim)
                 crd = builder.create<arith::AddIOp>(loc, crd, offset);
               // FIXME: `toStoredDim` is deprecated

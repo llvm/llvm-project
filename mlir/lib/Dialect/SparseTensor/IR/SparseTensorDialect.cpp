@@ -1256,7 +1256,7 @@ bool ConcatenateOp::needExtraSort() {
   bool allSameOrdered = llvm::all_of(getInputs(), [dstStt](Value op) {
     return getSparseTensorType(op).hasSameDimToLvl(dstStt);
   });
-  // TODO: When conDim != 0, as long as conDim corresponding to  the first level
+  // TODO: When conDim != 0, as long as conDim corresponding to the first level
   // in all input/output buffers, and all input/output buffers have the same
   // dimToLvl, the tmp COO buffer is still unnecessary (e.g, concatenate
   // CSC matrices along column).
