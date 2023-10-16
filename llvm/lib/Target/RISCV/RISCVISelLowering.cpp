@@ -17331,7 +17331,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       // info.
       SmallVector<std::pair<SDValue, SDValue>> Parts;
       while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
-        SDValue PartValue = OutVals[i + 1];
+        SDValue PartValue = OutVals[OutIdx + 1];
         unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
         SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
         EVT PartVT = PartValue.getValueType();
