@@ -1947,17 +1947,18 @@ void OmpAttributeVisitor::ResolveOmpNameList(
 
 Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
     const parser::Name *name) {
-  if (auto *prev{name
-              ? GetContext().scope.parent().FindCommonBlock(name->source)
-              : nullptr}) {
+  if (!name) {
+    return nullptr;
+  }
+  // First check if the Common Block is declared in the current scope
+  if (auto *cur{GetContext().scope.FindCommonBlock(name->source)}) {
+    name->symbol = cur;
+    return cur;
+  }
+  // Then check parent scope
+  if (auto *prev{GetContext().scope.parent().FindCommonBlock(name->source)}) {
     name->symbol = prev;
     return prev;
-  }
-  // Check if the Common Block is declared in the current scope
-  if (auto *commonBlockSymbol{
-          name ? GetContext().scope.FindCommonBlock(name->source) : nullptr}) {
-    name->symbol = commonBlockSymbol;
-    return commonBlockSymbol;
   }
   return nullptr;
 }
