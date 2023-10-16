@@ -273,9 +273,9 @@ public:
 
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
-    assert(pos < shape.size() && "overflow");
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
+    assert(pos < storage.size() && "overflow");
     storage.erase(storage.begin() + pos);
     shape = {};
     return *this;
@@ -283,9 +283,9 @@ public:
 
   /// Insert a val into shape @pos.
   Builder &insertDim(int64_t val, unsigned pos) {
-    assert(pos <= shape.size() && "overflow");
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
+    assert(pos <= storage.size() && "overflow");
     storage.insert(storage.begin() + pos, val);
     shape = {};
     return *this;
@@ -340,9 +340,9 @@ public:
 
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
-    assert(pos < shape.size() && "overflow");
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
+    assert(pos < storage.size() && "overflow");
     if (storageScalableDims.empty())
       storageScalableDims.append(scalableDims.begin(), scalableDims.end());
     storage.erase(storage.begin() + pos);
