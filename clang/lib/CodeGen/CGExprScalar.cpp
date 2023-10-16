@@ -3084,18 +3084,9 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
             .getQuantity();
     return llvm::ConstantInt::get(CGF.SizeTy, Alignment);
   } else if (E->getKind() == UETT_VectorElements) {
-    // For scalable vectors, we don't know the size at compile time. We can use
-    // @llvm.vscale to calculate it at runtime.
-    if (E->getTypeOfArgument()->isSizelessVectorType()) {
-      auto *VecTy = dyn_cast<llvm::ScalableVectorType>(
-          ConvertType(E->getTypeOfArgument()));
-      uint64_t NumUnscaledElements = VecTy->getMinNumElements();
-
-      llvm::Value *VScale =
-          Builder.CreateVScale(llvm::ConstantInt::get(CGF.SizeTy, 1));
-      return Builder.CreateMul(
-          VScale, llvm::ConstantInt::get(CGF.SizeTy, NumUnscaledElements));
-    }
+    auto *VecTy =
+        dyn_cast<llvm::VectorType>(ConvertType(E->getTypeOfArgument()));
+    return Builder.CreateElementCount(CGF.SizeTy, VecTy->getElementCount());
   }
 
   // If this isn't sizeof(vla), the result must be constant; use the constant

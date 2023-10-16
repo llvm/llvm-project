@@ -13602,6 +13602,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     if (Ty->isVectorType())
       return Success(Ty->castAs<VectorType>()->getNumElements(), E);
 
+    assert(Ty->isSizelessVectorType());
     return false;
   }
   }

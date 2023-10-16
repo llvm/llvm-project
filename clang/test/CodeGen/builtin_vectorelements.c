@@ -107,8 +107,7 @@ long test_builtin_vectorelements_riscv8() {
 long test_builtin_vectorelements_riscv64() {
   // RISCV: i64 @test_builtin_vectorelements_riscv64(
   // RISCV: [[VSCALE:%.+]] = call i64 @llvm.vscale.i64()
-  // RISCV: [[RES:%.+]] = mul i64 [[VSCALE]], 1
-  // RISCV: ret i64 [[RES]]
+  // RISCV: ret i64 [[VSCALE]]
   return __builtin_vectorelements(vuint64m1_t);
 }
 
