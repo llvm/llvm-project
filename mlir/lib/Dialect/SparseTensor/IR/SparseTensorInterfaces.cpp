@@ -19,8 +19,6 @@ using namespace mlir::sparse_tensor;
 LogicalResult
 sparse_tensor::detail::stageWithSortImpl(StageWithSortSparseOp op,
                                          PatternRewriter &rewriter) {
-  // TODO: Implement it as an Interface, this can be reused from other
-  // operations too (e.g., concatenate, reshape, etc).
   if (!op.needExtraSort())
     return failure();
 
