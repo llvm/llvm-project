@@ -5474,7 +5474,7 @@ def _dyld_prefix_EQ : Joined<["--"], "dyld-prefix=">;
 def _dyld_prefix : Separate<["--"], "dyld-prefix">, Alias<_dyld_prefix_EQ>;
 def _encoding_EQ : Joined<["--"], "encoding=">, Alias<fencoding_EQ>;
 def _encoding : Separate<["--"], "encoding">, Alias<fencoding_EQ>;
-def _entry_EQ : Joined<["--"], "entry=">, Flags<[LinkerInput]>, Group<Link_Group>, Alias<e>;
+def : Joined<["--"], "entry=">, Flags<[LinkerInput]>, Group<Link_Group>, Alias<e>;
 def _entry : Separate<["--"], "entry">, Flags<[LinkerInput]>, Group<Link_Group>, Alias<e>;
 def _extdirs_EQ : Joined<["--"], "extdirs=">, Alias<fextdirs_EQ>;
 def _extdirs : Separate<["--"], "extdirs">, Alias<fextdirs_EQ>;
