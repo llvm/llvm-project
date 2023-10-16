@@ -13803,29 +13803,28 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
     Align = std::min(Align, Ld->getAlign());
   }
 
-  auto getPtrDiff = [&DAG, &DL](LoadSDNode *Ld1, LoadSDNode *Ld2) {
+  using PtrDiff = std::pair<SDValue, bool>;
+  auto GetPtrDiff = [](LoadSDNode *Ld1,
+                       LoadSDNode *Ld2) -> std::optional<PtrDiff> {
     SDValue P1 = Ld1->getBasePtr();
     SDValue P2 = Ld2->getBasePtr();
     if (P2.getOpcode() == ISD::ADD && P2.getOperand(0) == P1)
-      return P2.getOperand(1);
+      return {{P2.getOperand(1), false}};
     if (P1.getOpcode() == ISD::ADD && P1.getOperand(0) == P2)
-      return DAG.getNegative(P1.getOperand(1), DL,
-                             P1.getOperand(1).getValueType());
-    return SDValue();
+      return {{P1.getOperand(1), true}};
+
+    return std::nullopt;
   };
 
-  SDValue Stride;
-  for (auto [Idx, Ld] : enumerate(Lds)) {
-    if (Idx == 0)
-      continue;
-    SDValue Offset = getPtrDiff(Lds[Idx - 1], Ld);
-    if (!Offset)
+  // Get the distance between the first and second loads
+  auto BaseDiff = GetPtrDiff(Lds[0], Lds[1]);
+  if (!BaseDiff)
+    return SDValue();
+
+  // Check all the loads are the same distance apart
+  for (auto *It = Lds.begin() + 1; It != Lds.end() - 1; It++)
+    if (GetPtrDiff(*It, *std::next(It)) != BaseDiff)
       return SDValue();
-    if (!Stride)
-      Stride = Offset;
-    else if (Offset != Stride)
-      return SDValue();
-  }
 
   // Get the widened scalar type, e.g. v4i8 -> i64
   unsigned WideScalarBitWidth =
@@ -13840,6 +13839,10 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   // Check that the operation is legal
   if (!TLI.isLegalStridedLoadStore(WideVecVT, Align))
     return SDValue();
+
+  auto [Stride, Reversed] = *BaseDiff;
+  if (Reversed)
+    Stride = DAG.getNegative(Stride, DL, Stride.getValueType());
 
   SDVTList VTs = DAG.getVTList({WideVecVT, MVT::Other});
   SDValue IntID =
