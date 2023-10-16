@@ -912,6 +912,29 @@ TEST_F(FlowConditionTest, WhileStmt) {
       });
 }
 
+TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      // This test checks whether the analysis preserves the connection between
+      // the value of `Foo` and the assignment expression, despite widening.
+      // The equality operator generates a fresh boolean variable on each
+      // interpretation, which forces use of widening.
+      while ((Foo = (3 == 4))) {
+        (void)0;
+        /*[[p]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo").formula();
+        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+      });
+}
+
 TEST_F(FlowConditionTest, Conjunction) {
   std::string Code = R"(
     void target(bool Foo, bool Bar) {
