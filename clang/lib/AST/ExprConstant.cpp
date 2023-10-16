@@ -2413,11 +2413,12 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
   if (!Value.hasValue()) {
     if (SubobjectDecl) {
       Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
-          << true << SubobjectDecl;
+          << /*(name)*/ 1 << SubobjectDecl;
       Info.Note(SubobjectDecl->getLocation(),
                 diag::note_constexpr_subobject_declared_here);
     } else {
-      Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized) << false << Type;
+      Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
+          << /*of type*/ 0 << Type;
     }
     return false;
   }
