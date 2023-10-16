@@ -11,15 +11,17 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang::tidy::misc {
 
-/// Check detects objects which should not to persist across suspension points
+/// This check detects hostile-RAII objects which should not persist across a
+/// suspension point in a coroutine.
 ///
-/// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
+///  For the user-facing documentation see:
+///  http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
 class CoroutineHostileRAIICheck : public ClangTidyCheck {
 public:
   CoroutineHostileRAIICheck(llvm::StringRef Name, ClangTidyContext *Context);
@@ -33,10 +35,10 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void checkVarDecl(const VarDecl *VD);
+  void checkVarDecl(const VarDecl *VD, SourceLocation SuspensionLoc);
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
-  std::vector<StringRef> RAIIDenyList;
+  std::vector<StringRef> RAIITypesList;
 };
 
 } // namespace clang::tidy::misc

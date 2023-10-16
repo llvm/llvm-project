@@ -21,6 +21,7 @@ The check considers the following type as hostile:
  - Scoped-lockable types: A scoped-lockable object persisting across a suspension
  point is problematic as the lock held by this object could be unlocked by a 
  different thread. This would be undefined behaviour.
+ This includes all types annotated with the ``scoped_lockable`` attribute.
 
  - Types belonging to a configurable denylist.
 
@@ -40,9 +41,9 @@ The check considers the following type as hostile:
 Options
 -------
 
-.. option:: RAIIDenyList
+.. option:: RAIITypesList
 
-   A semicolon-separated list of qualified types which should not be allowed to 
-   persist across suspension points.
-   Do not include ``::`` in the beginning of the qualified name.
-   Eg: ``my::lockable; a::b; ::my::other::lockable;``
+    A semicolon-separated list of qualified types which should not be allowed to 
+    persist across suspension points.
+    Eg: ``my::lockable; a::b;::my::other::lockable;``
+    The default value of this option is ``"std::lock_guard;std::scoped_lock"``.

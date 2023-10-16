@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++20 %s misc-coroutine-hostile-raii %t \
 // RUN:   -config="{CheckOptions: \
-// RUN:             {misc-coroutine-hostile-raii.RAIIDenyList: \
+// RUN:             {misc-coroutine-hostile-raii.RAIITypesList: \
 // RUN:               'my::Mutex; ::my::other::Mutex'}}"
 
 namespace std {
@@ -80,8 +80,17 @@ class SCOPED_LOCKABLE Mutex {};
 using Mutex2 = Mutex;
 } // namespace absl
 
+ReturnObject scopedLockableBasic() {
+  absl::Mutex mtx;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: 'mtx' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+  {
+    co_yield 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
+  }
+}
 
 ReturnObject scopedLockableTest() {
+    co_yield 0;
     absl::Mutex a;
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'a' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
     absl::Mutex2 b;
@@ -92,13 +101,16 @@ ReturnObject scopedLockableTest() {
     }
 
     co_yield 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
     absl::Mutex c;
     // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'c' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
     co_await std::suspend_always{};
-    for(int i=1;i<=10;++i ) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
+    for(int i=1; i<=10; ++i ) {
       absl::Mutex d;
       // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 'd' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
       co_await std::suspend_always{};
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: note: suspension point is here
       co_yield 1;
       absl::Mutex no_warning_3;
     }
@@ -106,13 +118,37 @@ ReturnObject scopedLockableTest() {
       absl::Mutex e;
       // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 'e' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
       co_yield 1;
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: note: suspension point is here
       absl::Mutex no_warning_4;
     }
     absl::Mutex no_warning_5;
 }
+
+void lambda() {
+  absl::Mutex no_warning;
+  auto lambda = []() -> ReturnObject {
+    co_await std::suspend_always{};
+    absl::Mutex a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 'a' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+    co_yield 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
+    co_await std::suspend_always{};
+    co_yield 1;
+  };
+  absl::Mutex no_warning_2;
+}
+
+template<class T>
+ReturnObject raii_in_template(){
+  T a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'a' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+  co_yield 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: suspension point is here
+}
+void foo_template() { raii_in_template<absl::Mutex>(); }
+
 namespace my {
 class Mutex{};
-
 namespace other {
 class Mutex{};
 } // namespace other
@@ -127,5 +163,19 @@ ReturnObject denyListTest() {
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: 'b' persists across a suspension point of coroutine [misc-coroutine-hostile-raii]
     my::Mutex2 c;
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'c' persists across a suspension point of coroutine [misc-coroutine-hostile-raii]
+    co_yield 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
+}
+
+ReturnObject referenceTest(my::Mutex& ref) {
+    my::Mutex& a = ref;
+    co_yield 1;
+}
+ReturnObject pointerTest(my::Mutex* ref) {
+    my::Mutex* a = ref;
+    co_yield 1;
+}
+
+ReturnObject functionArgTest(my::Mutex ref) {
     co_yield 1;
 }
