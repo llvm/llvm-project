@@ -37,6 +37,11 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// The type of callback functions which receive an element.
+template <typename V>
+using ElementConsumer =
+    const std::function<void(const std::vector<uint64_t> &, V)> &;
+
 // Forward references.
 template <typename V>
 class SparseTensorEnumeratorBase;
