@@ -2468,32 +2468,21 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
     // Look for a single use of the register that is also a subreg.
     Register RegToFind = Orig.getOperand(0).getReg();
-    int SingleUseIdx = -1;
-    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
-      const MachineOperand &CandMO = I->getOperand(i);
-      if (!CandMO.isReg())
+    MachineOperand *UseMO = nullptr;
+    for (auto &CandMO : I->operands()) {
+      if (!CandMO.isReg() || CandMO.getReg() != RegToFind || CandMO.isDef())
         continue;
-      Register CandReg = CandMO.getReg();
-      if (!CandReg)
-        continue;
-
-      if (CandReg == RegToFind) {
-        if (SingleUseIdx == -1 && CandMO.isUse()) {
-          SingleUseIdx = i;
-        } else {
-          SingleUseIdx = -1;
-          break;
-        }
+      if (UseMO) {
+        UseMO = nullptr;
+        break;
       }
+      UseMO = &CandMO;
     }
-    if (SingleUseIdx == -1)
-      break;
-    MachineOperand &UseMO = I->getOperand(SingleUseIdx);
-    if (UseMO.getSubReg() == AMDGPU::NoSubRegister)
+    if (!UseMO || UseMO->getSubReg() == AMDGPU::NoSubRegister)
       break;
 
-    unsigned Offset = RI.getSubRegIdxOffset(UseMO.getSubReg());
-    unsigned SubregSize = RI.getSubRegIdxSize(UseMO.getSubReg());
+    unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
+    unsigned SubregSize = RI.getSubRegIdxSize(UseMO->getSubReg());
 
     MachineFunction *MF = MBB.getParent();
     MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -2512,8 +2501,8 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
         RI.getAllocatableClass(getRegClass(TID, 0, &RI, *MF));
     MRI.setRegClass(DestReg, NewRC);
 
-    UseMO.setReg(DestReg);
-    UseMO.setSubReg(AMDGPU::NoSubRegister);
+    UseMO->setReg(DestReg);
+    UseMO->setSubReg(AMDGPU::NoSubRegister);
 
     // Use a smaller load with the desired size, possibly with updated offset.
     MachineInstr *MI = MF->CloneMachineInstr(&Orig);
