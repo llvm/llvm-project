@@ -25,6 +25,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributes.h"
+#include <sstream>
 
 using namespace llvm;
 
@@ -44,14 +45,33 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   // its ParseInstruction may call setForceRelocs as well.
   if (STI.hasFeature(RISCV::FeatureRelax))
     static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
+
+  // Using RISCVISAInfo, construct ISAString from given features.
+  std::stringstream SS(STI.getFeatureString().str());
+  std::string Feature;
+  std::vector<std::string> FeatureVec;
+  while (std::getline(SS, Feature, ','))
+    FeatureVec.push_back(Feature);
+
+  auto ParseResult = RISCVISAInfo::parseFeatures(
+      STI.getTargetTriple().isRISCV64() ? 64 : 32, FeatureVec);
+  if (ParseResult) {
+    auto &ISAInfo = *ParseResult;
+    ISAString = ISAInfo->toString();
+  }
 }
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }
 
-void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::setArchString(StringRef Arch) {
+  if (Arch != ISAString) {
+    getStreamer().setNewISAString(Arch);
+    ISAString = Arch;
+  }
+}
+
 void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
@@ -66,7 +86,69 @@ void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
 void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                                StringRef String) {
   getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
-  getStreamer().changeISAMappingSymbol(Attribute, String);
+  if (Attribute == RISCVAttrs::ARCH)
+    setArchString(String);
+}
+
+void RISCVTargetELFStreamer::emitDirectiveOptionArch(
+    ArrayRef<RISCVOptionArchArg> Args) {
+  if (Args.size() == 1) {
+    RISCVOptionArchArg Arg = Args[0];
+    if (Arg.Type == RISCVOptionArchArgType::Full) {
+      // If there is a full arch string, then just set the arch string and
+      // return. It is illegal to have more than one argument with this option.
+      setArchString(Arg.Value);
+      return;
+    }
+  }
+
+  auto ParseResult = RISCVISAInfo::parseArchString(ISAString, false);
+  if (!ParseResult) {
+    std::string Buffer;
+    raw_string_ostream OutputErrMsg(Buffer);
+    handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+      OutputErrMsg << "invalid arch name '" << ISAString << "', "
+                   << ErrMsg.getMessage();
+    });
+    return;
+  }
+  auto &ISAInfo = *ParseResult;
+  std::vector<std::string> NewFeatures = ISAInfo->toFeatureVector();
+  for (RISCVOptionArchArg Arg : Args) {
+    switch (Arg.Type) {
+    case RISCVOptionArchArgType::Minus:
+      NewFeatures.push_back("-" + Arg.Value);
+      break;
+    case RISCVOptionArchArgType::Plus:
+      NewFeatures.push_back("+" + Arg.Value);
+      break;
+    case RISCVOptionArchArgType::Full:
+      // This is special cased at the beginning of this function.
+      // It is illegal to have more than one argument for this option.
+      llvm_unreachable("Improperly formed arch option");
+      break;
+    }
+  }
+  auto NewParseResult = RISCVISAInfo::parseFeatures(
+      STI.hasFeature(RISCV::Feature64Bit) ? 64 : 32, NewFeatures);
+  if (!NewParseResult) {
+    std::string Buffer;
+    raw_string_ostream OutputErrMsg(Buffer);
+    handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+      OutputErrMsg << "Bad set of features. " << ErrMsg.getMessage();
+    });
+    return;
+  }
+  auto &NewISAInfo = *NewParseResult;
+  setArchString(NewISAInfo->toString());
+}
+
+void RISCVTargetELFStreamer::emitDirectiveOptionPush() {
+  ISAStringStack.push_back(ISAString);
+}
+
+void RISCVTargetELFStreamer::emitDirectiveOptionPop() {
+  setArchString(ISAStringStack.pop_back_val());
 }
 
 void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,
@@ -146,12 +228,14 @@ void RISCVELFStreamer::emitDataMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitInstructionsMappingSymbol() {
-  if (LastEMS == EMS_Instructions)
-    return;
-  if (LastEMS == EMS_ChangeISA)
-    emitMappingSymbol("$x" + ISAString);
-  else
+  // If NewISAString string has a value, this means there has been a change
+  // of ISA, so emit an ISA mapping symbol.
+  if (!NewISAString.empty()) {
+    emitMappingSymbol("$x" + NewISAString);
+    NewISAString.clear();
+  } else if (LastEMS != EMS_Instructions) {
     emitMappingSymbol("$x");
+  }
   LastEMS = EMS_Instructions;
 }
 
@@ -163,14 +247,8 @@ void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
   Symbol->setBinding(ELF::STB_LOCAL);
 }
 
-void RISCVELFStreamer::changeISAMappingSymbol(unsigned Attribute,
-                                              StringRef arch) {
-  if (Attribute != RISCVAttrs::ARCH)
-    return;
-  if (arch != ISAString) {
-    LastEMS = EMS_ChangeISA;
-    ISAString = std::string(arch);
-  }
+void RISCVELFStreamer::setNewISAString(StringRef Arch) {
+  NewISAString = std::string(Arch);
 }
 
 void RISCVELFStreamer::changeSection(MCSection *Section,

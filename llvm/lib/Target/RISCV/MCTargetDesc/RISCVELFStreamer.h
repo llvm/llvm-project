@@ -20,12 +20,12 @@ class RISCVELFStreamer : public MCELFStreamer {
   void emitInstructionsMappingSymbol();
   void emitMappingSymbol(StringRef Name);
 
-  enum ElfMappingSymbol { EMS_None, EMS_ChangeISA, EMS_Instructions, EMS_Data };
+  enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
 
   int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS = EMS_None;
-  std::string ISAString;
+  std::string NewISAString;
 
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
@@ -38,7 +38,7 @@ public:
   void emitBytes(StringRef Data) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue, SMLoc Loc) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
-  void changeISAMappingSymbol(unsigned Attribute, StringRef arch);
+  void setNewISAString(StringRef Arch);
 };
 
 namespace llvm {
@@ -46,6 +46,8 @@ namespace llvm {
 class RISCVTargetELFStreamer : public RISCVTargetStreamer {
 private:
   StringRef CurrentVendor;
+  std::string ISAString;
+  SmallVector<std::string, 4> ISAStringStack;
 
   MCSection *AttributeSection = nullptr;
   const MCSubtargetInfo &STI;
@@ -71,6 +73,9 @@ public:
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
+  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
+
+  void setArchString(StringRef Arch);
 
   void finish() override;
 };
