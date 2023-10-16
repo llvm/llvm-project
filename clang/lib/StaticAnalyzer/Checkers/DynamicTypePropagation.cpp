@@ -623,7 +623,6 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
   if (CE->getCastKind() != CK_BitCast)
     return;
 
-  ASTContext &ASTCtxt = C.getASTContext();
   QualType OriginType = CE->getSubExpr()->getType();
   QualType DestType = CE->getType();
 
@@ -632,6 +631,8 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
 
   if (!OrigObjectPtrType || !DestObjectPtrType)
     return;
+
+  ASTContext &ASTCtxt = C.getASTContext();
 
   // This checker detects the subtyping relationships using the assignment
   // rules. In order to be able to do this the kindofness must be stripped
