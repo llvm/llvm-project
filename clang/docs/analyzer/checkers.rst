@@ -1016,7 +1016,7 @@ Check the size argument passed into C string functions for common erroneous patt
 .. _unix-cstring-NullArg:
 
 unix.cstring.NullArg (C)
-"""""""""""""""""""""""""
+""""""""""""""""""""""""
 Check for null pointers being passed as arguments to C string functions:
 ``strlen, strnlen, strcpy, strncpy, strcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp, wcslen, wcsnlen``.
 
@@ -1025,6 +1025,99 @@ Check for null pointers being passed as arguments to C string functions:
  int test() {
    return strlen(0); // warn
  }
+
+.. _unix-StdCLibraryFunctions:
+
+unix.StdCLibraryFunctions (C)
+"""""""""""""""""""""""""""""
+Check for calls of standard library functions that violate predefined argument
+constraints. For example, according to the C standard the behavior of function
+``int isalnum(int ch)`` is undefined if the value of ``ch`` is not representable
+as ``unsigned char`` and is not equal to ``EOF``.
+
+You can think of this checker as defining restrictions (pre- and postconditions)
+on standard library functions. Preconditions are checked, and when they are
+violated, a warning is emitted. Postconditions are added to the analysis, e.g.
+that the return value of a function is not greater than 255. Preconditions are
+added to the analysis too, in the case when the affected values are not known
+before the call.
+
+For example, if an argument to a function must be in between 0 and 255, but the
+value of the argument is unknown, the analyzer will assume that it is in this
+interval. Similarly, if a function mustn't be called with a null pointer and the
+analyzer cannot prove that it is null, then it will assume that it is non-null.
+
+These are the possible checks on the values passed as function arguments:
+ - The argument has an allowed range (or multiple ranges) of values. The checker
+   can detect if a passed value is outside of the allowed range and show the
+   actual and allowed values.
+ - The argument has pointer type and is not allowed to be null pointer. Many
+   (but not all) standard functions can produce undefined behavior if a null
+   pointer is passed, these cases can be detected by the checker.
+ - The argument is a pointer to a memory block and the minimal size of this
+   buffer is determined by another argument to the function, or by
+   multiplication of two arguments (like at function ``fread``), or is a fixed
+   value (for example ``asctime_r`` requires at least a buffer of size 26). The
+   checker can detect if the buffer size is too small and in optimal case show
+   the size of the buffer and the values of the corresponding arguments.
+
+.. code-block:: c
+
+  #define EOF -1
+  void test_alnum_concrete(int v) {
+    int ret = isalnum(256); // \
+    // warning: Function argument outside of allowed range
+    (void)ret;
+  }
+
+  void buffer_size_violation(FILE *file) {
+    enum { BUFFER_SIZE = 1024 };
+    wchar_t wbuf[BUFFER_SIZE];
+
+    const size_t size = sizeof(*wbuf);   // 4
+    const size_t nitems = sizeof(wbuf);  // 4096
+
+    // Below we receive a warning because the 3rd parameter should be the
+    // number of elements to read, not the size in bytes. This case is a known
+    // vulnerability described by the ARR38-C SEI-CERT rule.
+    fread(wbuf, size, nitems, file);
+  }
+
+  int test_alnum_symbolic(int x) {
+    int ret = isalnum(x);
+    // after the call, ret is assumed to be in the range [-1, 255]
+
+    if (ret > 255)      // impossible (infeasible branch)
+      if (x == 0)
+        return ret / x; // division by zero is not reported
+    return ret;
+  }
+
+Additionally to the argument and return value conditions, this checker also adds
+state of the value ``errno`` if applicable to the analysis. Many system
+functions set the ``errno`` value only if an error occurs (together with a
+specific return value of the function), otherwise it becomes undefined. This
+checker changes the analysis state to contain such information. This data is
+used by other checkers, for example :ref:`alpha-unix-Errno`.
+
+**Limitations**
+
+The checker can not always provide notes about the values of the arguments.
+Without this information it is hard to confirm if the constraint is indeed
+violated. The argument values are shown if they are known constants or the value
+is determined by previous (not too complicated) assumptions.
+
+The checker can produce false positives in cases such as if the program has
+invariants not known to the analyzer engine or the bug report path contains
+calls to unknown functions. In these cases the analyzer fails to detect the real
+range of the argument.
+
+**Parameters**
+
+The checker models functions (and emits diagnostics) from the C standard by
+default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
+additional functions that are defined in the POSIX standard. This option is
+disabled by default.
 
 .. _osx-checkers:
 
@@ -2677,101 +2770,7 @@ For a more detailed description of configuration options, please see the
   file. This causes potential true positive findings to be lost.
 
 alpha.unix
-^^^^^^^^^^^
-
-.. _alpha-unix-StdCLibraryFunctions:
-
-alpha.unix.StdCLibraryFunctions (C)
-"""""""""""""""""""""""""""""""""""
-Check for calls of standard library functions that violate predefined argument
-constraints. For example, it is stated in the C standard that for the ``int
-isalnum(int ch)`` function the behavior is undefined if the value of ``ch`` is
-not representable as unsigned char and is not equal to ``EOF``.
-
-.. code-block:: c
-
-  #define EOF -1
-  void test_alnum_concrete(int v) {
-    int ret = isalnum(256); // \
-    // warning: Function argument outside of allowed range
-    (void)ret;
-  }
-
-  void buffer_size_violation(FILE *file) {
-    enum { BUFFER_SIZE = 1024 };
-    wchar_t wbuf[BUFFER_SIZE];
-
-    const size_t size = sizeof(*wbuf);   // 4
-    const size_t nitems = sizeof(wbuf);  // 4096
-
-    // Below we receive a warning because the 3rd parameter should be the
-    // number of elements to read, not the size in bytes. This case is a known
-    // vulnerability described by the ARR38-C SEI-CERT rule.
-    fread(wbuf, size, nitems, file);
-  }
-
-You can think of this checker as defining restrictions (pre- and postconditions)
-on standard library functions. Preconditions are checked, and when they are
-violated, a warning is emitted. Post conditions are added to the analysis, e.g.
-that the return value must be no greater than 255.
-
-For example if an argument to a function must be in between 0 and 255, but the
-value of the argument is unknown, the analyzer will conservatively assume that
-it is in this interval. Similarly, if a function mustn't be called with a null
-pointer and the null value of the argument can not be proven, the analyzer will
-assume that it is non-null.
-
-These are the possible checks on the values passed as function arguments:
- - The argument has an allowed range (or multiple ranges) of values. The checker
-   can detect if a passed value is outside of the allowed range and show the
-   actual and allowed values.
- - The argument has pointer type and is not allowed to be null pointer. Many
-   (but not all) standard functions can produce undefined behavior if a null
-   pointer is passed, these cases can be detected by the checker.
- - The argument is a pointer to a memory block and the minimal size of this
-   buffer is determined by another argument to the function, or by
-   multiplication of two arguments (like at function ``fread``), or is a fixed
-   value (for example ``asctime_r`` requires at least a buffer of size 26). The
-   checker can detect if the buffer size is too small and in optimal case show
-   the size of the buffer and the values of the corresponding arguments.
-
-.. code-block:: c
-
-  int test_alnum_symbolic(int x) {
-    int ret = isalnum(x);
-    // after the call, ret is assumed to be in the range [-1, 255]
-
-    if (ret > 255)      // impossible (infeasible branch)
-      if (x == 0)
-        return ret / x; // division by zero is not reported
-    return ret;
-  }
-
-Additionally to the argument and return value conditions, this checker also adds
-state of the value ``errno`` if applicable to the analysis. Many system
-functions set the ``errno`` value only if an error occurs (together with a
-specific return value of the function), otherwise it becomes undefined. This
-checker changes the analysis state to contain such information. This data is
-used by other checkers, for example :ref:`alpha-unix-Errno`.
-
-**Limitations**
-
-The checker can not always provide notes about the values of the arguments.
-Without this information it is hard to confirm if the constraint is indeed
-violated. The argument values are shown if they are known constants or the value
-is determined by previous (not too complicated) assumptions.
-
-The checker can produce false positives in cases such as if the program has
-invariants not known to the analyzer engine or the bug report path contains
-calls to unknown functions. In these cases the analyzer fails to detect the real
-range of the argument.
-
-**Parameters**
-
-The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
-additional functions that are defined in the POSIX standard. This option is
-disabled by default.
+^^^^^^^^^^
 
 .. _alpha-unix-BlockInCriticalSection:
 
@@ -2840,9 +2839,9 @@ pages of the functions and in the `POSIX standard <https://pubs.opengroup.org/on
    return 1;
  }
 
-The checker :ref:`alpha-unix-StdCLibraryFunctions` must be turned on to get the
+The checker :ref:`unix-StdCLibraryFunctions` must be turned on to get the
 warnings from this checker. The supported functions are the same as by
-:ref:`alpha-unix-StdCLibraryFunctions`. The ``ModelPOSIX`` option of that
+:ref:`unix-StdCLibraryFunctions`. The ``ModelPOSIX`` option of that
 checker affects the set of checked functions.
 
 **Parameters**

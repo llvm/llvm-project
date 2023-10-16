@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
 // The signatures for these functions are the same and they specify their
