@@ -52,6 +52,12 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
+// A "backedge" node is a block introduced in the CFG exclusively to indicate a
+// loop backedge. They are exactly identified by the presence of a non-null
+// pointer to the entry block of the loop condition. Note that this is not
+// necessarily the block with the loop statement as terminator, because
+// short-circuit operators will result in multiple blocks encoding the loop
+// condition, only one of which will contain the loop statement as terminator.
 static bool isBackedgeNode(const CFGBlock &B) {
   return B.getLoopTarget() != nullptr;
 }

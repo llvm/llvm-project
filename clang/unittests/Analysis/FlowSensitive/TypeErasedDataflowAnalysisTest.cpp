@@ -930,13 +930,8 @@ TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        auto &FooVal = cast<BoolValue>(Env.getValue(*FooDecl))->formula();
+        auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo").formula();
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       });
 }

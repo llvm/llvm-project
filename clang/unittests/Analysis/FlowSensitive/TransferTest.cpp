@@ -4099,7 +4099,7 @@ TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
   ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
-TEST(TransferTest, LoopWithDisjunctiveConditionConverges) {
+TEST(TransferTest, LoopWithShortCircuitedConditionConverges) {
   std::string Code = R"cc(
     bool foo();
 
