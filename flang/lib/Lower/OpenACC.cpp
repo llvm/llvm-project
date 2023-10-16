@@ -569,8 +569,20 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   auto recipe =
       modBuilder.create<mlir::acc::FirstprivateRecipeOp>(loc, recipeName, ty);
+  llvm::SmallVector<mlir::Type> initArgsTy{ty};
+  llvm::SmallVector<mlir::Location> initArgsLoc{loc};
+  auto refTy = fir::unwrapRefType(ty);
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(refTy)) {
+    if (seqTy.hasDynamicExtents()) {
+      mlir::Type idxTy = builder.getIndexType();
+      for (unsigned i = 0; i < seqTy.getDimension(); ++i) {
+        initArgsTy.push_back(idxTy);
+        initArgsLoc.push_back(loc);
+      }
+    }
+  }
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                      {ty}, {loc});
+                      initArgsTy, initArgsLoc);
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
   genPrivateLikeInitRegion<mlir::acc::FirstprivateRecipeOp>(builder, recipe, ty,
                                                             loc);
@@ -601,32 +613,28 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
     builder.create<fir::StoreOp>(loc, initValue,
                                  recipe.getCopyRegion().front().getArgument(1));
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
-    if (seqTy.hasDynamicExtents())
-      TODO(loc, "firstprivate recipe of array with dynamic extents");
-    mlir::Type idxTy = builder.getIndexType();
-    mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-    mlir::Value arraySrc = recipe.getCopyRegion().front().getArgument(0);
-    mlir::Value arrayDst = recipe.getCopyRegion().front().getArgument(1);
-    llvm::SmallVector<fir::DoLoopOp> loops;
-    llvm::SmallVector<mlir::Value> ivs;
-    for (auto ext : llvm::reverse(seqTy.getShape())) {
-      auto lb = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, 0));
-      auto ub = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, ext - 1));
-      auto step = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, 1));
-      auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                /*unordered=*/false);
-      builder.setInsertionPointToStart(loop.getBody());
-      loops.push_back(loop);
-      ivs.push_back(loop.getInductionVar());
-    }
-    auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, arraySrc, ivs);
-    auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, arrayDst, ivs);
-    auto loadedValue = builder.create<fir::LoadOp>(loc, addr1);
-    builder.create<fir::StoreOp>(loc, loadedValue, addr2);
-    builder.setInsertionPointAfter(loops[0]);
+    fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
+    auto shape = genShapeFromBoundsOrArgs(
+        loc, firBuilder, seqTy, bounds, recipe.getCopyRegion().getArguments());
+
+    auto leftDeclOp = builder.create<hlfir::DeclareOp>(
+        loc, recipe.getCopyRegion().getArgument(0), llvm::StringRef{}, shape,
+        llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+    auto rightDeclOp = builder.create<hlfir::DeclareOp>(
+        loc, recipe.getCopyRegion().getArgument(1), llvm::StringRef{}, shape,
+        llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
+
+    hlfir::DesignateOp::Subscripts triplets =
+        getSubscriptsFromArgs(recipe.getCopyRegion().getArguments());
+    auto leftEntity = hlfir::Entity{leftDeclOp.getBase()};
+    auto left =
+        genDesignateWithTriplets(firBuilder, loc, leftEntity, triplets, shape);
+    auto rightEntity = hlfir::Entity{rightDeclOp.getBase()};
+    auto right =
+        genDesignateWithTriplets(firBuilder, loc, rightEntity, triplets, shape);
+
+    firBuilder.create<hlfir::AssignOp>(loc, left, right);
+
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
     fir::FirOpBuilder firBuilder{builder, recipe.getOperation()};
     llvm::SmallVector<mlir::Value> tripletArgs;
