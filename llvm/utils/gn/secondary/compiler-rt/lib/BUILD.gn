@@ -5,7 +5,10 @@ group("lib") {
     "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
   ]
   if (current_os == "linux") {
-    deps += [ "//compiler-rt/lib/msan" ]
+    deps += [
+      "//compiler-rt/lib/builtins:crt",
+      "//compiler-rt/lib/msan",
+    ]
   }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/lib/ubsan_minimal" ]
