@@ -9577,8 +9577,8 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  // For f16 require arcp only.
-  // For f32 require afn+arcp.
+  // For f16 require afn or arcp.
+  // For f32 require afn.
   if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
     return SDValue();
 
