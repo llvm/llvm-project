@@ -19,9 +19,8 @@
 #include "llvm/Support/KnownBits.h"
 #include <type_traits>
 
-
 namespace llvm {
-  struct SimplifyQuery;
+struct SimplifyQuery;
 }
 
 llvm::KnownBits computeKnownBits(const llvm::Value *V, unsigned Depth,

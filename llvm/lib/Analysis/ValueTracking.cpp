@@ -180,10 +180,10 @@ void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
 }
 
 KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                  unsigned Depth, const SimplifyQuery &Q);
+                           unsigned Depth, const SimplifyQuery &Q);
 
 KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                                  const SimplifyQuery &Q);
+                           const SimplifyQuery &Q);
 
 KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  unsigned Depth, AssumptionCache *AC,
@@ -256,9 +256,8 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
       return true;
   }
 
-  return KnownBits::haveNoCommonBitsSet(
-      LHSCache.getKnownBits(SQ),
-      RHSCache.getKnownBits(SQ));
+  return KnownBits::haveNoCommonBitsSet(LHSCache.getKnownBits(SQ),
+                                        RHSCache.getKnownBits(SQ));
 }
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
@@ -1788,7 +1787,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 /// Determine which bits of V are known to be either zero or one and return
 /// them.
 KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                 unsigned Depth, const SimplifyQuery &Q) {
+                           unsigned Depth, const SimplifyQuery &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
   computeKnownBits(V, DemandedElts, Known, Depth, Q);
   return Known;
@@ -1797,7 +1796,7 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
 /// Determine which bits of V are known to be either zero or one and return
 /// them.
 KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                                 const SimplifyQuery &Q) {
+                           const SimplifyQuery &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
   computeKnownBits(V, Known, Depth, Q);
   return Known;
