@@ -619,6 +619,9 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
     case CallingConvention::DW_CC_LLVM_X86RegCall:
       OS << " __attribute__((regcall))";
       break;
+    case CallingConvention::DW_CC_LLVM_M68kRTD:
+      OS << " __attribute__((m68k_rtd))";
+      break;
     }
   }
 

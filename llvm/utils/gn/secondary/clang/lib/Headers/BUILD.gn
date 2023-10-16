@@ -273,6 +273,7 @@ copy("Headers") {
     "tsxldtrkintrin.h",
     "uintrintrin.h",
     "unwind.h",
+    "usermsrintrin.h",
     "vadefs.h",
     "vaesintrin.h",
     "varargs.h",
