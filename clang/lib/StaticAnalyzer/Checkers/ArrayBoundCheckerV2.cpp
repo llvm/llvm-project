@@ -56,9 +56,9 @@ public:
 std::optional<std::pair<const SubRegion *, NonLoc>>
 computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
   QualType T = SVB.getArrayIndexType();
-  auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc LHS, NonLoc RHS) {
+  auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc L, NonLoc R) {
     // We will use this utility to add and multiply values.
-    return SVB.evalBinOpNN(State, Op, LHS, RHS, T).getAs<NonLoc>();
+    return SVB.evalBinOpNN(State, Op, L, R, T).getAs<NonLoc>();
   };
 
   const auto *Region = dyn_cast_or_null<SubRegion>(Location.getAsRegion());
