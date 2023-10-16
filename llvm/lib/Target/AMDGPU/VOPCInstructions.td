@@ -1114,8 +1114,8 @@ defm : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
 
 let OtherPredicates = [HasTrue16BitInsts] in {
-defm : FCMP_Pattern <COND_O, V_CMP_U_F16_t16_e64, f16>;
-defm : FCMP_Pattern <COND_UO, V_CMP_O_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_O, V_CMP_O_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_t16_e64, f16>;
@@ -1132,8 +1132,8 @@ defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_t16_e64, f16>;
 } // End OtherPredicates = [HasTrue16BitInsts]
 
 let OtherPredicates = [NotHasTrue16BitInsts] in {
-defm : FCMP_Pattern <COND_O, V_CMP_U_F16_e64, f16>;
-defm : FCMP_Pattern <COND_UO, V_CMP_O_F16_e64, f16>;
+defm : FCMP_Pattern <COND_O, V_CMP_O_F16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F16_e64, f16>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_e64, f16>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_e64, f16>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_e64, f16>;
