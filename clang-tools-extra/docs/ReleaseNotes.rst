@@ -122,8 +122,6 @@ Improvements to clang-tidy
   if any :program:`clang-tidy` subprocess exits with a non-zero code or if
   exporting fixes fails.
 
-- Do not emit a `return` for fixes of `modernize-avoid-bind` when the function returns void.
-
 New checks
 ^^^^^^^^^^
 
@@ -344,6 +342,10 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
+
+- Improved :doc:`modernize-avoid-bind
+  <clang-tidy/checks/modernize/avoid-bind>` check to
+  not emit a `return` for fixes when the function returns void.
 
 Removed checks
 ^^^^^^^^^^^^^^
