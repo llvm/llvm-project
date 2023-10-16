@@ -753,7 +753,7 @@ AffineMap mlir::sparse_tensor::inferLvlToDim(AffineMap dimToLvl,
                                              MLIRContext *context) {
   auto map = static_cast<AffineMap>(dimToLvl);
   AffineMap lvlToDim;
-  // TODO: support ELL instead of returning an empty lvlToDim.
+  // Return an empty lvlToDim when inference is not successful.
   if (!map || map.getNumSymbols() != 0) {
     lvlToDim = AffineMap();
   } else if (map.isPermutation()) {
@@ -791,8 +791,8 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
         auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
         assert(lvlExprComponents.find(pos) != lvlExprComponents.end() &&
                "expected floordiv before mod");
-        // Level variable for mod added to the vector of the corresponding
-        // floordiv with the same dimension.
+        // Add level variable for mod to the same vector
+        // of the corresponding floordiv.
         lvlExprComponents[pos].push_back(getAffineDimExpr(i, context));
       } else {
         assert(false && "expected floordiv or mod");
