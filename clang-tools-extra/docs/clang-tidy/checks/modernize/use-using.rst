@@ -28,6 +28,15 @@ After:
   using R_t = struct { int a; };
   using R_p = R_t*;
 
+The checker ignores `typedef` within `extern "C" { ... }` blocks.
+
+.. code-block:: c++
+
+  extern "C" {
+
+    typedef int InExternC; // Left intact.
+  }
+
 This check requires using C++11 or higher to run.
 
 Options
