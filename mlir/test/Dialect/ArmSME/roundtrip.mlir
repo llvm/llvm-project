@@ -358,81 +358,81 @@ func.func @arm_sme_tile_load_hor_f64(%src : memref<?x?xf64>) {
 // -----
 
 func.func @arm_sme_tile_load_ver_i8(%src : memref<?x?xi8>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_i16(%src : memref<?x?xi16>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_i32(%src : memref<?x?xi32>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_i64(%src : memref<?x?xi64>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_i128(%src : memref<?x?xi128>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_f16(%src : memref<?x?xf16>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_bf16(%src : memref<?x?xbf16>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_f32(%src : memref<?x?xf32>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_load_ver_f64(%src : memref<?x?xf64>) {
-  // CHECK: arm_sme.tile_load {{.*}}, <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  // CHECK: arm_sme.tile_load {{.*}} layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   return
 }
 
@@ -442,7 +442,7 @@ func.func @arm_sme_tile_load_ver_f64(%src : memref<?x?xf64>) {
 func.func @arm_sme_tile_load_explicit_hor(%src : memref<?x?xi8>) {
   // CHECK: arm_sme.tile_load %{{.*}}[{{.*}}] : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
@@ -534,81 +534,81 @@ func.func @arm_sme_tile_store_hor_f64(%tile : vector<[2]x[2]xf64>, %dest : memre
 // -----
 
 func.func @arm_sme_tile_store_ver_i8(%tile : vector<[16]x[16]xi8>, %dest : memref<?x?xi8>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_i16(%tile : vector<[8]x[8]xi16>, %dest : memref<?x?xi16>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_i32(%tile : vector<[4]x[4]xi32>, %dest : memref<?x?xi32>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_i64(%tile : vector<[2]x[2]xi64>, %dest : memref<?x?xi64>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_i128(%tile : vector<[1]x[1]xi128>, %dest : memref<?x?xi128>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_f16(%tile : vector<[8]x[8]xf16>, %dest : memref<?x?xf16>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_bf16(%tile : vector<[8]x[8]xbf16>, %dest : memref<?x?xbf16>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_f32(%tile : vector<[4]x[4]xf32>, %dest : memref<?x?xf32>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   return
 }
 
 // -----
 
 func.func @arm_sme_tile_store_ver_f64(%tile : vector<[2]x[2]xf64>, %dest : memref<?x?xf64>) {
-  // CHECK: arm_sme.tile_store {{.*}}, <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  // CHECK: arm_sme.tile_store {{.*}} layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   return
 }
 
@@ -618,7 +618,7 @@ func.func @arm_sme_tile_store_ver_f64(%tile : vector<[2]x[2]xf64>, %dest : memre
 func.func @arm_sme_tile_store_ver_i8(%tile : vector<[16]x[16]xi8>, %dest : memref<?x?xi8>) {
   // CHECK: arm_sme.tile_store %{{.*}}[{{.*}}] : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
@@ -710,81 +710,81 @@ func.func @arm_sme_load_tile_slice_hor_f64(%src : memref<?x?xf64>, %tile : vecto
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_i8(%src : memref<?x?xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_i16(%src : memref<?x?xi16>, %tile : vector<[8]x[8]xi16>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_i32(%src : memref<?x?xi32>, %tile : vector<[4]x[4]xi32>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_i64(%src : memref<?x?xi64>, %tile : vector<[2]x[2]xi64>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_i128(%src : memref<?x?xi128>, %tile : vector<[1]x[1]xi128>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_f16(%src : memref<?x?xf16>, %tile : vector<[8]x[8]xf16>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_bf16(%src : memref<?x?xbf16>, %tile : vector<[8]x[8]xbf16>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_f32(%src : memref<?x?xf32>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   return
 }
 
 // -----
 
 func.func @arm_sme_load_tile_slice_ver_f64(%src : memref<?x?xf64>, %tile : vector<[2]x[2]xf64>, %tile_slice_index : index) {
-  // CHECK: arm_sme.load_tile_slice {{.*}}, <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  // CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   return
 }
 
@@ -794,7 +794,7 @@ func.func @arm_sme_load_tile_slice_ver_f64(%src : memref<?x?xf64>, %tile : vecto
 func.func @arm_sme_load_tile_slice_hor_i8(%src : memref<?x?xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) {
   // CHECK: arm_sme.load_tile_slice %{{.*}}[{{.*}}], %{{.*}}, %{{.*}} : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index, <horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %tile, %tile_slice_index layout<horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
@@ -886,81 +886,81 @@ func.func @arm_sme_store_tile_slice_hor_f64(%tile : vector<[2]x[2]xf64>, %tile_s
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_i8(%tile : vector<[16]x[16]xi8>, %tile_slice_index : index, %dest : memref<?x?xi8>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_i16(%tile : vector<[8]x[8]xi16>, %tile_slice_index : index, %dest : memref<?x?xi16>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xi16>, vector<[8]x[8]xi16>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_i32(%tile : vector<[4]x[4]xi32>, %tile_slice_index : index, %dest : memref<?x?xi32>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_i64(%tile : vector<[2]x[2]xi64>, %tile_slice_index : index, %dest : memref<?x?xi64>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xi64>, vector<[2]x[2]xi64>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_i128(%tile : vector<[1]x[1]xi128>, %tile_slice_index : index, %dest : memref<?x?xi128>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_f16(%tile : vector<[8]x[8]xf16>, %tile_slice_index : index, %dest : memref<?x?xf16>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xf16>, vector<[8]x[8]xf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_bf16(%tile : vector<[8]x[8]xbf16>, %tile_slice_index : index, %dest : memref<?x?xbf16>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xbf16>, vector<[8]x[8]xbf16>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_f32(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index, %dest : memref<?x?xf32>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
   return
 }
 
 // -----
 
 func.func @arm_sme_store_tile_slice_ver_f64(%tile : vector<[2]x[2]xf64>, %tile_slice_index : index, %dest : memref<?x?xf64>) -> () {
-  // CHECK: arm_sme.store_tile_slice {{.*}}, <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  // CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<vertical> : memref<?x?xf64>, vector<[2]x[2]xf64>
   return
 }
 
@@ -970,7 +970,7 @@ func.func @arm_sme_store_tile_slice_ver_f64(%tile : vector<[2]x[2]xf64>, %tile_s
 func.func @arm_sme_store_tile_slice_hor_i8(%tile : vector<[16]x[16]xi8>, %tile_slice_index : index, %dest : memref<?x?xi8>) -> () {
   // CHECK: arm_sme.store_tile_slice {{.*}}, {{.*}}, %{{.*}}[{{.*}}] : memref<?x?xi8>, vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0], <horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %dest[%c0] layout<horizontal> : memref<?x?xi8>, vector<[16]x[16]xi8>
   return
 }
 
