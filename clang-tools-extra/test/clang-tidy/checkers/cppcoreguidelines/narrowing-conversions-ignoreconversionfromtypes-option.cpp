@@ -75,7 +75,7 @@ void most_narrowing_is_not_ok() {
 
 void test_ignore_builtin_type_pr58809() {
   long x = 123;
-  int y = x;
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:11: warning: narrowing conversion from 'long' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
-  // CHECK-MESSAGES-NOT-IGNORED: :[[@LINE-2]]:11: warning: narrowing conversion from 'long' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  short y = x;
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:13: warning: narrowing conversion from 'long' to signed type 'short' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES-NOT-IGNORED: :[[@LINE-2]]:13: warning: narrowing conversion from 'long' to signed type 'short' is implementation-defined [cppcoreguidelines-narrowing-conversions]
 }
