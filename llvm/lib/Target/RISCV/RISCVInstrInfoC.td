@@ -956,7 +956,13 @@ def : CompressPat<(JAL X0, simm12_lsb0:$offset),
                   (C_J simm12_lsb0:$offset)>;
 def : CompressPat<(BEQ GPRC:$rs1, X0, simm9_lsb0:$imm),
                   (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
+let isCompressOnly = true in
+def : CompressPat<(BEQ X0, GPRC:$rs1, simm9_lsb0:$imm),
+                  (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
 def : CompressPat<(BNE GPRC:$rs1, X0, simm9_lsb0:$imm),
+                  (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+let isCompressOnly = true in
+def : CompressPat<(BNE X0, GPRC:$rs1, simm9_lsb0:$imm),
                   (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 

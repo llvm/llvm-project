@@ -9,6 +9,7 @@
 #include "DWARFDeclContext.h"
 
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 const char *DWARFDeclContext::GetQualifiedName() const {
   if (m_qualified_name.empty()) {

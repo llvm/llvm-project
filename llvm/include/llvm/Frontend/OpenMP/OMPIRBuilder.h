@@ -1917,8 +1917,17 @@ public:
   ///
   /// \param Loc The location where the teams construct was encountered.
   /// \param BodyGenCB Callback that will generate the region code.
+  /// \param NumTeamsLower Lower bound on number of teams. If this is nullptr,
+  ///        it is as if lower bound is specified as equal to upperbound. If
+  ///        this is non-null, then upperbound must also be non-null.
+  /// \param NumTeamsUpper Upper bound on the number of teams.
+  /// \param ThreadLimit on the number of threads that may participate in a
+  ///        contention group created by each team.
   InsertPointTy createTeams(const LocationDescription &Loc,
-                            BodyGenCallbackTy BodyGenCB);
+                            BodyGenCallbackTy BodyGenCB,
+                            Value *NumTeamsLower = nullptr,
+                            Value *NumTeamsUpper = nullptr,
+                            Value *ThreadLimit = nullptr);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate

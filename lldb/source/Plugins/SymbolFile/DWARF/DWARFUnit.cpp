@@ -28,6 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 extern int g_verbose;
 
@@ -201,8 +202,8 @@ DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(ScopedExtractDIEs &&rhs)
   rhs.m_cu = nullptr;
 }
 
-DWARFUnit::ScopedExtractDIEs &DWARFUnit::ScopedExtractDIEs::operator=(
-    DWARFUnit::ScopedExtractDIEs &&rhs) {
+DWARFUnit::ScopedExtractDIEs &
+DWARFUnit::ScopedExtractDIEs::operator=(DWARFUnit::ScopedExtractDIEs &&rhs) {
   m_cu = rhs.m_cu;
   rhs.m_cu = nullptr;
   m_clear_dies = rhs.m_clear_dies;
@@ -311,9 +312,9 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   if (!m_die_array.empty()) {
-    // The last die cannot have children (if it did, it wouldn't be the last one).
-    // This only makes a difference for malformed dwarf that does not have a
-    // terminating null die.
+    // The last die cannot have children (if it did, it wouldn't be the last
+    // one). This only makes a difference for malformed dwarf that does not have
+    // a terminating null die.
     m_die_array.back().SetHasChildren(false);
 
     if (m_first_die) {
@@ -720,7 +721,7 @@ void DWARFUnit::ParseProducerInfo() {
 
   llvm::SmallVector<llvm::StringRef, 3> matches;
   if (g_swiftlang_version_regex.Execute(producer, &matches)) {
-      m_producer_version.tryParse(matches[1]);
+    m_producer_version.tryParse(matches[1]);
     m_producer = eProducerSwift;
   } else if (producer.contains("clang")) {
     if (g_clang_version_regex.Execute(producer, &matches))
@@ -905,9 +906,10 @@ llvm::Error DWARFUnitHeader::ApplyIndexEntry(
   return llvm::Error::success();
 }
 
-llvm::Expected<DWARFUnitHeader> DWARFUnitHeader::extract(
-    const DWARFDataExtractor &data, DIERef::Section section,
-    lldb_private::DWARFContext &context, lldb::offset_t *offset_ptr) {
+llvm::Expected<DWARFUnitHeader>
+DWARFUnitHeader::extract(const DWARFDataExtractor &data,
+                         DIERef::Section section, DWARFContext &context,
+                         lldb::offset_t *offset_ptr) {
   DWARFUnitHeader header;
   header.m_offset = *offset_ptr;
   header.m_length = data.GetDWARFInitialLength(offset_ptr);
@@ -1086,22 +1088,20 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   return ranges;
 }
 
-llvm::Expected<DWARFRangeList>
-DWARFUnit::FindRnglistFromIndex(uint32_t index) {
+llvm::Expected<DWARFRangeList> DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   llvm::Expected<uint64_t> maybe_offset = GetRnglistOffset(index);
   if (!maybe_offset)
     return maybe_offset.takeError();
   return FindRnglistFromOffset(*maybe_offset);
 }
 
-
 bool DWARFUnit::HasAny(llvm::ArrayRef<dw_tag_t> tags) {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
     return m_dwo->HasAny(tags);
 
-  for (const auto &die: m_die_array) {
-    for (const auto tag: tags) {
+  for (const auto &die : m_die_array) {
+    for (const auto tag : tags) {
       if (tag == die.Tag())
         return true;
     }

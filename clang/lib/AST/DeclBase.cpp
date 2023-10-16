@@ -470,8 +470,9 @@ bool Decl::isFlexibleArrayMemberLike(
       }
 
       if (auto CTL = TL.getAs<ConstantArrayTypeLoc>()) {
-        const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
-        if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
+        if (const Expr *SizeExpr =
+                dyn_cast_if_present<IntegerLiteral>(CTL.getSizeExpr());
+            !SizeExpr || SizeExpr->getExprLoc().isMacroID())
           return false;
       }
 

@@ -237,6 +237,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``, ``sizeof``, ...).
 
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  to ignore unused parameters when they are marked as unused.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
@@ -267,7 +271,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
-  iterators initialized by free functions like ``begin``, ``end``, or ``size``.
+  iterators initialized by free functions like ``begin``, ``end``, or ``size``
+  and avoid crash for array of dependent array.
 
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
@@ -312,6 +317,10 @@ Changes in existing checks
   detect comparison between string and empty string literals and support
   ``length()`` method as an alternative to ``size()``.
 
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check configuration to use
+  `none` rather than `-1` to disable some parameters.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to issue accurate
   warnings when a type's forward declaration precedes its definition.
@@ -333,7 +342,6 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
-
 
 Removed checks
 ^^^^^^^^^^^^^^
