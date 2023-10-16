@@ -374,6 +374,11 @@
 // EVEX512: "-target-feature" "+evex512"
 // NO-EVEX512: "-target-feature" "-evex512"
 
+// RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
+// RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
+// USERMSR: "-target-feature" "+usermsr"
+// NO-USERMSR: "-target-feature" "-usermsr"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"
