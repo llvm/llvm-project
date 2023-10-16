@@ -119,7 +119,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       "Value *V, DemandedMask and Known must have same BitWidth");
 
   if (isa<Constant>(V)) {
-    computeKnownBits(V, Known, Depth, CxtI);
+    Known = computeKnownBits(V, Depth, CxtI);
     return nullptr;
   }
 
@@ -132,7 +132,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
-    computeKnownBits(V, Known, Depth, CxtI);
+    Known = computeKnownBits(V, Depth, CxtI);
     return nullptr;        // Only analyze instructions.
   }
 
@@ -184,7 +184,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
   switch (I->getOpcode()) {
   default:
-    computeKnownBits(I, Known, Depth, CxtI);
+    Known = computeKnownBits(I, Depth, CxtI);
     break;
   case Instruction::And: {
     // If either the LHS or the RHS are Zero, the result is zero.
@@ -598,7 +598,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return InsertNewInstWith(And1, I->getIterator());
     }
 
-    computeKnownBits(I, Known, Depth, CxtI);
+    Known = computeKnownBits(I, Depth, CxtI);
     break;
   }
   case Instruction::Shl: {
@@ -660,7 +660,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           return I;
         }
       }
-      computeKnownBits(I, Known, Depth, CxtI);
+      Known = computeKnownBits(I, Depth, CxtI);
     }
     break;
   }
@@ -712,7 +712,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (ShiftAmt)
         Known.Zero.setHighBits(ShiftAmt);  // high bits known zero.
     } else {
-      computeKnownBits(I, Known, Depth, CxtI);
+      Known = computeKnownBits(I, Depth, CxtI);
     }
     break;
   }
@@ -775,7 +775,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Known.One |= HighBits;
       }
     } else {
-      computeKnownBits(I, Known, Depth, CxtI);
+      Known = computeKnownBits(I, Depth, CxtI);
     }
     break;
   }
@@ -797,7 +797,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       Known = KnownBits::udiv(LHSKnown, KnownBits::makeConstant(*SA),
                               cast<BinaryOperator>(I)->isExact());
     } else {
-      computeKnownBits(I, Known, Depth, CxtI);
+      Known = computeKnownBits(I, Depth, CxtI);
     }
     break;
   }
@@ -837,7 +837,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
     }
 
-    computeKnownBits(I, Known, Depth, CxtI);
+    Known = computeKnownBits(I, Depth, CxtI);
     break;
   }
   case Instruction::URem: {
@@ -977,7 +977,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     }
 
     if (!KnownBitsComputed)
-      computeKnownBits(V, Known, Depth, CxtI);
+      Known = computeKnownBits(V, Depth, CxtI);
     break;
   }
   }
@@ -1007,8 +1007,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   // this instruction has a simpler value in that context.
   switch (I->getOpcode()) {
   case Instruction::And: {
-    computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
+    RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, CxtI);
+    LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, CxtI);
     Known = LHSKnown & RHSKnown;
     computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
@@ -1027,8 +1027,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     break;
   }
   case Instruction::Or: {
-    computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
+    RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, CxtI);
+    LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, CxtI);
     Known = LHSKnown | RHSKnown;
     computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
@@ -1049,8 +1049,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     break;
   }
   case Instruction::Xor: {
-    computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
+    RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, CxtI);
+    LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, CxtI);
     Known = LHSKnown ^ RHSKnown;
     computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
@@ -1075,11 +1075,11 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     // If an operand adds zeros to every bit below the highest demanded bit,
     // that operand doesn't change the result. Return the other side.
-    computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
+    RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, CxtI);
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
 
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
+    LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, CxtI);
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
@@ -1094,19 +1094,19 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     // If an operand subtracts zeros from every bit below the highest demanded
     // bit, that operand doesn't change the result. Return the other side.
-    computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
+    RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, CxtI);
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
+    LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, CxtI);
     Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
     computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::AShr: {
     // Compute the Known bits to simplify things downstream.
-    computeKnownBits(I, Known, Depth, CxtI);
+    Known = computeKnownBits(I, Depth, CxtI);
 
     // If this user is only demanding bits that we know, return the known
     // constant.
@@ -1133,7 +1133,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   }
   default:
     // Compute the Known bits to simplify things downstream.
-    computeKnownBits(I, Known, Depth, CxtI);
+    Known = computeKnownBits(I, Depth, CxtI);
 
     // If this user is only demanding bits that we know, return the known
     // constant.

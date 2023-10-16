@@ -70,13 +70,10 @@ void DemandedBits::determineLiveOperandBits(
         KnownBitsComputed = true;
 
         const DataLayout &DL = UserI->getModule()->getDataLayout();
-        Known = KnownBits(BitWidth);
-        computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
+        Known = computeKnownBits(V1, DL, 0, &AC, UserI, &DT);
 
-        if (V2) {
-          Known2 = KnownBits(BitWidth);
-          computeKnownBits(V2, Known2, DL, 0, &AC, UserI, &DT);
-        }
+        if (V2)
+          Known2 = computeKnownBits(V2, DL, 0, &AC, UserI, &DT);
       };
 
   switch (UserI->getOpcode()) {

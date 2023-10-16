@@ -1262,9 +1262,8 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   if (!Safe) {
     // When computing known bits, use the GEPs as context instructions, since
     // they likely are in the same BB as the load/store.
-    KnownBits Known(BitWidth);
-    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, 0, &AC,
-                     ContextInst, &DT);
+    KnownBits Known = computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), DL, 0,
+                                       &AC, ContextInst, &DT);
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
