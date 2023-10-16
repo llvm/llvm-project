@@ -20,12 +20,9 @@
 
 namespace llvm {
 struct SimplifyQuery;
-}
+KnownBits computeKnownBits(const Value *V, unsigned Depth,
+                           const SimplifyQuery &Q);
 
-llvm::KnownBits computeKnownBits(const llvm::Value *V, unsigned Depth,
-                                 const llvm::SimplifyQuery &Q);
-
-namespace llvm {
 template <typename Arg> class WithCache {
   static_assert(std::is_pointer_v<Arg>, "WithCache requires a pointer type!");
 
