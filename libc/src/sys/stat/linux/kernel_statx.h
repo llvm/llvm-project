@@ -67,14 +67,14 @@ constexpr unsigned int STATX_BASIC_STATS_MASK = 0x7FF;
 
 } // Anonymous namespace
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
                       struct stat *__restrict statbuf) {
   // We make a statx syscall and copy out the result into the |statbuf|.
   ::statx_buf xbuf;
-  int ret = __llvm_libc::syscall_impl<int>(SYS_statx, dirfd, path, flags,
-                                           ::STATX_BASIC_STATS_MASK, &xbuf);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_statx, dirfd, path, flags,
+                                              ::STATX_BASIC_STATS_MASK, &xbuf);
   if (ret < 0)
     return -ret;
 
@@ -98,6 +98,6 @@ LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H

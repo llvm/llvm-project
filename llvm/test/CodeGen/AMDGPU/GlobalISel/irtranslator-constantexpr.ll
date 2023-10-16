@@ -27,7 +27,7 @@ define i32 @test_fcmp_constexpr() {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @a
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s64)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[GV]], [[C]](s64)
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[PTR_ADD]](p0), [[GV1]]
   ; CHECK-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[ICMP]](s1)

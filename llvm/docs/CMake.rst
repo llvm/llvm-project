@@ -334,6 +334,15 @@ enabled sub-projects. Nearly all of these variable names begin with
   need revision info can disable this option to avoid re-linking most binaries
   after a branch switch. Defaults to ON.
 
+**LLVM_FORCE_VC_REVISION**:STRING
+  Force a specific Git revision id rather than calling to git to determine it.
+  This is useful in environments where git is not available or non-functional
+  but the VC revision is available through other means.
+
+**LLVM_FORCE_VC_REPOSITORY**:STRING
+  Set the git repository to include in version info rather than calling git to
+  determine it.
+
 **LLVM_BUILD_32_BITS**:BOOL
   Build 32-bit executables and libraries on 64-bit systems. This option is
   available only on some 64-bit Unix systems. Defaults to OFF.
@@ -723,6 +732,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   intended for cross-compiling: if the user sets this variable and the
   directory contains executables with the expected names, no separate
   native versions of those executables will be built.
+
+**LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE**:BOOL
+  Defaults to ``OFF``. If set to ``ON``, CMake's default logic for library IDs
+  on Darwin in the build tree will be used. Otherwise the install-time library
+  IDs will be used in the build tree as well. Mainly useful when other CMake
+  library ID control variables (e.g., ``CMAKE_INSTALL_NAME_DIR``) are being
+  set to non-standard values.
 
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will

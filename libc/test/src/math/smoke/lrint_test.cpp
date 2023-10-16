@@ -10,4 +10,4 @@
 
 #include "src/math/lrint.h"
 
-LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(double, long, __llvm_libc::lrint)
+LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(double, long, LIBC_NAMESPACE::lrint)

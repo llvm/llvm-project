@@ -17,7 +17,7 @@
 static_assert(LIBC_HAS_BUILTIN(__builtin_fma), "FMA builtins must be defined");
 static_assert(LIBC_HAS_BUILTIN(__builtin_fmaf), "FMA builtins must be defined");
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T>
@@ -31,6 +31,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GPU_FMA_H

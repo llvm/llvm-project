@@ -15,7 +15,7 @@
 
 #include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // A trimmed down implementation of std::span.
 // Missing features:
@@ -119,6 +119,6 @@ private:
   size_t span_size;
 };
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H

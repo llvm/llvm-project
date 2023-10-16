@@ -9,8 +9,8 @@
 #include "src/math/tanf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, tanf, (float x)) { return __builtin_tanf(x); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

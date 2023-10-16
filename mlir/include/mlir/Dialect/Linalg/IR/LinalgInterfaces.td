@@ -555,12 +555,12 @@ def LinalgStructuredInterface
         are expection. For example, in `map` output operand isn't used in
         the block.
       }],
-      /*retTy=*/"OpOperandVector",
+      /*retTy=*/"::llvm::SmallVector<OpOperand *>",
       /*methodName=*/"getOpOperandsMatchingBBargs",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        OpOperandVector result;
+        ::llvm::SmallVector<OpOperand *> result;
         result.reserve($_op->getNumOperands());
         llvm::transform(
           this->getOperation()->getOpOperands(),

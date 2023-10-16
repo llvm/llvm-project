@@ -3122,3 +3122,123 @@ define void @callee_no_irq() nounwind{
   store volatile [32 x i32] %val, [32 x i32]* @var_test_irq
   ret void
 }
+
+declare void @bar(ptr, ptr)
+declare ptr @llvm.frameaddress.p0(i32 immarg)
+
+define i32 @use_fp(i32 %x) {
+; RV32IZCMP-LABEL: use_fp:
+; RV32IZCMP:       # %bb.0: # %entry
+; RV32IZCMP-NEXT:    cm.push {ra, s0-s1}, -32
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV32IZCMP-NEXT:    .cfi_offset ra, -12
+; RV32IZCMP-NEXT:    .cfi_offset s0, -8
+; RV32IZCMP-NEXT:    .cfi_offset s1, -4
+; RV32IZCMP-NEXT:    addi s0, sp, 32
+; RV32IZCMP-NEXT:    .cfi_def_cfa s0, 0
+; RV32IZCMP-NEXT:    mv s1, a0
+; RV32IZCMP-NEXT:    addi a1, s0, -20
+; RV32IZCMP-NEXT:    mv a0, s0
+; RV32IZCMP-NEXT:    call bar@plt
+; RV32IZCMP-NEXT:    mv a0, s1
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s1}, 32
+;
+; RV64IZCMP-LABEL: use_fp:
+; RV64IZCMP:       # %bb.0: # %entry
+; RV64IZCMP-NEXT:    cm.push {ra, s0-s1}, -48
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 48
+; RV64IZCMP-NEXT:    .cfi_offset ra, -24
+; RV64IZCMP-NEXT:    .cfi_offset s0, -16
+; RV64IZCMP-NEXT:    .cfi_offset s1, -8
+; RV64IZCMP-NEXT:    addi s0, sp, 48
+; RV64IZCMP-NEXT:    .cfi_def_cfa s0, 0
+; RV64IZCMP-NEXT:    mv s1, a0
+; RV64IZCMP-NEXT:    addi a1, s0, -36
+; RV64IZCMP-NEXT:    mv a0, s0
+; RV64IZCMP-NEXT:    call bar@plt
+; RV64IZCMP-NEXT:    mv a0, s1
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s1}, 48
+;
+; RV32IZCMP-SR-LABEL: use_fp:
+; RV32IZCMP-SR:       # %bb.0: # %entry
+; RV32IZCMP-SR-NEXT:    cm.push {ra, s0-s1}, -32
+; RV32IZCMP-SR-NEXT:    .cfi_def_cfa_offset 32
+; RV32IZCMP-SR-NEXT:    .cfi_offset ra, -12
+; RV32IZCMP-SR-NEXT:    .cfi_offset s0, -8
+; RV32IZCMP-SR-NEXT:    .cfi_offset s1, -4
+; RV32IZCMP-SR-NEXT:    addi s0, sp, 32
+; RV32IZCMP-SR-NEXT:    .cfi_def_cfa s0, 0
+; RV32IZCMP-SR-NEXT:    mv s1, a0
+; RV32IZCMP-SR-NEXT:    addi a1, s0, -20
+; RV32IZCMP-SR-NEXT:    mv a0, s0
+; RV32IZCMP-SR-NEXT:    call bar@plt
+; RV32IZCMP-SR-NEXT:    mv a0, s1
+; RV32IZCMP-SR-NEXT:    cm.popret {ra, s0-s1}, 32
+;
+; RV64IZCMP-SR-LABEL: use_fp:
+; RV64IZCMP-SR:       # %bb.0: # %entry
+; RV64IZCMP-SR-NEXT:    cm.push {ra, s0-s1}, -48
+; RV64IZCMP-SR-NEXT:    .cfi_def_cfa_offset 48
+; RV64IZCMP-SR-NEXT:    .cfi_offset ra, -24
+; RV64IZCMP-SR-NEXT:    .cfi_offset s0, -16
+; RV64IZCMP-SR-NEXT:    .cfi_offset s1, -8
+; RV64IZCMP-SR-NEXT:    addi s0, sp, 48
+; RV64IZCMP-SR-NEXT:    .cfi_def_cfa s0, 0
+; RV64IZCMP-SR-NEXT:    mv s1, a0
+; RV64IZCMP-SR-NEXT:    addi a1, s0, -36
+; RV64IZCMP-SR-NEXT:    mv a0, s0
+; RV64IZCMP-SR-NEXT:    call bar@plt
+; RV64IZCMP-SR-NEXT:    mv a0, s1
+; RV64IZCMP-SR-NEXT:    cm.popret {ra, s0-s1}, 48
+;
+; RV32I-LABEL: use_fp:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset ra, -4
+; RV32I-NEXT:    .cfi_offset s0, -8
+; RV32I-NEXT:    .cfi_offset s1, -12
+; RV32I-NEXT:    addi s0, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    addi a1, s0, -16
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: use_fp:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    .cfi_offset s0, -16
+; RV64I-NEXT:    .cfi_offset s1, -24
+; RV64I-NEXT:    addi s0, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    addi a1, s0, -28
+; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    call bar@plt
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
+entry:
+  %var = alloca i32, align 4
+  %0 = tail call ptr @llvm.frameaddress.p0(i32 0)
+  call void @bar(ptr %0, ptr %var)
+  ret i32 %x
+}

@@ -36,3 +36,42 @@
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/gnu"
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers/posix"
 // CHECK-C-HEADER-PATH: "-internal-isystem" "/boot/system/develop/headers"
+
+// Check x86_64-unknown-haiku, X86_64
+// RUN: %clang -### %s 2>&1 --target=x86_64-unknown-haiku \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/haiku_x86_64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-X86_64 %s
+// CHECK-LD-X86_64: "-cc1" "-triple" "x86_64-unknown-haiku"
+// CHECK-LD-X86_64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD-X86_64: "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD-X86_64-SAME: "--no-undefined"
+// CHECK-LD-X86_64-SAME: "[[SYSROOT]]/boot/system/develop/lib/crti.o"
+// CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/tools/lib/gcc/x86_64-unknown-haiku/13.2.0/crtbeginS.o"
+// CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/lib/start_dyn.o"
+// CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/lib/init_term_dyn.o"
+// CHECK-LD-X86_64-SAME: "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--no-as-needed" "--pop-state"
+// CHECK-LD-X86_64-SAME: {{^}} "-lroot"
+// CHECK-LD-X86_64-SAME: {{^}} "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--no-as-needed" "--pop-state"
+// CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/tools/lib/gcc/x86_64-unknown-haiku/13.2.0/crtendS.o"
+// CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/lib/crtn.o"
+
+// Check -rdynamic is a no-op
+// RUN: %clang -### -rdynamic %s 2>&1 --target=x86_64-unknown-haiku \
+// RUN:    | FileCheck --check-prefix=CHECK-RDYNAMIC %s
+// CHECK-RDYNAMIC-NOT: "-export-dynamic"
+
+// Check the right flags are present with -shared
+// RUN: %clang -### %s -shared 2>&1 --target=x86_64-unknown-haiku \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/haiku_x86_64_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-X86_64-SHARED %s
+// CHECK-X86_64-SHARED: "-cc1" "-triple" "x86_64-unknown-haiku"
+// CHECK-X86_64-SHARED-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-X86_64-SHARED: "{{.*}}ld{{(.exe)?}}"
+// CHECK-X86_64-SHARED-NOT: "[[SYSROOT]]/boot/system/develop/lib/start_dyn.o"
+
+// Check default ARM CPU, ARMv6
+// RUN: %clang -### %s 2>&1 --target=arm-unknown-haiku \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM-CPU %s
+// CHECK-ARM-CPU: "-target-cpu" "arm1176jzf-s"

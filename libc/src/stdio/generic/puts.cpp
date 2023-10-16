@@ -13,11 +13,11 @@
 #include "src/errno/libc_errno.h"
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
-  auto result = __llvm_libc::stdout->write(str, str_view.size());
+  auto result = LIBC_NAMESPACE::stdout->write(str, str_view.size());
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
@@ -25,7 +25,7 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  result = __llvm_libc::stdout->write("\n", 1);
+  result = LIBC_NAMESPACE::stdout->write("\n", 1);
   if (result.has_error())
     libc_errno = result.error;
   written = result.value;
@@ -36,4 +36,4 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

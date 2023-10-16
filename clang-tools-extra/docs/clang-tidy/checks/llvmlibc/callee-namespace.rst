@@ -3,14 +3,18 @@
 llvmlibc-callee-namespace
 ====================================
 
-Checks all calls resolve to functions within ``__llvm_libc`` namespace.
+Checks all calls resolve to functions within correct namespace.
 
 .. code-block:: c++
 
-    namespace __llvm_libc {
+    // Implementation inside the LIBC_NAMESPACE namespace.
+    // Correct if:
+    // - LIBC_NAMESPACE is a macro
+    // - LIBC_NAMESPACE expansion starts with `__llvm_libc`
+    namespace LIBC_NAMESPACE {
 
     // Allow calls with the fully qualified name.
-    __llvm_libc::strlen("hello");
+    LIBC_NAMESPACE::strlen("hello");
 
     // Allow calls to compiler provided functions.
     (void)__builtin_abs(-1);
@@ -21,4 +25,4 @@ Checks all calls resolve to functions within ``__llvm_libc`` namespace.
     // Disallow calling into functions in the global namespace.
     ::strlen("!");
 
-    } // namespace __llvm_libc
+    } // namespace LIBC_NAMESPACE

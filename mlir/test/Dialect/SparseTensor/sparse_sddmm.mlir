@@ -55,7 +55,7 @@ func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 }
 
 // CHECK-LABEL:   func.func @sampled_dd_unfused(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>,
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>,
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<8x8xf64>,
 // CHECK-SAME:      %[[VAL_2:.*]]: tensor<8x8xf64>) -> tensor<8x8xf64> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 8 : index

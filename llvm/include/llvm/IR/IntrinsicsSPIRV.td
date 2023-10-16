@@ -33,4 +33,8 @@ let TargetPrefix = "spv" in {
   def int_spv_unreachable : Intrinsic<[], []>;
   def int_spv_alloca : Intrinsic<[llvm_any_ty], []>;
   def int_spv_undef : Intrinsic<[llvm_i32_ty], []>;
+
+  // Expect, Assume Intrinsics
+  def int_spv_assume : Intrinsic<[], [llvm_i1_ty]>;
+  def int_spv_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }

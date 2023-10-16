@@ -244,6 +244,14 @@ bool ModFileWriter::PutComponents(const Symbol &typeSymbol) {
   }
 }
 
+// Return the symbol's attributes that should be written
+// into the mod file.
+static Attrs getSymbolAttrsToWrite(const Symbol &symbol) {
+  // Is SAVE attribute is implicit, it should be omitted
+  // to not violate F202x C862 for a common block member.
+  return symbol.attrs() & ~(symbol.implicitAttrs() & Attrs{Attr::SAVE});
+}
+
 static llvm::raw_ostream &PutGenericName(
     llvm::raw_ostream &os, const Symbol &symbol) {
   if (IsGenericDefinedOp(symbol)) {
@@ -314,7 +322,7 @@ void ModFileWriter::PutSymbol(
             }
             decls_ << '\n';
             if (symbol.attrs().test(Attr::BIND_C)) {
-              PutAttrs(decls_, symbol.attrs(), x.bindName(),
+              PutAttrs(decls_, getSymbolAttrsToWrite(symbol), x.bindName(),
                   x.isExplicitBindName(), ""s);
               decls_ << "::/" << symbol.name() << "/\n";
             }
@@ -723,7 +731,7 @@ void ModFileWriter::PutObjectEntity(
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
-      symbol.attrs());
+      getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
   PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());

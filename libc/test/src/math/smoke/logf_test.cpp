@@ -17,11 +17,13 @@
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcLogfTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::logf(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::logf(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(0.0f), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::logf(-0.0f), FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::logf(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::logf(1.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::logf(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::logf(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::logf(0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::logf(-0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(-1.0f), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::logf(1.0f));
 }

@@ -84,6 +84,9 @@ InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVRegisterBankInfo &);
 void initializeRISCVDAGToDAGISelPass(PassRegistry &);
 
+FunctionPass *createRISCVPostLegalizerCombiner();
+void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);
+
 FunctionPass *createRISCVO0PreLegalizerCombiner();
 void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
 

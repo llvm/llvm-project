@@ -79,7 +79,7 @@ public:
       Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  bnd, idx);
       Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
-      result = rewriter.create<vector::InsertOp>(loc, dstType, sel, result, d);
+      result = rewriter.create<vector::InsertOp>(loc, sel, result, d);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -151,8 +151,8 @@ public:
     Value result = rewriter.create<arith::ConstantOp>(
         loc, dstType, rewriter.getZeroAttr(dstType));
     for (int64_t d = 0; d < trueDimSize; d++)
-      result =
-          rewriter.create<vector::InsertOp>(loc, dstType, trueVal, result, d);
+      result = rewriter.create<vector::InsertOp>(loc, trueVal, result, d);
+
     rewriter.replaceOp(op, result);
     return success();
   }

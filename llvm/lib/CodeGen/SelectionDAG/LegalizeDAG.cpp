@@ -2251,7 +2251,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   // Also pass the return address of the remainder.
   SDValue FIPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = FIPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = isSigned;
   Entry.IsZExt = !isSigned;
   Args.push_back(Entry);
@@ -2342,7 +2342,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   // Pass the return address of sin.
   SDValue SinPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = SinPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = false;
   Entry.IsZExt = false;
   Args.push_back(Entry);
@@ -2350,7 +2350,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   // Also pass the return address of the cos.
   SDValue CosPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = CosPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = false;
   Entry.IsZExt = false;
   Args.push_back(Entry);

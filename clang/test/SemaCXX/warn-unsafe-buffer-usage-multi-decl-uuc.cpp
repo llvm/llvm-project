@@ -3,11 +3,11 @@ void bar(int * param) {}
 
 void foo1a() {
   int *r = new int[7];
-  int *p = new int[4];  // expected-warning{{'p' is an unsafe pointer used for buffer access}} expected-note{{change type of 'p' to 'std::span' to preserve bounds information, and change 'r' to 'std::span' to propagate bounds information between them}}
+  int *p = new int[4];  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   p = r;
   int tmp = p[9];  // expected-note{{used in buffer access here}}
   int *q;
-  q = r;
+  q = r;           // FIXME: we do not fix `q = r` here as the `.data()` fix-it is not generally correct
 }
 
 void uuc_if_body() {

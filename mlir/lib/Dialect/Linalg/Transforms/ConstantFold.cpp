@@ -97,8 +97,8 @@ public:
                       [](AffineMap map) { return map.isPermutation(); }))
       return failure();
 
-    for (OpOperand *operand : genericOp.getDpsInitOperands()) {
-      if (genericOp.payloadUsesValueFromOperand(operand))
+    for (OpOperand &operand : genericOp.getDpsInitsMutable()) {
+      if (genericOp.payloadUsesValueFromOperand(&operand))
         return failure();
     }
 

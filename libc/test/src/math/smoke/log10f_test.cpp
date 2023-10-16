@@ -18,17 +18,18 @@
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcLog10fTest, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, __llvm_libc::log10f(aNaN));
-  EXPECT_FP_EQ(inf, __llvm_libc::log10f(inf));
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log10f(neg_inf), FE_INVALID);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log10f(0.0f), FE_DIVBYZERO);
-  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, __llvm_libc::log10f(-0.0f),
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log10f(aNaN));
+  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log10f(inf));
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(neg_inf), FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log10f(0.0f),
                               FE_DIVBYZERO);
-  EXPECT_FP_IS_NAN_WITH_EXCEPTION(__llvm_libc::log10f(-1.0f), FE_INVALID);
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, __llvm_libc::log10f(1.0f));
+  EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, LIBC_NAMESPACE::log10f(-0.0f),
+                              FE_DIVBYZERO);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log10f(-1.0f), FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log10f(1.0f));
 
   float x = 1.0f;
   for (int i = 0; i < 11; ++i, x *= 10.0f) {
-    EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float>(i), __llvm_libc::log10f(x));
+    EXPECT_FP_EQ_ALL_ROUNDING(static_cast<float>(i), LIBC_NAMESPACE::log10f(x));
   }
 }

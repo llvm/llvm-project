@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-// Extracts the variant information from the top 8 bits in the version and
+// Extracts the variant information from the top 32 bits in the version and
 // returns an enum specifying the variants present.
 static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
@@ -92,7 +92,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
                       const uint64_t BinaryIdsSize,
                       const uint8_t *BinaryIdsStart,
                       std::vector<llvm::object::BuildID> &BinaryIds,
-                      const llvm::support::endianness Endian) {
+                      const llvm::endianness Endian) {
   using namespace support;
 
   if (BinaryIdsSize == 0)
@@ -112,10 +112,11 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
           "not enough data to read binary id length");
 
     uint64_t BILen = 0;
-    if (Endian == little)
-      BILen = endian::readNext<uint64_t, little, unaligned>(BI);
+    if (Endian == llvm::endianness::little)
+      BILen =
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(BI);
     else
-      BILen = endian::readNext<uint64_t, big, unaligned>(BI);
+      BILen = endian::readNext<uint64_t, llvm::endianness::big, unaligned>(BI);
 
     if (BILen == 0)
       return make_error<InstrProfError>(instrprof_error::malformed,
@@ -145,7 +146,7 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
                                     const MemoryBuffer &DataBuffer,
                                     uint64_t BinaryIdsSize,
                                     const uint8_t *BinaryIdsStart,
-                                    llvm::support::endianness Endian) {
+                                    llvm::endianness Endian) {
   if (BinaryIdsSize == 0)
     return Error::success();
 
@@ -471,7 +472,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
   uint64_t Magic =
     *reinterpret_cast<const uint64_t *>(DataBuffer.getBufferStart());
   return RawInstrProf::getMagic<IntPtrT>() == Magic ||
-         sys::getSwappedBytes(RawInstrProf::getMagic<IntPtrT>()) == Magic;
+         llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
 template <class IntPtrT>
@@ -800,7 +801,8 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     // Read hash.
     if (D + sizeof(uint64_t) >= End)
       return data_type();
-    uint64_t Hash = endian::readNext<uint64_t, little, unaligned>(D);
+    uint64_t Hash =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D);
 
     // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
@@ -808,7 +810,8 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     if (GET_VERSION(FormatVersion) != IndexedInstrProf::ProfVersion::Version1) {
       if (D + sizeof(uint64_t) > End)
         return data_type();
-      CountsSize = endian::readNext<uint64_t, little, unaligned>(D);
+      CountsSize =
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D);
     }
     // Read counter values.
     if (D + CountsSize * sizeof(uint64_t) > End)
@@ -817,7 +820,8 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     CounterBuffer.clear();
     CounterBuffer.reserve(CountsSize);
     for (uint64_t J = 0; J < CountsSize; ++J)
-      CounterBuffer.push_back(endian::readNext<uint64_t, little, unaligned>(D));
+      CounterBuffer.push_back(
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D));
 
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer));
 
@@ -1001,8 +1005,8 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
   if (DataBuffer.getBufferSize() < 8)
     return false;
-  uint64_t Magic =
-      endian::read<uint64_t, little, aligned>(DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
+      DataBuffer.getBufferStart());
   // Verify that it's magical.
   return Magic == IndexedInstrProf::Magic;
 }
@@ -1016,10 +1020,10 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   if (Version >= IndexedInstrProf::Version4) {
     const IndexedInstrProf::Summary *SummaryInLE =
         reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
-    uint64_t NFields =
-        endian::byte_swap<uint64_t, little>(SummaryInLE->NumSummaryFields);
-    uint64_t NEntries =
-        endian::byte_swap<uint64_t, little>(SummaryInLE->NumCutoffEntries);
+    uint64_t NFields = endian::byte_swap<uint64_t, llvm::endianness::little>(
+        SummaryInLE->NumSummaryFields);
+    uint64_t NEntries = endian::byte_swap<uint64_t, llvm::endianness::little>(
+        SummaryInLE->NumCutoffEntries);
     uint32_t SummarySize =
         IndexedInstrProf::Summary::getSize(NFields, NEntries);
     std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
@@ -1028,7 +1032,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
     const uint64_t *Src = reinterpret_cast<const uint64_t *>(SummaryInLE);
     uint64_t *Dst = reinterpret_cast<uint64_t *>(SummaryData.get());
     for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
-      Dst[I] = endian::byte_swap<uint64_t, little>(Src[I]);
+      Dst[I] = endian::byte_swap<uint64_t, llvm::endianness::little>(Src[I]);
 
     SummaryEntryVector DetailedSummary;
     for (unsigned I = 0; I < SummaryData->NumCutoffEntries; I++) {
@@ -1085,11 +1089,12 @@ Error IndexedInstrProfReader::readHeader() {
                     /* UseCS */ true);
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(
-      endian::byte_swap<uint64_t, little>(Header->HashType));
+      endian::byte_swap<uint64_t, llvm::endianness::little>(Header->HashType));
   if (HashType > IndexedInstrProf::HashT::Last)
     return error(instrprof_error::unsupported_hash_type);
 
-  uint64_t HashOffset = endian::byte_swap<uint64_t, little>(Header->HashOffset);
+  uint64_t HashOffset =
+      endian::byte_swap<uint64_t, llvm::endianness::little>(Header->HashOffset);
 
   // The hash table with profile counts comes next.
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
@@ -1100,19 +1105,23 @@ Error IndexedInstrProfReader::readHeader() {
   if (GET_VERSION(Header->formatVersion()) >= 8 &&
       Header->formatVersion() & VARIANT_MASK_MEMPROF) {
     uint64_t MemProfOffset =
-        endian::byte_swap<uint64_t, little>(Header->MemProfOffset);
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->MemProfOffset);
 
     const unsigned char *Ptr = Start + MemProfOffset;
     // The value returned from RecordTableGenerator.Emit.
     const uint64_t RecordTableOffset =
-        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
     // The offset in the stream right before invoking
     // FrameTableGenerator.Emit.
     const uint64_t FramePayloadOffset =
-        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
     // The value returned from FrameTableGenerator.Emit.
     const uint64_t FrameTableOffset =
-        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
 
     // Read the schema.
     auto SchemaOr = memprof::readMemProfSchema(Ptr);
@@ -1137,10 +1146,13 @@ Error IndexedInstrProfReader::readHeader() {
   // is higher than 9 (when it was introduced).
   if (GET_VERSION(Header->formatVersion()) >= 9) {
     uint64_t BinaryIdOffset =
-        endian::byte_swap<uint64_t, little>(Header->BinaryIdOffset);
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->BinaryIdOffset);
     const unsigned char *Ptr = Start + BinaryIdOffset;
     // Read binary ids size.
-    BinaryIdsSize = support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    BinaryIdsSize =
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
       return error(instrprof_error::bad_header);
     // Set the binary ids start.
@@ -1153,31 +1165,37 @@ Error IndexedInstrProfReader::readHeader() {
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
       Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
     uint64_t TemporalProfTracesOffset =
-        endian::byte_swap<uint64_t, little>(Header->TemporalProfTracesOffset);
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->TemporalProfTracesOffset);
     const unsigned char *Ptr = Start + TemporalProfTracesOffset;
     const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
     // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
     if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
       return error(instrprof_error::truncated);
     const uint64_t NumTraces =
-        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
     TemporalProfTraceStreamSize =
-        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
     for (unsigned i = 0; i < NumTraces; i++) {
       // Expect at least two 64 bit fields: Weight and NumFunctions
       if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
         return error(instrprof_error::truncated);
       TemporalProfTraceTy Trace;
       Trace.Weight =
-          support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+          support::endian::readNext<uint64_t, llvm::endianness::little,
+                                    unaligned>(Ptr);
       const uint64_t NumFunctions =
-          support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+          support::endian::readNext<uint64_t, llvm::endianness::little,
+                                    unaligned>(Ptr);
       // Expect at least NumFunctions 64 bit fields
       if (Ptr + NumFunctions * sizeof(uint64_t) > PtrEnd)
         return error(instrprof_error::truncated);
       for (unsigned j = 0; j < NumFunctions; j++) {
         const uint64_t NameRef =
-            support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+            support::endian::readNext<uint64_t, llvm::endianness::little,
+                                      unaligned>(Ptr);
         Trace.FunctionNameRefs.push_back(NameRef);
       }
       TemporalProfTraces.push_back(std::move(Trace));
@@ -1337,12 +1355,12 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 Error IndexedInstrProfReader::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
   return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds, llvm::support::little);
+                               BinaryIds, llvm::endianness::little);
 }
 
 Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {
   return printBinaryIdsInternal(OS, *DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                                llvm::support::little);
+                                llvm::endianness::little);
 }
 
 void InstrProfReader::accumulateCounts(CountSumOrPercent &Sum, bool IsCS) {

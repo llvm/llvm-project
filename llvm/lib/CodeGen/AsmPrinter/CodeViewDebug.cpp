@@ -250,7 +250,10 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
         InlinedAt->getLine(), InlinedAt->getColumn(), SMLoc());
     Site->Inlinee = Inlinee;
     InlinedSubprograms.insert(Inlinee);
-    getFuncIdForSubprogram(Inlinee);
+    auto InlineeIdx = getFuncIdForSubprogram(Inlinee);
+
+    if (InlinedAt->getInlinedAt() == nullptr)
+      CurFn->Inlinees.insert(InlineeIdx);
   }
   return *Site;
 }
@@ -1194,6 +1197,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.emitInt32(uint32_t(FI.FrameProcOpts));
     endSymbolRecord(FrameProcEnd);
 
+    emitInlinees(FI.Inlinees);
     emitLocalVariableList(FI, FI.Locals);
     emitGlobalVariableList(FI.Globals);
     emitLexicalBlockList(FI.ChildBlocks, FI);
@@ -3349,7 +3353,7 @@ void CodeViewDebug::emitConstantSymbolRecord(const DIType *DTy, APSInt &Value,
 
   // Encoded integers shouldn't need more than 10 bytes.
   uint8_t Data[10];
-  BinaryStreamWriter Writer(Data, llvm::support::endianness::little);
+  BinaryStreamWriter Writer(Data, llvm::endianness::little);
   CodeViewRecordIO IO(Writer);
   cantFail(IO.mapEncodedInteger(Value));
   StringRef SRef((char *)Data, Writer.getOffset());
@@ -3586,5 +3590,33 @@ void CodeViewDebug::emitDebugInfoForJumpTables(const FunctionInfo &FI) {
     OS.AddComment("Entries count");
     OS.emitInt32(JumpTable.TableSize);
     endSymbolRecord(JumpTableEnd);
+  }
+}
+
+void CodeViewDebug::emitInlinees(
+    const SmallSet<codeview::TypeIndex, 1> &Inlinees) {
+  // Divide the list of inlinees into chunks such that each chunk fits within
+  // one record.
+  constexpr size_t ChunkSize =
+      (MaxRecordLength - sizeof(SymbolKind) - sizeof(uint32_t)) /
+      sizeof(uint32_t);
+
+  SmallVector<TypeIndex> SortedInlinees{Inlinees.begin(), Inlinees.end()};
+  llvm::sort(SortedInlinees);
+
+  size_t CurrentIndex = 0;
+  while (CurrentIndex < SortedInlinees.size()) {
+    auto Symbol = beginSymbolRecord(SymbolKind::S_INLINEES);
+    auto CurrentChunkSize =
+        std::min(ChunkSize, SortedInlinees.size() - CurrentIndex);
+    OS.AddComment("Count");
+    OS.emitInt32(CurrentChunkSize);
+
+    const size_t CurrentChunkEnd = CurrentIndex + CurrentChunkSize;
+    for (; CurrentIndex < CurrentChunkEnd; ++CurrentIndex) {
+      OS.AddComment("Inlinee");
+      OS.emitInt32(SortedInlinees[CurrentIndex].getIndex());
+    }
+    endSymbolRecord(Symbol);
   }
 }

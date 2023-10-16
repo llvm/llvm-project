@@ -12,7 +12,7 @@
 
 #include <threads.h> // For mtx_t definition.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The implementation currently handles only plain mutexes.
 LLVM_LIBC_FUNCTION(int, mtx_lock, (mtx_t * mutex)) {
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, mtx_lock, (mtx_t * mutex)) {
   return err == MutexError::NONE ? thrd_success : thrd_error;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

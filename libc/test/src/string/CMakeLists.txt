@@ -425,8 +425,11 @@ function(add_libc_multi_impl_test name)
     get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
     cpu_supports(can_run "${required_cpu_features}")
     if(can_run)
+      string(FIND ${fq_config_name} "." last_dot_loc REVERSE)
+      math(EXPR name_loc "${last_dot_loc} + 1")
+      string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
       add_libc_test(
-        ${fq_config_name}_test
+        ${target_name}_test
         SUITE
           libc-string-tests
         COMPILE_OPTIONS

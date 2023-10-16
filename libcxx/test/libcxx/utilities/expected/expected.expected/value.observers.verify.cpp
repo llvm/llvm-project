@@ -55,7 +55,7 @@ void test() {
     {
       std::expected<int, MoveOnly> e;
       [[maybe_unused]] auto val = e.value();
-      // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}error_type has to be copy constructible}}
+      // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be copy constructible}}
     }
   }
 
@@ -71,7 +71,7 @@ void test() {
     {
       const std::expected<int, MoveOnly> e;
       [[maybe_unused]] auto val = e.value();
-      // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}error_type has to be copy constructible}}
+      // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be copy constructible}}
     }
   }
 
@@ -81,7 +81,7 @@ void test() {
     {
       std::expected<int, MoveOnly> e;
       [[maybe_unused]] auto val = std::move(e).value();
-      // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
+      // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
     }
 
     // is_copy_constructible_v<E> is true and is_constructible_v<E, decltype(std::move(error()))> is true.
@@ -94,7 +94,7 @@ void test() {
     {
       std::expected<int, CopyConstructibleButNotMoveConstructible> e;
       [[maybe_unused]] auto val = std::move(e).value();
-      // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
+      // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
     }
   }
 
@@ -104,7 +104,7 @@ void test() {
     {
       const std::expected<int, MoveOnly> e;
       [[maybe_unused]] auto val = std::move(e).value();
-      // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
+      // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
     }
 
     // is_copy_constructible_v<E> is true and is_constructible_v<E, decltype(std::move(error()))> is true.
@@ -117,7 +117,7 @@ void test() {
     {
       const std::expected<int, CopyConstructibleButNotMoveConstructible> e;
       [[maybe_unused]] auto val = std::move(e).value();
-      // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
+      // expected-error-re@*:* {{static assertion failed {{.*}}error_type has to be both copy constructible and constructible from decltype(std::move(error()))}}
     }
   }
 // These diagnostics happen when we try to construct bad_expected_access from the non copy-constructible error type.

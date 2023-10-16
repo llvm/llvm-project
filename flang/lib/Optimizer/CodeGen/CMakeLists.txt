@@ -14,6 +14,7 @@ add_flang_library(FIRCodeGen
   CGOpsIncGen
 
   LINK_LIBS
+  FIRAnalysis
   FIRBuilder
   FIRDialect
   FIRDialectSupport

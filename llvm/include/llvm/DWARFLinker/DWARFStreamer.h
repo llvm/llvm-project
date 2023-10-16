@@ -72,9 +72,6 @@ public:
   void emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
                    unsigned DwarfVersion) override;
 
-  /// Emit DIE containing warnings.
-  void emitPaperTrailWarningsDie(DIE &Die) override;
-
   /// Emit contents of section SecName From Obj.
   void emitSectionContents(StringRef SecData, StringRef SecName) override;
 

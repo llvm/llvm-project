@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/InstrTypes.h"
@@ -193,9 +194,6 @@ public:
   /// Match (and (load x), mask) -> zextload x
   bool matchCombineLoadWithAndMask(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine \p MI into a pre-indexed or post-indexed load/store operation if
-  /// legal and the surrounding code makes it useful.
-  bool tryCombineIndexedLoadStore(MachineInstr &MI);
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
@@ -377,7 +375,6 @@ public:
 
   /// Transform anyext(trunc(x)) to x.
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
-  void applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
 
   /// Transform zext(trunc(x)) to x.
   bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
@@ -821,14 +818,14 @@ private:
   /// can be usefully and legally folded into it as a post-indexing operation.
   ///
   /// \returns true if a candidate is found.
-  bool findPostIndexCandidate(MachineInstr &MI, Register &Addr, Register &Base,
+  bool findPostIndexCandidate(GLoadStore &MI, Register &Addr, Register &Base,
                               Register &Offset);
 
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a pre-indexing operation.
   ///
   /// \returns true if a candidate is found.
-  bool findPreIndexCandidate(MachineInstr &MI, Register &Addr, Register &Base,
+  bool findPreIndexCandidate(GLoadStore &MI, Register &Addr, Register &Base,
                              Register &Offset);
 
   /// Helper function for matchLoadOrCombine. Searches for Registers

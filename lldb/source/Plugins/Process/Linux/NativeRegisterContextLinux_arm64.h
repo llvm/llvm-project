@@ -96,7 +96,7 @@ private:
   RegisterInfoPOSIX_arm64::FPU
       m_fpr; // floating-point registers including extended register sets.
 
-  SVEState m_sve_state;
+  SVEState m_sve_state = SVEState::Unknown;
   struct sve::user_sve_header m_sve_header;
   std::vector<uint8_t> m_sve_ptrace_payload;
 

@@ -16,14 +16,15 @@
 
 // We use a template to implement likely/unlikely to make sure that we don't
 // accidentally pass an integer.
-namespace __llvm_libc::details {
+namespace LIBC_NAMESPACE::details {
 template <typename T>
 LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
   return __builtin_expect(value, expected);
 }
-} // namespace __llvm_libc::details
-#define LIBC_LIKELY(x) __llvm_libc::details::expects_bool_condition(x, true)
-#define LIBC_UNLIKELY(x) __llvm_libc::details::expects_bool_condition(x, false)
+} // namespace LIBC_NAMESPACE::details
+#define LIBC_LIKELY(x) LIBC_NAMESPACE::details::expects_bool_condition(x, true)
+#define LIBC_UNLIKELY(x)                                                       \
+  LIBC_NAMESPACE::details::expects_bool_condition(x, false)
 
 #if defined(LIBC_COMPILER_IS_CLANG)
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")

@@ -51,6 +51,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -292,6 +293,8 @@ void LoopVersioningPass::runOnOperation() {
   // immediately nested in a loop.
   llvm::DenseMap<fir::DoLoopOp, ArgsUsageInLoop> argsInLoops;
 
+  auto &domInfo = getAnalysis<mlir::DominanceInfo>();
+
   // Traverse the loops in post-order and see
   // if those arguments are used inside any loop.
   func.walk([&](fir::DoLoopOp loop) {
@@ -309,11 +312,14 @@ void LoopVersioningPass::runOnOperation() {
       for (auto a : argsOfInterest) {
         if (a.arg == normaliseVal(operand)) {
           // Use the reboxed value, not the block arg when re-creating the loop.
-          // TODO: should we check that the operand dominates the loop?
-          // If this might be a case, we should record such operands in
-          // argsInLoop.cannotTransform, so that they disable the transformation
-          // for the parent loops as well.
           a.arg = operand;
+
+          // Check that the operand dominates the loop?
+          // If this is the case, record such operands in argsInLoop.cannot-
+          // Transform, so that they disable the transformation for the parent
+          /// loops as well.
+          if (!domInfo.dominates(a.arg, loop))
+            argsInLoop.cannotTransform.insert(a.arg);
 
           // No support currently for sliced arrays.
           // This means that we cannot transform properly

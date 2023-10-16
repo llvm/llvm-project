@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace rpc {
 
 /// A fixed size channel used to communicate between the RPC client and server.
@@ -88,20 +88,13 @@ template <bool Invert, typename Packet> struct Process {
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
   cpp::Atomic<uint32_t> lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
-  /// Initialize the communication channels.
-  LIBC_INLINE void reset(uint32_t port_count, void *buffer) {
-    this->port_count = port_count;
-    this->inbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(
-        advance(buffer, inbox_offset(port_count)));
-    this->outbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(
-        advance(buffer, outbox_offset(port_count)));
-    this->packet =
-        reinterpret_cast<Packet *>(advance(buffer, buffer_offset(port_count)));
-  }
-
-  /// Returns the beginning of the unified buffer. Intended for initializing the
-  /// client after the server has been started.
-  LIBC_INLINE void *get_buffer_start() const { return Invert ? outbox : inbox; }
+  LIBC_INLINE Process(uint32_t port_count, void *buffer)
+      : port_count(port_count), inbox(reinterpret_cast<cpp::Atomic<uint32_t> *>(
+                                    advance(buffer, inbox_offset(port_count)))),
+        outbox(reinterpret_cast<cpp::Atomic<uint32_t> *>(
+            advance(buffer, outbox_offset(port_count)))),
+        packet(reinterpret_cast<Packet *>(
+            advance(buffer, buffer_offset(port_count)))) {}
 
   /// Allocate a memory buffer sufficient to store the following equivalent
   /// representation in memory.
@@ -116,13 +109,13 @@ template <bool Invert, typename Packet> struct Process {
   }
 
   /// Retrieve the inbox state from memory shared between processes.
-  LIBC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) {
+  LIBC_INLINE uint32_t load_inbox(uint64_t lane_mask, uint32_t index) const {
     return gpu::broadcast_value(lane_mask,
                                 inbox[index].load(cpp::MemoryOrder::RELAXED));
   }
 
   /// Retrieve the outbox state from memory shared between processes.
-  LIBC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) {
+  LIBC_INLINE uint32_t load_outbox(uint64_t lane_mask, uint32_t index) const {
     return gpu::broadcast_value(lane_mask,
                                 outbox[index].load(cpp::MemoryOrder::RELAXED));
   }
@@ -325,6 +318,8 @@ public:
     return process.packet[index].header.opcode;
   }
 
+  LIBC_INLINE uint16_t get_index() const { return index; }
+
   LIBC_INLINE void close() {
     // The server is passive, if it own the buffer when it closes we need to
     // give ownership back to the client.
@@ -349,12 +344,11 @@ struct Client {
   LIBC_INLINE Client &operator=(const Client &) = delete;
   LIBC_INLINE ~Client() = default;
 
+  LIBC_INLINE Client(uint32_t port_count, void *buffer)
+      : process(port_count, buffer) {}
+
   using Port = rpc::Port<false, Packet<gpu::LANE_SIZE>>;
   template <uint16_t opcode> LIBC_INLINE Port open();
-
-  LIBC_INLINE void reset(uint32_t port_count, void *buffer) {
-    process.reset(port_count, buffer);
-  }
 
 private:
   Process<false, Packet<gpu::LANE_SIZE>> process;
@@ -371,17 +365,12 @@ template <uint32_t lane_size> struct Server {
   LIBC_INLINE Server &operator=(const Server &) = delete;
   LIBC_INLINE ~Server() = default;
 
+  LIBC_INLINE Server(uint32_t port_count, void *buffer)
+      : process(port_count, buffer) {}
+
   using Port = rpc::Port<true, Packet<lane_size>>;
-  LIBC_INLINE cpp::optional<Port> try_open();
+  LIBC_INLINE cpp::optional<Port> try_open(uint32_t start = 0);
   LIBC_INLINE Port open();
-
-  LIBC_INLINE void reset(uint32_t port_count, void *buffer) {
-    process.reset(port_count, buffer);
-  }
-
-  LIBC_INLINE void *get_buffer_start() const {
-    return process.get_buffer_start();
-  }
 
   LIBC_INLINE static uint64_t allocation_size(uint32_t port_count) {
     return Process<true, Packet<lane_size>>::allocation_size(port_count);
@@ -560,9 +549,9 @@ template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
 template <uint32_t lane_size>
 [[clang::convergent]] LIBC_INLINE
     cpp::optional<typename Server<lane_size>::Port>
-    Server<lane_size>::try_open() {
+    Server<lane_size>::try_open(uint32_t start) {
   // Perform a naive linear scan for a port that has a pending request.
-  for (uint32_t index = 0; index < process.port_count; ++index) {
+  for (uint32_t index = start; index < process.port_count; ++index) {
     uint64_t lane_mask = gpu::get_lane_mask();
     uint32_t in = process.load_inbox(lane_mask, index);
     uint32_t out = process.load_outbox(lane_mask, index);
@@ -599,6 +588,6 @@ LIBC_INLINE typename Server<lane_size>::Port Server<lane_size>::open() {
 }
 
 } // namespace rpc
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

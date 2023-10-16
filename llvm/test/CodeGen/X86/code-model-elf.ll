@@ -10,8 +10,6 @@
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
 
-; FIXME: small pic and medium pic w/ big enough large data threshold should be equivalent
-
 ; Generated from this C source:
 ;
 ; static int static_data[10];
@@ -577,16 +575,12 @@ define dso_local float @load_constant_pool(float %x) #0 {
 ;
 ; MEDIUM-SMALL-DATA-PIC-LABEL: load_constant_pool:
 ; MEDIUM-SMALL-DATA-PIC:       # %bb.0:
-; MEDIUM-SMALL-DATA-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; MEDIUM-SMALL-DATA-PIC-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}@GOTOFF, %rcx
-; MEDIUM-SMALL-DATA-PIC-NEXT:    addss (%rax,%rcx), %xmm0
+; MEDIUM-SMALL-DATA-PIC-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; MEDIUM-SMALL-DATA-PIC-NEXT:    retq
 ;
 ; MEDIUM-PIC-LABEL: load_constant_pool:
 ; MEDIUM-PIC:       # %bb.0:
-; MEDIUM-PIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; MEDIUM-PIC-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}@GOTOFF, %rcx
-; MEDIUM-PIC-NEXT:    addss (%rax,%rcx), %xmm0
+; MEDIUM-PIC-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; MEDIUM-PIC-NEXT:    retq
 ;
 ; LARGE-PIC-LABEL: load_constant_pool:

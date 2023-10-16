@@ -119,13 +119,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-      .legalFor({s32, s64, v2s32, v4s32, v4s16, v8s16, v16s8, v8s8})
-      .scalarizeIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Opcode == G_MUL && Query.Types[0] == v2s64;
-          },
-          0)
-      .legalFor({v2s64})
+      .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampMaxNumElements(0, s8, 16)
@@ -235,10 +229,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
        .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG, G_FABS,
-                               G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
-                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
-                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
+                               G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM,
+                               G_FMAXIMUM, G_FMINIMUM, G_FCEIL, G_FFLOOR,
+                               G_FRINT, G_FNEARBYINT, G_INTRINSIC_TRUNC,
                                G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
@@ -257,7 +251,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder({G_FMA, G_INTRINSIC_LRINT})
+  getActionDefinitionsBuilder(G_INTRINSIC_LRINT)
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(
@@ -542,14 +536,22 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       });
 
   getActionDefinitionsBuilder(G_TRUNC)
+      .legalFor({{v2s32, v2s64}, {v4s16, v4s32}, {v8s8, v8s16}})
+      .moreElementsToNextPow2(0)
+      .clampMaxNumElements(0, s8, 8)
+      .clampMaxNumElements(0, s16, 4)
+      .clampMaxNumElements(0, s32, 2)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) { return Query.Types[0].isVector(); },
           0, s8)
-      .customIf([=](const LegalityQuery &Query) {
+      .lowerIf([=](const LegalityQuery &Query) {
         LLT DstTy = Query.Types[0];
         LLT SrcTy = Query.Types[1];
-        return DstTy == v8s8 && SrcTy.getSizeInBits() > 128;
+        return DstTy.isVector() && (SrcTy.getSizeInBits() > 128 ||
+                                    (DstTy.getScalarSizeInBits() * 2 <
+                                     SrcTy.getScalarSizeInBits()));
       })
+
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
@@ -867,10 +869,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
-      .legalFor(
-          {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .legalFor({{s8, v16s8},
+                 {s8, v8s8},
+                 {s16, v8s16},
+                 {s16, v4s16},
+                 {s32, v4s32},
+                 {s32, v2s32},
+                 {s64, v2s64}})
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8)
+      .clampMaxNumElements(1, s8, 16)
       .lower();
 
   getActionDefinitionsBuilder({G_VECREDUCE_FMIN, G_VECREDUCE_FMAX,
@@ -973,6 +982,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_FMAD).lower();
 
+  // Access to floating-point environment.
+  getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
+      .libcall();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -997,8 +1010,6 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeShlAshrLshr(MI, MRI, MIRBuilder, Observer);
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeSmallCMGlobalValue(MI, MRI, MIRBuilder, Observer);
-  case TargetOpcode::G_TRUNC:
-    return legalizeVectorTrunc(MI, Helper);
   case TargetOpcode::G_SBFX:
   case TargetOpcode::G_UBFX:
     return legalizeBitfieldExtract(MI, MRI, Helper);
@@ -1093,54 +1104,6 @@ bool AArch64LegalizerInfo::legalizeRotate(MachineInstr &MI,
   auto NewAmt = Helper.MIRBuilder.buildZExt(LLT::scalar(64), AmtReg);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(2).setReg(NewAmt.getReg(0));
-  Helper.Observer.changedInstr(MI);
-  return true;
-}
-
-static void extractParts(Register Reg, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &MIRBuilder, LLT Ty, int NumParts,
-                         SmallVectorImpl<Register> &VRegs) {
-  for (int I = 0; I < NumParts; ++I)
-    VRegs.push_back(MRI.createGenericVirtualRegister(Ty));
-  MIRBuilder.buildUnmerge(VRegs, Reg);
-}
-
-bool AArch64LegalizerInfo::legalizeVectorTrunc(
-    MachineInstr &MI, LegalizerHelper &Helper) const {
-  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  // Similar to how operand splitting is done in SelectiondDAG, we can handle
-  // %res(v8s8) = G_TRUNC %in(v8s32) by generating:
-  //   %inlo(<4x s32>), %inhi(<4 x s32>) = G_UNMERGE %in(<8 x s32>)
-  //   %lo16(<4 x s16>) = G_TRUNC %inlo
-  //   %hi16(<4 x s16>) = G_TRUNC %inhi
-  //   %in16(<8 x s16>) = G_CONCAT_VECTORS %lo16, %hi16
-  //   %res(<8 x s8>) = G_TRUNC %in16
-
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  LLT SrcTy = MRI.getType(SrcReg);
-  assert(llvm::has_single_bit<uint32_t>(DstTy.getSizeInBits()) &&
-         llvm::has_single_bit<uint32_t>(SrcTy.getSizeInBits()));
-
-  // Split input type.
-  LLT SplitSrcTy =
-      SrcTy.changeElementCount(SrcTy.getElementCount().divideCoefficientBy(2));
-  // First, split the source into two smaller vectors.
-  SmallVector<Register, 2> SplitSrcs;
-  extractParts(SrcReg, MRI, MIRBuilder, SplitSrcTy, 2, SplitSrcs);
-
-  // Truncate the splits into intermediate narrower elements.
-  LLT InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
-  for (unsigned I = 0; I < SplitSrcs.size(); ++I)
-    SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
-
-  auto Concat = MIRBuilder.buildConcatVectors(
-      DstTy.changeElementSize(DstTy.getScalarSizeInBits() * 2), SplitSrcs);
-
-  Helper.Observer.changingInstr(MI);
-  MI.getOperand(1).setReg(Concat.getReg(0));
   Helper.Observer.changedInstr(MI);
   return true;
 }
@@ -1314,6 +1277,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return true;
   }
+  case Intrinsic::experimental_vector_reverse:
+    // TODO: Add support for vector_reverse
+    return false;
   }
 
   return true;

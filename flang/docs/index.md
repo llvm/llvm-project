@@ -9,7 +9,7 @@ is capable of generating executables for a number of examples, some
 functionality is still missing. See [GettingInvolved](GettingInvolved) for tips
 on how to get in touch with us and to learn more about the current status.
 
-```eval_rst
+```{eval-rst}
 .. toctree::
    :titlesonly:
 
@@ -18,7 +18,7 @@ on how to get in touch with us and to learn more about the current status.
 
 # Contributing to Flang
 
-```eval_rst
+```{eval-rst}
 .. toctree::
    :titlesonly:
 
@@ -33,7 +33,7 @@ on how to get in touch with us and to learn more about the current status.
 
 # Design Documents
 
-```eval_rst
+```{eval-rst}
 .. toctree::
    :titlesonly:
 
@@ -70,7 +70,7 @@ on how to get in touch with us and to learn more about the current status.
 
 # Indices and tables
 
-```eval_rst
+```{eval-rst}
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

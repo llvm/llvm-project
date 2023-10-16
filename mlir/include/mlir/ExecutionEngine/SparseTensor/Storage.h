@@ -24,121 +24,8 @@
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
+#include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
 
-namespace mlir {
-namespace sparse_tensor {
-
-namespace detail {
-
-/// Checks whether the `perm` array is a permutation of `[0 .. size)`.
-inline bool isPermutation(uint64_t size, const uint64_t *perm) {
-  assert(perm && "Got nullptr for permutation");
-  std::vector<bool> seen(size, false);
-  for (uint64_t i = 0; i < size; ++i) {
-    const uint64_t j = perm[i];
-    if (j >= size || seen[j])
-      return false;
-    seen[j] = true;
-  }
-  for (uint64_t i = 0; i < size; ++i)
-    if (!seen[i])
-      return false;
-  return true;
-}
-
-/// Wrapper around `isPermutation` to ensure consistent error messages.
-inline void assertIsPermutation(uint64_t size, const uint64_t *perm) {
-#ifndef NDEBUG
-  if (!isPermutation(size, perm))
-    MLIR_SPARSETENSOR_FATAL("Not a permutation of [0..%" PRIu64 ")\n", size);
-#endif
-}
-
-/// A class for capturing the knowledge that `isPermutation` is true.
-class PermutationRef final {
-public:
-  /// Asserts `isPermutation` and returns the witness to that being true.
-  explicit PermutationRef(uint64_t size, const uint64_t *perm)
-      : permSize(size), perm(perm) {
-    assertIsPermutation(size, perm);
-  }
-
-  uint64_t size() const { return permSize; }
-
-  const uint64_t *data() const { return perm; }
-
-  const uint64_t &operator[](uint64_t i) const {
-    assert(i < permSize && "index is out of bounds");
-    return perm[i];
-  }
-
-  /// Constructs a pushforward array of values.  This method is the inverse
-  /// of `permute` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> pushforward(const std::vector<T> &values) const {
-    return pushforward(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> pushforward(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    pushforward(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void pushforward(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[perm[i]] = values[i];
-  }
-
-  /// Constructs a permuted array of values.  This method is the inverse
-  /// of `pushforward` in the sense that for all `p` and `xs` we have:
-  /// * `p.permute(p.pushforward(xs)) == xs`
-  /// * `p.pushforward(p.permute(xs)) == xs`
-  template <typename T>
-  inline std::vector<T> permute(const std::vector<T> &values) const {
-    return permute(values.size(), values.data());
-  }
-
-  template <typename T>
-  inline std::vector<T> permute(uint64_t size, const T *values) const {
-    std::vector<T> out(permSize);
-    permute(size, values, out.data());
-    return out;
-  }
-
-  template <typename T>
-  inline void permute(uint64_t size, const T *values, T *out) const {
-    assert(size == permSize && "size mismatch");
-    for (uint64_t i = 0; i < permSize; ++i)
-      out[i] = values[perm[i]];
-  }
-
-private:
-  const uint64_t permSize;
-  const uint64_t *const perm; // non-owning pointer.
-};
-
-} // namespace detail
-
-//===----------------------------------------------------------------------===//
-// This forward decl is sufficient to split `SparseTensorStorageBase` into
-// its own header, but isn't sufficient for `SparseTensorStorage` to join it.
-template <typename V>
-class SparseTensorEnumeratorBase;
-
-// These macros ensure consistent error messages, without risk of incuring
-// an additional method call to do so.
-#define ASSERT_VALID_DIM(d)                                                    \
-  assert(d < getDimRank() && "Dimension is out of bounds");
-#define ASSERT_VALID_LVL(l)                                                    \
-  assert(l < getLvlRank() && "Level is out of bounds");
-#define ASSERT_COMPRESSED_LVL(l)                                               \
-  assert(isCompressedLvl(l) && "Level is not compressed");
 #define ASSERT_COMPRESSED_OR_SINGLETON_LVL(l)                                  \
   do {                                                                         \
     const DimLevelType dlt = getLvlType(l);                                    \
@@ -146,15 +33,25 @@ class SparseTensorEnumeratorBase;
     assert((isCompressedDLT(dlt) || isSingletonDLT(dlt)) &&                    \
            "Level is neither compressed nor singleton");                       \
   } while (false)
-// Because the `SparseTensorStorageBase` ctor uses `MLIR_SPARSETENSOR_FATAL`
-// (rather than `assert`) when validating level-types, all the uses of
-// `ASSERT_DENSE_DLT` are technically unnecessary.  However, they are
-// retained for the sake of future-proofing.
-#define ASSERT_DENSE_DLT(dlt) assert(isDenseDLT(dlt) && "Level is not dense");
 
-/// Abstract base class for `SparseTensorStorage<P,C,V>`.  This class
+namespace mlir {
+namespace sparse_tensor {
+
+// Forward references.
+template <typename V>
+class SparseTensorEnumeratorBase;
+template <typename P, typename C, typename V>
+class SparseTensorEnumerator;
+
+//===----------------------------------------------------------------------===//
+//
+//  SparseTensorStorage
+//
+//===----------------------------------------------------------------------===//
+
+/// Abstract base class for `SparseTensorStorage<P,C,V>`. This class
 /// takes responsibility for all the `<P,C,V>`-independent aspects
-/// of the tensor (e.g., shape, sparsity, permutation).  In addition,
+/// of the tensor (e.g., shape, sparsity, mapping). In addition,
 /// we use function overloading to implement "partial" method
 /// specialization, which the C-API relies on to catch type errors
 /// arising from our use of opaque pointers.
@@ -165,66 +62,33 @@ class SparseTensorEnumeratorBase;
 /// coordinate spaces (and their associated rank, shape, sizes, etc).
 /// Denotationally, we have the *dimensions* of the tensor represented
 /// by this object.  Operationally, we have the *levels* of the storage
-/// representation itself.  We use this "dimension" vs "level" terminology
-/// throughout, since alternative terminology like "tensor-dimension",
-/// "original-dimension", "storage-dimension", etc, is both more verbose
-/// and prone to introduce confusion whenever the qualifiers are dropped.
-/// Where necessary, we use "axis" as the generic term.
+/// representation itself.
 ///
 /// The *size* of an axis is the cardinality of possible coordinate
 /// values along that axis (regardless of which coordinates have stored
-/// element values).  As such, each size must be non-zero since if any
+/// element values). As such, each size must be non-zero since if any
 /// axis has size-zero then the whole tensor would have trivial storage
-/// (since there are no possible coordinates).  Thus we use the plural
+/// (since there are no possible coordinates). Thus we use the plural
 /// term *sizes* for a collection of non-zero cardinalities, and use
-/// this term whenever referring to run-time cardinalities.  Whereas we
+/// this term whenever referring to run-time cardinalities. Whereas we
 /// use the term *shape* for a collection of compile-time cardinalities,
 /// where zero is used to indicate cardinalities which are dynamic (i.e.,
-/// unknown/unspecified at compile-time).  At run-time, these dynamic
+/// unknown/unspecified at compile-time). At run-time, these dynamic
 /// cardinalities will be inferred from or checked against sizes otherwise
-/// specified.  Thus, dynamic cardinalities always have an "immutable but
+/// specified. Thus, dynamic cardinalities always have an "immutable but
 /// unknown" value; so the term "dynamic" should not be taken to indicate
 /// run-time mutability.
-//
-// TODO: we'd like to factor out a class akin to `PermutationRef` for
-// capturing known-valid sizes to avoid redundant validity assertions.
-// But calling that class "SizesRef" would be a terrible name (and
-// "ValidSizesRef" isn't much better).  Whereas, calling it "ShapeRef"
-// would be a lot nicer, but then that conflicts with the terminology
-// introduced above.  So we need to come up with some new terminology
-// for distinguishing things, which allows a reasonable class name too.
 class SparseTensorStorageBase {
 protected:
-  // Since this class is virtual, we must disallow public copying in
-  // order to avoid "slicing".  Since this class has data members,
-  // that means making copying protected.
-  // <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rc-copy-virtual>
   SparseTensorStorageBase(const SparseTensorStorageBase &) = default;
-  // Copy-assignment would be implicitly deleted (because our fields
-  // are const), so we explicitly delete it for clarity.
   SparseTensorStorageBase &operator=(const SparseTensorStorageBase &) = delete;
 
 public:
   /// Constructs a new sparse-tensor storage object with the given encoding.
-  ///
-  /// Preconditions:
-  /// * `dimSizes`, `lvlSizes`, `lvlTypes`, and `lvl2dim` must be nonnull.
-  /// * `dimSizes` must be valid for `dimRank`.
-  /// * `lvlSizes`, `lvlTypes`, and `lvl2dim` must be valid for `lvlRank`.
-  /// * `lvl2dim` must map `lvlSizes`-coordinates to `dimSizes`-coordinates.
-  ///
-  /// Asserts:
-  /// * `dimRank` and `lvlRank` are nonzero.
-  /// * `dimSizes` and `lvlSizes` contain only nonzero sizes.
   SparseTensorStorageBase(uint64_t dimRank, const uint64_t *dimSizes,
                           uint64_t lvlRank, const uint64_t *lvlSizes,
-                          const DimLevelType *lvlTypes,
+                          const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
                           const uint64_t *lvl2dim);
-  // NOTE: For the most part we only need the `dimRank`.  But we need
-  // `dimSizes` for `toCOO` to support the identity permutation nicely
-  // (i.e., without the caller needing to already know the tensor's
-  // dimension-sizes; e.g., as in `fromMLIRSparseTensor`).
-
   virtual ~SparseTensorStorageBase() = default;
 
   /// Gets the number of tensor-dimensions.
@@ -238,7 +102,7 @@ public:
 
   /// Safely looks up the size of the given tensor-dimension.
   uint64_t getDimSize(uint64_t d) const {
-    ASSERT_VALID_DIM(d);
+    assert(d < getDimRank());
     return dimSizes[d];
   }
 
@@ -247,19 +111,16 @@ public:
 
   /// Safely looks up the size of the given storage-level.
   uint64_t getLvlSize(uint64_t l) const {
-    ASSERT_VALID_LVL(l);
+    assert(l < getLvlRank());
     return lvlSizes[l];
   }
-
-  /// Gets the level-to-dimension mapping.
-  const std::vector<uint64_t> &getLvl2Dim() const { return lvl2dim; }
 
   /// Gets the level-types array.
   const std::vector<DimLevelType> &getLvlTypes() const { return lvlTypes; }
 
   /// Safely looks up the type of the given level.
   DimLevelType getLvlType(uint64_t l) const {
-    ASSERT_VALID_LVL(l);
+    assert(l < getLvlRank());
     return lvlTypes[l];
   }
 
@@ -282,8 +143,12 @@ public:
   /// Safely checks if the level is unique.
   bool isUniqueLvl(uint64_t l) const { return isUniqueDLT(getLvlType(l)); }
 
+  /// Gets the level-to-dimension mapping.
+  // TODO: REMOVE THIS
+  const std::vector<uint64_t> &getLvl2Dim() const { return lvl2dimVec; }
+
   /// Allocates a new enumerator.  Callers must make sure to delete
-  /// the enumerator when they're done with it.  The first argument
+  /// the enumerator when they're done with it. The first argument
   /// is the out-parameter for storing the newly allocated enumerator;
   /// all other arguments are passed along to the `SparseTensorEnumerator`
   /// ctor and must satisfy the preconditions/assertions thereof.
@@ -313,10 +178,15 @@ public:
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
 
-  /// Element-wise insertion in lexicographic coordinate order.  The first
+  /// Element-wise forwarding insertions. The first argument is the
+  /// dimension-coordinates for the value being inserted.
+#define DECL_FORWARDINGINSERT(VNAME, V)                                        \
+  virtual void forwardingInsert(const uint64_t *, V);
+  MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
+#undef DECL_FORWARDINGINSERT
+
+  /// Element-wise insertion in lexicographic coordinate order. The first
   /// argument is the level-coordinates for the value being inserted.
-  // TODO: For better safety, this should take a parameter for the
-  // length of `lvlCoords` and check that against `getLvlRank()`.
 #define DECL_LEXINSERT(VNAME, V) virtual void lexInsert(const uint64_t *, V);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
@@ -324,39 +194,32 @@ public:
   /// Expanded insertion.  Note that this method resets the
   /// values/filled-switch array back to all-zero/false while only
   /// iterating over the nonzero elements.
-  ///
-  /// Arguments:
-  /// * `lvlCoords` the level-coordinates shared by the values being inserted.
-  /// * `values` a map from last-level coordinates to their associated value.
-  /// * `filled` a map from last-level coordinates to bool, indicating
-  ///   whether `values` contains a valid value to be inserted.
-  /// * `added` a map from `[0..count)` to last-level coordinates for
-  ///   which `filled` is true and `values` contains the assotiated value.
-  /// * `count` the size of `added`.
 #define DECL_EXPINSERT(VNAME, V)                                               \
-  virtual void expInsert(uint64_t *, V *, bool *, uint64_t *, uint64_t);
+  virtual void expInsert(uint64_t *, V *, bool *, uint64_t *, uint64_t,        \
+                         uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
 
-  /// Finishes insertion.
-  virtual void endInsert() = 0;
+  /// Finalizes forwarding insertions.
+  virtual void endForwardingInsert() = 0;
+
+  /// Finalizes lexicographic insertions.
+  virtual void endLexInsert() = 0;
 
 private:
   const std::vector<uint64_t> dimSizes;
   const std::vector<uint64_t> lvlSizes;
   const std::vector<DimLevelType> lvlTypes;
-  const std::vector<uint64_t> lvl2dim;
+  const std::vector<uint64_t> dim2lvlVec;
+  const std::vector<uint64_t> lvl2dimVec;
+
+protected:
+  const MapRef map; // non-owning pointers into dim2lvl/lvl2dim vectors
 };
 
-//===----------------------------------------------------------------------===//
-// This forward decl is necessary for defining `SparseTensorStorage`,
-// but isn't sufficient for splitting it off.
-template <typename P, typename C, typename V>
-class SparseTensorEnumerator;
-
 /// A memory-resident sparse tensor using a storage scheme based on
-/// per-level sparse/dense annotations.  This data structure provides
-/// a bufferized form of a sparse tensor type.  In contrast to generating
+/// per-level sparse/dense annotations. This data structure provides
+/// a bufferized form of a sparse tensor type. In contrast to generating
 /// setup methods for each differently annotated sparse tensor, this
 /// method provides a convenient "one-size-fits-all" solution that simply
 /// takes an input tensor and annotations to implement all required setup
@@ -367,58 +230,47 @@ class SparseTensorStorage final : public SparseTensorStorageBase {
   /// Beware that the object is not necessarily guaranteed to be in a
   /// valid state after this constructor alone; e.g., `isCompressedLvl(l)`
   /// doesn't entail `!(positions[l].empty())`.
-  ///
-  /// Preconditions/assertions are as per the `SparseTensorStorageBase` ctor.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *lvl2dim)
+                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const uint64_t *lvl2dim)
       : SparseTensorStorageBase(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
-                                lvl2dim),
-        positions(lvlRank), coordinates(lvlRank), lvlCursor(lvlRank) {}
+                                dim2lvl, lvl2dim),
+        positions(lvlRank), coordinates(lvlRank), lvlCursor(lvlRank), lvlCOO() {
+  }
 
 public:
   /// Constructs a sparse tensor with the given encoding, and allocates
-  /// overhead storage according to some simple heuristics.  When the
+  /// overhead storage according to some simple heuristics. When the
   /// `bool` argument is true and `lvlTypes` are all dense, then this
-  /// ctor will also initialize the values array with zeros.  That
+  /// ctor will also initialize the values array with zeros. That
   /// argument should be true when an empty tensor is intended; whereas
   /// it should usually be false when the ctor will be followed up by
   /// some other form of initialization.
-  ///
-  /// Preconditions/assertions are as per the `SparseTensorStorageBase` ctor.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
+                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const uint64_t *lvl2dim, SparseTensorCOO<V> *coo,
                       bool initializeValuesIfAllDense);
 
   /// Constructs a sparse tensor with the given encoding, and initializes
-  /// the contents from the COO.  This ctor performs the same heuristic
-  /// overhead-storage allocation as the ctor taking a `bool`, and
-  /// has the same preconditions/assertions (where we define `lvlSizes =
-  /// lvlCOO.getDimSizes().data()`), with the following addition:
-  ///
-  /// Asserts:
-  /// * `lvlRank == lvlCOO.getRank()`.
+  /// the contents from the COO. This ctor performs the same heuristic
+  /// overhead-storage allocation as the ctor above.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const DimLevelType *lvlTypes,
-                      const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO);
+                      const uint64_t *dim2lvl, const uint64_t *lvl2dim,
+                      SparseTensorCOO<V> &lvlCOO);
 
   /// Constructs a sparse tensor with the given encoding, and initializes
-  /// the contents from the enumerator.  This ctor allocates exactly
+  /// the contents from the enumerator. This ctor allocates exactly
   /// the required amount of overhead storage, not using any heuristics.
-  /// Preconditions/assertions are as per the `SparseTensorStorageBase`
-  /// ctor (where we define `lvlSizes = lvlEnumerator.getTrgSizes().data()`),
-  /// with the following addition:
-  ///
-  /// Asserts:
-  /// * `lvlRank == lvlEnumerator.getTrgRank()`.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const DimLevelType *lvlTypes,
-                      const uint64_t *lvl2dim,
+                      const uint64_t *dim2lvl, const uint64_t *lvl2dim,
                       SparseTensorEnumeratorBase<V> &lvlEnumerator);
 
   /// Constructs a sparse tensor with the given encoding, and initializes
-  /// the contents from the level buffers.  This ctor allocates exactly
+  /// the contents from the level buffers. This ctor allocates exactly
   /// the required amount of overhead storage, not using any heuristics.
   /// It assumes that the data provided by `lvlBufs` can be directly used to
   /// interpret the result sparse tensor and performs *NO* integrity test on the
@@ -426,31 +278,22 @@ public:
   /// passed in as a single AoS memory.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-                      const intptr_t *lvlBufs);
+                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const uint64_t *lvl2dim, const intptr_t *lvlBufs);
 
-  /// Allocates a new empty sparse tensor.  The preconditions/assertions
+  /// Allocates a new empty sparse tensor. The preconditions/assertions
   /// are as per the `SparseTensorStorageBase` ctor; which is to say,
   /// the `dimSizes` and `lvlSizes` must both be "sizes" not "shapes",
   /// since there's nowhere to reconstruct dynamic sizes from.
   static SparseTensorStorage<P, C, V> *
   newEmpty(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
            const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-           const uint64_t *lvl2dim) {
-    return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank,
-                                            lvlSizes, lvlTypes, lvl2dim, true);
-  }
+           const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding);
 
   /// Allocates a new sparse tensor and initializes it from the given COO.
   /// The preconditions are as per the `SparseTensorStorageBase` ctor
   /// (where we define `lvlSizes = lvlCOO.getDimSizes().data()`), but
   /// using the following assertions in lieu of the base ctor's assertions:
-  ///
-  /// Asserts:
-  /// * `dimRank` and `lvlRank` are nonzero.
-  /// * `lvlRank == lvlCOO.getRank()`.
-  /// * `lvlCOO.getDimSizes()` under the `lvl2dim` mapping is a refinement
-  ///   of `dimShape`.
   //
   // TODO: The ability to reconstruct dynamic dimensions-sizes does not
   // easily generalize to arbitrary `lvl2dim` mappings.  When compiling
@@ -461,24 +304,11 @@ public:
   // to update the type/preconditions of this factory too.
   static SparseTensorStorage<P, C, V> *
   newFromCOO(uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
-             const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-             SparseTensorCOO<V> &lvlCOO);
+             const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+             const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO);
 
   /// Allocates a new sparse tensor and initializes it with the contents
   /// of another sparse tensor.
-  ///
-  /// Preconditions:
-  /// * as per the `SparseTensorStorageBase` ctor.
-  /// * `src2lvl` must be valid for `srcRank`, must map coordinates valid
-  ///    for `source.getDimSizes()` to coordinates valid for `lvlSizes`,
-  ///    and therefore must be the inverse of `lvl2dim`.
-  /// * `source` must have the same value type `V`.
-  ///
-  /// Asserts:
-  /// * `dimRank` and `lvlRank` are nonzero.
-  /// * `srcRank == source.getDimRank()`.
-  /// * `lvlSizes` contains only nonzero sizes.
-  /// * `source.getDimSizes()` is a refinement of `dimShape`.
   //
   // TODO: The `dimRank` and `dimShape` arguments are only used for
   // verifying that the source tensor has the expected shape.  So if we
@@ -493,34 +323,30 @@ public:
   static SparseTensorStorage<P, C, V> *
   newFromSparseTensor(uint64_t dimRank, const uint64_t *dimShape,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-                      uint64_t srcRank, const uint64_t *src2lvl,
+                      const DimLevelType *lvlTypes,
+                      const uint64_t *src2lvl, // FIXME: dim2lvl,
+                      const uint64_t *lvl2dim, uint64_t srcRank,
                       const SparseTensorStorageBase &source);
 
   /// Allocates a new sparse tensor and initialize it with the data stored level
   /// buffers directly.
-  ///
-  /// Precondition:
-  /// * as per the `SparseTensorStorageBase` ctor.
-  /// * the data integrity stored in `buffers` is guaranteed by users already.
-  static SparseTensorStorage<P, C, V> *
-  packFromLvlBuffers(uint64_t dimRank, const uint64_t *dimShape,
-                     uint64_t lvlRank, const uint64_t *lvlSizes,
-                     const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-                     uint64_t srcRank, const uint64_t *src2lvl,
-                     const intptr_t *buffers);
+  static SparseTensorStorage<P, C, V> *packFromLvlBuffers(
+      uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
+      const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+      const uint64_t *src2lvl, // FIXME: dim2lvl
+      const uint64_t *lvl2dim, uint64_t srcRank, const intptr_t *buffers);
 
   ~SparseTensorStorage() final = default;
 
   /// Partially specialize these getter methods based on template types.
   void getPositions(std::vector<P> **out, uint64_t lvl) final {
     assert(out && "Received nullptr for out parameter");
-    ASSERT_VALID_LVL(lvl);
+    assert(lvl < getLvlRank());
     *out = &positions[lvl];
   }
   void getCoordinates(std::vector<C> **out, uint64_t lvl) final {
     assert(out && "Received nullptr for out parameter");
-    ASSERT_VALID_LVL(lvl);
+    assert(lvl < getLvlRank());
     *out = &coordinates[lvl];
   }
   void getValues(std::vector<V> **out) final {
@@ -528,15 +354,36 @@ public:
     *out = &values;
   }
 
+  /// Returns coordinate at given position.
   uint64_t getCrd(uint64_t lvl, uint64_t pos) const final {
     ASSERT_COMPRESSED_OR_SINGLETON_LVL(lvl);
-    assert(pos < coordinates[lvl].size() && "Position is out of bounds");
+    assert(pos < coordinates[lvl].size());
     return coordinates[lvl][pos]; // Converts the stored `C` into `uint64_t`.
+  }
+
+  /// Partially specialize forwarding insertions based on template types.
+  void forwardingInsert(const uint64_t *dimCoords, V val) final {
+    assert(dimCoords && lvlCOO);
+    map.pushforward(dimCoords, lvlCursor.data());
+    lvlCOO->add(lvlCursor, val);
   }
 
   /// Partially specialize lexicographical insertions based on template types.
   void lexInsert(const uint64_t *lvlCoords, V val) final {
-    assert(lvlCoords && "Received nullptr for level-coordinates");
+    assert(lvlCoords);
+    // TODO: get rid of this! canonicalize all-dense "sparse" array into dense
+    // tensors.
+    bool allDense = std::all_of(getLvlTypes().begin(), getLvlTypes().end(),
+                                [](DimLevelType lt) { return isDenseDLT(lt); });
+    if (allDense) {
+      uint64_t lvlRank = getLvlRank();
+      uint64_t valIdx = 0;
+      // Linearize the address
+      for (size_t lvl = 0; lvl < lvlRank; lvl++)
+        valIdx = valIdx * getLvlSize(lvl) + lvlCoords[lvl];
+      values[valIdx] = val;
+      return;
+    }
     // First, wrap up pending insertion path.
     uint64_t diffLvl = 0;
     uint64_t full = 0;
@@ -551,7 +398,7 @@ public:
 
   /// Partially specialize expanded insertions based on template types.
   void expInsert(uint64_t *lvlCoords, V *values, bool *filled, uint64_t *added,
-                 uint64_t count) final {
+                 uint64_t count, uint64_t expsz) final {
     assert((lvlCoords && values && filled && added) && "Received nullptr");
     if (count == 0)
       return;
@@ -560,6 +407,7 @@ public:
     // Restore insertion path for first insert.
     const uint64_t lastLvl = getLvlRank() - 1;
     uint64_t c = added[0];
+    assert(c <= expsz);
     assert(filled[c] && "added coordinate is not filled");
     lvlCoords[lastLvl] = c;
     lexInsert(lvlCoords, values[c]);
@@ -569,6 +417,7 @@ public:
     for (uint64_t i = 1; i < count; ++i) {
       assert(c < added[i] && "non-lexicographic insertion");
       c = added[i];
+      assert(c <= expsz);
       assert(filled[c] && "added coordinate is not filled");
       lvlCoords[lastLvl] = c;
       insPath(lvlCoords, lastLvl, added[i - 1] + 1, values[c]);
@@ -577,8 +426,22 @@ public:
     }
   }
 
+  /// Finalizes forwarding insertions.
+  void endForwardingInsert() final {
+    // Ensure lvlCOO is sorted.
+    assert(lvlCOO);
+    lvlCOO->sort();
+    // Now actually insert the `elements`.
+    const auto &elements = lvlCOO->getElements();
+    const uint64_t nse = elements.size();
+    assert(values.size() == 0);
+    values.reserve(nse);
+    fromCOO(elements, 0, nse, 0);
+    delete lvlCOO;
+  }
+
   /// Finalizes lexicographic insertions.
-  void endInsert() final {
+  void endLexInsert() final {
     if (values.empty())
       finalizeSegment(0);
     else
@@ -598,13 +461,14 @@ public:
 
   /// Allocates a new COO object and initializes it with the contents
   /// of this tensor under the given mapping from the `getDimSizes()`
-  /// coordinate-space to the `trgSizes` coordinate-space.  Callers must
+  /// coordinate-space to the `trgSizes` coordinate-space. Callers must
   /// make sure to delete the COO when they're done with it.
-  ///
-  /// Preconditions/assertions are as per the `SparseTensorEnumerator` ctor.
   SparseTensorCOO<V> *toCOO(uint64_t trgRank, const uint64_t *trgSizes,
-                            uint64_t srcRank, const uint64_t *src2trg) const {
+                            uint64_t srcRank,
+                            const uint64_t *src2trg, // FIXME: dim2lvl
+                            const uint64_t *lvl2dim) const {
     // We inline `newEnumerator` to avoid virtual dispatch and allocation.
+    // TODO: use MapRef here too for the translation
     SparseTensorEnumerator<P, C, V> enumerator(*this, trgRank, trgSizes,
                                                srcRank, src2trg);
     auto *coo = new SparseTensorCOO<V>(trgRank, trgSizes, values.size());
@@ -612,9 +476,66 @@ public:
         [&coo](const auto &trgCoords, V val) { coo->add(trgCoords, val); });
     // TODO: This assertion assumes there are no stored zeros,
     // or if there are then that we don't filter them out.
-    // Cf., <https://github.com/llvm/llvm-project/issues/54179>
+    // <https://github.com/llvm/llvm-project/issues/54179>
     assert(coo->getElements().size() == values.size());
     return coo;
+  }
+
+  /// Sort the unordered tensor in place, the method assumes that it is
+  /// an unordered COO tensor.
+  void sortInPlace() {
+    uint64_t nnz = values.size();
+#ifndef NDEBUG
+    for (uint64_t l = 0; l < getLvlRank(); l++)
+      assert(nnz == coordinates[l].size());
+#endif
+
+    // In-place permutation.
+    auto applyPerm = [this](std::vector<uint64_t> &perm) {
+      size_t length = perm.size();
+      size_t lvlRank = getLvlRank();
+      // Cache for the current level coordinates.
+      std::vector<P> lvlCrds(lvlRank);
+      for (size_t i = 0; i < length; i++) {
+        size_t current = i;
+        if (i != perm[current]) {
+          for (size_t l = 0; l < lvlRank; l++)
+            lvlCrds[l] = coordinates[l][i];
+          V val = values[i];
+          // Deals with a permutation cycle.
+          while (i != perm[current]) {
+            size_t next = perm[current];
+            // Swaps the level coordinates and value.
+            for (size_t l = 0; l < lvlRank; l++)
+              coordinates[l][current] = coordinates[l][next];
+            values[current] = values[next];
+            perm[current] = current;
+            current = next;
+          }
+          for (size_t l = 0; l < lvlRank; l++)
+            coordinates[l][current] = lvlCrds[l];
+          values[current] = val;
+          perm[current] = current;
+        }
+      }
+    };
+
+    std::vector<uint64_t> sortedIdx(nnz, 0);
+    for (uint64_t i = 0; i < nnz; i++)
+      sortedIdx[i] = i;
+
+    std::sort(sortedIdx.begin(), sortedIdx.end(),
+              [this](uint64_t lhs, uint64_t rhs) {
+                for (uint64_t l = 0; l < getLvlRank(); l++) {
+                  if (coordinates[l][lhs] == coordinates[l][rhs])
+                    continue;
+                  return coordinates[l][lhs] < coordinates[l][rhs];
+                }
+                assert(false && "duplicate coordinates");
+                return false;
+              });
+
+    applyPerm(sortedIdx);
   }
 
 private:
@@ -623,7 +544,7 @@ private:
   /// does not check that `pos` is semantically valid (i.e., larger than
   /// the previous position and smaller than `coordinates[lvl].capacity()`).
   void appendPos(uint64_t lvl, uint64_t pos, uint64_t count = 1) {
-    ASSERT_COMPRESSED_LVL(lvl);
+    assert(isCompressedLvl(lvl));
     positions[lvl].insert(positions[lvl].end(), count,
                           detail::checkOverflowCast<P>(pos));
   }
@@ -642,7 +563,7 @@ private:
     if (isCompressedDLT(dlt) || isSingletonDLT(dlt)) {
       coordinates[lvl].push_back(detail::checkOverflowCast<C>(crd));
     } else { // Dense level.
-      ASSERT_DENSE_DLT(dlt);
+      assert(isDenseDLT(dlt));
       assert(crd >= full && "Coordinate was already filled");
       if (crd == full)
         return; // Short-circuit, since it'll be a nop.
@@ -662,7 +583,7 @@ private:
     // Subscript assignment to `std::vector` requires that the `pos`-th
     // entry has been initialized; thus we must be sure to check `size()`
     // here, instead of `capacity()` as would be ideal.
-    assert(pos < coordinates[lvl].size() && "Position is out of bounds");
+    assert(pos < coordinates[lvl].size());
     coordinates[lvl][pos] = detail::checkOverflowCast<C>(crd);
   }
 
@@ -734,7 +655,7 @@ private:
     } else if (isSingletonDLT(dlt)) {
       return; // Nothing to finalize.
     } else {  // Dense dimension.
-      ASSERT_DENSE_DLT(dlt);
+      assert(isDenseDLT(dlt));
       const uint64_t sz = getLvlSizes()[l];
       assert(sz >= full && "Segment is overfull");
       count = detail::checkedMul(count, sz - full);
@@ -753,7 +674,7 @@ private:
   void endPath(uint64_t diffLvl) {
     const uint64_t lvlRank = getLvlRank();
     const uint64_t lastLvl = lvlRank - 1;
-    assert(diffLvl <= lvlRank && "Level-diff is out of bounds");
+    assert(diffLvl <= lvlRank);
     const uint64_t stop = lvlRank - diffLvl;
     for (uint64_t i = 0; i < stop; ++i) {
       const uint64_t l = lastLvl - i;
@@ -761,12 +682,12 @@ private:
     }
   }
 
-  /// Continues a single insertion path, outer to inner.  The first
+  /// Continues a single insertion path, outer to inner. The first
   /// argument is the level-coordinates for the value being inserted.
   void insPath(const uint64_t *lvlCoords, uint64_t diffLvl, uint64_t full,
                V val) {
     const uint64_t lvlRank = getLvlRank();
-    assert(diffLvl <= lvlRank && "Level-diff is out of bounds");
+    assert(diffLvl <= lvlRank);
     for (uint64_t l = diffLvl; l < lvlRank; ++l) {
       const uint64_t c = lvlCoords[l];
       appendCrd(l, full, c);
@@ -783,8 +704,11 @@ private:
     for (uint64_t l = 0; l < lvlRank; ++l) {
       const auto crd = lvlCoords[l];
       const auto cur = lvlCursor[l];
-      if (crd > cur || (crd == cur && !isUniqueLvl(l)))
+      if (crd > cur || (crd == cur && !isUniqueLvl(l)) ||
+          (crd < cur && !isOrderedLvl(l))) {
         return l;
+      }
+
       if (crd < cur) {
         assert(false && "non-lexicographic insertion");
         return -1u;
@@ -803,14 +727,17 @@ private:
   std::vector<std::vector<C>> coordinates;
   std::vector<V> values;
   std::vector<uint64_t> lvlCursor; // cursor for lexicographic insertion.
+  SparseTensorCOO<V> *lvlCOO;      // COO used during forwarding
 };
 
 #undef ASSERT_COMPRESSED_OR_SINGLETON_LVL
-#undef ASSERT_COMPRESSED_LVL
-#undef ASSERT_VALID_LVL
-#undef ASSERT_VALID_DIM
 
 //===----------------------------------------------------------------------===//
+//
+//  SparseTensorEnumerator
+//
+//===----------------------------------------------------------------------===//
+
 /// A (higher-order) function object for enumerating the elements of some
 /// `SparseTensorStorage` under a permutation.  That is, the `forallElements`
 /// method encapsulates the loop-nest for enumerating the elements of
@@ -898,10 +825,8 @@ protected:
   std::vector<uint64_t> trgCursor; // in target order.
 };
 
-//===----------------------------------------------------------------------===//
 template <typename P, typename C, typename V>
-class SparseTensorEnumerator final
-    : public SparseTensorEnumeratorBase<V> {
+class SparseTensorEnumerator final : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
   using StorageImpl = SparseTensorStorage<P, C, V>;
 
@@ -939,8 +864,7 @@ private:
     // Recover the `<P,C,V>` type parameters of `src`.
     const auto &src = static_cast<const StorageImpl &>(this->src);
     if (l == src.getLvlRank()) {
-      assert(parentPos < src.values.size() &&
-             "Value position is out of bounds");
+      assert(parentPos < src.values.size());
       // TODO: <https://github.com/llvm/llvm-project/issues/54179>
       yield(this->trgCursor, src.values[parentPos]);
       return;
@@ -951,13 +875,12 @@ private:
       // Look up the bounds of the `l`-level segment determined by the
       // `(l - 1)`-level position `parentPos`.
       const std::vector<P> &positionsL = src.positions[l];
-      assert(parentPos + 1 < positionsL.size() &&
-             "Parent position is out of bounds");
+      assert(parentPos + 1 < positionsL.size());
       const uint64_t pstart = static_cast<uint64_t>(positionsL[parentPos]);
       const uint64_t pstop = static_cast<uint64_t>(positionsL[parentPos + 1]);
       // Loop-invariant code for looking up the `l`-level coordinates.
       const std::vector<C> &coordinatesL = src.coordinates[l];
-      assert(pstop <= coordinatesL.size() && "Stop position is out of bounds");
+      assert(pstop <= coordinatesL.size());
       for (uint64_t pos = pstart; pos < pstop; ++pos) {
         cursorL = static_cast<uint64_t>(coordinatesL[pos]);
         forallElements(yield, pos, l + 1);
@@ -966,7 +889,7 @@ private:
       cursorL = src.getCrd(l, parentPos);
       forallElements(yield, parentPos, l + 1);
     } else { // Dense level.
-      ASSERT_DENSE_DLT(dlt);
+      assert(isDenseDLT(dlt));
       const uint64_t sz = src.getLvlSizes()[l];
       const uint64_t pstart = parentPos * sz;
       for (uint64_t c = 0; c < sz; ++c) {
@@ -978,6 +901,11 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+//
+//  SparseTensorNNZ
+//
+//===----------------------------------------------------------------------===//
+
 /// Statistics regarding the number of nonzero subtensors in
 /// a source tensor, for direct sparse=>sparse conversion a la
 /// <https://arxiv.org/abs/2001.02609>.
@@ -1050,15 +978,31 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// Definitions of the ctors and factories of `SparseTensorStorage<P,C,V>`.
+//
+//  SparseTensorStorage Factories
+//
+//===----------------------------------------------------------------------===//
 
+template <typename P, typename C, typename V>
+SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
+    uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
+    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding) {
+  SparseTensorCOO<V> *lvlCOO = nullptr;
+  if (forwarding)
+    lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes);
+  return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
+                                          lvlTypes, dim2lvl, lvl2dim, lvlCOO,
+                                          !forwarding);
+}
+
+// TODO: MapRef
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
     uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
-    const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-    SparseTensorCOO<V> &lvlCOO) {
-  assert(dimShape && "Got nullptr for dimension shape");
-  assert(lvl2dim && "Got nullptr for level-to-dimension mapping");
+    const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+    const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO) {
+  assert(dimShape && dim2lvl && lvl2dim);
   const auto &lvlSizes = lvlCOO.getDimSizes();
   assert(lvlRank == lvlSizes.size() && "Level-rank mismatch");
   // Must reconstruct `dimSizes` from `lvlSizes`.  While this is easy
@@ -1073,14 +1017,15 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
     dimSizes[d] = lvlSizes[l];
   }
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes.data(), lvlRank,
-                                          lvlTypes, lvl2dim, lvlCOO);
+                                          lvlTypes, dim2lvl, lvl2dim, lvlCOO);
 }
 
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromSparseTensor(
     uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
     const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-    const uint64_t *lvl2dim, uint64_t srcRank, const uint64_t *src2lvl,
+    const uint64_t *src2lvl, // dim2lvl
+    const uint64_t *lvl2dim, uint64_t srcRank,
     const SparseTensorStorageBase &source) {
   // Verify that the `source` dimensions match the expected `dimShape`.
   assert(dimShape && "Got nullptr for dimension shape");
@@ -1095,8 +1040,9 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromSparseTensor(
 #endif
   SparseTensorEnumeratorBase<V> *lvlEnumerator;
   source.newEnumerator(&lvlEnumerator, lvlRank, lvlSizes, srcRank, src2lvl);
-  auto *tensor = new SparseTensorStorage<P, C, V>(
-      dimRank, dimSizes.data(), lvlRank, lvlTypes, lvl2dim, *lvlEnumerator);
+  auto *tensor = new SparseTensorStorage<P, C, V>(dimRank, dimSizes.data(),
+                                                  lvlRank, lvlTypes, src2lvl,
+                                                  lvl2dim, *lvlEnumerator);
   delete lvlEnumerator;
   return tensor;
 }
@@ -1105,21 +1051,30 @@ template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
     uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
     const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-    const uint64_t *lvl2dim, uint64_t srcRank, const uint64_t *src2lvl,
-    const intptr_t *buffers) {
+    const uint64_t *src2lvl, // FIXME: dim2lvl
+    const uint64_t *lvl2dim, uint64_t srcRank, const intptr_t *buffers) {
   assert(dimShape && "Got nullptr for dimension shape");
-  auto *tensor = new SparseTensorStorage<P, C, V>(
-      dimRank, dimShape, lvlRank, lvlSizes, lvlTypes, lvl2dim, buffers);
+  auto *tensor =
+      new SparseTensorStorage<P, C, V>(dimRank, dimShape, lvlRank, lvlSizes,
+                                       lvlTypes, src2lvl, lvl2dim, buffers);
   return tensor;
 }
+
+//===----------------------------------------------------------------------===//
+//
+//  SparseTensorStorage Constructors
+//
+//===----------------------------------------------------------------------===//
 
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-    const uint64_t *lvl2dim, bool initializeValuesIfAllDense)
+    const uint64_t *dim2lvl, const uint64_t *lvl2dim, SparseTensorCOO<V> *coo,
+    bool initializeValuesIfAllDense)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
-                          lvl2dim) {
+                          dim2lvl, lvl2dim) {
+  lvlCOO = coo;
   // Provide hints on capacity of positions and coordinates.
   // TODO: needs much fine-tuning based on actual sparsity; currently
   // we reserve position/coordinate space based on all previous dense
@@ -1130,8 +1085,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   for (uint64_t l = 0; l < lvlRank; ++l) {
     const DimLevelType dlt = lvlTypes[l]; // Avoid redundant bounds checking.
     if (isCompressedDLT(dlt)) {
-      // TODO: Take a parameter between 1 and `lvlSizes[l]`, and multiply
-      // `sz` by that before reserving. (For now we just use 1.)
       positions[l].reserve(sz + 1);
       positions[l].push_back(0);
       coordinates[l].reserve(sz);
@@ -1142,7 +1095,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       sz = 1;
       allDense = false;
     } else { // Dense level.
-      ASSERT_DENSE_DLT(dlt);
+      assert(isDenseDLT(dlt));
       sz = detail::checkedMul(sz, lvlSizes[l]);
     }
   }
@@ -1150,21 +1103,22 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     values.resize(sz, 0);
 }
 
+// TODO: share more code with forwarding methods?
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-    SparseTensorCOO<V> &lvlCOO)
+    const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+    const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank,
-                          lvlCOO.getDimSizes().data(), lvlTypes, lvl2dim,
-                          false) {
+                          lvlCOO.getDimSizes().data(), lvlTypes, dim2lvl,
+                          lvl2dim, nullptr, false) {
+  // Ensure lvlCOO is sorted.
   assert(lvlRank == lvlCOO.getDimSizes().size() && "Level-rank mismatch");
-  // Ensure the preconditions of `fromCOO`.  (One is already ensured by
-  // using `lvlSizes = lvlCOO.getDimSizes()` in the ctor above.)
   lvlCOO.sort();
   // Now actually insert the `elements`.
   const auto &elements = lvlCOO.getElements();
   const uint64_t nse = elements.size();
+  assert(values.size() == 0);
   values.reserve(nse);
   fromCOO(elements, 0, nse, 0);
 }
@@ -1172,10 +1126,10 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const DimLevelType *lvlTypes, const uint64_t *lvl2dim,
-    SparseTensorEnumeratorBase<V> &lvlEnumerator)
+    const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+    const uint64_t *lvl2dim, SparseTensorEnumeratorBase<V> &lvlEnumerator)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank,
-                          lvlEnumerator.getTrgSizes().data(), lvlTypes,
+                          lvlEnumerator.getTrgSizes().data(), lvlTypes, dim2lvl,
                           lvl2dim) {
   assert(lvlRank == lvlEnumerator.getTrgRank() && "Level-rank mismatch");
   {
@@ -1211,7 +1165,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       if (isCompressedDLT(dlt) || isSingletonDLT(dlt))
         coordinates[l].resize(parentSz, 0);
       else
-        ASSERT_DENSE_DLT(dlt); // Future-proofing.
+        assert(isDenseDLT(dlt));
     }
     values.resize(parentSz, 0); // Both allocate and zero-initialize.
   }
@@ -1225,7 +1179,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
         // however, it's semantically invalid here since that entry
         // does not represent a segment of `coordinates[l]`.  Moreover, that
         // entry must be immutable for `assembledSize` to remain valid.
-        assert(parentPos < parentSz && "Parent position is out of bounds");
+        assert(parentPos < parentSz);
         const uint64_t currentPos = positions[l][parentPos];
         // This increment won't overflow the `P` type, since it can't
         // exceed the original value of `positions[l][parentPos+1]`
@@ -1238,12 +1192,12 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
         writeCrd(l, parentPos, lvlCoords[l]);
         // the new parentPos equals the old parentPos.
       } else { // Dense level.
-        ASSERT_DENSE_DLT(dlt);
+        assert(isDenseDLT(dlt));
         parentPos = parentPos * getLvlSizes()[l] + lvlCoords[l];
       }
       parentSz = assembledSize(parentSz, l);
     }
-    assert(parentPos < values.size() && "Value position is out of bounds");
+    assert(parentPos < values.size());
     values[parentPos] = val;
   });
   // The finalizeYieldPos loop
@@ -1255,7 +1209,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       // Can't check all of them, but at least we can check the last one.
       assert(positions[l][parentSz - 1] == positions[l][parentSz] &&
              "Positions got corrupted");
-      // TODO: optimize this by using `memmove` or similar.
       for (uint64_t n = 0; n < parentSz; ++n) {
         const uint64_t parentPos = parentSz - n;
         positions[l][parentPos] = positions[l][parentPos - 1];
@@ -1264,8 +1217,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     } else {
       // Both dense and singleton are no-ops for the finalizeYieldPos loop.
       // This assertion is for future-proofing.
-      assert((isDenseDLT(dlt) || isSingletonDLT(dlt)) &&
-             "Level is neither dense nor singleton");
+      assert((isDenseDLT(dlt) || isSingletonDLT(dlt)));
     }
     parentSz = assembledSize(parentSz, l);
   }
@@ -1275,9 +1227,9 @@ template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-    const uint64_t *lvl2dim, const intptr_t *lvlBufs)
+    const uint64_t *dim2lvl, const uint64_t *lvl2dim, const intptr_t *lvlBufs)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
-                          lvl2dim) {
+                          dim2lvl, lvl2dim) {
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
     if (!isUniqueLvl(l) && isCompressedLvl(l)) {
@@ -1299,7 +1251,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       positions[l].assign(posPtr, posPtr + parentSz + 1);
       coordinates[l].assign(crdPtr, crdPtr + positions[l][parentSz]);
     } else {
-      assert(isDenseLvl(l) && "Level is not dense");
+      assert(isDenseLvl(l));
     }
     parentSz = assembledSize(parentSz, l);
   }
@@ -1323,8 +1275,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   V *valPtr = reinterpret_cast<V *>(lvlBufs[bufIdx]);
   values.assign(valPtr, valPtr + parentSz);
 }
-
-#undef ASSERT_DENSE_DLT
 
 } // namespace sparse_tensor
 } // namespace mlir

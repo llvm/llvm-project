@@ -465,10 +465,8 @@ define void @slt_smin_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -520,10 +518,8 @@ define void @slt_smin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -693,9 +689,9 @@ define void @sgt_smin_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP10]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -752,9 +748,9 @@ define void @sgt_smin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP10]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -1117,9 +1113,9 @@ define void @sgt_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[Y]], <i32 10, i32 10>
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[Y]], <i32 10, i32 10>
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP10]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1275,5 +1271,27 @@ define i1 @smin_and_bitwise(i32 %x) {
   ret i1 %tobool
 }
 
+; try to fold icmp eq smin(X, Y), Z
+; pre-condition X != Z
+; X < Z fail
+; swap X and Y
+; pre-condition Y != Z fail
+; Y < Z fail
+define i1 @eq_smin_nofold(i32 %x) {
+; CHECK-LABEL: @eq_smin_nofold(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[MINV:%.*]] = tail call i32 @llvm.smin.i32(i32 [[X]], i32 5)
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i32 [[MINV]], 5
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %cond = icmp ne i32 %x, 5
+  call void @llvm.assume(i1 %cond)
+  %minv = tail call i32 @llvm.smin.i32(i32 %x, i32 5)
+  %ret = icmp eq i32 %minv, 5
+  ret i1 %ret
+}
+
+declare void @llvm.assume(i1)
 declare i32 @llvm.smin.i32(i32, i32)
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)

@@ -76,6 +76,8 @@ unsigned long long monotonic_clock_ns() {
 const int kPCInc = 1;
 #elif defined(__sparc__) || defined(__mips__)
 const int kPCInc = 8;
+#elif defined(__riscv) && __riscv_xlen == 64
+const int kPCInc = 2;
 #else
 const int kPCInc = 4;
 #endif

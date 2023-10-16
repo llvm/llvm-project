@@ -106,8 +106,8 @@ struct TestAllocatorStorage {
 
   // To alleviate some problem, let's skip the thread safety analysis here.
   static void *get(size_t size) NO_THREAD_SAFETY_ANALYSIS {
-    assert(size <= kMaxSize &&
-           "Allocation size doesn't fit in the allocator storage");
+    CHECK(size <= kMaxSize &&
+          "Allocation size doesn't fit in the allocator storage");
     M.lock();
     return AllocatorStorage;
   }
@@ -512,6 +512,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, CacheDrain) NO_THREAD_SAFETY_ANALYSIS {
 
   bool UnlockRequired;
   auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_TRUE(!TSD->getCache().isEmpty());
   TSD->getCache().drain();
   EXPECT_TRUE(TSD->getCache().isEmpty());
@@ -536,6 +537,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ForceCacheDrain) NO_THREAD_SAFETY_ANALYSIS {
 
   bool UnlockRequired;
   auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_TRUE(TSD->getCache().isEmpty());
   EXPECT_EQ(TSD->getQuarantineCache().getSize(), 0U);
   EXPECT_TRUE(Allocator->getQuarantine()->isEmpty());
@@ -842,6 +844,7 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
 
   bool UnlockRequired;
   auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   TSD->getCache().drain();
 
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);

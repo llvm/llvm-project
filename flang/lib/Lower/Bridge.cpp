@@ -112,7 +112,6 @@ struct IncrementLoopInfo {
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
   mlir::Value loopVariable = nullptr;
-  mlir::Value stepValue = nullptr; // possible uses in multiple blocks
 
   // Data members for structured loops.
   fir::DoLoopOp doLoop = nullptr;
@@ -120,6 +119,7 @@ struct IncrementLoopInfo {
   // Data members for unstructured loops.
   bool hasRealControl = false;
   mlir::Value tripVariable = nullptr;
+  mlir::Value stepVariable = nullptr;
   mlir::Block *headerBlock = nullptr; // loop entry and test block
   mlir::Block *maskBlock = nullptr;   // concurrent loop mask block
   mlir::Block *bodyBlock = nullptr;   // first loop body block
@@ -137,34 +137,41 @@ struct ConstructContext {
   Fortran::lower::StatementContext &stmtCtx; // construct exit code
 };
 
-/// Helper class to generate the runtime type info global data. This data
-/// is required to describe the derived type to the runtime so that it can
-/// operate over it. It must be ensured this data will be generated for every
-/// derived type lowered in the current translated unit. However, this data
+/// Helper class to generate the runtime type info global data and the
+/// fir.type_info operations that contain the dipatch tables (if any).
+/// The type info global data is required to describe the derived type to the
+/// runtime so that it can operate over it.
+/// It must be ensured these operations will be generated for every derived type
+/// lowered in the current translated unit. However, these operations
 /// cannot be generated before FuncOp have been created for functions since the
 /// initializers may take their address (e.g for type bound procedures). This
-/// class allows registering all the required runtime type info while it is not
-/// possible to create globals, and to generate this data after function
-/// lowering.
-class RuntimeTypeInfoConverter {
+/// class allows registering all the required type info while it is not
+/// possible to create GlobalOp/TypeInfoOp, and to generate this data afte
+/// function lowering.
+class TypeInfoConverter {
   /// Store the location and symbols of derived type info to be generated.
   /// The location of the derived type instantiation is also stored because
-  /// runtime type descriptor symbol are compiler generated and cannot be mapped
-  /// to user code on their own.
-  struct TypeInfoSymbol {
+  /// runtime type descriptor symbols are compiler generated and cannot be
+  /// mapped to user code on their own.
+  struct TypeInfo {
     Fortran::semantics::SymbolRef symbol;
+    const Fortran::semantics::DerivedTypeSpec &typeSpec;
+    fir::RecordType type;
     mlir::Location loc;
   };
 
 public:
-  void registerTypeInfoSymbol(Fortran::lower::AbstractConverter &converter,
-                              mlir::Location loc,
-                              Fortran::semantics::SymbolRef typeInfoSym) {
+  void registerTypeInfo(Fortran::lower::AbstractConverter &converter,
+                        mlir::Location loc,
+                        Fortran::semantics::SymbolRef typeInfoSym,
+                        const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                        fir::RecordType type) {
     if (seen.contains(typeInfoSym))
       return;
     seen.insert(typeInfoSym);
     if (!skipRegistration) {
-      registeredTypeInfoSymbols.emplace_back(TypeInfoSymbol{typeInfoSym, loc});
+      registeredTypeInfo.emplace_back(
+          TypeInfo{typeInfoSym, typeSpec, type, loc});
       return;
     }
     // Once the registration is closed, symbols cannot be added to the
@@ -172,67 +179,59 @@ public:
     // However, after registration is closed, it is safe to directly generate
     // the globals because all FuncOps whose addresses may be required by the
     // initializers have been generated.
-    Fortran::lower::createRuntimeTypeInfoGlobal(converter, loc,
-                                                typeInfoSym.get());
+    createTypeInfoOpAndGlobal(converter,
+                              TypeInfo{typeInfoSym, typeSpec, type, loc});
   }
 
-  void createTypeInfoGlobals(Fortran::lower::AbstractConverter &converter) {
+  void createTypeInfo(Fortran::lower::AbstractConverter &converter) {
     skipRegistration = true;
-    for (const TypeInfoSymbol &info : registeredTypeInfoSymbols)
-      Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.loc,
-                                                  info.symbol.get());
-    registeredTypeInfoSymbols.clear();
+    for (const TypeInfo &info : registeredTypeInfo)
+      createTypeInfoOpAndGlobal(converter, info);
+    registeredTypeInfo.clear();
   }
 
 private:
-  /// Store the runtime type descriptors that will be required for the
-  /// derived type that have been converted to FIR derived types.
-  llvm::SmallVector<TypeInfoSymbol> registeredTypeInfoSymbols;
-  /// Create derived type runtime info global immediately without storing the
-  /// symbol in registeredTypeInfoSymbols.
-  bool skipRegistration = false;
-  /// Track symbols symbols processed during and after the registration
-  /// to avoid infinite loops between type conversions and global variable
-  /// creation.
-  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
-};
-
-class DispatchTableConverter {
-  struct DispatchTableInfo {
-    const Fortran::semantics::DerivedTypeSpec *typeSpec;
-    mlir::Location loc;
-  };
-
-public:
-  void registerTypeSpec(Fortran::lower::AbstractConverter &converter,
-                        mlir::Location loc,
-                        const Fortran::semantics::DerivedTypeSpec *typeSpec) {
-    assert(typeSpec && "type spec is null");
-    std::string dtName = converter.mangleName(*typeSpec);
-    if (seen.contains(dtName) || dtName.find("__fortran") != std::string::npos)
-      return;
-    seen.insert(dtName);
-    registeredDispatchTableInfo.emplace_back(DispatchTableInfo{typeSpec, loc});
+  void createTypeInfoOpAndGlobal(Fortran::lower::AbstractConverter &converter,
+                                 const TypeInfo &info) {
+    Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.loc,
+                                                info.symbol.get());
+    createTypeInfoOp(converter, info);
   }
 
-  void createDispatchTableOps(Fortran::lower::AbstractConverter &converter) {
-    for (const DispatchTableInfo &info : registeredDispatchTableInfo) {
-      std::string dtName = converter.mangleName(*info.typeSpec);
-      const Fortran::semantics::DerivedTypeSpec *parent =
-          Fortran::evaluate::GetParentTypeSpec(*info.typeSpec);
-      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      fir::DispatchTableOp dt = builder.createDispatchTableOp(
-          info.loc, dtName, parent ? converter.mangleName(*parent) : "");
-      auto insertPt = builder.saveInsertionPoint();
-      const Fortran::semantics::Scope *scope = info.typeSpec->scope();
-      if (!scope)
-        scope = info.typeSpec->typeSymbol().scope();
-      Fortran::semantics::SymbolVector bindings =
-          Fortran::semantics::CollectBindings(*scope);
+  void createTypeInfoOp(Fortran::lower::AbstractConverter &converter,
+                        const TypeInfo &info) {
+    fir::RecordType parentType{};
+    if (const Fortran::semantics::DerivedTypeSpec *parent =
+            Fortran::evaluate::GetParentTypeSpec(info.typeSpec))
+      parentType = mlir::cast<fir::RecordType>(converter.genType(*parent));
 
-      if (!bindings.empty())
-        builder.createBlock(&dt.getRegion());
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::ModuleOp module = builder.getModule();
+    fir::TypeInfoOp dt =
+        module.lookupSymbol<fir::TypeInfoOp>(info.type.getName());
+    if (dt)
+      return; // Already created.
+    auto insertPt = builder.saveInsertionPoint();
+    builder.setInsertionPoint(module.getBody(), module.getBody()->end());
+    dt = builder.create<fir::TypeInfoOp>(info.loc, info.type, parentType);
 
+    if (!info.typeSpec.HasDefaultInitialization(/*ignoreAllocatable=*/false,
+                                                /*ignorePointer=*/false))
+      dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
+    if (!info.typeSpec.HasDestruction())
+      dt->setAttr(dt.getNoDestroyAttrName(), builder.getUnitAttr());
+    if (!Fortran::semantics::MayRequireFinalization(info.typeSpec))
+      dt->setAttr(dt.getNoFinalAttrName(), builder.getUnitAttr());
+
+    const Fortran::semantics::Scope *scope = info.typeSpec.scope();
+    if (!scope)
+      scope = info.typeSpec.typeSymbol().scope();
+    assert(scope && "failed to find type scope");
+
+    Fortran::semantics::SymbolVector bindings =
+        Fortran::semantics::CollectBindings(*scope);
+    if (!bindings.empty()) {
+      builder.createBlock(&dt.getDispatchTable());
       for (const Fortran::semantics::SymbolRef &binding : bindings) {
         const auto &details =
             binding.get().get<Fortran::semantics::ProcBindingDetails>();
@@ -244,20 +243,21 @@ public:
             info.loc, mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
       }
-      if (!bindings.empty())
-        builder.create<fir::FirEndOp>(info.loc);
-      builder.restoreInsertionPoint(insertPt);
+      builder.create<fir::FirEndOp>(info.loc);
     }
-    registeredDispatchTableInfo.clear();
+    builder.restoreInsertionPoint(insertPt);
   }
 
-private:
-  /// Store the semantic DerivedTypeSpec that will be required to generate the
-  /// dispatch table.
-  llvm::SmallVector<DispatchTableInfo> registeredDispatchTableInfo;
-
-  /// Track processed type specs to avoid multiple creation.
-  llvm::StringSet<> seen;
+  /// Store the front-end data that will be required to generate the type info
+  /// for the derived types that have been converted to fir.type<>.
+  llvm::SmallVector<TypeInfo> registeredTypeInfo;
+  /// Create derived type info immediately without storing the
+  /// symbol in registeredTypeInfo.
+  bool skipRegistration = false;
+  /// Track symbols symbols processed during and after the registration
+  /// to avoid infinite loops between type conversions and global variable
+  /// creation.
+  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 32> seen;
 };
 
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
@@ -334,13 +334,10 @@ public:
 
     /// Once all the code has been translated, create runtime type info
     /// global data structure for the derived types that have been
-    /// processed.
+    /// processed as well as the fir.type_info operations with the
+    /// dispatch tables.
     createGlobalOutsideOfFunctionLowering(
-        [&]() { runtimeTypeInfoConverter.createTypeInfoGlobals(*this); });
-
-    /// Create the dispatch tables for derived types.
-    createGlobalOutsideOfFunctionLowering(
-        [&]() { dispatchTableConverter.createDispatchTableOps(*this); });
+        [&]() { typeInfoConverter.createTypeInfo(*this); });
 
     // Create the list of any environment defaults for the runtime to set. The
     // runtime default list is only created if there is a main program to ensure
@@ -706,14 +703,7 @@ public:
             return;
           }
           // deallocate allocated in createHostAssociateVarClone value
-          mlir::Value needs_dealloc =
-              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc,
-                                                           new_box);
-          builder->genIfThen(loc, needs_dealloc)
-              .genThen([&]() {
-                Fortran::lower::genDeallocateBox(*this, new_box, loc);
-              })
-              .end();
+          Fortran::lower::genDeallocateIfAllocated(*this, new_box, loc);
         },
         [&](const auto &) -> void {
           // Do nothing
@@ -816,16 +806,16 @@ public:
   genLocation(const Fortran::parser::CharBlock &block) override final {
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
-      if (std::optional<std::pair<Fortran::parser::SourcePosition,
-                                  Fortran::parser::SourcePosition>>
-              loc = cooked->GetSourcePositionRange(block)) {
-        // loc is a pair (begin, end); use the beginning position
-        Fortran::parser::SourcePosition &filePos = loc->first;
-        llvm::SmallString<256> filePath(*filePos.path);
-        llvm::sys::fs::make_absolute(filePath);
-        llvm::sys::path::remove_dots(filePath);
-        return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
-                                         filePos.line, filePos.column);
+      if (std::optional<Fortran::parser::ProvenanceRange> provenance =
+              cooked->GetProvenanceRange(block)) {
+        if (std::optional<Fortran::parser::SourcePosition> filePos =
+                cooked->allSources().GetSourcePosition(provenance->start())) {
+          llvm::SmallString<256> filePath(*filePos->path);
+          llvm::sys::fs::make_absolute(filePath);
+          llvm::sys::path::remove_dots(filePath);
+          return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
+                                           filePos->line, filePos->column);
+        }
       }
     }
     return genUnknownLocation();
@@ -882,16 +872,11 @@ public:
     hostAssocTuple = val;
   }
 
-  void registerRuntimeTypeInfo(
-      mlir::Location loc,
-      Fortran::lower::SymbolRef typeInfoSym) override final {
-    runtimeTypeInfoConverter.registerTypeInfoSymbol(*this, loc, typeInfoSym);
-  }
-
-  void registerDispatchTableInfo(
-      mlir::Location loc,
-      const Fortran::semantics::DerivedTypeSpec *typeSpec) override final {
-    dispatchTableConverter.registerTypeSpec(*this, loc, typeSpec);
+  void registerTypeInfo(mlir::Location loc,
+                        Fortran::lower::SymbolRef typeInfoSym,
+                        const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                        fir::RecordType type) override final {
+    typeInfoConverter.registerTypeInfo(*this, loc, typeInfoSym, typeSpec, type);
   }
 
   llvm::StringRef
@@ -1738,29 +1723,45 @@ private:
     genFIR(endDoEval, unstructuredContext);
   }
 
+  /// Generate FIR to evaluate loop control values (lower, upper and step).
+  mlir::Value genControlValue(const Fortran::lower::SomeExpr *expr,
+                              const IncrementLoopInfo &info,
+                              bool *isConst = nullptr) {
+    mlir::Location loc = toLocation();
+    mlir::Type controlType = info.isStructured() ? builder->getIndexType()
+                                                 : info.getLoopVariableType();
+    Fortran::lower::StatementContext stmtCtx;
+    if (expr) {
+      if (isConst)
+        *isConst = Fortran::evaluate::IsConstantExpr(*expr);
+      return builder->createConvert(loc, controlType,
+                                    createFIRExpr(loc, expr, stmtCtx));
+    }
+
+    if (isConst)
+      *isConst = true;
+    if (info.hasRealControl)
+      return builder->createRealConstant(loc, controlType, 1u);
+    return builder->createIntegerConstant(loc, controlType, 1); // step
+  }
+
   /// Generate FIR to begin a structured or unstructured increment loop nest.
   void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
-    auto genControlValue = [&](const Fortran::lower::SomeExpr *expr,
-                               const IncrementLoopInfo &info) {
-      mlir::Type controlType = info.isStructured() ? builder->getIndexType()
-                                                   : info.getLoopVariableType();
-      Fortran::lower::StatementContext stmtCtx;
-      if (expr)
-        return builder->createConvert(loc, controlType,
-                                      createFIRExpr(loc, expr, stmtCtx));
-
-      if (info.hasRealControl)
-        return builder->createRealConstant(loc, controlType, 1u);
-      return builder->createIntegerConstant(loc, controlType, 1); // step
-    };
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       info.loopVariable =
           genLoopVariableAddress(loc, info.loopVariableSym, info.isUnordered);
       mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
       mlir::Value upperValue = genControlValue(info.upperExpr, info);
-      info.stepValue = genControlValue(info.stepExpr, info);
+      bool isConst = true;
+      mlir::Value stepValue = genControlValue(
+          info.stepExpr, info, info.isStructured() ? nullptr : &isConst);
+      // Use a temp variable for unstructured loops with non-const step.
+      if (!isConst) {
+        info.stepVariable = builder->createTemporary(loc, stepValue.getType());
+        builder->create<fir::StoreOp>(loc, stepValue, info.stepVariable);
+      }
 
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
@@ -1769,14 +1770,14 @@ private:
         if (info.isUnordered) {
           // The loop variable value is explicitly updated.
           info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, info.stepValue, /*unordered=*/true);
+              loc, lowerValue, upperValue, stepValue, /*unordered=*/true);
           builder->setInsertionPointToStart(info.doLoop.getBody());
           loopValue = builder->createConvert(loc, loopVarType,
                                              info.doLoop.getInductionVar());
         } else {
           // The loop variable is a doLoop op argument.
           info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, info.stepValue, /*unordered=*/false,
+              loc, lowerValue, upperValue, stepValue, /*unordered=*/false,
               /*finalCountValue=*/true,
               builder->createConvert(loc, loopVarType, lowerValue));
           builder->setInsertionPointToStart(info.doLoop.getBody());
@@ -1805,18 +1806,17 @@ private:
         auto diff1 =
             builder->create<mlir::arith::SubFOp>(loc, upperValue, lowerValue);
         auto diff2 =
-            builder->create<mlir::arith::AddFOp>(loc, diff1, info.stepValue);
-        tripCount =
-            builder->create<mlir::arith::DivFOp>(loc, diff2, info.stepValue);
+            builder->create<mlir::arith::AddFOp>(loc, diff1, stepValue);
+        tripCount = builder->create<mlir::arith::DivFOp>(loc, diff2, stepValue);
         tripCount =
             builder->createConvert(loc, builder->getIndexType(), tripCount);
       } else {
         auto diff1 =
             builder->create<mlir::arith::SubIOp>(loc, upperValue, lowerValue);
         auto diff2 =
-            builder->create<mlir::arith::AddIOp>(loc, diff1, info.stepValue);
+            builder->create<mlir::arith::AddIOp>(loc, diff1, stepValue);
         tripCount =
-            builder->create<mlir::arith::DivSIOp>(loc, diff2, info.stepValue);
+            builder->create<mlir::arith::DivSIOp>(loc, diff2, stepValue);
       }
       if (forceLoopToExecuteOnce) { // minimum tripCount is 1
         mlir::Value one =
@@ -1904,12 +1904,15 @@ private:
       tripCount = builder->create<mlir::arith::SubIOp>(loc, tripCount, one);
       builder->create<fir::StoreOp>(loc, tripCount, info.tripVariable);
       mlir::Value value = builder->create<fir::LoadOp>(loc, info.loopVariable);
-      if (info.hasRealControl)
-        value =
-            builder->create<mlir::arith::AddFOp>(loc, value, info.stepValue);
+      mlir::Value step;
+      if (info.stepVariable)
+        step = builder->create<fir::LoadOp>(loc, info.stepVariable);
       else
-        value =
-            builder->create<mlir::arith::AddIOp>(loc, value, info.stepValue);
+        step = genControlValue(info.stepExpr, info);
+      if (info.hasRealControl)
+        value = builder->create<mlir::arith::AddFOp>(loc, value, step);
+      else
+        value = builder->create<mlir::arith::AddIOp>(loc, value, step);
       builder->create<fir::StoreOp>(loc, value, info.loopVariable);
 
       genBranch(info.headerBlock);
@@ -4800,8 +4803,7 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
-  RuntimeTypeInfoConverter runtimeTypeInfoConverter;
-  DispatchTableConverter dispatchTableConverter;
+  TypeInfoConverter typeInfoConverter;
 
   // Stack to manage object deallocation and finalization at construct exits.
   llvm::SmallVector<ConstructContext> activeConstructStack;

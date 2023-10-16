@@ -1335,8 +1335,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if ((PreviousNonComment &&
        (PreviousNonComment->ClosesTemplateDeclaration ||
         PreviousNonComment->ClosesRequiresClause ||
+        (PreviousNonComment->is(TT_AttributeMacro) &&
+         Current.isNot(tok::l_paren)) ||
         PreviousNonComment->isOneOf(
-            TT_AttributeParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
+            TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
             TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
@@ -1955,7 +1957,8 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
 
 void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
-      State.NextToken->is(TT_LambdaLBrace)) {
+      State.NextToken->is(TT_LambdaLBrace) &&
+      !State.Line->MightBeFunctionDecl) {
     State.Stack.back().NestedBlockIndent = State.FirstIndent;
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
@@ -2270,7 +2273,16 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     if (State.Stack.back().IsInsideObjCArrayLiteral)
       return nullptr;
 
+    // The "DPI"/"DPI-C" in SystemVerilog direct programming interface
+    // imports/exports cannot be split, e.g.
+    // `import "DPI" function foo();`
+    // FIXME: make this use same infra as C++ import checks
+    if (Style.isVerilog() && Current.Previous &&
+        Current.Previous->isOneOf(tok::kw_export, Keywords.kw_import)) {
+      return nullptr;
+    }
     StringRef Text = Current.TokenText;
+
     // We need this to address the case where there is an unbreakable tail only
     // if certain other formatting decisions have been taken. The
     // UnbreakableTailLength of Current is an overapproximation in that case and

@@ -1250,8 +1250,8 @@ AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
   for (const auto &operand : llvm::enumerate(operands)) {
     // Compute replacement dim/sym of operand.
     AffineExpr replacement;
-    auto dimIt = std::find(dims.begin(), dims.end(), operand.value());
-    auto symIt = std::find(syms.begin(), syms.end(), operand.value());
+    auto dimIt = llvm::find(dims, operand.value());
+    auto symIt = llvm::find(syms, operand.value());
     if (dimIt != dims.end()) {
       replacement =
           builder.getAffineDimExpr(std::distance(dims.begin(), dimIt));

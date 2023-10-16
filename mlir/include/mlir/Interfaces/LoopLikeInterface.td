@@ -20,6 +20,19 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     Contains helper functions to query properties and perform transformations
     of a loop. Operations that implement this interface will be considered by
     loop-invariant code motion.
+
+    Loop-carried variables can be exposed through this interface. There are
+    3 components to a loop-carried variable.
+    - The "region iter_arg" is the block argument of the entry block that
+      represents the loop-carried variable in each iteration.
+    - The "init value" is an operand of the loop op that serves as the initial
+      region iter_arg value for the first iteration (if any).
+    - The "yielded" value is the value that is forwarded from one iteration to
+      serve as the region iter_arg of the next iteration.
+
+    If one of the respective interface methods is implemented, so must the other
+    two. The interface verifier ensures that the number of types of the region
+    iter_args, init values and yielded values match.
   }];
   let cppNamespace = "::mlir";
 
@@ -141,6 +154,42 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         return ::mlir::Block::BlockArgListType();
       }]
     >,
+    InterfaceMethod<[{
+        Return the values that are yielded to the next iteration.
+      }],
+      /*retTy=*/"::mlir::ValueRange",
+      /*methodName=*/"getYieldedValues",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::ValueRange();
+      }]
+    >,
+    InterfaceMethod<[{
+        Append the specified additional "init" operands: replace this loop with
+        a new loop that has the additional init operands. The loop body of
+        this loop is moved over to the new loop.
+
+        `newInitOperands` specifies the additional "init" operands.
+        `newYieldValuesFn` is a function that returns the yielded values (which
+        can be computed based on the additional region iter_args). If
+        `replaceInitOperandUsesInLoop` is set, all uses of the additional init
+        operands inside of this loop are replaced with the corresponding, newly
+        added region iter_args.
+
+        Note: Loops that do not support init/iter_args should return "failure".
+      }],
+      /*retTy=*/"::mlir::FailureOr<::mlir::LoopLikeOpInterface>",
+      /*methodName=*/"replaceWithAdditionalYields",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                    "::mlir::ValueRange":$newInitOperands,
+                    "bool":$replaceInitOperandUsesInLoop,
+                    "const ::mlir::NewYieldValuesFn &":$newYieldValuesFn),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
   ];
 
   let extraClassDeclaration = [{
@@ -148,6 +197,30 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// can either be because the block is nested inside a LoopLikeInterface, or
     /// because the control flow graph is cyclic
     static bool blockIsInLoop(Block *block);
+  }];
+
+  let extraSharedClassDeclaration = [{
+    /// Append the specified additional "init" operands: replace this loop with
+    /// a new loop that has the additional init operands. The loop body of this
+    /// loop is moved over to the new loop.
+    ///
+    /// The newly added region iter_args are yielded from the loop.
+    ::mlir::FailureOr<::mlir::LoopLikeOpInterface>
+        replaceWithAdditionalIterOperands(::mlir::RewriterBase &rewriter,
+                                          ::mlir::ValueRange newInitOperands,
+                                          bool replaceInitOperandUsesInLoop) {
+      return $_op.replaceWithAdditionalYields(
+          rewriter, newInitOperands, replaceInitOperandUsesInLoop,
+          [](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+            return SmallVector<Value>(newBBArgs);
+          });
+    }
+  }];
+
+  let verifyWithRegions = 1;
+
+  let verify = [{
+    return detail::verifyLoopLikeOpInterface($_op);
   }];
 }
 

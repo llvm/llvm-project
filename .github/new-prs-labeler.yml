@@ -40,15 +40,6 @@ lld:
 llvm-lit:
   - llvm/utils/lit/**/*
 
-mlir:afine:
-  - mlir/**/Affine/**/*
-
-mlir:python:
-  - mlir/python/**/*
-
-mlir:vectorops:
-  - mlir/**/Vector/**/*
-
 PGO:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
@@ -87,6 +78,10 @@ compiler-rt:sanitizer:
   - compiler-rt/test/*san*/**
   - compiler-rt/lib/fuzzer/**
   - compiler-rt/test/fuzzer/**
+  - compiler-rt/lib/scudo/**
+  - compiler-rt/test/scudo/**
+
+compiler-rt:scudo:
   - compiler-rt/lib/scudo/**
   - compiler-rt/test/scudo/**
 
@@ -259,6 +254,15 @@ mlir:vector:
 mlir:execution-engine:
   - mlir/**/ExecutionEngine/**
 
+mlir:presburger:
+  - mlir/**/*Presburger*/**
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
+
 coroutines:
   - clang/docs/DebuggingCoroutines.rst
   - clang/lib/Sema/SemaCoroutine.cpp
@@ -304,10 +308,6 @@ tools:llvm-mca:
   - llvm/tools/llvm-mca/**
   - llvm/include/llvm/MCA/**
   - llvm/lib/MCA/**
-
-vectorizers:
-  - llvm/lib/Transforms/Vectorize/**
-  - llvm/include/llvm/Transforms/Vectorize/**
 
 clang:
   - any:
@@ -632,9 +632,6 @@ llvm:regalloc:
   - llvm/include/PBQPRAConstraint.h
   - llvm/include/llvm/CodeGen/Spiller.h
   - llvm/**/*RegAlloc
-
-mlir:presburger:
-  - mlir/**/*Presburger
 
 lldb:
   - lldb/**

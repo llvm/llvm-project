@@ -27,17 +27,17 @@ void rhs_span3() {
   int *q = new int[6];
   int *p = q;  // expected-warning{{'p' is an unsafe pointer used for buffer access}}
   p[5] = 10;  // expected-note{{used in buffer access here}}
-  int *r = q;
+  int *r = q; // FIXME: we do not fix `int *r = q` here as the `.data()` fix-it is not generally correct
 }
 
 void test_grouping() {
   int *z = new int[8];
   int tmp;
-  int *y = new int[10];  // expected-warning{{'y' is an unsafe pointer used for buffer access}} expected-note{{change type of 'y' to 'std::span' to preserve bounds information}}
+  int *y = new int[10];  // expected-warning{{'y' is an unsafe pointer used for buffer access}}
   tmp = y[5]; // expected-note{{used in buffer access here}}
 
   int *x = new int[10];
-  x = y;
+  x = y;      // FIXME: we do not fix `x = y` here as the `.data()` fix-it is not generally correct
 
   int *w = z;
 }

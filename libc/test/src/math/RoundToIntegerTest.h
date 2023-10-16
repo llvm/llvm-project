@@ -18,32 +18,32 @@
 #include <errno.h>
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename F, typename I, bool TestModes = false>
-class RoundToIntegerTestTemplate : public __llvm_libc::testing::Test {
+class RoundToIntegerTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   typedef I (*RoundToIntegerFunc)(F);
 
 private:
-  using FPBits = __llvm_libc::fputil::FPBits<F>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using UIntType = typename FPBits::UIntType;
 
-  const F zero = F(__llvm_libc::fputil::FPBits<F>::zero());
-  const F neg_zero = F(__llvm_libc::fputil::FPBits<F>::neg_zero());
-  const F inf = F(__llvm_libc::fputil::FPBits<F>::inf());
-  const F neg_inf = F(__llvm_libc::fputil::FPBits<F>::neg_inf());
-  const F nan = F(__llvm_libc::fputil::FPBits<F>::build_quiet_nan(1));
+  const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
+  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
+  const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf());
+  const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_inf());
+  const F nan = F(LIBC_NAMESPACE::fputil::FPBits<F>::build_quiet_nan(1));
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
 
   void test_one_input(RoundToIntegerFunc func, F input, I expected,
                       bool expectError) {
     libc_errno = 0;
-    __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
     ASSERT_EQ(func(input), expected);
 
@@ -77,7 +77,7 @@ public:
       // We will disable all exceptions so that the test will not
       // crash with SIGFPE. We can still use fetestexcept to check
       // if the appropriate flag was raised.
-      __llvm_libc::fputil::disable_except(FE_ALL_EXCEPT);
+      LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
     }
   }
 
@@ -96,7 +96,7 @@ public:
   void testInfinityAndNaN(RoundToIntegerFunc func) {
     if (TestModes) {
       for (int mode : ROUNDING_MODES) {
-        __llvm_libc::fputil::set_round(mode);
+        LIBC_NAMESPACE::fputil::set_round(mode);
         do_infinity_and_na_n_test(func);
       }
     } else {
@@ -140,7 +140,7 @@ public:
   void testRoundNumbers(RoundToIntegerFunc func) {
     if (TestModes) {
       for (int mode : ROUNDING_MODES) {
-        __llvm_libc::fputil::set_round(mode);
+        LIBC_NAMESPACE::fputil::set_round(mode);
         do_round_numbers_test(func);
       }
     } else {
@@ -167,7 +167,7 @@ public:
   void testFractions(RoundToIntegerFunc func) {
     if (TestModes) {
       for (int mode : ROUNDING_MODES) {
-        __llvm_libc::fputil::set_round(mode);
+        LIBC_NAMESPACE::fputil::set_round(mode);
         do_fractions_test(func, mode);
       }
     } else {
@@ -193,12 +193,12 @@ public:
     bits.set_unbiased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
     bits.set_sign(1);
     bits.set_mantissa(UIntType(0x1)
-                      << (__llvm_libc::fputil::MantissaWidth<F>::VALUE - 1));
+                      << (LIBC_NAMESPACE::fputil::MantissaWidth<F>::VALUE - 1));
 
     F x = F(bits);
     if (TestModes) {
       for (int m : ROUNDING_MODES) {
-        __llvm_libc::fputil::set_round(m);
+        LIBC_NAMESPACE::fputil::set_round(m);
         long mpfr_long_result;
         bool erangeflag =
             mpfr::round_to_long(x, to_mpfr_rounding_mode(m), mpfr_long_result);
@@ -226,22 +226,22 @@ public:
       // All subnormal numbers should round to zero.
       if (TestModes) {
         if (x > 0) {
-          __llvm_libc::fputil::set_round(FE_UPWARD);
+          LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
           test_one_input(func, x, I(1), false);
-          __llvm_libc::fputil::set_round(FE_DOWNWARD);
+          LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
           test_one_input(func, x, I(0), false);
-          __llvm_libc::fputil::set_round(FE_TOWARDZERO);
+          LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
           test_one_input(func, x, I(0), false);
-          __llvm_libc::fputil::set_round(FE_TONEAREST);
+          LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
           test_one_input(func, x, I(0), false);
         } else {
-          __llvm_libc::fputil::set_round(FE_UPWARD);
+          LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
           test_one_input(func, x, I(0), false);
-          __llvm_libc::fputil::set_round(FE_DOWNWARD);
+          LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
           test_one_input(func, x, I(-1), false);
-          __llvm_libc::fputil::set_round(FE_TOWARDZERO);
+          LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
           test_one_input(func, x, I(0), false);
-          __llvm_libc::fputil::set_round(FE_TONEAREST);
+          LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
           test_one_input(func, x, I(0), false);
         }
       } else {
@@ -276,7 +276,7 @@ public:
           bool erangeflag = mpfr::round_to_long(x, to_mpfr_rounding_mode(m),
                                                 mpfr_long_result);
           I mpfr_result = mpfr_long_result;
-          __llvm_libc::fputil::set_round(m);
+          LIBC_NAMESPACE::fputil::set_round(m);
           if (erangeflag)
             test_one_input(func, x, x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
           else

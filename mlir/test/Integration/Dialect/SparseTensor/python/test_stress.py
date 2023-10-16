@@ -196,13 +196,7 @@ def main():
     # CHECK-LABEL: TEST: test_stress
     print("\nTEST: test_stress")
     with ir.Context() as ctx, ir.Location.unknown():
-        # Disable direct sparse2sparse conversion, because it doubles the time!
-        # TODO: While direct s2s is far too slow for per-commit testing,
-        # we should have some framework ensure that we run this test with
-        # `s2s=0` on a regular basis, to ensure that it does continue to work.
-        # TODO: be sure to test s2s=0 together with singletons.
-        s2s = 1
-        sparsification_options = f"parallelization-strategy=none " f"s2s-strategy={s2s}"
+        sparsification_options = f"parallelization-strategy=none "
         compiler = sparse_compiler.SparseCompiler(
             options=sparsification_options, opt_level=0, shared_libs=[support_lib]
         )

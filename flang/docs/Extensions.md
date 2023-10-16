@@ -8,9 +8,10 @@
 
 # Fortran Extensions supported by Flang
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 As a general principle, this compiler will accept by default and
@@ -99,7 +100,9 @@ end
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
-* Saved integer, logical and real scalars are zero initialized.
+* Saved variables without explicit or default initializers are zero initialized.
+* In a saved entity of a type with a default initializer, components without default
+  values are zero initialized.
 * Kind specification with `*`, e.g. `REAL*4`
 * `DOUBLE COMPLEX` as a synonym for `COMPLEX(KIND(0.D0))` --
   but not when spelled `TYPE(DOUBLECOMPLEX)`.

@@ -15588,7 +15588,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       break;
     SDValue ConstOp = DAG.getConstant(Imm, dl, MVT::i32);
     SDValue NarrowAnd = DAG.getNode(ISD::AND, dl, MVT::i32, NarrowOp, ConstOp);
-    return DAG.getAnyExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
+    return DAG.getZExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
   }
   case ISD::SHL:
     return combineSHL(N, DCI);
@@ -16718,13 +16718,14 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
 /// vector.  If it is invalid, don't add anything to Ops.
 void PPCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
-                                                     std::string &Constraint,
-                                                     std::vector<SDValue>&Ops,
+                                                     StringRef Constraint,
+                                                     std::vector<SDValue> &Ops,
                                                      SelectionDAG &DAG) const {
   SDValue Result;
 
   // Only support length 1 constraints.
-  if (Constraint.length() > 1) return;
+  if (Constraint.size() > 1)
+    return;
 
   char Letter = Constraint[0];
   switch (Letter) {
@@ -17296,7 +17297,7 @@ bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 
 bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
                                                    Type *Ty) const {
-  if (Subtarget.hasSPE())
+  if (Subtarget.hasSPE() || Subtarget.useSoftFloat())
     return false;
   switch (Ty->getScalarType()->getTypeID()) {
   case Type::FloatTyID:

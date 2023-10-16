@@ -16,7 +16,7 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
 ; CHECK-NEXT:    s_load_dword s2, s[0:1], 0x0
-; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; CHECK-NEXT:    s_mov_b32 s7, 0x401c0000
 ; CHECK-NEXT:    s_mov_b32 s5, 0x40280000

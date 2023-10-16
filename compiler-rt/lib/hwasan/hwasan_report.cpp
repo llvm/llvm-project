@@ -260,9 +260,10 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
     frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
                        reinterpret_cast<uptr>(record_addr), record);
     if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
-      RenderFrame(&frame_desc, " %F %L", 0, frame->info.address, &frame->info,
-                  common_flags()->symbolize_vs_style,
-                  common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderFrame(
+          &frame_desc, " %F %L", 0, frame->info.address, &frame->info,
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
       frame->ClearAll();
     }
     Printf("%s\n", frame_desc.data());
@@ -322,18 +323,32 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
 
 void ReportStats() {}
 
+constexpr uptr kDumpWidth = 16;
+constexpr uptr kShadowLines = 17;
+constexpr uptr kShadowDumpSize = kShadowLines * kDumpWidth;
+
+constexpr uptr kShortLines = 3;
+constexpr uptr kShortDumpSize = kShortLines * kDumpWidth;
+constexpr uptr kShortDumpOffset = (kShadowLines - kShortLines) / 2 * kDumpWidth;
+
+static uptr GetPrintTagStart(uptr addr) {
+  addr = MemToShadow(addr);
+  addr = RoundDownTo(addr, kDumpWidth);
+  addr -= kDumpWidth * (kShadowLines / 2);
+  return addr;
+}
+
 template <typename PrintTag>
 static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
                                    InternalScopedString &s,
                                    PrintTag print_tag) {
-  const uptr row_len = 16;  // better be power of two.
-  uptr center_row_beg = RoundDownTo(addr, row_len);
-  uptr beg_row = center_row_beg - row_len * (num_rows / 2);
-  uptr end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  for (uptr row = beg_row; row < end_row; row += row_len) {
+  uptr center_row_beg = RoundDownTo(addr, kDumpWidth);
+  uptr beg_row = center_row_beg - kDumpWidth * (num_rows / 2);
+  uptr end_row = center_row_beg + kDumpWidth * ((num_rows + 1) / 2);
+  for (uptr row = beg_row; row < end_row; row += kDumpWidth) {
     s.Append(row == center_row_beg ? "=>" : "  ");
     s.AppendF("%p:", (void *)ShadowToMem(row));
-    for (uptr i = 0; i < row_len; i++) {
+    for (uptr i = 0; i < kDumpWidth; i++) {
       s.Append(row + i == addr ? "[" : " ");
       print_tag(s, row + i);
       s.Append(row + i == addr ? "]" : " ");
@@ -351,7 +366,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(addr, 17, s,
+  PrintTagInfoAroundAddr(addr, kShadowLines, s,
                          [&](InternalScopedString &s, uptr tag_addr) {
                            tag_t tag = get_tag(tag_addr);
                            s.AppendF("%02x", tag);
@@ -361,7 +376,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
       "Tags for short granules around the buggy address (one tag corresponds "
       "to %zd bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(addr, 3, s,
+  PrintTagInfoAroundAddr(addr, kShortLines, s,
                          [&](InternalScopedString &s, uptr tag_addr) {
                            tag_t tag = get_tag(tag_addr);
                            if (tag >= 1 && tag <= kShadowAlignment) {
@@ -394,6 +409,7 @@ class BaseReport {
         access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
         ptr_tag(GetTagFromPointer(tagged_addr)),
+        mismatch_offset(FindMismatchOffset()),
         heap(CopyHeapChunk()),
         allocations(CopyAllocations()),
         candidate(FindBufferOverflowCandidate()),
@@ -437,10 +453,11 @@ class BaseReport {
 
   struct Shadow {
     uptr addr = 0;
-    tag_t tags[512] = {};
-    tag_t short_tags[ARRAY_SIZE(tags)] = {};
+    tag_t tags[kShadowDumpSize] = {};
+    tag_t short_tags[kShortDumpSize] = {};
   };
 
+  sptr FindMismatchOffset() const;
   Shadow CopyShadow() const;
   tag_t GetTagCopy(uptr addr) const;
   tag_t GetShortTagCopy(uptr addr) const;
@@ -449,6 +466,7 @@ class BaseReport {
   OverflowCandidate FindBufferOverflowCandidate() const;
   void PrintAddressDescription() const;
   void PrintHeapOrGlobalCandidate() const;
+  void PrintTags(uptr addr) const;
 
   SavedStackAllocations stack_allocations_storage[16];
   HeapAllocation heap_allocations_storage[256];
@@ -459,6 +477,7 @@ class BaseReport {
   const uptr access_size = 0;
   const uptr untagged_addr = 0;
   const tag_t ptr_tag = 0;
+  const sptr mismatch_offset = 0;
 
   const HeapChunk heap;
   const Allocations allocations;
@@ -467,21 +486,55 @@ class BaseReport {
   const Shadow shadow;
 };
 
+sptr BaseReport::FindMismatchOffset() const {
+  if (!access_size)
+    return 0;
+  sptr offset =
+      __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
+  CHECK_GE(offset, 0);
+  CHECK_LT(offset, static_cast<sptr>(access_size));
+  tag_t *tag_ptr =
+      reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
+  tag_t mem_tag = *tag_ptr;
+
+  if (mem_tag && mem_tag < kShadowAlignment) {
+    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
+                                                   ~(kShadowAlignment - 1));
+    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
+    // This is the offset of the leftmost accessed byte within the bad granule.
+    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
+    tag_t short_tag = granule_ptr[kShadowAlignment - 1];
+    // The first mismatch was a short granule that matched the ptr_tag.
+    if (short_tag == ptr_tag) {
+      // If the access starts after the end of the short granule, then the first
+      // bad byte is the first byte of the access; otherwise it is the first
+      // byte past the end of the short granule
+      if (mem_tag > in_granule_offset) {
+        offset += mem_tag - in_granule_offset;
+      }
+    }
+  }
+  return offset;
+}
+
 BaseReport::Shadow BaseReport::CopyShadow() const {
   Shadow result;
   if (!MemIsApp(untagged_addr))
     return result;
 
-  result.addr = MemToShadow(untagged_addr) - ARRAY_SIZE(result.tags) / 2;
-  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i) {
-    uptr tag_addr = result.addr + i;
+  result.addr = GetPrintTagStart(untagged_addr + mismatch_offset);
+  uptr tag_addr = result.addr;
+  uptr short_end = kShortDumpOffset + ARRAY_SIZE(shadow.short_tags);
+  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i, ++tag_addr) {
     if (!MemIsShadow(tag_addr))
       continue;
     result.tags[i] = *reinterpret_cast<tag_t *>(tag_addr);
+    if (i < kShortDumpOffset || i >= short_end)
+      continue;
     uptr granule_addr = ShadowToMem(tag_addr);
     if (1 <= result.tags[i] && result.tags[i] <= kShadowAlignment &&
         IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
-      result.short_tags[i] =
+      result.short_tags[i - kShortDumpOffset] =
           *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1);
     }
   }
@@ -496,8 +549,8 @@ tag_t BaseReport::GetTagCopy(uptr addr) const {
 }
 
 tag_t BaseReport::GetShortTagCopy(uptr addr) const {
-  CHECK_GE(addr, shadow.addr);
-  uptr idx = addr - shadow.addr;
+  CHECK_GE(addr, shadow.addr + kShortDumpOffset);
+  uptr idx = addr - shadow.addr - kShortDumpOffset;
   CHECK_LT(idx, ARRAY_SIZE(shadow.short_tags));
   return shadow.short_tags[idx];
 }
@@ -764,6 +817,14 @@ void BaseReport::PrintAddressDescription() const {
   }
 }
 
+void BaseReport::PrintTags(uptr addr) const {
+  if (shadow.addr) {
+    PrintTagsAroundAddr(
+        addr, [&](uptr addr) { return GetTagCopy(addr); },
+        [&](uptr addr) { return GetShortTagCopy(addr); });
+  }
+}
+
 class InvalidFreeReport : public BaseReport {
  public:
   InvalidFreeReport(StackTrace *stack, uptr tagged_addr)
@@ -796,13 +857,7 @@ InvalidFreeReport::~InvalidFreeReport() {
   stack->Print();
 
   PrintAddressDescription();
-
-  if (shadow.addr) {
-    PrintTagsAroundAddr(
-        untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
-        [&](uptr addr) { return GetShortTagCopy(addr); });
-  }
-
+  PrintTags(untagged_addr);
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
@@ -882,11 +937,7 @@ TailOverwrittenReport::~TailOverwrittenReport() {
       kShadowAlignment, SanitizerToolName);
   Printf("%s", s.data());
   GetCurrentThread()->Announce();
-
-  PrintTagsAroundAddr(
-      untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
-      [&](uptr addr) { return GetShortTagCopy(addr); });
-
+  PrintTags(untagged_addr);
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
@@ -897,15 +948,13 @@ class TagMismatchReport : public BaseReport {
                              uptr access_size, bool is_store, bool fatal,
                              uptr *registers_frame)
       : BaseReport(stack, fatal, tagged_addr, access_size),
-        access_size(access_size),
         is_store(is_store),
         registers_frame(registers_frame) {}
   ~TagMismatchReport();
 
  private:
-  uptr access_size;
-  bool is_store;
-  uptr *registers_frame;
+  const bool is_store;
+  const uptr *registers_frame;
 };
 
 TagMismatchReport::~TagMismatchReport() {
@@ -919,31 +968,12 @@ TagMismatchReport::~TagMismatchReport() {
 
   Thread *t = GetCurrentThread();
 
-  sptr offset =
-      __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
-  CHECK_GE(offset, 0);
-  CHECK_LT(offset, static_cast<sptr>(access_size));
-  tag_t *tag_ptr =
-      reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
-  tag_t mem_tag = *tag_ptr;
+  tag_t mem_tag = GetTagCopy(MemToShadow(untagged_addr + mismatch_offset));
 
   Printf("%s", d.Access());
   if (mem_tag && mem_tag < kShadowAlignment) {
-    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
-                                                   ~(kShadowAlignment - 1));
-    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
-    // This is the offset of the leftmost accessed byte within the bad granule.
-    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
-    tag_t short_tag = granule_ptr[kShadowAlignment - 1];
-    // The first mismatch was a short granule that matched the ptr_tag.
-    if (short_tag == ptr_tag) {
-      // If the access starts after the end of the short granule, then the first
-      // bad byte is the first byte of the access; otherwise it is the first
-      // byte past the end of the short granule
-      if (mem_tag > in_granule_offset) {
-        offset += mem_tag - in_granule_offset;
-      }
-    }
+    tag_t short_tag =
+        GetShortTagCopy(MemToShadow(untagged_addr + mismatch_offset));
     Printf(
         "%s of size %zu at %p tags: %02x/%02x(%02x) (ptr/mem) in thread T%zd\n",
         is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
@@ -953,8 +983,8 @@ TagMismatchReport::~TagMismatchReport() {
            is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
            mem_tag, t->unique_id());
   }
-  if (offset != 0)
-    Printf("Invalid access starting at offset %zu\n", offset);
+  if (mismatch_offset)
+    Printf("Invalid access starting at offset %zu\n", mismatch_offset);
   Printf("%s", d.Default());
 
   stack->Print();
@@ -962,9 +992,7 @@ TagMismatchReport::~TagMismatchReport() {
   PrintAddressDescription();
   t->Announce();
 
-  PrintTagsAroundAddr(
-      untagged_addr + offset, [&](uptr addr) { return GetTagCopy(addr); },
-      [&](uptr addr) { return GetShortTagCopy(addr); });
+  PrintTags(untagged_addr + mismatch_offset);
 
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
@@ -991,7 +1019,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_{aarch64,riscv64}.S).
-void ReportRegisters(uptr *frame, uptr pc) {
+void ReportRegisters(const uptr *frame, uptr pc) {
   Printf("Registers where the failure occurred (pc %p):\n", pc);
 
   // We explicitly print a single line (4 registers/line) each iteration to
@@ -1003,7 +1031,8 @@ void ReportRegisters(uptr *frame, uptr pc) {
        frame[0], frame[1], frame[2], frame[3]);
 #elif SANITIZER_RISCV64
   Printf("    sp  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
-         reinterpret_cast<u8 *>(frame) + 256, frame[1], frame[2], frame[3]);
+         reinterpret_cast<const u8 *>(frame) + 256, frame[1], frame[2],
+         frame[3]);
 #endif
   Printf("    x4  %016llx  x5  %016llx  x6  %016llx  x7  %016llx\n",
        frame[4], frame[5], frame[6], frame[7]);
@@ -1021,7 +1050,7 @@ void ReportRegisters(uptr *frame, uptr pc) {
   // passes it to this function.
 #if defined(__aarch64__)
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx   sp %016llx\n", frame[28],
-         frame[29], frame[30], reinterpret_cast<u8 *>(frame) + 256);
+         frame[29], frame[30], reinterpret_cast<const u8 *>(frame) + 256);
 #elif SANITIZER_RISCV64
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx  x31 %016llx\n", frame[28],
          frame[29], frame[30], frame[31]);

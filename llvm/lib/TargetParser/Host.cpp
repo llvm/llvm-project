@@ -913,6 +913,9 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Type = X86::INTEL_GOLDMONT_PLUS;
       break;
     case 0x86:
+    case 0x8a: // Lakefield
+    case 0x96: // Elkhart Lake
+    case 0x9c: // Jasper Lake
       CPU = "tremont";
       *Type = X86::INTEL_TREMONT;
       break;
@@ -1793,6 +1796,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
+  Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -1932,6 +1936,9 @@ static Triple withHostArch(Triple T) {
 #elif defined(__x86_64__)
   T.setArch(Triple::x86_64);
   T.setArchName("x86_64");
+#elif defined(__i386__)
+  T.setArch(Triple::x86);
+  T.setArchName("i386");
 #elif defined(__powerpc__)
   T.setArch(Triple::ppc);
   T.setArchName("powerpc");

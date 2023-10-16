@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace gpu {
 
 /// The number of threads that execute in lock-step in a warp.
@@ -160,6 +160,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 }
 
 } // namespace gpu
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif
