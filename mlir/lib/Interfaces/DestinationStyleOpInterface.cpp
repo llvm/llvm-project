@@ -31,7 +31,24 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
       cast<DestinationStyleOpInterface>(op);
 
   SmallVector<OpOperand *> outputTensorOperands;
+#ifndef NDEBUG
+  int64_t lastOperandIdx;
+  if (!dstStyleOp.getDpsInitsMutable().empty())
+    lastOperandIdx =
+        static_cast<int64_t>(
+            dstStyleOp.getDpsInitsMutable().begin()->getOperandNumber()) -
+        1;
+#endif // NDEBUG
   for (OpOperand &operand : dstStyleOp.getDpsInitsMutable()) {
+#ifndef NDEBUG
+    // DPS inits must be consecutive operands. Since `getDpsInitsMutable`
+    // returns a MutableArrayRef (that does not own the underlying data), it is
+    // currently not possible to return non-consecutive operands and this check
+    // just guards against future changes of this interface.
+    assert(lastOperandIdx + 1 == operand.getOperandNumber() &&
+           "DPS inits must be consecutive operands");
+    ++lastOperandIdx;
+#endif // NDEBUG
     Type type = operand.get().getType();
     if (isa<RankedTensorType>(type)) {
       outputTensorOperands.push_back(&operand);

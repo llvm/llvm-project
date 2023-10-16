@@ -675,7 +675,7 @@ bool MaterializeInDestinationOp::isWritable(Value value,
   return isa<TensorType>(getDest().getType()) ? true : getWritable();
 }
 
-MutableOperandRange MaterializeInDestinationOp::getDpsInitsMutable() {
+MutableArrayRef<OpOperand> MaterializeInDestinationOp::getDpsInitsMutable() {
   return getDestMutable();
 }
 

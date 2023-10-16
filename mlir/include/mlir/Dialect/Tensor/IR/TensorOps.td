@@ -750,7 +750,7 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
   }];
 
   let extraClassDeclaration = [{
-    MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() { return getDestMutable(); }
   }];
 
   let hasFolder = 1;
@@ -890,7 +890,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
 
-    MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() { return getDestMutable(); }
   }];
 
   let hasCanonicalizer = 1;
@@ -1710,7 +1710,7 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     RankedTensorType getDestType() {
       return ::llvm::cast<RankedTensorType>(getDest().getType()); };
 
-    MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() { return getDestMutable(); }
 
     /// Interface method for ConditionallySpeculatable.
     Speculation::Speculatability getSpeculatability();

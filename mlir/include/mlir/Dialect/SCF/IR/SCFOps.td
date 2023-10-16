@@ -635,7 +635,9 @@ def ForallOp : SCF_Op<"forall", [
     InParallelOp getTerminator();
 
     // Declare the shared_outs as inits/outs to DestinationStyleOpInterface.
-    MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() {
+      return getOutputsMutable();
+    }
   }];
 }
 

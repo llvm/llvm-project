@@ -20,9 +20,9 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     Init operands must be ranked tensors or ranked memrefs. Input operands can
     have any type. All non-init operands are DPS inputs.
 
-    The init operands of this op are specified by the MutableOperandRange that
-    the `getDpsInitsMutable` interface methods returns. This implies that the
-    init operands must be a consecutive range of operands.
+    The init operands of this op are specified by the OpOperands that
+    the `getDpsInitsMutable` interface methods returns. The init operands must
+    be a consecutive range of operands.
 
     If the op has "tensor semantics", then the input operands are either ranked
     tensors or other non-tensor/memref types ("scalars"). The init operands are
@@ -56,8 +56,8 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
 
   let methods = [
     InterfaceMethod<
-      /*desc=*/"Return start and end indices of the init operands range.",
-      /*retTy=*/"::mlir::MutableOperandRange",
+      /*desc=*/"Return the consecutive range of init operands.",
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
       /*methodName=*/"getDpsInitsMutable",
       /*args=*/(ins)
     >,
@@ -65,7 +65,13 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
 
   let extraSharedClassDeclaration = [{
     ::mlir::OperandRange getDpsInits() {
-      return $_op.getDpsInitsMutable();
+      auto initsMutable = $_op.getDpsInitsMutable();
+      if (initsMutable.empty())
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      unsigned firstOperandIndex = initsMutable.begin()->getOperandNumber();
+      return OperandRange(
+          $_op->operand_begin() + firstOperandIndex,
+          $_op->operand_begin() + firstOperandIndex + initsMutable.size());
     }
 
     /// Return the number of DPS inits.

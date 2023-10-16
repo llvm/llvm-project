@@ -208,7 +208,9 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
       return nullptr;
     }
 
-    MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() {
+      return getOutputsMutable();
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -281,7 +283,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() { return getInitMutable(); }
 
     SmallVector<OpOperand *> getOpOperandsMatchingBBargs() {
       return getDpsInputOperands();
@@ -377,7 +379,9 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     getRegionBuilder() {
       return nullptr;
     }
-    MutableOperandRange getDpsInitsMutable() { return getInitsMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() {
+      return getInitsMutable();
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -440,7 +444,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() { return getInitMutable(); }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
@@ -508,7 +512,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
+    MutableArrayRef<OpOperand> getDpsInitsMutable() { return getInitMutable(); }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>

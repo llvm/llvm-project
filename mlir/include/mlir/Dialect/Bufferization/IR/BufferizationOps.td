@@ -218,7 +218,8 @@ def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
         [AllShapesMatch<["source", "dest"]>,
          AllElementTypesMatch<["source", "dest"]>,
-         BufferizableOpInterface, DestinationStyleOpInterface,
+         BufferizableOpInterface,
+         DeclareOpInterfaceMethods<DestinationStyleOpInterface>,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
          DeclareOpInterfaceMethods<SubsetInsertionOpInterface,
             ["getSourceOperand", "getValuesNeededToBuildSubsetExtraction",
@@ -300,8 +301,6 @@ def Bufferization_MaterializeInDestinationOp
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
-
-    MutableOperandRange getDpsInitsMutable();
 
     bool isWritable(Value value, const AnalysisState &state);
   }];
