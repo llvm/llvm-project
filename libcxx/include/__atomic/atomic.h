@@ -143,7 +143,7 @@ struct atomic<_Tp*>
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
   requires is_floating_point_v<_Tp>
-struct atomic<_Tp> : public __atomic_base<_Tp> {
+struct atomic<_Tp> : __atomic_base<_Tp> {
   private:
     // The builtin __cxx_atomic_fetch_add errors during compilation for
     // long double on some platforms with fp80 type.

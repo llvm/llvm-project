@@ -26,7 +26,7 @@ template <class T>
 concept HasVolatileNotifyOne = requires(volatile std::atomic<T>& a, T t) { a.notify_one(); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
-void testImpl() {
+void test_impl() {
   // Uncomment the test after P1831R1 is implemented
   // static_assert(HasVolatileNotifyOne<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().notify_one()));
@@ -41,7 +41,7 @@ void testImpl() {
       std::atomic_bool started = false;
       bool done                = false;
 
-      std::thread t([&a, &started, old, &done] {
+      auto t = support::make_test_thread([&a, &started, old, &done] {
         started.store(true, std::memory_order::relaxed);
 
         a.wait(old);
@@ -66,9 +66,9 @@ void testImpl() {
 
 template <class T>
 void test() {
-  testImpl<T>();
+  test_impl<T>();
   if constexpr (std::atomic<T>::is_always_lock_free) {
-    testImpl<T, std::add_volatile_t>();
+    test_impl<T, std::add_volatile_t>();
   }
 }
 

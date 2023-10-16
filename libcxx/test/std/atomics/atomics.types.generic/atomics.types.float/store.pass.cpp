@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
@@ -28,7 +27,7 @@ template <class T>
 concept HasVolatileStore = requires(volatile std::atomic<T>& a, T t) { a.store(t); };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
-void testImpl() {
+void test_impl() {
   // Uncomment the test after P1831R1 is implemented
   // static_assert(HasVolatileStore<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>().store(T(0))));
@@ -40,6 +39,7 @@ void testImpl() {
     assert(a.load() == T(1.2));
   }
 
+#ifndef TEST_HAS_NO_THREADS
   // memory_order::relaxed
   {
     constexpr auto number_of_threads = 4;
@@ -50,11 +50,11 @@ void testImpl() {
     std::vector<std::thread> threads;
     threads.reserve(number_of_threads);
     for (auto i = 0; i < number_of_threads; ++i) {
-      threads.emplace_back([&at, i]() {
+      threads.push_back(support::make_test_thread([&at, i]() {
         for (auto j = 0; j < loop; ++j) {
           at.store(T(i), std::memory_order_relaxed);
         }
-      });
+      }));
     }
 
     while (at.load() == T(-1.0)) {
@@ -70,6 +70,7 @@ void testImpl() {
       thread.join();
     }
   }
+#endif
 
   // memory_order::release
   {
@@ -92,9 +93,9 @@ void testImpl() {
 
 template <class T>
 void test() {
-  testImpl<T>();
+  test_impl<T>();
   if constexpr (std::atomic<T>::is_always_lock_free) {
-    testImpl<T, std::add_volatile_t>();
+    test_impl<T, std::add_volatile_t>();
   }
 }
 

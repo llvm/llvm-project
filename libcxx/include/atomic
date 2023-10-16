@@ -263,7 +263,7 @@ struct atomic<T*>
 };
 
 template<>
-struct atomic<floating-point-type> {
+struct atomic<floating-point-type> {  // since C++20
   using value_type = floating-point-type;
   using difference_type = value_type;
 

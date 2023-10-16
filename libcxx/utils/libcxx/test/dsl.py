@@ -232,6 +232,29 @@ def hasCompileFlag(config, flag):
     (exitCode, _, _) = tryCompileFlag(config, flag)
     return exitCode == 0
 
+@_memoizeExpensiveOperation(lambda c, f: (c.substitutions, c.environment, f))
+def tryCompileOrLinkFlag(config, flag):
+    """
+    Try using the given compiler flag/linker and return the exit code along with stdout and stderr.
+    """
+    # fmt: off
+    with _makeConfigTest(config) as test:
+        out, err, exitCode, timeoutInfo, _ = _executeWithFakeConfig(test, [
+            "%{{cxx}} -xc++ {} -Werror %{{flags}} %{{compile_flags}} %{{link_flags}} {}".format(os.devnull, flag)
+        ])
+        return exitCode, out, err
+    # fmt: on
+
+def hasCompileOrLinkFlag(config, flag):
+    """
+    Return whether the compiler in the configuration supports a given compiler/linker flag.
+
+    This is done by executing the %{cxx} substitution with the given flag and
+    checking whether that succeeds.
+    """
+    (exitCode, _, _) = tryCompileOrLinkFlag(config, flag)
+    return exitCode == 0
+
 
 @_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
 def runScriptExitCode(config, script):

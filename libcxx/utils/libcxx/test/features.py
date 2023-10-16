@@ -112,7 +112,7 @@ DEFAULT_FEATURES = [
     ),
     Feature(
         name="has-latomic",
-        when=lambda cfg: hasCompileFlag(cfg, "-latomic"),
+        when=lambda cfg: hasCompileOrLinkFlag(cfg, "-latomic"),
     ),
     Feature(
         name="non-lockfree-atomics",

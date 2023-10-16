@@ -23,21 +23,21 @@ void test() {
   //   static constexpr bool is_always_lock_free = implementation-defined;
   {
     bool r = std::atomic<T>::is_always_lock_free;
-    assert(r == __atomic_always_lock_free(sizeof(T), 0));
+    assert(r == __atomic_always_lock_free(sizeof(std::__cxx_atomic_impl<T>), 0));
   }
 
   //   bool is_lock_free() const volatile noexcept;
   {
     const volatile std::atomic<T> a;
     bool r = a.is_lock_free();
-    assert(r == __cxx_atomic_is_lock_free(sizeof(T)));
+    assert(r == __cxx_atomic_is_lock_free(sizeof(std::__cxx_atomic_impl<T>)));
   }
 
   //   bool is_lock_free() const noexcept;
   {
     const std::atomic<T> a;
     bool r = a.is_lock_free();
-    assert(r == __cxx_atomic_is_lock_free(sizeof(T)));
+    assert(r == __cxx_atomic_is_lock_free(sizeof(std::__cxx_atomic_impl<T>)));
   }
 }
 

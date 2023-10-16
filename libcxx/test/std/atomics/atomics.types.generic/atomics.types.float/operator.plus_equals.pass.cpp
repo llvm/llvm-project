@@ -25,7 +25,7 @@ template <class T>
 concept HasVolatilePlusEquals = requires(volatile std::atomic<T>& a, T t) { a += t; };
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
-void testImpl() {
+void test_impl() {
   static_assert(HasVolatilePlusEquals<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::declval<MaybeVolatile<std::atomic<T>>&>() += T(0)));
 
@@ -37,6 +37,7 @@ void testImpl() {
     assert(a.load() == T(3.1) + T(1.2));
   }
 
+#ifndef TEST_HAS_NO_THREADS
   // += concurrent
   {
     constexpr auto number_of_threads = 4;
@@ -47,11 +48,11 @@ void testImpl() {
     std::vector<std::thread> threads;
     threads.reserve(number_of_threads);
     for (auto i = 0; i < number_of_threads; ++i) {
-      threads.emplace_back([&at]() {
+      threads.push_back(support::make_test_thread([&at]() {
         for (auto j = 0; j < loop; ++j) {
           at += T(1.234);
         }
-      });
+      }));
     }
 
     for (auto& thread : threads) {
@@ -75,13 +76,14 @@ void testImpl() {
     auto load        = [](MaybeVolatile<std::atomic<T>>& x) { return x.load(); };
     test_seq_cst<T, MaybeVolatile>(plus_equals, load);
   }
+#endif
 }
 
 template <class T>
 void test() {
-  testImpl<T>();
+  test_impl<T>();
   if constexpr (std::atomic<T>::is_always_lock_free) {
-    testImpl<T, std::add_volatile_t>();
+    test_impl<T, std::add_volatile_t>();
   }
 }
 

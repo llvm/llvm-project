@@ -15,6 +15,9 @@
 #include <thread>
 #include <vector>
 
+#include "test_macros.h"
+#include "make_test_thread.h"
+
 template <class T>
 bool approximately_equals(T x, T y) {
   T epsilon = 0.001;
@@ -26,6 +29,7 @@ bool approximately_equals(T x, T y) {
 // affecting the memory with seq_cst order
 template <class T, template <class> class MaybeVolatile, class StoreOp, class LoadOp>
 void test_seq_cst(StoreOp store_op, LoadOp load_op) {
+#ifndef TEST_HAS_NO_THREADS
   for (int i = 0; i < 100; ++i) {
     T old_value = 0.0;
     T new_value = 1.0;
@@ -36,11 +40,11 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     std::atomic_bool x_update_first(false);
     std::atomic_bool y_update_first(false);
 
-    std::thread t1([&] { store_op(x, old_value, new_value); });
+    auto t1 = support::make_test_thread([&] { store_op(x, old_value, new_value); });
 
-    std::thread t2([&] { store_op(y, old_value, new_value); });
+    auto t2 = support::make_test_thread([&] { store_op(y, old_value, new_value); });
 
-    std::thread t3([&] {
+    auto t3 = support::make_test_thread([&] {
       while (!approximately_equals(load_op(x), new_value)) {
         std::this_thread::yield();
       }
@@ -49,7 +53,7 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
       }
     });
 
-    std::thread t4([&] {
+    auto t4 = support::make_test_thread([&] {
       while (!approximately_equals(load_op(y), new_value)) {
         std::this_thread::yield();
       }
@@ -65,6 +69,10 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     // thread 3 and thread 4 cannot see different orders of storing x and y
     assert(!(x_update_first && y_update_first));
   }
+#else
+  (void)store_op;
+  (void)load_op;
+#endif
 }
 
 // Test that all writes before the store are seen by other threads after the load
@@ -72,6 +80,7 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
 // affecting the memory with acquire-release order
 template <class T, template <class> class MaybeVolatile, class StoreOp, class LoadOp>
 void test_acquire_release(StoreOp store_op, LoadOp load_op) {
+#ifndef TEST_HAS_NO_THREADS
   for (auto i = 0; i < 100; ++i) {
     T old_value = 0.0;
     T new_value = 1.0;
@@ -84,14 +93,14 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
     threads.reserve(number_of_threads);
 
     for (auto j = 0; j < number_of_threads; ++j) {
-      threads.emplace_back([&at, &non_atomic, load_op, new_value] {
+      threads.push_back(support::make_test_thread([&at, &non_atomic, load_op, new_value] {
         while (!approximately_equals(load_op(at), new_value)) {
           std::this_thread::yield();
         }
         // Other thread's writes before the release store are visible
         // in this thread's read after the acquire load
         assert(non_atomic == 6);
-      });
+      }));
     }
 
     non_atomic = 6;
@@ -101,6 +110,10 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
       thread.join();
     }
   }
+#else
+  (void)store_op;
+  (void)load_op;
+#endif
 }
 
 #endif // TEST_STD_ATOMICS_ATOMICS_TYPES_FLOAT_TEST_HELPER_H

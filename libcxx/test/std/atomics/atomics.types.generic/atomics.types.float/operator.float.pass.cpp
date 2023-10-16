@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
@@ -21,7 +20,7 @@
 #include "test_macros.h"
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
-void testImpl() {
+void test_impl() {
   // Uncomment the test after P1831R1 is implemented
   // static_assert(std::is_convertible_v<volatile std::atomic<T>&, T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(T(std::declval<MaybeVolatile<std::atomic<T>>&>())));
@@ -43,9 +42,9 @@ void testImpl() {
 
 template <class T>
 void test() {
-  testImpl<T>();
+  test_impl<T>();
   if constexpr (std::atomic<T>::is_always_lock_free) {
-    testImpl<T, std::add_volatile_t>();
+    test_impl<T, std::add_volatile_t>();
   }
 }
 

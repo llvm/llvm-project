@@ -35,13 +35,19 @@ void test() {
   //   bool is_lock_free() const volatile noexcept;
   {
     const volatile std::atomic<T> a;
-    [[maybe_unused]] std::same_as<bool> decltype(auto) r = a.is_lock_free();
+    std::same_as<bool> decltype(auto) r = a.is_lock_free();
+    if (std::atomic<T>::is_always_lock_free) {
+      assert(r);
+    }
   }
 
   //   bool is_lock_free() const noexcept;
   {
     const std::atomic<T> a;
-    [[maybe_unused]] std::same_as<bool> decltype(auto) r = a.is_lock_free();
+    std::same_as<bool> decltype(auto) r = a.is_lock_free();
+    if (std::atomic<T>::is_always_lock_free) {
+      assert(r);
+    }
   }
 }
 
