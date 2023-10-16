@@ -2625,35 +2625,35 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
-    TODO(toLocation(), "ChangeTeamConstruct implementation");
+    TODO(toLocation(), "coarray: ChangeTeamConstruct");
   }
   void genFIR(const Fortran::parser::ChangeTeamStmt &stmt) {
-    TODO(toLocation(), "ChangeTeamStmt implementation");
+    TODO(toLocation(), "coarray: ChangeTeamStmt");
   }
   void genFIR(const Fortran::parser::EndChangeTeamStmt &stmt) {
-    TODO(toLocation(), "EndChangeTeamStmt implementation");
+    TODO(toLocation(), "coarray: EndChangeTeamStmt");
   }
 
   void genFIR(const Fortran::parser::CriticalConstruct &criticalConstruct) {
     setCurrentPositionAt(criticalConstruct);
-    TODO(toLocation(), "CriticalConstruct implementation");
+    TODO(toLocation(), "coarray: CriticalConstruct");
   }
   void genFIR(const Fortran::parser::CriticalStmt &) {
-    TODO(toLocation(), "CriticalStmt implementation");
+    TODO(toLocation(), "coarray: CriticalStmt");
   }
   void genFIR(const Fortran::parser::EndCriticalStmt &) {
-    TODO(toLocation(), "EndCriticalStmt implementation");
+    TODO(toLocation(), "coarray: EndCriticalStmt");
   }
 
   void genFIR(const Fortran::parser::SelectRankConstruct &selectRankConstruct) {
     setCurrentPositionAt(selectRankConstruct);
-    TODO(toLocation(), "SelectRankConstruct implementation");
+    TODO(toLocation(), "coarray: SelectRankConstruct");
   }
   void genFIR(const Fortran::parser::SelectRankStmt &) {
-    TODO(toLocation(), "SelectRankStmt implementation");
+    TODO(toLocation(), "coarray: SelectRankStmt");
   }
   void genFIR(const Fortran::parser::SelectRankCaseStmt &) {
-    TODO(toLocation(), "SelectRankCaseStmt implementation");
+    TODO(toLocation(), "coarray: SelectRankCaseStmt");
   }
 
   void genFIR(const Fortran::parser::SelectTypeConstruct &selectTypeConstruct) {
