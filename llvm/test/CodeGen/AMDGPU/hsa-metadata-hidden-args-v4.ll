@@ -286,7 +286,7 @@ entry:
 
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
-; CHECK-NEXT: - 0
+; CHECK-NEXT: - 1
 
 ; We don't have a use of llvm.amdgcn.implicitarg.ptr, so optnone to
 ; avoid optimizing out the implicit argument allocation.
@@ -298,4 +298,4 @@ attributes #4 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
 attributes #5 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
