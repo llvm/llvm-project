@@ -20,7 +20,32 @@
                 "LLVM_USE_LINKER": "mold",
                 "LLVM_ENABLE_LLD": "OFF",
                 "LLVM_PARALLEL_COMPILE_JOBS": "24",
-                "LLVM_PARALLEL_LINK_JOBS": "2"
+                "LLVM_PARALLEL_LINK_JOBS": "2",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+                "LLVM_CCACHE_BUILD": "ON",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "notchpeak",
+            "displayName": "notchpeak",
+            "description": "Default preset for notchpeak",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "LLVM_ENABLE_PROJECTS": "mlir",
+                "LLVM_TARGETS_TO_BUILD": "X86",
+                "LLVM_ENABLE_ASSERTIONS": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "LLVM_USE_LINKER": "mold",
+                "LLVM_ENABLE_LLD": "OFF",
+                "LLVM_PARALLEL_COMPILE_JOBS": "24",
+                "LLVM_PARALLEL_LINK_JOBS": "8",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+                "LLVM_CCACHE_BUILD": "ON",
+                "CMAKE_BUILD_TYPE": "Debug"
             }
         }
     ],
@@ -30,6 +55,12 @@
             "displayName": "Default",
             "description": "Default preset",
             "configurePreset": "default"
+        },
+        {
+            "name": "notchpeak",
+            "displayName": "notchpeak",
+            "description": "Default preset for notchpeak",
+            "configurePreset": "notchpeak"
         }
     ],
     "workflowPresets": [
@@ -44,6 +75,20 @@
                 {
                     "type": "build",
                     "name": "default"
+                }
+            ]
+        },
+        {
+            "name": "notchpeak",
+            "description": "default workflow for notchpeak",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "notchpeak"
+                },
+                {
+                    "type": "build",
+                    "name": "notchpeak"
                 }
             ]
         }
