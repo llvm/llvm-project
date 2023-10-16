@@ -518,6 +518,10 @@ Bug Fixes to C++ Support
   (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
   (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
 
+- Clang now properly compares constraints on an out of line class template
+  declaration definition. Fixes:
+  (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
