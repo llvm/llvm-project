@@ -54,11 +54,8 @@ mlirSparseTensorEncodingAttrGet(MlirContext ctx, intptr_t lvlRank,
   cppLvlTypes.reserve(lvlRank);
   for (intptr_t l = 0; l < lvlRank; ++l)
     cppLvlTypes.push_back(static_cast<DimLevelType>(lvlTypes[l]));
-  auto unwrappedLvlToDim = unwrap(lvlToDim);
-  if (!unwrappedLvlToDim)
-    unwrappedLvlToDim = inferLvlToDim(unwrap(dimToLvl), unwrap(ctx));
   return wrap(SparseTensorEncodingAttr::get(unwrap(ctx), cppLvlTypes,
-                                            unwrap(dimToLvl), unwrappedLvlToDim,
+                                            unwrap(dimToLvl), unwrap(lvlToDim),
                                             posWidth, crdWidth));
 }
 

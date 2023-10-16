@@ -582,6 +582,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 #undef RETURN_ON_FAIL
 
   // Construct struct-like storage for attribute.
+  // TODO: Fetch lvlToDim if user provides one
   AffineMap lvlToDim = inferLvlToDim(dimToLvl, parser.getContext());
   return parser.getChecked<SparseTensorEncodingAttr>(
       parser.getContext(), lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
@@ -770,29 +771,28 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
   lvlExprs.reserve(numLvls);
   // lvlExprComponents stores information of the floordiv and mod operations
   // applied to the same dimension, so as to build the lvlToDim map.
-  // Map key is the position of the dimension in dimToLvl.
-  // Map value is a SmallVector that contains lvl var for floordiv, multiplier,
-  // lvl var for mod in dimToLvl.
-  // For example, for il = i floordiv 2 and ii = i mod 2, the SmalleVector
-  // would be [il, 2, ii]. It could be used to build the AffineExpr
-  // i = il * 2 + ii in lvlToDim.
   std::map<unsigned, SmallVector<AffineExpr, 3>> lvlExprComponents;
   for (unsigned i = 0, n = numLvls; i < n; i++) {
     auto result = dimToLvl.getResult(i);
     if (auto binOp = result.dyn_cast<AffineBinaryOpExpr>()) {
       if (result.getKind() == AffineExprKind::FloorDiv) {
+        // Position of the dimension in dimToLvl.
+        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        assert(lvlExprComponents.find(pos) == lvlExprComponents.end() &&
+               "expected only one floordiv for each dimension");
         SmallVector<AffineExpr, 3> components;
         // Level variable for floordiv.
         components.push_back(getAffineDimExpr(i, context));
         // Multiplier.
         components.push_back(binOp.getRHS());
-        auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
+        // Map key is the position of the dimension.
         lvlExprComponents[pos] = components;
       } else if (result.getKind() == AffineExprKind::Mod) {
         auto pos = binOp.getLHS().dyn_cast<AffineDimExpr>().getPosition();
         assert(lvlExprComponents.find(pos) != lvlExprComponents.end() &&
                "expected floordiv before mod");
-        // Level variable for mod.
+        // Level variable for mod added to the vector of the corresponding
+        // floordiv with the same dimension.
         lvlExprComponents[pos].push_back(getAffineDimExpr(i, context));
       } else {
         assert(false && "expected floordiv or mod");
@@ -801,6 +801,10 @@ AffineMap mlir::sparse_tensor::inverseBlockSparsity(AffineMap dimToLvl,
       lvlExprs.push_back(getAffineDimExpr(i, context));
     }
   }
+  // Build lvlExprs from lvlExprComponents.
+  // For example, for il = i floordiv 2 and ii = i mod 2, the components
+  // would be [il, 2, ii]. It could be used to build the AffineExpr
+  // i = il * 2 + ii in lvlToDim.
   for (auto &components : lvlExprComponents) {
     assert(components.second.size() == 3 &&
            "expected 3 components to build lvlExprs");
@@ -875,7 +879,7 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
   // default value.
   unsigned posWidth = src.getPosWidth();
   unsigned crdWidth = src.getCrdWidth();
-  auto invPerm = src.getLvlToDim();
+  AffineMap invPerm = src.getLvlToDim();
   auto enc = SparseTensorEncodingAttr::get(src.getContext(), lvlTypes, lvlPerm,
                                            invPerm, posWidth, crdWidth);
   return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
