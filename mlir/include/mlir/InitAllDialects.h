@@ -63,6 +63,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/Partition/IR/Partition.h"
 #include "mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
@@ -120,6 +121,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   scf::SCFDialect,
                   shape::ShapeDialect,
                   sparse_tensor::SparseTensorDialect,
+                  partition::PartitionDialect,
                   spirv::SPIRVDialect,
                   tensor::TensorDialect,
                   tosa::TosaDialect,
