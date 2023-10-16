@@ -1232,6 +1232,15 @@ td_library(
 )
 
 td_library(
+    name = "SparseTensorInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "TilingInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/TilingInterface.td"],
     includes = ["include"],
@@ -2683,6 +2692,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorBase.td",
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorTypes.td",
     ],
@@ -2801,6 +2811,23 @@ gentbl_cc_library(
     deps = [":PassBaseTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "SparseTensorInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
+    deps = [":SparseTensorInterfacesTdFiles"],
+)
+
 # This library is shared by both SparseTensorDialect and
 # SparseTensorRuntime, so it must not depend on any of the MLIR/LLVM
 # internals or else mlir_c_runner_utils will inherit that dependency.
@@ -2823,9 +2850,11 @@ cc_library(
         "lib/Dialect/SparseTensor/IR/Detail/Var.cpp",
         "lib/Dialect/SparseTensor/IR/Detail/Var.h",
         "lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp",
+        "lib/Dialect/SparseTensor/IR/SparseTensorInterfaces.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensor.h",
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorType.h",
     ],
@@ -2837,6 +2866,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorEnums",
+        ":SparseTensorInterfacesIncGen",
         ":SparseTensorOpsIncGen",
         ":SparseTensorTypesIncGen",
         "//llvm:Support",
