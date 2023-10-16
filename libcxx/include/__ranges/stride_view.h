@@ -118,8 +118,6 @@ public:
 template <class _Range>
 stride_view(_Range&&, range_difference_t<_Range>) -> stride_view<views::all_t<_Range>>;
 
-namespace views {
-
 template <class _View>
 struct __stride_iterator_category {};
 
@@ -348,6 +346,7 @@ public:
   }
 }; // class stride_view::__iterator
 
+namespace views {
 namespace __stride {
 struct __fn {
   template <viewable_range _Range>
