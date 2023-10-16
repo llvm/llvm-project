@@ -3060,7 +3060,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // If the function requires all the GP registers to save (SavedRegs),
     // and there are an odd number of GP CSRs at the same time (CSRegs),
     // PairedReg could be in a different register class from Reg, which would
-    // lead to an FPR (usually D8) accidentally being marked saved.
+    // lead to a FPR (usually D8) accidentally being marked saved.
     if (RegIsGPR64 && !AArch64::GPR64RegClass.contains(PairedReg)) {
       PairedReg = AArch64::NoRegister;
       HasUnpairedGPR64 = true;

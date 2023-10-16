@@ -240,7 +240,7 @@ static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
 }
 
 /// Emit a load-pair instruction for frame-destroy.
-/// If Reg2 is AArch64::NoRegister, emit LTR instead.
+/// If Reg2 is AArch64::NoRegister, emit LDR instead.
 static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator Pos,
                      const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
