@@ -66,11 +66,20 @@ OmptAssertEvent::TargetEmi(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
                                      TargetTaskData, TargetData, CodeptrRA));
 }
 
-/// Create a DataAlloc Event
 OmptAssertEvent OmptAssertEvent::TargetDataOp(
     ompt_id_t TargetId, ompt_id_t HostOpId, ompt_target_data_op_t OpType,
     void *SrcAddr, int SrcDeviceNum, void *DstAddr, int DstDeviceNum,
     size_t Bytes, const void *CodeptrRA, const std::string &Name) {
+  return OmptAssertEvent(
+      Name, new internal::TargetDataOp(TargetId, HostOpId, OpType, SrcAddr,
+                                       SrcDeviceNum, DstAddr, DstDeviceNum,
+                                       Bytes, CodeptrRA));
+}
+
+OmptAssertEvent OmptAssertEvent::TargetDataOp(
+    ompt_target_data_op_t OpType, size_t Bytes, void *SrcAddr, void *DstAddr,
+    int SrcDeviceNum, int DstDeviceNum, ompt_id_t TargetId, ompt_id_t HostOpId,
+    const void *CodeptrRA, const std::string &Name) {
   return OmptAssertEvent(
       Name, new internal::TargetDataOp(TargetId, HostOpId, OpType, SrcAddr,
                                        SrcDeviceNum, DstAddr, DstDeviceNum,
@@ -89,9 +98,30 @@ OmptAssertEvent OmptAssertEvent::TargetDataOpEmi(
                                     DstAddr, DstDeviceNum, Bytes, CodeptrRA));
 }
 
+OmptAssertEvent OmptAssertEvent::TargetDataOpEmi(
+    ompt_target_data_op_t OpType, ompt_scope_endpoint_t Endpoint, size_t Bytes,
+    void *SrcAddr, void *DstAddr, int SrcDeviceNum, int DstDeviceNum,
+    ompt_data_t *TargetTaskData, ompt_data_t *TargetData, ompt_id_t *HostOpId,
+    const void *CodeptrRA, const std::string &Name) {
+  auto EName = getName(Name);
+  return OmptAssertEvent(EName, new internal::TargetDataOpEmi(
+                                    Endpoint, TargetTaskData, TargetData,
+                                    HostOpId, OpType, SrcAddr, SrcDeviceNum,
+                                    DstAddr, DstDeviceNum, Bytes, CodeptrRA));
+}
+
 OmptAssertEvent OmptAssertEvent::TargetSubmit(ompt_id_t TargetId,
                                               ompt_id_t HostOpId,
                                               unsigned int RequestedNumTeams,
+                                              const std::string &Name) {
+  auto EName = getName(Name);
+  return OmptAssertEvent(
+      EName, new internal::TargetSubmit(TargetId, HostOpId, RequestedNumTeams));
+}
+
+OmptAssertEvent OmptAssertEvent::TargetSubmit(unsigned int RequestedNumTeams,
+                                              ompt_id_t TargetId,
+                                              ompt_id_t HostOpId,
                                               const std::string &Name) {
   auto EName = getName(Name);
   return OmptAssertEvent(
@@ -102,6 +132,17 @@ OmptAssertEvent OmptAssertEvent::TargetSubmitEmi(ompt_scope_endpoint_t Endpoint,
                                                  ompt_data_t *TargetData,
                                                  ompt_id_t *HostOpId,
                                                  unsigned int RequestedNumTeams,
+                                                 const std::string &Name) {
+  auto EName = getName(Name);
+  return OmptAssertEvent(
+      EName, new internal::TargetSubmitEmi(Endpoint, TargetData, HostOpId,
+                                           RequestedNumTeams));
+}
+
+OmptAssertEvent OmptAssertEvent::TargetSubmitEmi(unsigned int RequestedNumTeams,
+                                                 ompt_scope_endpoint_t Endpoint,
+                                                 ompt_data_t *TargetData,
+                                                 ompt_id_t *HostOpId,
                                                  const std::string &Name) {
   auto EName = getName(Name);
   return OmptAssertEvent(

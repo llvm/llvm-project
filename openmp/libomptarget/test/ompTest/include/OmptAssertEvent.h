@@ -5,6 +5,7 @@
 #include "omp-tools.h"
 
 #include <cassert>
+#include <limits>
 #include <memory>
 #include <string>
 
@@ -28,16 +29,21 @@ struct OmptAssertEvent {
 
   static OmptAssertEvent ImplicitTask(const std::string &Name);
 
-  static OmptAssertEvent Target(ompt_target_t Kind,
-                                ompt_scope_endpoint_t Endpoint, int DeviceNum,
-                                ompt_data_t *TaskData, ompt_id_t TargetId,
-                                const void *CodeptrRA, const std::string &Name);
-
   static OmptAssertEvent
-  TargetEmi(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint, int DeviceNum,
-            ompt_data_t *TaskData, ompt_data_t *TargetTaskData,
-            ompt_data_t *TargetData, const void *CodeptrRA,
-            const std::string &Name);
+  Target(ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
+         int DeviceNum = std::numeric_limits<int>::min(),
+         ompt_data_t *TaskData = std::numeric_limits<ompt_data_t *>::min(),
+         ompt_id_t TargetId = std::numeric_limits<ompt_id_t>::min(),
+         const void *CodeptrRA = std::numeric_limits<void *>::min(),
+         const std::string &Name = "");
+
+  static OmptAssertEvent TargetEmi(
+      ompt_target_t Kind, ompt_scope_endpoint_t Endpoint, int DeviceNum,
+      ompt_data_t *TaskData = std::numeric_limits<ompt_data_t *>::min(),
+      ompt_data_t *TargetTaskData = std::numeric_limits<ompt_data_t *>::min(),
+      ompt_data_t *TargetData = std::numeric_limits<ompt_data_t *>::min(),
+      const void *CodeptrRA = std::numeric_limits<void *>::min(),
+      const std::string &Name = "");
 
   /// Create a DataAlloc Event
   static OmptAssertEvent TargetDataOp(ompt_id_t TargetId, ompt_id_t HostOpId,
@@ -48,15 +54,44 @@ struct OmptAssertEvent {
                                       const std::string &Name);
 
   static OmptAssertEvent
+  TargetDataOp(ompt_target_data_op_t OpType, size_t Bytes,
+               void *SrcAddr = std::numeric_limits<void *>::min(),
+               void *DstAddr = std::numeric_limits<void *>::min(),
+               int SrcDeviceNum = std::numeric_limits<int>::min(),
+               int DstDeviceNum = std::numeric_limits<int>::min(),
+               ompt_id_t TargetId = std::numeric_limits<ompt_id_t>::min(),
+               ompt_id_t HostOpId = std::numeric_limits<ompt_id_t>::min(),
+               const void *CodeptrRA = std::numeric_limits<void *>::min(),
+               const std::string &Name = "");
+
+  static OmptAssertEvent
   TargetDataOpEmi(ompt_scope_endpoint_t Endpoint, ompt_data_t *TargetTaskData,
                   ompt_data_t *TargetData, ompt_id_t *HostOpId,
                   ompt_target_data_op_t OpType, void *SrcAddr, int SrcDeviceNum,
                   void *DstAddr, int DstDeviceNum, size_t Bytes,
                   const void *CodeptrRA, const std::string &Name);
 
+  static OmptAssertEvent TargetDataOpEmi(
+      ompt_target_data_op_t OpType, ompt_scope_endpoint_t Endpoint,
+      size_t Bytes, void *SrcAddr = std::numeric_limits<void *>::min(),
+      void *DstAddr = std::numeric_limits<void *>::min(),
+      int SrcDeviceNum = std::numeric_limits<int>::min(),
+      int DstDeviceNum = std::numeric_limits<int>::min(),
+      ompt_data_t *TargetTaskData = std::numeric_limits<ompt_data_t *>::min(),
+      ompt_data_t *TargetData = std::numeric_limits<ompt_data_t *>::min(),
+      ompt_id_t *HostOpId = std::numeric_limits<ompt_id_t *>::min(),
+      const void *CodeptrRA = std::numeric_limits<void *>::min(),
+      const std::string &Name = "");
+
   static OmptAssertEvent TargetSubmit(ompt_id_t TargetId, ompt_id_t HostOpId,
                                       unsigned int RequestedNumTeams,
                                       const std::string &Name);
+
+  static OmptAssertEvent
+  TargetSubmit(unsigned int RequestedNumTeams,
+               ompt_id_t TargetId = std::numeric_limits<ompt_id_t>::min(),
+               ompt_id_t HostOpId = std::numeric_limits<ompt_id_t>::min(),
+               const std::string &Name = "");
 
   static OmptAssertEvent TargetSubmitEmi(ompt_scope_endpoint_t Endpoint,
                                          ompt_data_t *TargetData,
@@ -64,21 +99,35 @@ struct OmptAssertEvent {
                                          unsigned int RequestedNumTeams,
                                          const std::string &Name);
 
+  static OmptAssertEvent TargetSubmitEmi(
+      unsigned int RequestedNumTeams, ompt_scope_endpoint_t Endpoint,
+      ompt_data_t *TargetData = std::numeric_limits<ompt_data_t *>::min(),
+      ompt_id_t *HostOpId = std::numeric_limits<ompt_id_t *>::min(),
+      const std::string &Name = "");
+
   static OmptAssertEvent ControlTool(std::string &Name);
 
-  static OmptAssertEvent DeviceInitialize(int DeviceNum, const char *Type,
-                                          ompt_device_t *Device,
-                                          ompt_function_lookup_t LookupFn,
-                                          const char *DocumentationStr,
-                                          const std::string &Name);
+  static OmptAssertEvent DeviceInitialize(
+      int DeviceNum,
+      const char *Type = std::numeric_limits<const char *>::min(),
+      ompt_device_t *Device = std::numeric_limits<ompt_device_t *>::min(),
+      ompt_function_lookup_t LookupFn =
+          std::numeric_limits<ompt_function_lookup_t>::min(),
+      const char *DocumentationStr = std::numeric_limits<const char *>::min(),
+      const std::string &Name = "");
 
   static OmptAssertEvent DeviceFinalize(int DeviceNum, const std::string &Name);
 
-  static OmptAssertEvent DeviceLoad(int DeviceNum, const char *Filename,
-                                    int64_t OffsetInFile, void *VmaInFile,
-                                    size_t Bytes, void *HostAddr,
-                                    void *DeviceAddr, uint64_t ModuleId,
-                                    const std::string &Name);
+  static OmptAssertEvent
+  DeviceLoad(int DeviceNum,
+             const char *Filename = std::numeric_limits<const char *>::min(),
+             int64_t OffsetInFile = std::numeric_limits<int64_t>::min(),
+             void *VmaInFile = std::numeric_limits<void *>::min(),
+             size_t Bytes = std::numeric_limits<size_t>::min(),
+             void *HostAddr = std::numeric_limits<void *>::min(),
+             void *DeviceAddr = std::numeric_limits<void *>::min(),
+             uint64_t ModuleId = std::numeric_limits<int64_t>::min(),
+             const std::string &Name = "");
 
   static OmptAssertEvent DeviceUnload(const std::string &Name);
 

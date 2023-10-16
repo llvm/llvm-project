@@ -70,10 +70,10 @@ struct InternalEvent {
   };
 
 #define event_class_operator_stub(EvTy)                                        \
-  bool operator==(const EvTy &a, const EvTy &b) { return true; }
+  bool operator==(const EvTy &Expected, const EvTy &Observed) { return true; }
 
 #define event_class_operator_w_body(EvTy, ...)                                 \
-  bool operator==(const EvTy &a, const EvTy &b) { __VA_ARGS__ }
+  bool operator==(const EvTy &Expected, const EvTy &Observed) { __VA_ARGS__ }
 
 /// Template "base" for the cast functions generated in the define_cast_func
 /// macro

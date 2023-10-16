@@ -405,6 +405,11 @@ int stop_trace() {
     return 0;
   return ompt_stop_trace(Device);
 }
+
+// This is primarily used to stop unwanted prints from happening.
+void libomptest_global_eventreporter_set_active(bool State) {
+  EventReporter.setActive(State);
+}
 #ifdef __cplusplus
 }
 #endif

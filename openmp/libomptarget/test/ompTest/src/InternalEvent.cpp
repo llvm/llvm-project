@@ -65,17 +65,20 @@ std::string internal::TargetEmi::toString() const {
   S.append(" device_num=").append(std::to_string(DeviceNum));
   S.append(" task_data=").append(makeHexString((uint64_t)TaskData));
   S.append(" (")
-      .append(makeHexString((uint64_t)TaskData->value, /*IsPointer=*/false))
+      .append(makeHexString((uint64_t)(TaskData) ? TaskData->value : 0,
+                            /*IsPointer=*/false))
       .append(1, ')');
   S.append(" target_task_data=")
       .append(makeHexString((uint64_t)TargetTaskData));
   S.append(" (")
       .append(
-          makeHexString((uint64_t)TargetTaskData->value, /*IsPointer=*/false))
+          makeHexString((uint64_t)(TargetTaskData) ? TargetTaskData->value : 0,
+                        /*IsPointer=*/false))
       .append(1, ')');
   S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
   S.append(" (")
-      .append(makeHexString((uint64_t)TargetData->value, /*IsPointer=*/false))
+      .append(makeHexString((uint64_t)(TargetData) ? TargetData->value : 0,
+                            /*IsPointer=*/false))
       .append(1, ')');
   S.append(" code=").append(makeHexString((uint64_t)CodeptrRA));
   return S;
@@ -103,15 +106,18 @@ std::string internal::TargetDataOpEmi::toString() const {
       .append(makeHexString((uint64_t)TargetTaskData));
   S.append(" (")
       .append(
-          makeHexString((uint64_t)TargetTaskData->value, /*IsPointer=*/false))
+          makeHexString((uint64_t)(TargetTaskData) ? TargetTaskData->value : 0,
+                        /*IsPointer=*/false))
       .append(1, ')');
   S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
   S.append(" (")
-      .append(makeHexString((uint64_t)TargetData->value, /*IsPointer=*/false))
+      .append(makeHexString((uint64_t)(TargetData) ? TargetData->value : 0,
+                            /*IsPointer=*/false))
       .append(1, ')');
   S.append(" host_op_id=").append(makeHexString((uint64_t)HostOpId));
   S.append(" (")
-      .append(makeHexString((uint64_t)(*HostOpId), /*IsPointer=*/false))
+      .append(makeHexString((uint64_t)(HostOpId) ? (*HostOpId) : 0,
+                            /*IsPointer=*/false))
       .append(1, ')');
   S.append(" src=").append(makeHexString((uint64_t)SrcAddr));
   S.append(" src_device_num=").append(std::to_string(SrcDeviceNum));
@@ -136,11 +142,13 @@ std::string internal::TargetSubmitEmi::toString() const {
   S.append("  req_num_teams=").append(std::to_string(RequestedNumTeams));
   S.append(" target_data=").append(makeHexString((uint64_t)TargetData));
   S.append(" (")
-      .append(makeHexString((uint64_t)TargetData->value, /*IsPointer=*/false))
+      .append(makeHexString((uint64_t)(TargetData) ? TargetData->value : 0,
+                            /*IsPointer=*/false))
       .append(1, ')');
   S.append(" host_op_id=").append(makeHexString((uint64_t)HostOpId));
   S.append(" (")
-      .append(makeHexString((uint64_t)(*HostOpId), /*IsPointer=*/false))
+      .append(makeHexString((uint64_t)(HostOpId) ? (*HostOpId) : 0,
+                            /*IsPointer=*/false))
       .append(1, ')');
   return S;
 }

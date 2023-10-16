@@ -27,6 +27,7 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 int start_trace();
 int flush_trace();
 int stop_trace();
+void libomptest_global_eventreporter_set_active(bool State);
 #ifdef __cplusplus
 }
 #endif
@@ -165,6 +166,18 @@ struct Runner {
 #define OMPT_SEQ_ASSERT_DISABLE() this->SequenceAsserter.setActive(false);
 #define OMPT_SEQ_ASSERT_ENABLE() this->SequenceAsserter.setActive(true);
 #define OMPT_SEQ_ASSERT_NOT(Event, ...)
+#define OMPT_EVENT_SUPPRESS(Asserter, EventTy)                                 \
+  this->Asserter.suppressEvent(EventTy);
+#define OMPT_EVENT_PERMIT(Asserter, EventTy)                                   \
+  this->Asserter.permitEvent(EventTy);
+#define OMPT_EVENT_SUPPRESS_EACH_LISTENER(EventTy)                             \
+  OMPT_EVENT_SUPPRESS(EventAsserter, EventTy);                                 \
+  OMPT_EVENT_SUPPRESS(EventReporter, EventTy);                                 \
+  OMPT_EVENT_SUPPRESS(SequenceAsserter, EventTy);
+#define OMPT_EVENT_PERMIT_EACH_LISTENER(EventTy)                               \
+  OMPT_EVENT_PERMIT(EventAsserter, EventTy);                                   \
+  OMPT_EVENT_PERMIT(EventReporter, EventTy);                                   \
+  OMPT_EVENT_PERMIT(SequenceAsserter, EventTy);
 
 /// MACRO TO DEFINE A TESTSUITE + TESTCASE (like GoogleTest does)
 #define OMPTTESTCASE(SuiteName, CaseName)                                      \

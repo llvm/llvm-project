@@ -10,10 +10,47 @@
 
 /// General base class for the subscriber/notification pattern in
 /// OmptCallbachHandler. Derived classes need to implement the notify method.
-struct OmptListener {
+class OmptListener {
+public:
   virtual ~OmptListener() = default;
+
   /// Called for each registered OMPT event of the OmptCallbackHandler
   virtual void notify(omptest::OmptAssertEvent &&AE) = 0;
+
+  /// Control whether this asserter should be considered 'active'.
+  void setActive(bool Enabled) { Active = Enabled; }
+
+  /// Check if this asserter is considered 'active'.
+  bool isActive() { return Active; }
+
+  /// Check if the given event type is in the set of suppressed event types.
+  bool isSuppressedEventType(omptest::internal::EventTy EvTy) {
+    return SuppressedEvents.find(EvTy) != SuppressedEvents.end();
+  }
+
+  /// Remove the given event type to the set of suppressed events.
+  void permitEvent(omptest::internal::EventTy EvTy) {
+    SuppressedEvents.erase(EvTy);
+  }
+
+  /// Add the given event type to the set of suppressed events.
+  void suppressEvent(omptest::internal::EventTy EvTy) {
+    SuppressedEvents.insert(EvTy);
+  }
+
+private:
+  bool Active{true};
+
+  // For now we add event types to the set of suppressed events by default.
+  // This is necessary because AOMP currently does not handle these events.
+  std::set<omptest::internal::EventTy> SuppressedEvents{
+      omptest::internal::EventTy::ParallelBegin,
+      omptest::internal::EventTy::ParallelEnd,
+      omptest::internal::EventTy::ThreadBegin,
+      omptest::internal::EventTy::ThreadEnd,
+      omptest::internal::EventTy::ImplicitTask,
+      omptest::internal::EventTy::TaskCreate,
+      omptest::internal::EventTy::TaskSchedule};
 };
 
 /// Base class for asserting on OMPT events
@@ -26,6 +63,10 @@ public:
   // Called from the CallbackHandler with a corresponding AssertEvent to which
   // callback was handled.
   void notify(omptest::OmptAssertEvent &&AE) override {
+    // Ignore notifications while inactive
+    if (!isActive() || isSuppressedEventType(AE.getEventType()))
+      return;
+
     this->notifyImpl(std::move(AE));
   }
 
@@ -44,24 +85,18 @@ public:
   void reportError(const omptest::OmptAssertEvent &AwaitedEvent,
                    const omptest::OmptAssertEvent &OffendingEvent,
                    const std::string &Message) {
-    std::cerr << "[Assert Error]: Awaited event " << AwaitedEvent.getEventName()
-              << "\nGot: " << OffendingEvent.getEventName() << "\n"
+    std::cerr << "[Assert Error]: Awaited event name='"
+              << AwaitedEvent.getEventName() << "' toString='"
+              << AwaitedEvent.toString() << ")\nGot: name='"
+              << OffendingEvent.getEventName() << "' toString='"
+              << OffendingEvent.toString() << "'\n"
               << Message << std::endl;
   }
-
-  /// Control whether this asserter should be considered 'active'.
-  void setActive(bool Enabled) { Active = Enabled; }
-
-  /// Check if this asserter is considered 'active'.
-  bool isActive() { return Active; }
 
   virtual omptest::AssertState getState() { return State; }
 
 protected:
   omptest::AssertState State{omptest::AssertState::pass};
-
-private:
-  bool Active{true};
 };
 
 /// Class that can assert in a sequenced fashion, i.e., events hace to occur in
@@ -78,20 +113,26 @@ struct OmptSequencedAsserter : public OmptAsserter {
   /// Implements the asserter's actual logic
   virtual void notifyImpl(omptest::OmptAssertEvent &&AE) override {
     // Ignore notifications while inactive
-    if (!isActive())
+    if (!isActive() || isSuppressedEventType(AE.getEventType()))
       return;
 
+    ++NumNotifications;
+
     if (NextEvent >= Events.size()) {
-      reportError(AE, "[OmptSequencedAsserter] Too many events to check. "
-                      "Only asserted " +
-                          std::to_string(Events.size()) + " event.");
+      reportError(AE, "[OmptSequencedAsserter] Too many events to check (" +
+                          std::to_string(NumNotifications) + "). Asserted " +
+                          std::to_string(NumAssertSuccesses) + "/" +
+                          std::to_string(Events.size()) +
+                          " events successfully.");
       State = omptest::AssertState::fail;
       return;
     }
 
     auto &E = Events[NextEvent++];
-    if (E == AE)
+    if (E == AE) {
+      ++NumAssertSuccesses;
       return;
+    }
 
     reportError(E, AE, "[OmptSequencedAsserter] The events are not equal");
     State = omptest::AssertState::fail;
@@ -106,6 +147,8 @@ struct OmptSequencedAsserter : public OmptAsserter {
     return State;
   }
 
+  int NumAssertSuccesses{0};
+  int NumNotifications{0};
   size_t NextEvent{0};
   std::vector<omptest::OmptAssertEvent> Events;
 };
@@ -142,44 +185,14 @@ public:
   // Called from the CallbackHandler with a corresponding AssertEvent to which
   // callback was handled.
   void notify(omptest::OmptAssertEvent &&AE) override {
-    if (!isActive() ||
-        (SuppressedEvents.find(AE.getEventType()) != SuppressedEvents.end()))
+    if (!isActive() || isSuppressedEventType(AE.getEventType()))
       return;
 
     OutStream << AE.toString() << std::endl;
   }
 
-  /// Control whether this asserter should be considered 'active'.
-  void setActive(bool Enabled) { Active = Enabled; }
-
-  /// Check if this asserter is considered 'active'.
-  bool isActive() { return Active; }
-
-  /// Add the given event type to the set of suppressed events.
-  void suppressEvent(omptest::internal::EventTy EvTy) {
-    SuppressedEvents.insert(EvTy);
-  }
-
-  /// Remove the given event type to the set of suppressed events.
-  void permitEvent(omptest::internal::EventTy EvTy) {
-    SuppressedEvents.erase(EvTy);
-  }
-
 private:
-  bool Active{true};
   std::ostream &OutStream;
-
-  // For now we add events to the blacklist to suppress their reports by
-  // default. This is necessary because AOMP currently does not handle these
-  // events.
-  std::set<omptest::internal::EventTy> SuppressedEvents{
-      omptest::internal::EventTy::ParallelBegin,
-      omptest::internal::EventTy::ParallelEnd,
-      omptest::internal::EventTy::ThreadBegin,
-      omptest::internal::EventTy::ThreadEnd,
-      omptest::internal::EventTy::ImplicitTask,
-      omptest::internal::EventTy::TaskCreate,
-      omptest::internal::EventTy::TaskSchedule};
 };
 
 #endif

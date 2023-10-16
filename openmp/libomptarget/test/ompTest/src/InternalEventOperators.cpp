@@ -1,5 +1,10 @@
 #include "../include/InternalEvent.h"
 
+#include <cstring>
+#include <limits>
+
+#define expectedDefault(TypeName) std::numeric_limits<TypeName>::min()
+
 namespace omptest {
 
 namespace internal {
@@ -7,22 +12,88 @@ namespace internal {
 event_class_operator_stub(ThreadBegin)
 event_class_operator_stub(ThreadEnd)
 event_class_operator_w_body(ParallelBegin,                                     \
-return a.NumThreads == b.NumThreads;                                           \
+  return Expected.NumThreads == Observed.NumThreads;                           \
 )
 event_class_operator_stub(ParallelEnd)
 event_class_operator_stub(TaskCreate)
 event_class_operator_stub(TaskSchedule)
 event_class_operator_stub(ImplicitTask)
-event_class_operator_stub(Target)
-event_class_operator_stub(TargetEmi)
-event_class_operator_stub(TargetDataOp)
-event_class_operator_stub(TargetDataOpEmi)
-event_class_operator_stub(TargetSubmit)
-event_class_operator_stub(TargetSubmitEmi)
+event_class_operator_w_body(Target,                                            \
+  bool isSameKind = (Expected.Kind == Observed.Kind);                          \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
+  bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
+                            true : (Expected.DeviceNum == Observed.DeviceNum); \
+  return isSameKind && isSameEndpoint && isSameDeviceNum;                      \
+)
+event_class_operator_w_body(TargetEmi,                                         \
+  bool isSameKind = (Expected.Kind == Observed.Kind);                          \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
+  bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
+                            true : (Expected.DeviceNum == Observed.DeviceNum); \
+  return isSameKind && isSameEndpoint && isSameDeviceNum;                      \
+)
+event_class_operator_w_body(TargetDataOp,                                      \
+  bool isSameOpType = (Expected.OpType == Observed.OpType);                    \
+  bool isSameSize = (Expected.Bytes == Observed.Bytes);                        \
+  bool isSameSrcAddr = (Expected.SrcAddr == expectedDefault(void *)) ?         \
+                          true : (Expected.SrcAddr == Observed.SrcAddr);       \
+  bool isSameDstAddr = (Expected.DstAddr == expectedDefault(void *)) ?         \
+                          true :  (Expected.DstAddr == Observed.DstAddr);      \
+  bool isSameSrcDeviceNum =                                                    \
+    (Expected.SrcDeviceNum == expectedDefault(int)) ?                          \
+       true : (Expected.SrcDeviceNum == Observed.SrcDeviceNum);                \
+  bool isSameDstDeviceNum =                                                    \
+    (Expected.DstDeviceNum == expectedDefault(int)) ?                          \
+       true : (Expected.DstDeviceNum == Observed.DstDeviceNum);                \
+  return isSameOpType && isSameSize && isSameSrcAddr && isSameDstAddr &&       \
+         isSameSrcDeviceNum && isSameDstDeviceNum;                             \
+)
+event_class_operator_w_body(TargetDataOpEmi,                                   \
+  bool isSameOpType = (Expected.OpType == Observed.OpType);                    \
+  bool isSameSize = (Expected.Bytes == Observed.Bytes);                        \
+  bool isSameSrcAddr = (Expected.SrcAddr == expectedDefault(void *)) ?         \
+                          true : (Expected.SrcAddr == Observed.SrcAddr);       \
+  bool isSameDstAddr = (Expected.DstAddr == expectedDefault(void *)) ?         \
+                          true :  (Expected.DstAddr == Observed.DstAddr);      \
+  bool isSameSrcDeviceNum =                                                    \
+    (Expected.SrcDeviceNum == expectedDefault(int)) ?                          \
+       true : (Expected.SrcDeviceNum == Observed.SrcDeviceNum);                \
+  bool isSameDstDeviceNum =                                                    \
+    (Expected.DstDeviceNum == expectedDefault(int)) ?                          \
+       true : (Expected.DstDeviceNum == Observed.DstDeviceNum);                \
+  return isSameOpType && isSameSize && isSameSrcAddr && isSameDstAddr &&       \
+         isSameSrcDeviceNum && isSameDstDeviceNum;                             \
+)
+event_class_operator_w_body(TargetSubmit,                                      \
+  bool isSameReqNumTeams =                                                     \
+    (Expected.RequestedNumTeams == Observed.RequestedNumTeams);                \
+  return isSameReqNumTeams;                                                    \
+)
+event_class_operator_w_body(TargetSubmitEmi,                                   \
+  bool isSameReqNumTeams =                                                     \
+    (Expected.RequestedNumTeams == Observed.RequestedNumTeams);                \
+  bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);              \
+  return isSameReqNumTeams && isSameEndpoint;                                  \
+)
 event_class_operator_stub(ControlTool)
-event_class_operator_stub(DeviceInitialize)
+event_class_operator_w_body(DeviceInitialize,                                  \
+  bool isSameDeviceNum = (Expected.DeviceNum == Observed.DeviceNum);           \
+  bool isSameType = (Expected.Type == expectedDefault(const char *)) ?         \
+                       true :                                                  \
+                       ((Expected.Type == Observed.Type) ||                    \
+                        (strcmp(Expected.Type, Observed.Type) == 0));          \
+  bool isSameDevice =                                                          \
+    (Expected.Device == expectedDefault(ompt_device_t *)) ?                    \
+       true : (Expected.Device == Observed.Device);                            \
+  return isSameDeviceNum && isSameType && isSameDevice;                        \
+)
 event_class_operator_stub(DeviceFinalize)
-event_class_operator_stub(DeviceLoad)
+event_class_operator_w_body(DeviceLoad,                                        \
+  bool isSameDeviceNum = (Expected.DeviceNum == Observed.DeviceNum);           \
+  bool isSameSize = (Expected.Bytes == expectedDefault(size_t)) ?              \
+                       true : (Expected.Bytes == Observed.Bytes);              \
+  return isSameDeviceNum && isSameSize;                                        \
+)
 event_class_operator_stub(DeviceUnload)
 event_class_operator_stub(BufferRequest)
 event_class_operator_stub(BufferComplete)
