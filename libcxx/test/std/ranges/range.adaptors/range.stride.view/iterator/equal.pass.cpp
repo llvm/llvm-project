@@ -26,8 +26,8 @@ constexpr void testOne() {
   {
     // simple test
     {
-      int buffer[] = {0, 1, 2, -1, 4, 5, 6};
-      Range input(Iter{buffer}, Iter{buffer + 7});
+      int buffer[] = {0, 1, 2, -1, 4, 5, 6, 7};
+      Range input(Iter{buffer}, Iter{buffer + 8});
       StrideView sv(input, 1);
       StrideView sv_too(input, 2);
       auto b = sv.begin(), e = sv.end();
