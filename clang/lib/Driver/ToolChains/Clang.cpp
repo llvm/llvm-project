@@ -1067,6 +1067,35 @@ static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
   }
 }
 
+static bool hasClangPchSignature(const Driver &D, StringRef Path) {
+  if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MemBuf =
+          D.getVFS().getBufferForFile(Path))
+    return (*MemBuf)->getBuffer().startswith("CPCH");
+  return false;
+}
+
+static bool gchProbe(const Driver &D, StringRef Path) {
+  llvm::ErrorOr<llvm::vfs::Status> Status = D.getVFS().status(Path);
+  if (!Status)
+    return false;
+
+  if (Status->isDirectory()) {
+    std::error_code EC;
+    for (llvm::vfs::directory_iterator DI = D.getVFS().dir_begin(Path, EC), DE;
+         !EC && DI != DE; DI = DI.increment(EC)) {
+      if (hasClangPchSignature(D, DI->path()))
+        return true;
+    }
+    D.Diag(diag::warn_drv_pch_ignoring_gch_dir) << Path;
+    return false;
+  }
+
+  if (hasClangPchSignature(D, Path))
+    return true;
+  D.Diag(diag::warn_drv_pch_ignoring_gch_file) << Path;
+  return false;
+}
+
 void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                     const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs,
@@ -1283,11 +1312,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         FoundPCH = true;
 
       if (!FoundPCH) {
+        // For GCC compat, probe for a file or directory ending in .gch instead.
         llvm::sys::path::replace_extension(P, "gch");
-        if (D.getVFS().exists(P)) {
-          FoundPCH = true;
-          D.Diag(diag::warn_drv_include_probe_gch) << A->getAsString(Args) << P;
-        }
+        FoundPCH = gchProbe(D, P.str());
       }
 
       if (FoundPCH) {

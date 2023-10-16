@@ -441,11 +441,14 @@ def warn_drv_overriding_option : Warning<
 def warn_drv_treating_input_as_cxx : Warning<
   "treating '%0' input as '%1' when in C++ mode, this behavior is deprecated">,
   InGroup<Deprecated>;
-def warn_drv_include_probe_gch : Warning<
-  "'%0' probing .gch is deprecated. Use '-include-pch %1' or switch to .pch instead">,
-  InGroup<DeprecatedIncludeGch>;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
+def warn_drv_pch_ignoring_gch_file : Warning<
+  "precompiled header '%0' was ignored because it is not a clang PCH file">,
+  InGroup<IgnoredGCH>;
+def warn_drv_pch_ignoring_gch_dir : Warning<
+  "precompiled header directory '%0' was ignored because it contains no clang PCH files">,
+  InGroup<IgnoredGCH>;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
   InGroup<DiagGroup<"missing-sysroot">>;
 def warn_incompatible_sysroot : Warning<"using sysroot for '%0' but targeting '%1'">,
