@@ -476,13 +476,16 @@ void ChainT::mergeEdges(ChainT *Other) {
 }
 
 using NodeIter = std::vector<NodeT *>::const_iterator;
+static std::vector<NodeT *> EmptyList;
 
 /// A wrapper around three concatenated vectors (chains) of nodes; it is used
 /// to avoid extra instantiation of the vectors.
 struct MergedNodesT {
-  MergedNodesT(NodeIter Begin1, NodeIter End1, NodeIter Begin2 = NodeIter(),
-               NodeIter End2 = NodeIter(), NodeIter Begin3 = NodeIter(),
-               NodeIter End3 = NodeIter())
+  MergedNodesT(NodeIter Begin1, NodeIter End1,
+               NodeIter Begin2 = EmptyList.begin(),
+               NodeIter End2 = EmptyList.end(),
+               NodeIter Begin3 = EmptyList.begin(),
+               NodeIter End3 = EmptyList.end())
       : Begin1(Begin1), End1(End1), Begin2(Begin2), End2(End2), Begin3(Begin3),
         End3(End3) {}
 
@@ -1136,13 +1139,6 @@ private:
       // Extract the best (top) edge for merging.
       ChainEdge *BestEdge = *Queue.begin();
       Queue.erase(Queue.begin());
-      // Ignore self-edges.
-      if (BestEdge->isSelfEdge())
-        continue;
-      // Ignore edges with non-positive gains.
-      if (BestEdge->gain() <= EPS)
-        continue;
-
       ChainT *BestSrcChain = BestEdge->srcChain();
       ChainT *BestDstChain = BestEdge->dstChain();
 

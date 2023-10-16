@@ -4666,8 +4666,8 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
   }
 
-  // For f16 require arcp only.
-  // For f32 require afn+arcp.
+  // For f16 require afn or arcp.
+  // For f32 require afn.
   if (!AllowInaccurateRcp && (ResTy != LLT::scalar(16) ||
                               !MI.getFlag(MachineInstr::FmArcp)))
     return false;
@@ -6559,11 +6559,6 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
-
-  const Module *M = B.getMF().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return legalizeTrapHsaQueuePtr(MI, MRI, B);
 
   return ST.supportsGetDoorbellID() ?
          legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
