@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64 -std=c++17 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64 -std=c++17 -fsyntax-only -verify -disable-llvm-passes %s
 
 template <typename T>
 using VecT __attribute__((vector_size(16))) = T;
@@ -16,10 +16,10 @@ void test_builtin_vectorelements() {
   (void) __builtin_vectorelements(some_other_vec);
 
   using some_int = int;
-  (void) __builtin_vectorelements(some_int); // expected-error {{'__builtin_vectorelements' argument must be a vector}}
+  (void) __builtin_vectorelements(some_int); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
 
   class Foo {};
-  __builtin_vectorelements(Foo); // expected-error {{'__builtin_vectorelements' argument must be a vector}}
+  __builtin_vectorelements(Foo); // expected-error {{argument to __builtin_vectorelements must be of vector type}}
 
   struct Bar { veci4 vec; };
   (void) __builtin_vectorelements(Bar{}.vec);

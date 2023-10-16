@@ -10136,9 +10136,6 @@ def err_vec_builtin_incompatible_vector : Error<
 def err_vsx_builtin_nonconstant_argument : Error<
   "argument %0 to %1 must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)">;
 
-def err_vectorelements_non_vector : Error<
- "'__builtin_vectorelements' argument must be a vector">;
-
 def err_shufflevector_nonconstant_argument : Error<
   "index for __builtin_shufflevector must be a constant integer">;
 def err_shufflevector_argument_too_large : Error<
@@ -10147,8 +10144,8 @@ def err_shufflevector_argument_too_large : Error<
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
-def err_convertvector_non_vector_type : Error<
-  "second argument to __builtin_convertvector must be a vector type">;
+def err_builtin_non_vector_type : Error<
+  "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
   "first two arguments to __builtin_convertvector must have the same number of elements">;
 

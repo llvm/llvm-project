@@ -4356,10 +4356,11 @@ static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
                                                 SourceLocation Loc,
                                                 SourceRange ArgRange) {
   // builtin_vectorelements supports both fixed-sized and scalable vectors.
-  if (!T->isVectorType() && !T->isSizelessVectorType()) {
-    S.Diag(Loc, diag::err_vectorelements_non_vector) << T << ArgRange;
-    return true;
-  }
+  if (!T->isVectorType() && !T->isSizelessVectorType())
+    return S.Diag(Loc, diag::err_builtin_non_vector_type)
+           << ""
+           << "__builtin_vectorelements" << T << ArgRange;
+
   return false;
 }
 
