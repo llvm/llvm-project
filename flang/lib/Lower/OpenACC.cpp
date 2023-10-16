@@ -1086,8 +1086,9 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     llvm::SmallVector<fir::DoLoopOp> loops;
     llvm::SmallVector<mlir::Value> ivs;
     if (seqTy.hasDynamicExtents()) {
-      auto shape = genShapeFromBoundsOrArgs(
-        loc, builder, seqTy, bounds, recipe.getCombinerRegion().getArguments());
+      auto shape =
+          genShapeFromBoundsOrArgs(loc, builder, seqTy, bounds,
+                                   recipe.getCombinerRegion().getArguments());
       auto v1DeclareOp = builder.create<hlfir::DeclareOp>(
           loc, value1, llvm::StringRef{}, shape, llvm::ArrayRef<mlir::Value>{},
           fir::FortranVariableFlagsAttr{});
