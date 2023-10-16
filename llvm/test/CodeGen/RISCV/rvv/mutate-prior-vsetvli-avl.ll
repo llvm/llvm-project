@@ -10,18 +10,18 @@ define dso_local void @test(ptr nocapture noundef %var_99) {
 ; CHECK-NEXT:    lui a1, %hi(.L__const.test.var_45)
 ; CHECK-NEXT:    addi a1, a1, %lo(.L__const.test.var_45)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vle8.v v4, (a1)
 ; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    vmul.vx v12, v8, a1
+; CHECK-NEXT:    vmul.vx v8, v4, a1
 ; CHECK-NEXT:    lui a1, %hi(.L__const.test.var_101)
 ; CHECK-NEXT:    addi a1, a1, %lo(.L__const.test.var_101)
-; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    vmv.x.s a1, v12
+; CHECK-NEXT:    vle8.v v12, (a1)
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vmsleu.vx v0, v8, a1
-; CHECK-NEXT:    vssra.vv v8, v16, v8
-; CHECK-NEXT:    vmerge.vvm v8, v8, v8, v0
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vmsleu.vx v0, v4, a1
+; CHECK-NEXT:    vssra.vv v4, v12, v4
+; CHECK-NEXT:    vmerge.vvm v4, v4, v4, v0
+; CHECK-NEXT:    vse8.v v4, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 32 x i8> @llvm.riscv.vle.nxv32i8.i64(<vscale x 32 x i8> undef, ptr nonnull @__const.test.var_45, i64 2)

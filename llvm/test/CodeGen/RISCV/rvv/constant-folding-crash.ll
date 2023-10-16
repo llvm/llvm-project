@@ -19,47 +19,47 @@ define void @constant_folding_crash(ptr %v54, <4 x ptr> %lanes.a, <4 x ptr> %lan
 ; RV32-LABEL: constant_folding_crash:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a0, 8(a0)
-; RV32-NEXT:    vmv1r.v v10, v0
+; RV32-NEXT:    vmv1r.v v1, v0
 ; RV32-NEXT:    andi a0, a0, 1
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vmv.v.x v11, a0
-; RV32-NEXT:    vmsne.vi v0, v11, 0
+; RV32-NEXT:    vmv.v.x v2, a0
+; RV32-NEXT:    vmsne.vi v0, v2, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
-; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vmerge.vvm v2, v9, v8, v0
+; RV32-NEXT:    vmv.x.s a0, v2
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV32-NEXT:    vrgather.vi v9, v8, 0
-; RV32-NEXT:    vmsne.vi v0, v9, 0
+; RV32-NEXT:    vmv.v.i v2, 0
+; RV32-NEXT:    vmv1r.v v0, v1
+; RV32-NEXT:    vmerge.vim v1, v2, 1, v0
+; RV32-NEXT:    vrgather.vi v2, v1, 0
+; RV32-NEXT:    vmsne.vi v0, v2, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 10
-; RV32-NEXT:    vse32.v v8, (a0), v0.t
+; RV32-NEXT:    vmv.v.i v1, 10
+; RV32-NEXT:    vse32.v v1, (a0), v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: constant_folding_crash:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    ld a0, 8(a0)
-; RV64-NEXT:    vmv1r.v v12, v0
+; RV64-NEXT:    vmv1r.v v1, v0
 ; RV64-NEXT:    andi a0, a0, 1
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vmv.v.x v13, a0
-; RV64-NEXT:    vmsne.vi v0, v13, 0
+; RV64-NEXT:    vmv.v.x v2, a0
+; RV64-NEXT:    vmsne.vi v0, v2, 0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
-; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vmerge.vvm v2, v10, v8, v0
+; RV64-NEXT:    vmv.x.s a0, v2
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmv1r.v v0, v12
-; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV64-NEXT:    vrgather.vi v9, v8, 0
-; RV64-NEXT:    vmsne.vi v0, v9, 0
+; RV64-NEXT:    vmv.v.i v2, 0
+; RV64-NEXT:    vmv1r.v v0, v1
+; RV64-NEXT:    vmerge.vim v1, v2, 1, v0
+; RV64-NEXT:    vrgather.vi v2, v1, 0
+; RV64-NEXT:    vmsne.vi v0, v2, 0
 ; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 10
-; RV64-NEXT:    vse32.v v8, (a0), v0.t
+; RV64-NEXT:    vmv.v.i v1, 10
+; RV64-NEXT:    vse32.v v1, (a0), v0.t
 ; RV64-NEXT:    ret
 entry:
   %sunkaddr = getelementptr i8, ptr %v54, i64 8

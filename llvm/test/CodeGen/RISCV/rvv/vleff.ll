@@ -2558,7 +2558,7 @@ define void @intrinsic_vleff_dead_value(<vscale x 1 x double>* %0, iXLen %1, iXL
 ; RV32-LABEL: intrinsic_vleff_dead_value:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; RV32-NEXT:    vle64ff.v v8, (a0)
+; RV32-NEXT:    vle64ff.v v1, (a0)
 ; RV32-NEXT:    csrr a0, vl
 ; RV32-NEXT:    sw a0, 0(a2)
 ; RV32-NEXT:    ret
@@ -2566,7 +2566,7 @@ define void @intrinsic_vleff_dead_value(<vscale x 1 x double>* %0, iXLen %1, iXL
 ; RV64-LABEL: intrinsic_vleff_dead_value:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; RV64-NEXT:    vle64ff.v v8, (a0)
+; RV64-NEXT:    vle64ff.v v1, (a0)
 ; RV64-NEXT:    csrr a0, vl
 ; RV64-NEXT:    sd a0, 0(a2)
 ; RV64-NEXT:    ret
@@ -2613,7 +2613,7 @@ define void @intrinsic_vleff_dead_all(<vscale x 1 x double>* %0, iXLen %1, iXLen
 ; CHECK-LABEL: intrinsic_vleff_dead_all:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64ff.v v8, (a0)
+; CHECK-NEXT:    vle64ff.v v1, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %a = call { <vscale x 1 x double>, iXLen } @llvm.riscv.vleff.nxv1f64(

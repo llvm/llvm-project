@@ -105,8 +105,8 @@ define void @test_vsetvli_i16(<vscale x 1 x i16> %0, <vscale x 1 x i16> %1, <vsc
 ; CHECK-LABEL: test_vsetvli_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-NEXT:    vsm.v v8, (a0)
+; CHECK-NEXT:    vmseq.vv v1, v8, v9
+; CHECK-NEXT:    vsm.v v1, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i16(
@@ -126,8 +126,8 @@ define void @test_vsetvli_i32(<vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vsc
 ; CHECK-LABEL: test_vsetvli_i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vmseq.vv v8, v8, v9
-; CHECK-NEXT:    vsm.v v8, (a0)
+; CHECK-NEXT:    vmseq.vv v1, v8, v9
+; CHECK-NEXT:    vsm.v v1, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmseq.nxv1i32(

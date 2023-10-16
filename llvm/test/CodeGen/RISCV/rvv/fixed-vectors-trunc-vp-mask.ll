@@ -8,8 +8,8 @@ define <2 x i1> @vtrunc_v2i1_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vi v8, v8, 1, v0.t
-; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
+; CHECK-NEXT:    vand.vi v1, v8, 1, v0.t
+; CHECK-NEXT:    vmsne.vi v0, v1, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i1> %v
@@ -19,8 +19,8 @@ define <2 x i1> @vtrunc_v2i1_v2i16_unmasked(<2 x i16> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vi v1, v8, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v
@@ -32,8 +32,8 @@ define <2 x i1> @vtrunc_v2i1_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vand.vi v8, v8, 1, v0.t
-; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
+; CHECK-NEXT:    vand.vi v1, v8, 1, v0.t
+; CHECK-NEXT:    vmsne.vi v0, v1, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i1> %v
@@ -43,8 +43,8 @@ define <2 x i1> @vtrunc_v2i1_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vi v1, v8, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v
@@ -56,8 +56,8 @@ define <2 x i1> @vtrunc_v2i1_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vand.vi v8, v8, 1, v0.t
-; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
+; CHECK-NEXT:    vand.vi v1, v8, 1, v0.t
+; CHECK-NEXT:    vmsne.vi v0, v1, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i1> %v
@@ -67,8 +67,8 @@ define <2 x i1> @vtrunc_v2i1_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i1_v2i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vi v1, v8, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v

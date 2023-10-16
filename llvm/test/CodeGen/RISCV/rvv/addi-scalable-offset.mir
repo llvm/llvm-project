@@ -41,13 +41,13 @@ body: |
     ; CHECK-NEXT: $x12 = frame-setup SLLI killed $x12, 1
     ; CHECK-NEXT: $x2 = frame-setup SUB $x2, killed $x12
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: renamable $v8 = PseudoVLE64_V_M1 undef renamable $v8, killed renamable $x10, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
+    ; CHECK-NEXT: renamable $v1 = PseudoVLE64_V_M1 undef renamable $v1, killed renamable $x10, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
     ; CHECK-NEXT: $x10 = PseudoReadVLENB
     ; CHECK-NEXT: $x10 = SLLI killed $x10, 1
     ; CHECK-NEXT: $x10 = SUB $x8, killed $x10
     ; CHECK-NEXT: $x10 = ADDI killed $x10, -2048
     ; CHECK-NEXT: $x10 = ADDI killed $x10, -224
-    ; CHECK-NEXT: VS1R_V killed renamable $v8, killed renamable $x10
+    ; CHECK-NEXT: VS1R_V killed renamable $v1, killed renamable $x10
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x8, -2048
     ; CHECK-NEXT: $x2 = frame-destroy ADDI killed $x2, -224
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 240

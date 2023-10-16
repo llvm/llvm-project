@@ -9,8 +9,8 @@ define <vscale x 8 x i8> @f() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vadd.vx v8, v1, a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i8 @llvm.vscale.i8()

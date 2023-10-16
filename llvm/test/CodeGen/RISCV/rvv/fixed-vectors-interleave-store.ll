@@ -11,17 +11,17 @@ define void @vector_interleave_store_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b, ptr
 ; CHECK-NEXT:    vslideup.vi v0, v8, 2
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vmerge.vim v2, v2, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 16
+; CHECK-NEXT:    vslidedown.vi v4, v2, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v12, v8, v10
+; CHECK-NEXT:    vwaddu.vv v6, v2, v4
 ; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    vwmaccu.vx v12, a2, v10
+; CHECK-NEXT:    vwmaccu.vx v6, a2, v4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v12, 0
-; CHECK-NEXT:    vsm.v v8, (a0)
+; CHECK-NEXT:    vmsne.vi v1, v6, 0
+; CHECK-NEXT:    vsm.v v1, (a0)
 ; CHECK-NEXT:    ret
   %res = call <32 x i1> @llvm.experimental.vector.interleave2.v32i1(<16 x i1> %a, <16 x i1> %b)
   store <32 x i1> %res, ptr %p
@@ -33,12 +33,12 @@ define void @vector_interleave_store_v16i16_v8i16_align1(<8 x i16> %a, <8 x i16>
 ; CHECK-LABEL: vector_interleave_store_v16i16_v8i16_align1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v2, v8, v9
 ; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
+; CHECK-NEXT:    vwmaccu.vx v2, a1, v9
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vse8.v v10, (a0)
+; CHECK-NEXT:    vse8.v v2, (a0)
 ; CHECK-NEXT:    ret
   %res = call <16 x i16> @llvm.experimental.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
   store <16 x i16> %res, ptr %p, align 1

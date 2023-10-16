@@ -8,8 +8,8 @@ define void @splat_v8f16(ptr %x, half %y) {
 ; CHECK-LABEL: splat_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa0
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vfmv.v.f v1, fa0
+; CHECK-NEXT:    vse16.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x half> poison, half %y, i32 0
   %b = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
@@ -21,8 +21,8 @@ define void @splat_v4f32(ptr %x, float %y) {
 ; CHECK-LABEL: splat_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vfmv.v.f v1, fa0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x float> poison, float %y, i32 0
   %b = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> zeroinitializer
@@ -34,8 +34,8 @@ define void @splat_v2f64(ptr %x, double %y) {
 ; CHECK-LABEL: splat_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa0
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vfmv.v.f v1, fa0
+; CHECK-NEXT:    vse64.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <2 x double> poison, double %y, i32 0
   %b = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> zeroinitializer
@@ -47,17 +47,17 @@ define void @splat_16f16(ptr %x, half %y) {
 ; LMULMAX2-LABEL: splat_16f16:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; LMULMAX2-NEXT:    vfmv.v.f v8, fa0
-; LMULMAX2-NEXT:    vse16.v v8, (a0)
+; LMULMAX2-NEXT:    vfmv.v.f v2, fa0
+; LMULMAX2-NEXT:    vse16.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_16f16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; LMULMAX1-NEXT:    vfmv.v.f v8, fa0
+; LMULMAX1-NEXT:    vfmv.v.f v1, fa0
 ; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse16.v v8, (a1)
-; LMULMAX1-NEXT:    vse16.v v8, (a0)
+; LMULMAX1-NEXT:    vse16.v v1, (a1)
+; LMULMAX1-NEXT:    vse16.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x half> poison, half %y, i32 0
   %b = shufflevector <16 x half> %a, <16 x half> poison, <16 x i32> zeroinitializer
@@ -69,17 +69,17 @@ define void @splat_v8f32(ptr %x, float %y) {
 ; LMULMAX2-LABEL: splat_v8f32:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-NEXT:    vfmv.v.f v8, fa0
-; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    vfmv.v.f v2, fa0
+; LMULMAX2-NEXT:    vse32.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_v8f32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vfmv.v.f v8, fa0
+; LMULMAX1-NEXT:    vfmv.v.f v1, fa0
 ; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a1)
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    vse32.v v1, (a1)
+; LMULMAX1-NEXT:    vse32.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x float> poison, float %y, i32 0
   %b = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
@@ -91,17 +91,17 @@ define void @splat_v4f64(ptr %x, double %y) {
 ; LMULMAX2-LABEL: splat_v4f64:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-NEXT:    vfmv.v.f v8, fa0
-; LMULMAX2-NEXT:    vse64.v v8, (a0)
+; LMULMAX2-NEXT:    vfmv.v.f v2, fa0
+; LMULMAX2-NEXT:    vse64.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_v4f64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-NEXT:    vfmv.v.f v8, fa0
+; LMULMAX1-NEXT:    vfmv.v.f v1, fa0
 ; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse64.v v8, (a1)
-; LMULMAX1-NEXT:    vse64.v v8, (a0)
+; LMULMAX1-NEXT:    vse64.v v1, (a1)
+; LMULMAX1-NEXT:    vse64.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <4 x double> poison, double %y, i32 0
   %b = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> zeroinitializer
@@ -113,8 +113,8 @@ define void @splat_zero_v8f16(ptr %x) {
 ; CHECK-LABEL: splat_zero_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse16.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x half> poison, half 0.0, i32 0
   %b = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
@@ -126,8 +126,8 @@ define void @splat_zero_v4f32(ptr %x) {
 ; CHECK-LABEL: splat_zero_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x float> poison, float 0.0, i32 0
   %b = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> zeroinitializer
@@ -139,8 +139,8 @@ define void @splat_zero_v2f64(ptr %x) {
 ; CHECK-LABEL: splat_zero_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse64.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <2 x double> poison, double 0.0, i32 0
   %b = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> zeroinitializer
@@ -152,17 +152,17 @@ define void @splat_zero_16f16(ptr %x) {
 ; LMULMAX2-LABEL: splat_zero_16f16:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; LMULMAX2-NEXT:    vmv.v.i v8, 0
-; LMULMAX2-NEXT:    vse16.v v8, (a0)
+; LMULMAX2-NEXT:    vmv.v.i v2, 0
+; LMULMAX2-NEXT:    vse16.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_zero_16f16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-NEXT:    vse16.v v8, (a0)
+; LMULMAX1-NEXT:    vmv.v.i v1, 0
+; LMULMAX1-NEXT:    vse16.v v1, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
-; LMULMAX1-NEXT:    vse16.v v8, (a0)
+; LMULMAX1-NEXT:    vse16.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x half> poison, half 0.0, i32 0
   %b = shufflevector <16 x half> %a, <16 x half> poison, <16 x i32> zeroinitializer
@@ -174,17 +174,17 @@ define void @splat_zero_v8f32(ptr %x) {
 ; LMULMAX2-LABEL: splat_zero_v8f32:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-NEXT:    vmv.v.i v8, 0
-; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    vmv.v.i v2, 0
+; LMULMAX2-NEXT:    vse32.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_zero_v8f32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    vmv.v.i v1, 0
+; LMULMAX1-NEXT:    vse32.v v1, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    vse32.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x float> poison, float 0.0, i32 0
   %b = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
@@ -196,17 +196,17 @@ define void @splat_zero_v4f64(ptr %x) {
 ; LMULMAX2-LABEL: splat_zero_v4f64:
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-NEXT:    vmv.v.i v8, 0
-; LMULMAX2-NEXT:    vse64.v v8, (a0)
+; LMULMAX2-NEXT:    vmv.v.i v2, 0
+; LMULMAX2-NEXT:    vse64.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_zero_v4f64:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX1-NEXT:    vmv.v.i v8, 0
-; LMULMAX1-NEXT:    vse64.v v8, (a0)
+; LMULMAX1-NEXT:    vmv.v.i v1, 0
+; LMULMAX1-NEXT:    vse64.v v1, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
-; LMULMAX1-NEXT:    vse64.v v8, (a0)
+; LMULMAX1-NEXT:    vse64.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <4 x double> poison, double 0.0, i32 0
   %b = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> zeroinitializer
@@ -219,8 +219,8 @@ define void @splat_negzero_v8f16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 1048568
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse16.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vse16.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x half> poison, half -0.0, i32 0
   %b = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
@@ -233,8 +233,8 @@ define void @splat_negzero_v4f32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x float> poison, float -0.0, i32 0
   %b = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> zeroinitializer
@@ -248,8 +248,8 @@ define void @splat_negzero_v2f64(ptr %x) {
 ; CHECK-RV32-NEXT:    fcvt.d.w fa5, zero
 ; CHECK-RV32-NEXT:    fneg.d fa5, fa5
 ; CHECK-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vfmv.v.f v8, fa5
-; CHECK-RV32-NEXT:    vse64.v v8, (a0)
+; CHECK-RV32-NEXT:    vfmv.v.f v1, fa5
+; CHECK-RV32-NEXT:    vse64.v v1, (a0)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: splat_negzero_v2f64:
@@ -257,8 +257,8 @@ define void @splat_negzero_v2f64(ptr %x) {
 ; CHECK-RV64-NEXT:    li a1, -1
 ; CHECK-RV64-NEXT:    slli a1, a1, 63
 ; CHECK-RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-RV64-NEXT:    vmv.v.x v8, a1
-; CHECK-RV64-NEXT:    vse64.v v8, (a0)
+; CHECK-RV64-NEXT:    vmv.v.x v1, a1
+; CHECK-RV64-NEXT:    vse64.v v1, (a0)
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <2 x double> poison, double -0.0, i32 0
   %b = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> zeroinitializer
@@ -271,18 +271,18 @@ define void @splat_negzero_16f16(ptr %x) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    lui a1, 1048568
 ; LMULMAX2-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; LMULMAX2-NEXT:    vmv.v.x v8, a1
-; LMULMAX2-NEXT:    vse16.v v8, (a0)
+; LMULMAX2-NEXT:    vmv.v.x v2, a1
+; LMULMAX2-NEXT:    vse16.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_negzero_16f16:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    lui a1, 1048568
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; LMULMAX1-NEXT:    vmv.v.x v8, a1
+; LMULMAX1-NEXT:    vmv.v.x v1, a1
 ; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse16.v v8, (a1)
-; LMULMAX1-NEXT:    vse16.v v8, (a0)
+; LMULMAX1-NEXT:    vse16.v v1, (a1)
+; LMULMAX1-NEXT:    vse16.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <16 x half> poison, half -0.0, i32 0
   %b = shufflevector <16 x half> %a, <16 x half> poison, <16 x i32> zeroinitializer
@@ -295,18 +295,18 @@ define void @splat_negzero_v8f32(ptr %x) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    lui a1, 524288
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-NEXT:    vmv.v.x v8, a1
-; LMULMAX2-NEXT:    vse32.v v8, (a0)
+; LMULMAX2-NEXT:    vmv.v.x v2, a1
+; LMULMAX2-NEXT:    vse32.v v2, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
 ; LMULMAX1-LABEL: splat_negzero_v8f32:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    lui a1, 524288
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vmv.v.x v8, a1
+; LMULMAX1-NEXT:    vmv.v.x v1, a1
 ; LMULMAX1-NEXT:    addi a1, a0, 16
-; LMULMAX1-NEXT:    vse32.v v8, (a1)
-; LMULMAX1-NEXT:    vse32.v v8, (a0)
+; LMULMAX1-NEXT:    vse32.v v1, (a1)
+; LMULMAX1-NEXT:    vse32.v v1, (a0)
 ; LMULMAX1-NEXT:    ret
   %a = insertelement <8 x float> poison, float -0.0, i32 0
   %b = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
@@ -320,8 +320,8 @@ define void @splat_negzero_v4f64(ptr %x) {
 ; RV32-LMULMAX2-NEXT:    fcvt.d.w fa5, zero
 ; RV32-LMULMAX2-NEXT:    fneg.d fa5, fa5
 ; RV32-LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-LMULMAX2-NEXT:    vfmv.v.f v8, fa5
-; RV32-LMULMAX2-NEXT:    vse64.v v8, (a0)
+; RV32-LMULMAX2-NEXT:    vfmv.v.f v2, fa5
+; RV32-LMULMAX2-NEXT:    vse64.v v2, (a0)
 ; RV32-LMULMAX2-NEXT:    ret
 ;
 ; RV64-LMULMAX2-LABEL: splat_negzero_v4f64:
@@ -329,8 +329,8 @@ define void @splat_negzero_v4f64(ptr %x) {
 ; RV64-LMULMAX2-NEXT:    li a1, -1
 ; RV64-LMULMAX2-NEXT:    slli a1, a1, 63
 ; RV64-LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-LMULMAX2-NEXT:    vmv.v.x v8, a1
-; RV64-LMULMAX2-NEXT:    vse64.v v8, (a0)
+; RV64-LMULMAX2-NEXT:    vmv.v.x v2, a1
+; RV64-LMULMAX2-NEXT:    vse64.v v2, (a0)
 ; RV64-LMULMAX2-NEXT:    ret
 ;
 ; RV32-LMULMAX1-LABEL: splat_negzero_v4f64:
@@ -338,10 +338,10 @@ define void @splat_negzero_v4f64(ptr %x) {
 ; RV32-LMULMAX1-NEXT:    fcvt.d.w fa5, zero
 ; RV32-LMULMAX1-NEXT:    fneg.d fa5, fa5
 ; RV32-LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-LMULMAX1-NEXT:    vfmv.v.f v8, fa5
+; RV32-LMULMAX1-NEXT:    vfmv.v.f v1, fa5
 ; RV32-LMULMAX1-NEXT:    addi a1, a0, 16
-; RV32-LMULMAX1-NEXT:    vse64.v v8, (a1)
-; RV32-LMULMAX1-NEXT:    vse64.v v8, (a0)
+; RV32-LMULMAX1-NEXT:    vse64.v v1, (a1)
+; RV32-LMULMAX1-NEXT:    vse64.v v1, (a0)
 ; RV32-LMULMAX1-NEXT:    ret
 ;
 ; RV64-LMULMAX1-LABEL: splat_negzero_v4f64:
@@ -349,10 +349,10 @@ define void @splat_negzero_v4f64(ptr %x) {
 ; RV64-LMULMAX1-NEXT:    li a1, -1
 ; RV64-LMULMAX1-NEXT:    slli a1, a1, 63
 ; RV64-LMULMAX1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-LMULMAX1-NEXT:    vmv.v.x v8, a1
+; RV64-LMULMAX1-NEXT:    vmv.v.x v1, a1
 ; RV64-LMULMAX1-NEXT:    addi a1, a0, 16
-; RV64-LMULMAX1-NEXT:    vse64.v v8, (a1)
-; RV64-LMULMAX1-NEXT:    vse64.v v8, (a0)
+; RV64-LMULMAX1-NEXT:    vse64.v v1, (a1)
+; RV64-LMULMAX1-NEXT:    vse64.v v1, (a0)
 ; RV64-LMULMAX1-NEXT:    ret
   %a = insertelement <4 x double> poison, double -0.0, i32 0
   %b = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> zeroinitializer

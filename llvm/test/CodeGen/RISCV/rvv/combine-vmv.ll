@@ -10,9 +10,9 @@ define <vscale x 4 x i32> @vadd(<vscale x 4 x i32> %passthru, <vscale x 4 x i32>
 ; CHECK-LABEL: vadd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v10, v10, v12
+; CHECK-NEXT:    vadd.vv v2, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
@@ -23,9 +23,9 @@ define <vscale x 4 x i32> @vadd_undef(<vscale x 4 x i32> %a, <vscale x 4 x i32> 
 ; CHECK-LABEL: vadd_undef:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vadd.vv v2, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.v v8, v8
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, iXLen %vl2)
@@ -37,10 +37,10 @@ define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vsc
 ; CHECK-LABEL: vadd_same_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
-; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vadd.vv v14, v10, v12
+; CHECK-NEXT:    vmv2r.v v2, v8
+; CHECK-NEXT:    vadd.vv v2, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v14
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
@@ -53,9 +53,9 @@ define <vscale x 4 x i32> @vadd_mask_ma(<vscale x 4 x i32> %passthru, <vscale x 
 ; CHECK-LABEL: vadd_mask_ma:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v10, v10, v12, v0.t
+; CHECK-NEXT:    vadd.vv v2, v10, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl1, iXLen 2)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
@@ -66,9 +66,9 @@ define <vscale x 4 x i32> @vadd_mask_mu(<vscale x 4 x i32> %passthru, <vscale x 
 ; CHECK-LABEL: vadd_mask_mu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v10, v10, v12, v0.t
+; CHECK-NEXT:    vadd.vv v2, v10, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %mask, iXLen %vl1, iXLen 0)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
@@ -93,9 +93,9 @@ define <vscale x 4 x i32> @unfoldable_load(<vscale x 4 x i32> %passthru, ptr %p,
 ; CHECK-LABEL: unfoldable_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    vle32.v v2, (a0)
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32(<vscale x 4 x i32> poison, ptr %p, iXLen %vl1)
   %w = call <vscale x 4 x i32> @llvm.riscv.vmv.v.v.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, iXLen %vl2)
@@ -110,9 +110,9 @@ define <vscale x 4 x float> @vfadd(<vscale x 4 x float> %passthru, <vscale x 4 x
 ; CHECK-LABEL: vfadd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfadd.vv v10, v10, v12
+; CHECK-NEXT:    vfadd.vv v2, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen 7, iXLen %vl1)
   %w = call <vscale x 4 x float> @llvm.riscv.vmv.v.v.nxv4f32(<vscale x 4 x float> %passthru, <vscale x 4 x float> %v, iXLen %vl2)

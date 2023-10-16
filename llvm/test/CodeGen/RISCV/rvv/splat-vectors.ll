@@ -6,8 +6,8 @@ define <vscale x 4 x i32> @splat_c3_nxv4i32(<vscale x 4 x i32> %v) {
 ; CHECK-LABEL: splat_c3_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 3
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v2, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 4 x i32> %v, i32 3
   %ins = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
@@ -19,8 +19,8 @@ define <vscale x 4 x i32> @splat_idx_nxv4i32(<vscale x 4 x i32> %v, i64 %idx) {
 ; CHECK-LABEL: splat_idx_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vx v10, v8, a0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vx v2, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 4 x i32> %v, i64 %idx
   %ins = insertelement <vscale x 4 x i32> poison, i32 %x, i32 0
@@ -32,8 +32,8 @@ define <vscale x 8 x i16> @splat_c4_nxv8i16(<vscale x 8 x i16> %v) {
 ; CHECK-LABEL: splat_c4_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 4
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v2, v8, 4
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 8 x i16> %v, i32 4
   %ins = insertelement <vscale x 8 x i16> poison, i16 %x, i32 0
@@ -45,8 +45,8 @@ define <vscale x 8 x i16> @splat_idx_nxv8i16(<vscale x 8 x i16> %v, i64 %idx) {
 ; CHECK-LABEL: splat_idx_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrgather.vx v10, v8, a0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vx v2, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 8 x i16> %v, i64 %idx
   %ins = insertelement <vscale x 8 x i16> poison, i16 %x, i32 0
@@ -58,8 +58,8 @@ define <vscale x 2 x half> @splat_c1_nxv2f16(<vscale x 2 x half> %v) {
 ; CHECK-LABEL: splat_c1_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vrgather.vi v1, v8, 1
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 2 x half> %v, i32 1
   %ins = insertelement <vscale x 2 x half> poison, half %x, i32 0
@@ -71,8 +71,8 @@ define <vscale x 2 x half> @splat_idx_nxv2f16(<vscale x 2 x half> %v, i64 %idx) 
 ; CHECK-LABEL: splat_idx_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vrgather.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vrgather.vx v1, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 2 x half> %v, i64 %idx
   %ins = insertelement <vscale x 2 x half> poison, half %x, i32 0
@@ -84,8 +84,8 @@ define <vscale x 4 x float> @splat_c3_nxv4f32(<vscale x 4 x float> %v) {
 ; CHECK-LABEL: splat_c3_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 3
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v2, v8, 3
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 4 x float> %v, i64 3
   %ins = insertelement <vscale x 4 x float> poison, float %x, i32 0
@@ -97,8 +97,8 @@ define <vscale x 4 x float> @splat_idx_nxv4f32(<vscale x 4 x float> %v, i64 %idx
 ; CHECK-LABEL: splat_idx_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vx v10, v8, a0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vx v2, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 4 x float> %v, i64 %idx
   %ins = insertelement <vscale x 4 x float> poison, float %x, i32 0

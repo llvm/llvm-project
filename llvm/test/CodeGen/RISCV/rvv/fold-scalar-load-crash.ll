@@ -14,15 +14,15 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV32-NEXT:    mv a4, a1
 ; RV32-NEXT:    th.lbib a5, (a4), -1, 0
 ; RV32-NEXT:    th.lrb a4, a4, a0, 0
-; RV32-NEXT:    vmv.v.x v8, a5
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vmv.v.x v1, a5
+; RV32-NEXT:    vmv.s.x v2, zero
 ; RV32-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
-; RV32-NEXT:    vslideup.vx v8, v9, a2
+; RV32-NEXT:    vslideup.vx v1, v2, a2
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
-; RV32-NEXT:    vmv.s.x v8, a4
+; RV32-NEXT:    vmv.s.x v1, a4
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmseq.vi v8, v8, 0
-; RV32-NEXT:    vmv.x.s a4, v8
+; RV32-NEXT:    vmseq.vi v1, v1, 0
+; RV32-NEXT:    vmv.x.s a4, v1
 ; RV32-NEXT:    andi a4, a4, 255
 ; RV32-NEXT:    bnez a4, .LBB0_1
 ; RV32-NEXT:  # %bb.2: # %if.then381
@@ -39,15 +39,15 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV64-NEXT:    mv a4, a1
 ; RV64-NEXT:    th.lbib a5, (a4), -1, 0
 ; RV64-NEXT:    th.lrb a4, a4, a0, 0
-; RV64-NEXT:    vmv.v.x v8, a5
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vmv.v.x v1, a5
+; RV64-NEXT:    vmv.s.x v2, zero
 ; RV64-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
-; RV64-NEXT:    vslideup.vx v8, v9, a2
+; RV64-NEXT:    vslideup.vx v1, v2, a2
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a4
+; RV64-NEXT:    vmv.s.x v1, a4
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmseq.vi v8, v8, 0
-; RV64-NEXT:    vmv.x.s a4, v8
+; RV64-NEXT:    vmseq.vi v1, v1, 0
+; RV64-NEXT:    vmv.x.s a4, v1
 ; RV64-NEXT:    andi a4, a4, 255
 ; RV64-NEXT:    bnez a4, .LBB0_1
 ; RV64-NEXT:  # %bb.2: # %if.then381

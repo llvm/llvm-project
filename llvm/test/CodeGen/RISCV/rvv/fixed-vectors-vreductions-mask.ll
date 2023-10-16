@@ -127,8 +127,8 @@ define zeroext i1 @vreduce_and_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %v)
@@ -154,8 +154,8 @@ define zeroext i1 @vreduce_smax_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v2i1(<2 x i1> %v)
@@ -168,8 +168,8 @@ define zeroext i1 @vreduce_umin_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v2i1(<2 x i1> %v)
@@ -221,8 +221,8 @@ define zeroext i1 @vreduce_and_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> %v)
@@ -248,8 +248,8 @@ define zeroext i1 @vreduce_smax_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v4i1(<4 x i1> %v)
@@ -262,8 +262,8 @@ define zeroext i1 @vreduce_umin_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v4i1(<4 x i1> %v)
@@ -315,8 +315,8 @@ define zeroext i1 @vreduce_and_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %v)
@@ -342,8 +342,8 @@ define zeroext i1 @vreduce_smax_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v8i1(<8 x i1> %v)
@@ -356,8 +356,8 @@ define zeroext i1 @vreduce_umin_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v8i1(<8 x i1> %v)
@@ -409,8 +409,8 @@ define zeroext i1 @vreduce_and_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v16i1(<16 x i1> %v)
@@ -436,8 +436,8 @@ define zeroext i1 @vreduce_smax_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v16i1(<16 x i1> %v)
@@ -450,8 +450,8 @@ define zeroext i1 @vreduce_umin_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v16i1(<16 x i1> %v)
@@ -477,8 +477,8 @@ define zeroext i1 @vreduce_or_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_or_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmor.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmor.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    snez a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -499,8 +499,8 @@ define zeroext i1 @vreduce_xor_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_xor_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmxor.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmxor.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    andi a0, a0, 1
 ; LMULMAX1-NEXT:    ret
 ;
@@ -521,8 +521,8 @@ define zeroext i1 @vreduce_and_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_and_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmnand.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmnand.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    seqz a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -530,8 +530,8 @@ define zeroext i1 @vreduce_and_v32i1(<32 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; LMULMAX8-NEXT:    vmnot.m v8, v0
-; LMULMAX8-NEXT:    vcpop.m a0, v8
+; LMULMAX8-NEXT:    vmnot.m v1, v0
+; LMULMAX8-NEXT:    vcpop.m a0, v1
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v32i1(<32 x i1> %v)
@@ -544,8 +544,8 @@ define zeroext i1 @vreduce_umax_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umax_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmor.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmor.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    snez a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -566,8 +566,8 @@ define zeroext i1 @vreduce_smax_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smax_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmnand.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmnand.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    seqz a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -575,8 +575,8 @@ define zeroext i1 @vreduce_smax_v32i1(<32 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; LMULMAX8-NEXT:    vmnot.m v8, v0
-; LMULMAX8-NEXT:    vcpop.m a0, v8
+; LMULMAX8-NEXT:    vmnot.m v1, v0
+; LMULMAX8-NEXT:    vcpop.m a0, v1
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v32i1(<32 x i1> %v)
@@ -589,8 +589,8 @@ define zeroext i1 @vreduce_umin_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umin_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmnand.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmnand.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    seqz a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -598,8 +598,8 @@ define zeroext i1 @vreduce_umin_v32i1(<32 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; LMULMAX8-NEXT:    vmnot.m v8, v0
-; LMULMAX8-NEXT:    vcpop.m a0, v8
+; LMULMAX8-NEXT:    vmnot.m v1, v0
+; LMULMAX8-NEXT:    vcpop.m a0, v1
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v32i1(<32 x i1> %v)
@@ -612,8 +612,8 @@ define zeroext i1 @vreduce_smin_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smin_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmor.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmor.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    snez a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -634,10 +634,10 @@ define zeroext i1 @vreduce_or_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_or_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmor.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmor.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmor.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmor.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmor.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmor.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    snez a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -658,10 +658,10 @@ define zeroext i1 @vreduce_xor_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_xor_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmxor.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmxor.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmxor.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmxor.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmxor.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmxor.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    andi a0, a0, 1
 ; LMULMAX1-NEXT:    ret
 ;
@@ -682,10 +682,10 @@ define zeroext i1 @vreduce_and_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_and_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmand.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmand.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmnand.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmand.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmand.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmnand.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    seqz a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -693,8 +693,8 @@ define zeroext i1 @vreduce_and_v64i1(<64 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; LMULMAX8-NEXT:    vmnot.m v8, v0
-; LMULMAX8-NEXT:    vcpop.m a0, v8
+; LMULMAX8-NEXT:    vmnot.m v1, v0
+; LMULMAX8-NEXT:    vcpop.m a0, v1
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.v64i1(<64 x i1> %v)
@@ -707,10 +707,10 @@ define zeroext i1 @vreduce_umax_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umax_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmor.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmor.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmor.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmor.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmor.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmor.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    snez a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -731,10 +731,10 @@ define zeroext i1 @vreduce_smax_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smax_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmand.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmand.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmnand.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmand.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmand.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmnand.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    seqz a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -742,8 +742,8 @@ define zeroext i1 @vreduce_smax_v64i1(<64 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; LMULMAX8-NEXT:    vmnot.m v8, v0
-; LMULMAX8-NEXT:    vcpop.m a0, v8
+; LMULMAX8-NEXT:    vmnot.m v1, v0
+; LMULMAX8-NEXT:    vcpop.m a0, v1
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.v64i1(<64 x i1> %v)
@@ -756,10 +756,10 @@ define zeroext i1 @vreduce_umin_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umin_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmand.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmand.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmnand.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmand.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmand.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmnand.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    seqz a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -767,8 +767,8 @@ define zeroext i1 @vreduce_umin_v64i1(<64 x i1> %v) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
 ; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; LMULMAX8-NEXT:    vmnot.m v8, v0
-; LMULMAX8-NEXT:    vcpop.m a0, v8
+; LMULMAX8-NEXT:    vmnot.m v1, v0
+; LMULMAX8-NEXT:    vcpop.m a0, v1
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.v64i1(<64 x i1> %v)
@@ -781,10 +781,10 @@ define zeroext i1 @vreduce_smin_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smin_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmor.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmor.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmor.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmor.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmor.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmor.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    snez a0, a0
 ; LMULMAX1-NEXT:    ret
 ;
@@ -870,8 +870,8 @@ define zeroext i1 @vreduce_add_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_add_v32i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmxor.mm v8, v0, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmxor.mm v1, v0, v8
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    andi a0, a0, 1
 ; LMULMAX1-NEXT:    ret
 ;
@@ -892,10 +892,10 @@ define zeroext i1 @vreduce_add_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_add_v64i1:
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; LMULMAX1-NEXT:    vmxor.mm v8, v8, v10
-; LMULMAX1-NEXT:    vmxor.mm v9, v0, v9
-; LMULMAX1-NEXT:    vmxor.mm v8, v9, v8
-; LMULMAX1-NEXT:    vcpop.m a0, v8
+; LMULMAX1-NEXT:    vmxor.mm v1, v8, v10
+; LMULMAX1-NEXT:    vmxor.mm v2, v0, v9
+; LMULMAX1-NEXT:    vmxor.mm v1, v2, v1
+; LMULMAX1-NEXT:    vcpop.m a0, v1
 ; LMULMAX1-NEXT:    andi a0, a0, 1
 ; LMULMAX1-NEXT:    ret
 ;

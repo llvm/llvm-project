@@ -7,9 +7,9 @@ define <vscale x 2 x i32> @vwadd_tu(<vscale x 2 x i8> %arg, <vscale x 2 x i32> %
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    srli a0, a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vsext.vf2 v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
-; CHECK-NEXT:    vwadd.wv v9, v9, v10
+; CHECK-NEXT:    vwadd.wv v9, v9, v1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 bb:
@@ -25,9 +25,9 @@ define <vscale x 2 x i32> @vwaddu_tu(<vscale x 2 x i8> %arg, <vscale x 2 x i32> 
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    srli a0, a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
-; CHECK-NEXT:    vwaddu.wv v9, v9, v10
+; CHECK-NEXT:    vwaddu.wv v9, v9, v1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 bb:

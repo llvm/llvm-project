@@ -16,18 +16,18 @@ define <2 x i1> @reverse_v2i1(<2 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v2i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
-; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vmsne.vi v0, v9, 0
+; NO-ZVBB-NEXT:    vmv.v.i v1, 0
+; NO-ZVBB-NEXT:    vmerge.vim v1, v1, 1, v0
+; NO-ZVBB-NEXT:    vslidedown.vi v2, v1, 1
+; NO-ZVBB-NEXT:    vslideup.vi v2, v1, 1
+; NO-ZVBB-NEXT:    vmsne.vi v0, v2, 0
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v2i1:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; ZVBB-NEXT:    vbrev.v v8, v0
-; ZVBB-NEXT:    vsrl.vi v0, v8, 6
+; ZVBB-NEXT:    vbrev.v v1, v0
+; ZVBB-NEXT:    vsrl.vi v0, v1, 6
 ; ZVBB-NEXT:    ret
   %res = call <2 x i1> @llvm.experimental.vector.reverse.v2i1(<2 x i1> %a)
   ret <2 x i1> %res
@@ -37,19 +37,19 @@ define <4 x i1> @reverse_v4i1(<4 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v4i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
-; NO-ZVBB-NEXT:    vid.v v9
-; NO-ZVBB-NEXT:    vrsub.vi v9, v9, 3
-; NO-ZVBB-NEXT:    vrgather.vv v10, v8, v9
-; NO-ZVBB-NEXT:    vmsne.vi v0, v10, 0
+; NO-ZVBB-NEXT:    vmv.v.i v1, 0
+; NO-ZVBB-NEXT:    vmerge.vim v1, v1, 1, v0
+; NO-ZVBB-NEXT:    vid.v v2
+; NO-ZVBB-NEXT:    vrsub.vi v2, v2, 3
+; NO-ZVBB-NEXT:    vrgather.vv v3, v1, v2
+; NO-ZVBB-NEXT:    vmsne.vi v0, v3, 0
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v4i1:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; ZVBB-NEXT:    vbrev.v v8, v0
-; ZVBB-NEXT:    vsrl.vi v0, v8, 4
+; ZVBB-NEXT:    vbrev.v v1, v0
+; ZVBB-NEXT:    vsrl.vi v0, v1, 4
 ; ZVBB-NEXT:    ret
   %res = call <4 x i1> @llvm.experimental.vector.reverse.v4i1(<4 x i1> %a)
   ret <4 x i1> %res
@@ -59,12 +59,12 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v8i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
-; NO-ZVBB-NEXT:    vid.v v9
-; NO-ZVBB-NEXT:    vrsub.vi v9, v9, 7
-; NO-ZVBB-NEXT:    vrgather.vv v10, v8, v9
-; NO-ZVBB-NEXT:    vmsne.vi v0, v10, 0
+; NO-ZVBB-NEXT:    vmv.v.i v1, 0
+; NO-ZVBB-NEXT:    vmerge.vim v1, v1, 1, v0
+; NO-ZVBB-NEXT:    vid.v v2
+; NO-ZVBB-NEXT:    vrsub.vi v2, v2, 7
+; NO-ZVBB-NEXT:    vrgather.vv v3, v1, v2
+; NO-ZVBB-NEXT:    vmsne.vi v0, v3, 0
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v8i1:
@@ -80,12 +80,12 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; NO-ZVBB-LABEL: reverse_v16i1:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
-; NO-ZVBB-NEXT:    vid.v v9
-; NO-ZVBB-NEXT:    vrsub.vi v9, v9, 15
-; NO-ZVBB-NEXT:    vrgather.vv v10, v8, v9
-; NO-ZVBB-NEXT:    vmsne.vi v0, v10, 0
+; NO-ZVBB-NEXT:    vmv.v.i v1, 0
+; NO-ZVBB-NEXT:    vmerge.vim v1, v1, 1, v0
+; NO-ZVBB-NEXT:    vid.v v2
+; NO-ZVBB-NEXT:    vrsub.vi v2, v2, 15
+; NO-ZVBB-NEXT:    vrgather.vv v3, v1, v2
+; NO-ZVBB-NEXT:    vmsne.vi v0, v3, 0
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v16i1:
@@ -104,11 +104,11 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; NO-ZVBB-NEXT:    lui a0, %hi(.LCPI4_0)
 ; NO-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI4_0)
-; NO-ZVBB-NEXT:    vle8.v v8, (a0)
-; NO-ZVBB-NEXT:    vmv.v.i v10, 0
-; NO-ZVBB-NEXT:    vmerge.vim v10, v10, 1, v0
-; NO-ZVBB-NEXT:    vrgather.vv v12, v10, v8
-; NO-ZVBB-NEXT:    vmsne.vi v0, v12, 0
+; NO-ZVBB-NEXT:    vle8.v v2, (a0)
+; NO-ZVBB-NEXT:    vmv.v.i v4, 0
+; NO-ZVBB-NEXT:    vmerge.vim v4, v4, 1, v0
+; NO-ZVBB-NEXT:    vrgather.vv v6, v4, v2
+; NO-ZVBB-NEXT:    vmsne.vi v0, v6, 0
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v32i1:
@@ -127,11 +127,11 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; NO-ZVBB-NEXT:    lui a0, %hi(.LCPI5_0)
 ; NO-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI5_0)
-; NO-ZVBB-NEXT:    vle8.v v8, (a0)
-; NO-ZVBB-NEXT:    vmv.v.i v12, 0
-; NO-ZVBB-NEXT:    vmerge.vim v12, v12, 1, v0
-; NO-ZVBB-NEXT:    vrgather.vv v16, v12, v8
-; NO-ZVBB-NEXT:    vmsne.vi v0, v16, 0
+; NO-ZVBB-NEXT:    vle8.v v4, (a0)
+; NO-ZVBB-NEXT:    vmv.v.i v8, 0
+; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
+; NO-ZVBB-NEXT:    vrgather.vv v12, v8, v4
+; NO-ZVBB-NEXT:    vmsne.vi v0, v12, 0
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v64i1:
@@ -172,9 +172,9 @@ define <2 x i8> @reverse_v2i8(<2 x i8> %a) {
 ; NO-ZVBB-LABEL: reverse_v2i8:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    vslidedown.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v1
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v2i8:
@@ -190,10 +190,10 @@ define <4 x i8> @reverse_v4i8(<4 x i8> %a) {
 ; CHECK-LABEL: reverse_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 3
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 3
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.experimental.vector.reverse.v4i8(<4 x i8> %a)
   ret <4 x i8> %res
@@ -203,10 +203,10 @@ define <8 x i8> @reverse_v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: reverse_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 7
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 7
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <8 x i8> @llvm.experimental.vector.reverse.v8i8(<8 x i8> %a)
   ret <8 x i8> %res
@@ -216,10 +216,10 @@ define <16 x i8> @reverse_v16i8(<16 x i8> %a) {
 ; CHECK-LABEL: reverse_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 15
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 15
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8> %a)
   ret <16 x i8> %res
@@ -232,9 +232,9 @@ define <32 x i8> @reverse_v32i8(<32 x i8> %a) {
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI12_0)
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a0)
-; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vle8.v v4, (a0)
+; CHECK-NEXT:    vrgather.vv v2, v8, v4
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <32 x i8> @llvm.experimental.vector.reverse.v32i8(<32 x i8> %a)
   ret <32 x i8> %res
@@ -247,9 +247,9 @@ define <64 x i8> @reverse_v64i8(<64 x i8> %a) {
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI13_0)
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v16, (a0)
-; CHECK-NEXT:    vrgather.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vle8.v v12, (a0)
+; CHECK-NEXT:    vrgather.vv v4, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <64 x i8> @llvm.experimental.vector.reverse.v64i8(<64 x i8> %a)
   ret <64 x i8> %res
@@ -267,9 +267,9 @@ define <2 x i16> @reverse_v2i16(<2 x i16> %a) {
 ; NO-ZVBB-LABEL: reverse_v2i16:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    vslidedown.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v1
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v2i16:
@@ -285,10 +285,10 @@ define <4 x i16> @reverse_v4i16(<4 x i16> %a) {
 ; CHECK-LABEL: reverse_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 3
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 3
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <4 x i16> @llvm.experimental.vector.reverse.v4i16(<4 x i16> %a)
   ret <4 x i16> %res
@@ -298,10 +298,10 @@ define <8 x i16> @reverse_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: reverse_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 7
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 7
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %res
@@ -311,10 +311,10 @@ define <16 x i16> @reverse_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: reverse_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v12, v10, 15
-; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vid.v v2
+; CHECK-NEXT:    vrsub.vi v4, v2, 15
+; CHECK-NEXT:    vrgather.vv v2, v8, v4
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <16 x i16> @llvm.experimental.vector.reverse.v16i16(<16 x i16> %a)
   ret <16 x i16> %res
@@ -327,10 +327,10 @@ define <32 x i16> @reverse_v32i16(<32 x i16> %a) {
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a0)
-; CHECK-NEXT:    vsext.vf2 v16, v12
-; CHECK-NEXT:    vrgather.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vle8.v v2, (a0)
+; CHECK-NEXT:    vsext.vf2 v12, v2
+; CHECK-NEXT:    vrgather.vv v4, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <32 x i16> @llvm.experimental.vector.reverse.v32i16(<32 x i16> %a)
   ret <32 x i16> %res
@@ -348,9 +348,9 @@ define <2 x i32> @reverse_v2i32(<2 x i32> %a) {
 ; NO-ZVBB-LABEL: reverse_v2i32:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    vslidedown.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v1
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v2i32:
@@ -366,10 +366,10 @@ define <4 x i32> @reverse_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: reverse_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 3
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 3
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <4 x i32> @llvm.experimental.vector.reverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %res
@@ -379,11 +379,11 @@ define <8 x i32> @reverse_v8i32(<8 x i32> %a) {
 ; CHECK-LABEL: reverse_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v12, v10, 7
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v1, v1, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgatherei16.vv v2, v8, v1
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <8 x i32> @llvm.experimental.vector.reverse.v8i32(<8 x i32> %a)
   ret <8 x i32> %res
@@ -393,11 +393,11 @@ define <16 x i32> @reverse_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: reverse_v16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vrsub.vi v16, v12, 15
+; CHECK-NEXT:    vid.v v2
+; CHECK-NEXT:    vrsub.vi v2, v2, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v4, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <16 x i32> @llvm.experimental.vector.reverse.v16i32(<16 x i32> %a)
   ret <16 x i32> %res
@@ -415,9 +415,9 @@ define <2 x i64> @reverse_v2i64(<2 x i64> %a) {
 ; CHECK-LABEL: reverse_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vslidedown.vi v1, v8, 1
+; CHECK-NEXT:    vslideup.vi v1, v8, 1
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.experimental.vector.reverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %res
@@ -427,11 +427,11 @@ define <4 x i64> @reverse_v4i64(<4 x i64> %a) {
 ; CHECK-LABEL: reverse_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v12, v10, 3
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v1, v1, 3
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgatherei16.vv v2, v8, v1
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <4 x i64> @llvm.experimental.vector.reverse.v4i64(<4 x i64> %a)
   ret <4 x i64> %res
@@ -441,11 +441,11 @@ define <8 x i64> @reverse_v8i64(<8 x i64> %a) {
 ; CHECK-LABEL: reverse_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vrsub.vi v16, v12, 7
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v1, v1, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v4, v8, v1
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <8 x i64> @llvm.experimental.vector.reverse.v8i64(<8 x i64> %a)
   ret <8 x i64> %res
@@ -464,9 +464,9 @@ define <2 x half> @reverse_v2f16(<2 x half> %a) {
 ; NO-ZVBB-LABEL: reverse_v2f16:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    vslidedown.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v1
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v2f16:
@@ -482,10 +482,10 @@ define <4 x half> @reverse_v4f16(<4 x half> %a) {
 ; CHECK-LABEL: reverse_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 3
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 3
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <4 x half> @llvm.experimental.vector.reverse.v4f16(<4 x half> %a)
   ret <4 x half> %res
@@ -495,10 +495,10 @@ define <8 x half> @reverse_v8f16(<8 x half> %a) {
 ; CHECK-LABEL: reverse_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 7
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 7
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half> %a)
   ret <8 x half> %res
@@ -508,10 +508,10 @@ define <16 x half> @reverse_v16f16(<16 x half> %a) {
 ; CHECK-LABEL: reverse_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v12, v10, 15
-; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vid.v v2
+; CHECK-NEXT:    vrsub.vi v4, v2, 15
+; CHECK-NEXT:    vrgather.vv v2, v8, v4
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <16 x half> @llvm.experimental.vector.reverse.v16f16(<16 x half> %a)
   ret <16 x half> %res
@@ -524,10 +524,10 @@ define <32 x half> @reverse_v32f16(<32 x half> %a) {
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI34_0)
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a0)
-; CHECK-NEXT:    vsext.vf2 v16, v12
-; CHECK-NEXT:    vrgather.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vle8.v v2, (a0)
+; CHECK-NEXT:    vsext.vf2 v12, v2
+; CHECK-NEXT:    vrgather.vv v4, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <32 x half> @llvm.experimental.vector.reverse.v32f16(<32 x half> %a)
   ret <32 x half> %res
@@ -545,9 +545,9 @@ define <2 x float> @reverse_v2f32(<2 x float> %a) {
 ; NO-ZVBB-LABEL: reverse_v2f32:
 ; NO-ZVBB:       # %bb.0:
 ; NO-ZVBB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vslideup.vi v9, v8, 1
-; NO-ZVBB-NEXT:    vmv1r.v v8, v9
+; NO-ZVBB-NEXT:    vslidedown.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vslideup.vi v1, v8, 1
+; NO-ZVBB-NEXT:    vmv1r.v v8, v1
 ; NO-ZVBB-NEXT:    ret
 ;
 ; ZVBB-LABEL: reverse_v2f32:
@@ -563,10 +563,10 @@ define <4 x float> @reverse_v4f32(<4 x float> %a) {
 ; CHECK-LABEL: reverse_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vrsub.vi v10, v9, 3
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v2, v1, 3
+; CHECK-NEXT:    vrgather.vv v1, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <4 x float> @llvm.experimental.vector.reverse.v4f32(<4 x float> %a)
   ret <4 x float> %res
@@ -576,11 +576,11 @@ define <8 x float> @reverse_v8f32(<8 x float> %a) {
 ; CHECK-LABEL: reverse_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v12, v10, 7
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v1, v1, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgatherei16.vv v2, v8, v1
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <8 x float> @llvm.experimental.vector.reverse.v8f32(<8 x float> %a)
   ret <8 x float> %res
@@ -590,11 +590,11 @@ define <16 x float> @reverse_v16f32(<16 x float> %a) {
 ; CHECK-LABEL: reverse_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vrsub.vi v16, v12, 15
+; CHECK-NEXT:    vid.v v2
+; CHECK-NEXT:    vrsub.vi v2, v2, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v4, v8, v2
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <16 x float> @llvm.experimental.vector.reverse.v16f32(<16 x float> %a)
   ret <16 x float> %res
@@ -612,9 +612,9 @@ define <2 x double> @reverse_v2f64(<2 x double> %a) {
 ; CHECK-LABEL: reverse_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vslidedown.vi v1, v8, 1
+; CHECK-NEXT:    vslideup.vi v1, v8, 1
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %res = call <2 x double> @llvm.experimental.vector.reverse.v2f64(<2 x double> %a)
   ret <2 x double> %res
@@ -624,11 +624,11 @@ define <4 x double> @reverse_v4f64(<4 x double> %a) {
 ; CHECK-LABEL: reverse_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vrsub.vi v12, v10, 3
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v1, v1, 3
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgatherei16.vv v2, v8, v1
+; CHECK-NEXT:    vmv.v.v v8, v2
 ; CHECK-NEXT:    ret
   %res = call <4 x double> @llvm.experimental.vector.reverse.v4f64(<4 x double> %a)
   ret <4 x double> %res
@@ -638,11 +638,11 @@ define <8 x double> @reverse_v8f64(<8 x double> %a) {
 ; CHECK-LABEL: reverse_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vrsub.vi v16, v12, 7
+; CHECK-NEXT:    vid.v v1
+; CHECK-NEXT:    vrsub.vi v1, v1, 7
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v4, v8, v1
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %res = call <8 x double> @llvm.experimental.vector.reverse.v8f64(<8 x double> %a)
   ret <8 x double> %res
@@ -655,9 +655,9 @@ define <3 x i64> @reverse_v3i64(<3 x i64> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    lui a0, %hi(.LCPI44_0)
 ; RV32-BITS-UNKNOWN-NEXT:    addi a0, a0, %lo(.LCPI44_0)
 ; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vle16.v v12, (a0)
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v10
+; RV32-BITS-UNKNOWN-NEXT:    vle16.v v1, (a0)
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV32-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v2
 ; RV32-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV32-BITS-256-LABEL: reverse_v3i64:
@@ -665,9 +665,9 @@ define <3 x i64> @reverse_v3i64(<3 x i64> %a) {
 ; RV32-BITS-256-NEXT:    lui a0, %hi(.LCPI44_0)
 ; RV32-BITS-256-NEXT:    addi a0, a0, %lo(.LCPI44_0)
 ; RV32-BITS-256-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-BITS-256-NEXT:    vle16.v v12, (a0)
-; RV32-BITS-256-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-BITS-256-NEXT:    vmv.v.v v8, v10
+; RV32-BITS-256-NEXT:    vle16.v v1, (a0)
+; RV32-BITS-256-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV32-BITS-256-NEXT:    vmv.v.v v8, v2
 ; RV32-BITS-256-NEXT:    ret
 ;
 ; RV32-BITS-512-LABEL: reverse_v3i64:
@@ -675,39 +675,39 @@ define <3 x i64> @reverse_v3i64(<3 x i64> %a) {
 ; RV32-BITS-512-NEXT:    lui a0, %hi(.LCPI44_0)
 ; RV32-BITS-512-NEXT:    addi a0, a0, %lo(.LCPI44_0)
 ; RV32-BITS-512-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-BITS-512-NEXT:    vle16.v v12, (a0)
-; RV32-BITS-512-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-BITS-512-NEXT:    vmv.v.v v8, v10
+; RV32-BITS-512-NEXT:    vle16.v v1, (a0)
+; RV32-BITS-512-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV32-BITS-512-NEXT:    vmv.v.v v8, v2
 ; RV32-BITS-512-NEXT:    ret
 ;
 ; RV64-BITS-UNKNOWN-LABEL: reverse_v3i64:
 ; RV64-BITS-UNKNOWN:       # %bb.0:
 ; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vid.v v10
-; RV64-BITS-UNKNOWN-NEXT:    vrsub.vi v12, v10, 2
+; RV64-BITS-UNKNOWN-NEXT:    vid.v v1
+; RV64-BITS-UNKNOWN-NEXT:    vrsub.vi v1, v1, 2
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v10
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV64-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v2
 ; RV64-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV64-BITS-256-LABEL: reverse_v3i64:
 ; RV64-BITS-256:       # %bb.0:
 ; RV64-BITS-256-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-BITS-256-NEXT:    vid.v v10
-; RV64-BITS-256-NEXT:    vrsub.vi v12, v10, 2
+; RV64-BITS-256-NEXT:    vid.v v1
+; RV64-BITS-256-NEXT:    vrsub.vi v1, v1, 2
 ; RV64-BITS-256-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-BITS-256-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-BITS-256-NEXT:    vmv.v.v v8, v10
+; RV64-BITS-256-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV64-BITS-256-NEXT:    vmv.v.v v8, v2
 ; RV64-BITS-256-NEXT:    ret
 ;
 ; RV64-BITS-512-LABEL: reverse_v3i64:
 ; RV64-BITS-512:       # %bb.0:
 ; RV64-BITS-512-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-BITS-512-NEXT:    vid.v v10
-; RV64-BITS-512-NEXT:    vrsub.vi v12, v10, 2
+; RV64-BITS-512-NEXT:    vid.v v1
+; RV64-BITS-512-NEXT:    vrsub.vi v1, v1, 2
 ; RV64-BITS-512-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-BITS-512-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-BITS-512-NEXT:    vmv.v.v v8, v10
+; RV64-BITS-512-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV64-BITS-512-NEXT:    vmv.v.v v8, v2
 ; RV64-BITS-512-NEXT:    ret
 ;
 ; RV32-ZVBB-LABEL: reverse_v3i64:
@@ -715,19 +715,19 @@ define <3 x i64> @reverse_v3i64(<3 x i64> %a) {
 ; RV32-ZVBB-NEXT:    lui a0, %hi(.LCPI44_0)
 ; RV32-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI44_0)
 ; RV32-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-ZVBB-NEXT:    vle16.v v12, (a0)
-; RV32-ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-ZVBB-NEXT:    vmv.v.v v8, v10
+; RV32-ZVBB-NEXT:    vle16.v v1, (a0)
+; RV32-ZVBB-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV32-ZVBB-NEXT:    vmv.v.v v8, v2
 ; RV32-ZVBB-NEXT:    ret
 ;
 ; RV64-ZVBB-LABEL: reverse_v3i64:
 ; RV64-ZVBB:       # %bb.0:
 ; RV64-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-ZVBB-NEXT:    vid.v v10
-; RV64-ZVBB-NEXT:    vrsub.vi v12, v10, 2
+; RV64-ZVBB-NEXT:    vid.v v1
+; RV64-ZVBB-NEXT:    vrsub.vi v1, v1, 2
 ; RV64-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-ZVBB-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-ZVBB-NEXT:    vmv.v.v v8, v10
+; RV64-ZVBB-NEXT:    vrgatherei16.vv v2, v8, v1
+; RV64-ZVBB-NEXT:    vmv.v.v v8, v2
 ; RV64-ZVBB-NEXT:    ret
   %res = call <3 x i64> @llvm.experimental.vector.reverse.v3i64(<3 x i64> %a)
   ret <3 x i64> %res
@@ -739,9 +739,9 @@ define <6 x i64> @reverse_v6i64(<6 x i64> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    lui a0, %hi(.LCPI45_0)
 ; RV32-BITS-UNKNOWN-NEXT:    addi a0, a0, %lo(.LCPI45_0)
 ; RV32-BITS-UNKNOWN-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vle16.v v16, (a0)
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV32-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v12
+; RV32-BITS-UNKNOWN-NEXT:    vle16.v v2, (a0)
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v4, v8, v2
+; RV32-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v4
 ; RV32-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV32-BITS-256-LABEL: reverse_v6i64:
@@ -749,9 +749,9 @@ define <6 x i64> @reverse_v6i64(<6 x i64> %a) {
 ; RV32-BITS-256-NEXT:    lui a0, %hi(.LCPI45_0)
 ; RV32-BITS-256-NEXT:    addi a0, a0, %lo(.LCPI45_0)
 ; RV32-BITS-256-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-BITS-256-NEXT:    vle16.v v16, (a0)
-; RV32-BITS-256-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV32-BITS-256-NEXT:    vmv.v.v v8, v12
+; RV32-BITS-256-NEXT:    vle16.v v2, (a0)
+; RV32-BITS-256-NEXT:    vrgatherei16.vv v4, v8, v2
+; RV32-BITS-256-NEXT:    vmv.v.v v8, v4
 ; RV32-BITS-256-NEXT:    ret
 ;
 ; RV32-BITS-512-LABEL: reverse_v6i64:
@@ -759,39 +759,39 @@ define <6 x i64> @reverse_v6i64(<6 x i64> %a) {
 ; RV32-BITS-512-NEXT:    lui a0, %hi(.LCPI45_0)
 ; RV32-BITS-512-NEXT:    addi a0, a0, %lo(.LCPI45_0)
 ; RV32-BITS-512-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-BITS-512-NEXT:    vle16.v v16, (a0)
-; RV32-BITS-512-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV32-BITS-512-NEXT:    vmv.v.v v8, v12
+; RV32-BITS-512-NEXT:    vle16.v v2, (a0)
+; RV32-BITS-512-NEXT:    vrgatherei16.vv v4, v8, v2
+; RV32-BITS-512-NEXT:    vmv.v.v v8, v4
 ; RV32-BITS-512-NEXT:    ret
 ;
 ; RV64-BITS-UNKNOWN-LABEL: reverse_v6i64:
 ; RV64-BITS-UNKNOWN:       # %bb.0:
 ; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vid.v v12
-; RV64-BITS-UNKNOWN-NEXT:    vrsub.vi v16, v12, 5
+; RV64-BITS-UNKNOWN-NEXT:    vid.v v1
+; RV64-BITS-UNKNOWN-NEXT:    vrsub.vi v1, v1, 5
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV64-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v12
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v4, v8, v1
+; RV64-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v4
 ; RV64-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV64-BITS-256-LABEL: reverse_v6i64:
 ; RV64-BITS-256:       # %bb.0:
 ; RV64-BITS-256-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-BITS-256-NEXT:    vid.v v12
-; RV64-BITS-256-NEXT:    vrsub.vi v16, v12, 5
+; RV64-BITS-256-NEXT:    vid.v v1
+; RV64-BITS-256-NEXT:    vrsub.vi v1, v1, 5
 ; RV64-BITS-256-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; RV64-BITS-256-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV64-BITS-256-NEXT:    vmv.v.v v8, v12
+; RV64-BITS-256-NEXT:    vrgatherei16.vv v4, v8, v1
+; RV64-BITS-256-NEXT:    vmv.v.v v8, v4
 ; RV64-BITS-256-NEXT:    ret
 ;
 ; RV64-BITS-512-LABEL: reverse_v6i64:
 ; RV64-BITS-512:       # %bb.0:
 ; RV64-BITS-512-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-BITS-512-NEXT:    vid.v v12
-; RV64-BITS-512-NEXT:    vrsub.vi v16, v12, 5
+; RV64-BITS-512-NEXT:    vid.v v1
+; RV64-BITS-512-NEXT:    vrsub.vi v1, v1, 5
 ; RV64-BITS-512-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; RV64-BITS-512-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV64-BITS-512-NEXT:    vmv.v.v v8, v12
+; RV64-BITS-512-NEXT:    vrgatherei16.vv v4, v8, v1
+; RV64-BITS-512-NEXT:    vmv.v.v v8, v4
 ; RV64-BITS-512-NEXT:    ret
 ;
 ; RV32-ZVBB-LABEL: reverse_v6i64:
@@ -799,19 +799,19 @@ define <6 x i64> @reverse_v6i64(<6 x i64> %a) {
 ; RV32-ZVBB-NEXT:    lui a0, %hi(.LCPI45_0)
 ; RV32-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI45_0)
 ; RV32-ZVBB-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-ZVBB-NEXT:    vle16.v v16, (a0)
-; RV32-ZVBB-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV32-ZVBB-NEXT:    vmv.v.v v8, v12
+; RV32-ZVBB-NEXT:    vle16.v v2, (a0)
+; RV32-ZVBB-NEXT:    vrgatherei16.vv v4, v8, v2
+; RV32-ZVBB-NEXT:    vmv.v.v v8, v4
 ; RV32-ZVBB-NEXT:    ret
 ;
 ; RV64-ZVBB-LABEL: reverse_v6i64:
 ; RV64-ZVBB:       # %bb.0:
 ; RV64-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-ZVBB-NEXT:    vid.v v12
-; RV64-ZVBB-NEXT:    vrsub.vi v16, v12, 5
+; RV64-ZVBB-NEXT:    vid.v v1
+; RV64-ZVBB-NEXT:    vrsub.vi v1, v1, 5
 ; RV64-ZVBB-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; RV64-ZVBB-NEXT:    vrgatherei16.vv v12, v8, v16
-; RV64-ZVBB-NEXT:    vmv.v.v v8, v12
+; RV64-ZVBB-NEXT:    vrgatherei16.vv v4, v8, v1
+; RV64-ZVBB-NEXT:    vmv.v.v v8, v4
 ; RV64-ZVBB-NEXT:    ret
   %res = call <6 x i64> @llvm.experimental.vector.reverse.v6i64(<6 x i64> %a)
   ret <6 x i64> %res
@@ -824,8 +824,8 @@ define <12 x i64> @reverse_v12i64(<12 x i64> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    addi a0, a0, %lo(.LCPI46_0)
 ; RV32-BITS-UNKNOWN-NEXT:    li a1, 32
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-BITS-UNKNOWN-NEXT:    vle16.v v24, (a0)
-; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV32-BITS-UNKNOWN-NEXT:    vle16.v v4, (a0)
+; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v16, v8, v4
 ; RV32-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v16
 ; RV32-BITS-UNKNOWN-NEXT:    ret
 ;
@@ -835,8 +835,8 @@ define <12 x i64> @reverse_v12i64(<12 x i64> %a) {
 ; RV32-BITS-256-NEXT:    addi a0, a0, %lo(.LCPI46_0)
 ; RV32-BITS-256-NEXT:    li a1, 32
 ; RV32-BITS-256-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-BITS-256-NEXT:    vle16.v v24, (a0)
-; RV32-BITS-256-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV32-BITS-256-NEXT:    vle16.v v4, (a0)
+; RV32-BITS-256-NEXT:    vrgatherei16.vv v16, v8, v4
 ; RV32-BITS-256-NEXT:    vmv.v.v v8, v16
 ; RV32-BITS-256-NEXT:    ret
 ;
@@ -846,38 +846,38 @@ define <12 x i64> @reverse_v12i64(<12 x i64> %a) {
 ; RV32-BITS-512-NEXT:    addi a0, a0, %lo(.LCPI46_0)
 ; RV32-BITS-512-NEXT:    li a1, 32
 ; RV32-BITS-512-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-BITS-512-NEXT:    vle16.v v24, (a0)
-; RV32-BITS-512-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV32-BITS-512-NEXT:    vle16.v v4, (a0)
+; RV32-BITS-512-NEXT:    vrgatherei16.vv v16, v8, v4
 ; RV32-BITS-512-NEXT:    vmv.v.v v8, v16
 ; RV32-BITS-512-NEXT:    ret
 ;
 ; RV64-BITS-UNKNOWN-LABEL: reverse_v12i64:
 ; RV64-BITS-UNKNOWN:       # %bb.0:
 ; RV64-BITS-UNKNOWN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vid.v v16
-; RV64-BITS-UNKNOWN-NEXT:    vrsub.vi v24, v16, 11
+; RV64-BITS-UNKNOWN-NEXT:    vid.v v2
+; RV64-BITS-UNKNOWN-NEXT:    vrsub.vi v2, v2, 11
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v16, v8, v2
 ; RV64-BITS-UNKNOWN-NEXT:    vmv.v.v v8, v16
 ; RV64-BITS-UNKNOWN-NEXT:    ret
 ;
 ; RV64-BITS-256-LABEL: reverse_v12i64:
 ; RV64-BITS-256:       # %bb.0:
 ; RV64-BITS-256-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-BITS-256-NEXT:    vid.v v16
-; RV64-BITS-256-NEXT:    vrsub.vi v24, v16, 11
+; RV64-BITS-256-NEXT:    vid.v v2
+; RV64-BITS-256-NEXT:    vrsub.vi v2, v2, 11
 ; RV64-BITS-256-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-BITS-256-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV64-BITS-256-NEXT:    vrgatherei16.vv v16, v8, v2
 ; RV64-BITS-256-NEXT:    vmv.v.v v8, v16
 ; RV64-BITS-256-NEXT:    ret
 ;
 ; RV64-BITS-512-LABEL: reverse_v12i64:
 ; RV64-BITS-512:       # %bb.0:
 ; RV64-BITS-512-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-BITS-512-NEXT:    vid.v v16
-; RV64-BITS-512-NEXT:    vrsub.vi v24, v16, 11
+; RV64-BITS-512-NEXT:    vid.v v2
+; RV64-BITS-512-NEXT:    vrsub.vi v2, v2, 11
 ; RV64-BITS-512-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-BITS-512-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV64-BITS-512-NEXT:    vrgatherei16.vv v16, v8, v2
 ; RV64-BITS-512-NEXT:    vmv.v.v v8, v16
 ; RV64-BITS-512-NEXT:    ret
 ;
@@ -887,18 +887,18 @@ define <12 x i64> @reverse_v12i64(<12 x i64> %a) {
 ; RV32-ZVBB-NEXT:    addi a0, a0, %lo(.LCPI46_0)
 ; RV32-ZVBB-NEXT:    li a1, 32
 ; RV32-ZVBB-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-ZVBB-NEXT:    vle16.v v24, (a0)
-; RV32-ZVBB-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV32-ZVBB-NEXT:    vle16.v v4, (a0)
+; RV32-ZVBB-NEXT:    vrgatherei16.vv v16, v8, v4
 ; RV32-ZVBB-NEXT:    vmv.v.v v8, v16
 ; RV32-ZVBB-NEXT:    ret
 ;
 ; RV64-ZVBB-LABEL: reverse_v12i64:
 ; RV64-ZVBB:       # %bb.0:
 ; RV64-ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-ZVBB-NEXT:    vid.v v16
-; RV64-ZVBB-NEXT:    vrsub.vi v24, v16, 11
+; RV64-ZVBB-NEXT:    vid.v v2
+; RV64-ZVBB-NEXT:    vrsub.vi v2, v2, 11
 ; RV64-ZVBB-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-ZVBB-NEXT:    vrgatherei16.vv v16, v8, v24
+; RV64-ZVBB-NEXT:    vrgatherei16.vv v16, v8, v2
 ; RV64-ZVBB-NEXT:    vmv.v.v v8, v16
 ; RV64-ZVBB-NEXT:    ret
   %res = call <12 x i64> @llvm.experimental.vector.reverse.v12i64(<12 x i64> %a)

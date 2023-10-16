@@ -11,10 +11,10 @@ define <vscale x 4 x i32> @test_vloxei(<vscale x 4 x i32>* %ptr, <vscale x 4 x i
 ; CHECK-LABEL: test_vloxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v8
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -33,10 +33,10 @@ define <vscale x 4 x i32> @test_vloxei2(<vscale x 4 x i32>* %ptr, <vscale x 4 x 
 ; CHECK-LABEL: test_vloxei2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 14
+; CHECK-NEXT:    vzext.vf8 v4, v8
+; CHECK-NEXT:    vsll.vi v4, v4, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -55,10 +55,10 @@ define <vscale x 4 x i32> @test_vloxei3(<vscale x 4 x i32>* %ptr, <vscale x 4 x 
 ; CHECK-LABEL: test_vloxei3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 26
+; CHECK-NEXT:    vzext.vf8 v4, v8
+; CHECK-NEXT:    vsll.vi v4, v4, 26
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -79,11 +79,11 @@ define <vscale x 4 x i32> @test_vloxei4(<vscale x 4 x i32>* %ptr, <vscale x 4 x 
 ; CHECK-LABEL: test_vloxei4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8, v0.t
+; CHECK-NEXT:    vzext.vf8 v4, v8, v0.t
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = call <vscale x 4 x i64> @llvm.vp.zext.nxvi64.nxv1i8(<vscale x 4 x i8> %offset, <vscale x 4 x i1> %m, i32 %vl)
@@ -109,10 +109,10 @@ define <vscale x 4 x i32> @test_vloxei5(<vscale x 4 x i32>* %ptr, <vscale x 4 x 
 ; CHECK-LABEL: test_vloxei5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v9, v8
-; CHECK-NEXT:    vsll.vi v10, v9, 12
+; CHECK-NEXT:    vzext.vf2 v1, v8
+; CHECK-NEXT:    vsll.vi v1, v1, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei16.v v8, (a0), v10
+; CHECK-NEXT:    vloxei16.v v8, (a0), v1
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i16>
@@ -132,12 +132,12 @@ define <vscale x 4 x i32> @test_vloxei6(<vscale x 4 x i32>* %ptr, <vscale x 4 x 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 127
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a2
+; CHECK-NEXT:    vand.vx v1, v8, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v1
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i7> %offset to <vscale x 4 x i64>
@@ -156,11 +156,11 @@ define <vscale x 4 x i32> @test_vloxei7(<vscale x 4 x i32>* %ptr, <vscale x 4 x 
 ; CHECK-LABEL: test_vloxei7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsll.vi v12, v8, 2
+; CHECK-NEXT:    vmv.v.i v4, 0
+; CHECK-NEXT:    vmerge.vim v4, v4, 1, v0
+; CHECK-NEXT:    vsll.vi v4, v4, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i1> %offset to <vscale x 4 x i64>
@@ -187,10 +187,10 @@ define <vscale x 4 x i32> @test_vloxei_mask(<vscale x 4 x i32>* %ptr, <vscale x 
 ; CHECK-LABEL: test_vloxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v8
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vloxei64.v v8, (a0), v12, v0.t
+; CHECK-NEXT:    vloxei64.v v8, (a0), v4, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -216,10 +216,10 @@ define <vscale x 4 x i32> @test_vluxei(<vscale x 4 x i32>* %ptr, <vscale x 4 x i
 ; CHECK-LABEL: test_vluxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v8
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vluxei64.v v8, (a0), v12
+; CHECK-NEXT:    vluxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -246,10 +246,10 @@ define <vscale x 4 x i32> @test_vluxei_mask(<vscale x 4 x i32>* %ptr, <vscale x 
 ; CHECK-LABEL: test_vluxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v8
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v8
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vluxei64.v v8, (a0), v12, v0.t
+; CHECK-NEXT:    vluxei64.v v8, (a0), v4, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -275,10 +275,10 @@ define void @test_vsoxei(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr, <vsc
 ; CHECK-LABEL: test_vsoxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v10
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v10
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vsoxei64.v v8, (a0), v12
+; CHECK-NEXT:    vsoxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -304,10 +304,10 @@ define void @test_vsoxei_mask(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr,
 ; CHECK-LABEL: test_vsoxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v10
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v10
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
+; CHECK-NEXT:    vsoxei64.v v8, (a0), v4, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -333,10 +333,10 @@ define void @test_vsuxei(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr, <vsc
 ; CHECK-LABEL: test_vsuxei:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v10
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v10
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vsuxei64.v v8, (a0), v12
+; CHECK-NEXT:    vsuxei64.v v8, (a0), v4
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>
@@ -362,10 +362,10 @@ define void @test_vsuxei_mask(<vscale x 4 x i32> %val, <vscale x 4 x i32>* %ptr,
 ; CHECK-LABEL: test_vsuxei_mask:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vzext.vf8 v12, v10
-; CHECK-NEXT:    vsll.vi v12, v12, 4
+; CHECK-NEXT:    vzext.vf8 v4, v10
+; CHECK-NEXT:    vsll.vi v4, v4, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vsuxei64.v v8, (a0), v12, v0.t
+; CHECK-NEXT:    vsuxei64.v v8, (a0), v4, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %offset.ext = zext <vscale x 4 x i8> %offset to <vscale x 4 x i64>

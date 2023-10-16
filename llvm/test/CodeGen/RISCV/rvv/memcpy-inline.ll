@@ -33,15 +33,15 @@ define void @unaligned_memcpy2(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-LABEL: unaligned_memcpy2:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy2:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy2:
@@ -66,8 +66,8 @@ define void @unaligned_memcpy3(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    lbu a2, 2(a1)
 ; RV32-NEXT:    sb a2, 2(a0)
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy3:
@@ -75,8 +75,8 @@ define void @unaligned_memcpy3(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    lbu a2, 2(a1)
 ; RV64-NEXT:    sb a2, 2(a0)
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy3:
@@ -103,15 +103,15 @@ define void @unaligned_memcpy4(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-LABEL: unaligned_memcpy4:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy4:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy4:
@@ -136,13 +136,13 @@ define void @unaligned_memcpy7(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    lbu a2, 6(a1)
 ; RV32-NEXT:    sb a2, 6(a0)
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    addi a1, a1, 4
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vle8.v v1, (a1)
 ; RV32-NEXT:    addi a0, a0, 4
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy7:
@@ -150,13 +150,13 @@ define void @unaligned_memcpy7(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    lbu a2, 6(a1)
 ; RV64-NEXT:    sb a2, 6(a0)
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    addi a1, a1, 4
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vle8.v v1, (a1)
 ; RV64-NEXT:    addi a0, a0, 4
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy7:
@@ -183,22 +183,22 @@ define void @unaligned_memcpy8(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-LABEL: unaligned_memcpy8:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy8:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy8:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-FAST-NEXT:    vle32.v v8, (a1)
-; RV32-FAST-NEXT:    vse32.v v8, (a0)
+; RV32-FAST-NEXT:    vle32.v v1, (a1)
+; RV32-FAST-NEXT:    vse32.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy8:
@@ -217,18 +217,18 @@ define void @unaligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    lbu a2, 14(a1)
 ; RV32-NEXT:    sb a2, 14(a0)
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    addi a2, a1, 12
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32-NEXT:    vle8.v v8, (a2)
+; RV32-NEXT:    vle8.v v1, (a2)
 ; RV32-NEXT:    addi a2, a0, 12
-; RV32-NEXT:    vse8.v v8, (a2)
+; RV32-NEXT:    vse8.v v1, (a2)
 ; RV32-NEXT:    addi a1, a1, 8
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vle8.v v1, (a1)
 ; RV32-NEXT:    addi a0, a0, 8
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy15:
@@ -236,18 +236,18 @@ define void @unaligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    lbu a2, 14(a1)
 ; RV64-NEXT:    sb a2, 14(a0)
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    addi a2, a1, 12
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64-NEXT:    vle8.v v8, (a2)
+; RV64-NEXT:    vle8.v v1, (a2)
 ; RV64-NEXT:    addi a2, a0, 12
-; RV64-NEXT:    vse8.v v8, (a2)
+; RV64-NEXT:    vse8.v v1, (a2)
 ; RV64-NEXT:    addi a1, a1, 8
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vle8.v v1, (a1)
 ; RV64-NEXT:    addi a0, a0, 8
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy15:
@@ -257,8 +257,8 @@ define void @unaligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-FAST-NEXT:    lw a2, 8(a1)
 ; RV32-FAST-NEXT:    sw a2, 8(a0)
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-FAST-NEXT:    vle32.v v8, (a1)
-; RV32-FAST-NEXT:    vse32.v v8, (a0)
+; RV32-FAST-NEXT:    vle32.v v1, (a1)
+; RV32-FAST-NEXT:    vse32.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy15:
@@ -277,29 +277,29 @@ define void @unaligned_memcpy16(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-LABEL: unaligned_memcpy16:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy16:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy16:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v1, (a1)
+; RV32-FAST-NEXT:    vse64.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy16:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v1, (a1)
+; RV64-FAST-NEXT:    vse64.v v1, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 16, i1 false)
@@ -310,45 +310,45 @@ define void @unaligned_memcpy31(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-LABEL: unaligned_memcpy31:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v1, (a1)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    addi a1, a1, 15
-; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vle8.v v1, (a1)
 ; RV32-NEXT:    addi a0, a0, 15
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy31:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v1, (a1)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    addi a1, a1, 15
-; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vle8.v v1, (a1)
 ; RV64-NEXT:    addi a0, a0, 15
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy31:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v1, (a1)
+; RV32-FAST-NEXT:    vse64.v v1, (a0)
 ; RV32-FAST-NEXT:    addi a1, a1, 15
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
+; RV32-FAST-NEXT:    vle64.v v1, (a1)
 ; RV32-FAST-NEXT:    addi a0, a0, 15
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vse64.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy31:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v1, (a1)
+; RV64-FAST-NEXT:    vse64.v v1, (a0)
 ; RV64-FAST-NEXT:    addi a1, a1, 15
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
+; RV64-FAST-NEXT:    vle64.v v1, (a1)
 ; RV64-FAST-NEXT:    addi a0, a0, 15
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vse64.v v1, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 31, i1 false)
@@ -360,30 +360,30 @@ define void @unaligned_memcpy32(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v2, (a1)
+; RV32-NEXT:    vse8.v v2, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a2, 32
 ; RV64-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v2, (a1)
+; RV64-NEXT:    vse8.v v2, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy32:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v2, (a1)
+; RV32-FAST-NEXT:    vse64.v v2, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy32:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v2, (a1)
+; RV64-FAST-NEXT:    vse64.v v2, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 32, i1 false)
@@ -395,30 +395,30 @@ define void @unaligned_memcpy64(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    li a2, 64
 ; RV32-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v4, (a1)
+; RV32-NEXT:    vse8.v v4, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a2, 64
 ; RV64-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v4, (a1)
+; RV64-NEXT:    vse8.v v4, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy64:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v4, (a1)
+; RV32-FAST-NEXT:    vse64.v v4, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy64:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v4, (a1)
+; RV64-FAST-NEXT:    vse64.v v4, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 64, i1 false)
@@ -430,52 +430,52 @@ define void @unaligned_memcpy96(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    li a2, 64
 ; RV32-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vle8.v v4, (a1)
+; RV32-NEXT:    vse8.v v4, (a0)
 ; RV32-NEXT:    addi a1, a1, 64
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vle8.v v2, (a1)
 ; RV32-NEXT:    addi a0, a0, 64
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vse8.v v2, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: unaligned_memcpy96:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    li a2, 64
 ; RV64-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vle8.v v4, (a1)
+; RV64-NEXT:    vse8.v v4, (a0)
 ; RV64-NEXT:    addi a1, a1, 64
 ; RV64-NEXT:    li a2, 32
 ; RV64-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vle8.v v2, (a1)
 ; RV64-NEXT:    addi a0, a0, 64
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vse8.v v2, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: unaligned_memcpy96:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v4, (a1)
+; RV32-FAST-NEXT:    vse64.v v4, (a0)
 ; RV32-FAST-NEXT:    addi a1, a1, 64
 ; RV32-FAST-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
+; RV32-FAST-NEXT:    vle64.v v2, (a1)
 ; RV32-FAST-NEXT:    addi a0, a0, 64
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vse64.v v2, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy96:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v4, (a1)
+; RV64-FAST-NEXT:    vse64.v v4, (a0)
 ; RV64-FAST-NEXT:    addi a1, a1, 64
 ; RV64-FAST-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
+; RV64-FAST-NEXT:    vle64.v v2, (a1)
 ; RV64-FAST-NEXT:    addi a0, a0, 64
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vse64.v v2, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 96, i1 false)
@@ -527,9 +527,9 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    addi a2, a1, 128
 ; RV32-NEXT:    li a3, 64
 ; RV32-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
-; RV32-NEXT:    vle8.v v8, (a2)
+; RV32-NEXT:    vle8.v v4, (a2)
 ; RV32-NEXT:    addi a2, a0, 128
-; RV32-NEXT:    vse8.v v8, (a2)
+; RV32-NEXT:    vse8.v v4, (a2)
 ; RV32-NEXT:    lbu a2, 195(a1)
 ; RV32-NEXT:    sb a2, 195(a0)
 ; RV32-NEXT:    lbu a2, 194(a1)
@@ -549,9 +549,9 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    addi a2, a1, 128
 ; RV64-NEXT:    li a3, 64
 ; RV64-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a2)
+; RV64-NEXT:    vle8.v v4, (a2)
 ; RV64-NEXT:    addi a2, a0, 128
-; RV64-NEXT:    vse8.v v8, (a2)
+; RV64-NEXT:    vse8.v v4, (a2)
 ; RV64-NEXT:    lbu a2, 195(a1)
 ; RV64-NEXT:    sb a2, 195(a0)
 ; RV64-NEXT:    lbu a2, 194(a1)
@@ -571,9 +571,9 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-FAST-NEXT:    vse64.v v8, (a0)
 ; RV32-FAST-NEXT:    addi a1, a1, 128
 ; RV32-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
+; RV32-FAST-NEXT:    vle64.v v4, (a1)
 ; RV32-FAST-NEXT:    addi a0, a0, 128
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vse64.v v4, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: unaligned_memcpy196:
@@ -585,9 +585,9 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-FAST-NEXT:    vse64.v v8, (a0)
 ; RV64-FAST-NEXT:    addi a1, a1, 128
 ; RV64-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
+; RV64-FAST-NEXT:    vle64.v v4, (a1)
 ; RV64-FAST-NEXT:    addi a0, a0, 128
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vse64.v v4, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dest, ptr %src, i64 196, i1 false)
@@ -749,8 +749,8 @@ define void @aligned_memcpy8(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memcpy8:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-BOTH-NEXT:    vle32.v v8, (a1)
-; RV32-BOTH-NEXT:    vse32.v v8, (a0)
+; RV32-BOTH-NEXT:    vle32.v v1, (a1)
+; RV32-BOTH-NEXT:    vse32.v v1, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy8:
@@ -773,8 +773,8 @@ define void @aligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-NEXT:    lw a2, 8(a1)
 ; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vle32.v v1, (a1)
+; RV32-NEXT:    vse32.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: aligned_memcpy15:
@@ -796,8 +796,8 @@ define void @aligned_memcpy15(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-FAST-NEXT:    lw a2, 8(a1)
 ; RV32-FAST-NEXT:    sw a2, 8(a0)
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-FAST-NEXT:    vle32.v v8, (a1)
-; RV32-FAST-NEXT:    vse32.v v8, (a0)
+; RV32-FAST-NEXT:    vle32.v v1, (a1)
+; RV32-FAST-NEXT:    vse32.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: aligned_memcpy15:
@@ -816,15 +816,15 @@ define void @aligned_memcpy16(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memcpy16:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-BOTH-NEXT:    vle64.v v8, (a1)
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
+; RV32-BOTH-NEXT:    vle64.v v1, (a1)
+; RV32-BOTH-NEXT:    vse64.v v1, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy16:
 ; RV64-BOTH:       # %bb.0: # %entry
 ; RV64-BOTH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-BOTH-NEXT:    vle64.v v8, (a1)
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
+; RV64-BOTH-NEXT:    vle64.v v1, (a1)
+; RV64-BOTH-NEXT:    vse64.v v1, (a0)
 ; RV64-BOTH-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 16, i1 false)
@@ -835,47 +835,47 @@ define void @aligned_memcpy31(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-LABEL: aligned_memcpy31:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle64.v v8, (a1)
-; RV32-NEXT:    vse64.v v8, (a0)
+; RV32-NEXT:    vle64.v v1, (a1)
+; RV32-NEXT:    vse64.v v1, (a0)
 ; RV32-NEXT:    addi a1, a1, 15
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vle8.v v1, (a1)
 ; RV32-NEXT:    addi a0, a0, 15
-; RV32-NEXT:    vse8.v v8, (a0)
+; RV32-NEXT:    vse8.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: aligned_memcpy31:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle64.v v8, (a1)
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vle64.v v1, (a1)
+; RV64-NEXT:    vse64.v v1, (a0)
 ; RV64-NEXT:    addi a1, a1, 15
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vle8.v v1, (a1)
 ; RV64-NEXT:    addi a0, a0, 15
-; RV64-NEXT:    vse8.v v8, (a0)
+; RV64-NEXT:    vse8.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: aligned_memcpy31:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v1, (a1)
+; RV32-FAST-NEXT:    vse64.v v1, (a0)
 ; RV32-FAST-NEXT:    addi a1, a1, 15
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
+; RV32-FAST-NEXT:    vle64.v v1, (a1)
 ; RV32-FAST-NEXT:    addi a0, a0, 15
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vse64.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: aligned_memcpy31:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v1, (a1)
+; RV64-FAST-NEXT:    vse64.v v1, (a0)
 ; RV64-FAST-NEXT:    addi a1, a1, 15
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
+; RV64-FAST-NEXT:    vle64.v v1, (a1)
 ; RV64-FAST-NEXT:    addi a0, a0, 15
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vse64.v v1, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 31, i1 false)
@@ -886,15 +886,15 @@ define void @aligned_memcpy32(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memcpy32:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-BOTH-NEXT:    vle64.v v8, (a1)
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
+; RV32-BOTH-NEXT:    vle64.v v2, (a1)
+; RV32-BOTH-NEXT:    vse64.v v2, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy32:
 ; RV64-BOTH:       # %bb.0: # %entry
 ; RV64-BOTH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-BOTH-NEXT:    vle64.v v8, (a1)
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
+; RV64-BOTH-NEXT:    vle64.v v2, (a1)
+; RV64-BOTH-NEXT:    vse64.v v2, (a0)
 ; RV64-BOTH-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 32, i1 false)
@@ -905,15 +905,15 @@ define void @aligned_memcpy64(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memcpy64:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-BOTH-NEXT:    vle64.v v8, (a1)
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
+; RV32-BOTH-NEXT:    vle64.v v4, (a1)
+; RV32-BOTH-NEXT:    vse64.v v4, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy64:
 ; RV64-BOTH:       # %bb.0: # %entry
 ; RV64-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-BOTH-NEXT:    vle64.v v8, (a1)
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
+; RV64-BOTH-NEXT:    vle64.v v4, (a1)
+; RV64-BOTH-NEXT:    vse64.v v4, (a0)
 ; RV64-BOTH-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 64, i1 false)
@@ -924,25 +924,25 @@ define void @aligned_memcpy96(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-LABEL: aligned_memcpy96:
 ; RV32-BOTH:       # %bb.0: # %entry
 ; RV32-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-BOTH-NEXT:    vle64.v v8, (a1)
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
+; RV32-BOTH-NEXT:    vle64.v v4, (a1)
+; RV32-BOTH-NEXT:    vse64.v v4, (a0)
 ; RV32-BOTH-NEXT:    addi a1, a1, 64
 ; RV32-BOTH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-BOTH-NEXT:    vle64.v v8, (a1)
+; RV32-BOTH-NEXT:    vle64.v v2, (a1)
 ; RV32-BOTH-NEXT:    addi a0, a0, 64
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
+; RV32-BOTH-NEXT:    vse64.v v2, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy96:
 ; RV64-BOTH:       # %bb.0: # %entry
 ; RV64-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-BOTH-NEXT:    vle64.v v8, (a1)
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
+; RV64-BOTH-NEXT:    vle64.v v4, (a1)
+; RV64-BOTH-NEXT:    vse64.v v4, (a0)
 ; RV64-BOTH-NEXT:    addi a1, a1, 64
 ; RV64-BOTH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-BOTH-NEXT:    vle64.v v8, (a1)
+; RV64-BOTH-NEXT:    vle64.v v2, (a1)
 ; RV64-BOTH-NEXT:    addi a0, a0, 64
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
+; RV64-BOTH-NEXT:    vse64.v v2, (a0)
 ; RV64-BOTH-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 96, i1 false)
@@ -978,9 +978,9 @@ define void @aligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV32-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV32-BOTH-NEXT:    addi a1, a1, 128
 ; RV32-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-BOTH-NEXT:    vle64.v v8, (a1)
+; RV32-BOTH-NEXT:    vle64.v v4, (a1)
 ; RV32-BOTH-NEXT:    addi a0, a0, 128
-; RV32-BOTH-NEXT:    vse64.v v8, (a0)
+; RV32-BOTH-NEXT:    vse64.v v4, (a0)
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: aligned_memcpy196:
@@ -992,9 +992,9 @@ define void @aligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-BOTH-NEXT:    vse64.v v8, (a0)
 ; RV64-BOTH-NEXT:    addi a1, a1, 128
 ; RV64-BOTH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-BOTH-NEXT:    vle64.v v8, (a1)
+; RV64-BOTH-NEXT:    vle64.v v4, (a1)
 ; RV64-BOTH-NEXT:    addi a0, a0, 128
-; RV64-BOTH-NEXT:    vse64.v v8, (a0)
+; RV64-BOTH-NEXT:    vse64.v v4, (a0)
 ; RV64-BOTH-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i64(ptr align 8 %dest, ptr align 8 %src, i64 196, i1 false)
@@ -1036,29 +1036,29 @@ define void @memcpy16_align4(ptr nocapture %dest, ptr nocapture %src) nounwind {
 ; RV32-LABEL: memcpy16_align4:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vle32.v v1, (a1)
+; RV32-NEXT:    vse32.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memcpy16_align4:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vle32.v v8, (a1)
-; RV64-NEXT:    vse32.v v8, (a0)
+; RV64-NEXT:    vle32.v v1, (a1)
+; RV64-NEXT:    vse32.v v1, (a0)
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memcpy16_align4:
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-FAST-NEXT:    vle64.v v8, (a1)
-; RV32-FAST-NEXT:    vse64.v v8, (a0)
+; RV32-FAST-NEXT:    vle64.v v1, (a1)
+; RV32-FAST-NEXT:    vse64.v v1, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: memcpy16_align4:
 ; RV64-FAST:       # %bb.0: # %entry
 ; RV64-FAST-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-FAST-NEXT:    vle64.v v8, (a1)
-; RV64-FAST-NEXT:    vse64.v v8, (a0)
+; RV64-FAST-NEXT:    vle64.v v1, (a1)
+; RV64-FAST-NEXT:    vse64.v v1, (a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.inline.p0.p0.i32(ptr align 4 %dest, ptr align 4 %src, i32 16, i1 false)
@@ -1073,8 +1073,8 @@ define i32 @memcpy11_align8(ptr nocapture %dest, ptr %src) {
 ; RV32-NEXT:    lh a2, 8(a1)
 ; RV32-NEXT:    sh a2, 8(a0)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vle32.v v1, (a1)
+; RV32-NEXT:    vse32.v v1, (a0)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    ret
 ;
@@ -1094,8 +1094,8 @@ define i32 @memcpy11_align8(ptr nocapture %dest, ptr %src) {
 ; RV32-FAST-NEXT:    lw a2, 7(a1)
 ; RV32-FAST-NEXT:    sw a2, 7(a0)
 ; RV32-FAST-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-FAST-NEXT:    vle32.v v8, (a1)
-; RV32-FAST-NEXT:    vse32.v v8, (a0)
+; RV32-FAST-NEXT:    vle32.v v1, (a1)
+; RV32-FAST-NEXT:    vse32.v v1, (a0)
 ; RV32-FAST-NEXT:    li a0, 0
 ; RV32-FAST-NEXT:    ret
 ;

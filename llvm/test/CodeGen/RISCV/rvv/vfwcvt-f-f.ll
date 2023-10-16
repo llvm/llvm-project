@@ -16,8 +16,8 @@ define <vscale x 1 x float> @intrinsic_vfwcvt_f.f.v_nxv1f32_nxv1f16(<vscale x 1 
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv1f32_nxv1f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwcvt.f.f.v.nxv1f32.nxv1f16(
@@ -59,8 +59,8 @@ define <vscale x 2 x float> @intrinsic_vfwcvt_f.f.v_nxv2f32_nxv2f16(<vscale x 2 
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv2f32_nxv2f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwcvt.f.f.v.nxv2f32.nxv2f16(
@@ -102,8 +102,8 @@ define <vscale x 4 x float> @intrinsic_vfwcvt_f.f.v_nxv4f32_nxv4f16(<vscale x 4 
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv4f32_nxv4f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v8
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwcvt.f.f.v.nxv4f32.nxv4f16(
@@ -145,8 +145,8 @@ define <vscale x 8 x float> @intrinsic_vfwcvt_f.f.v_nxv8f32_nxv8f16(<vscale x 8 
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv8f32_nxv8f16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwcvt.f.f.v v4, v8
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwcvt.f.f.v.nxv8f32.nxv8f16(
@@ -231,8 +231,8 @@ define <vscale x 1 x double> @intrinsic_vfwcvt_f.f.v_nxv1f64_nxv1f32(<vscale x 1
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv1f64_nxv1f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x double> @llvm.riscv.vfwcvt.f.f.v.nxv1f64.nxv1f32(
@@ -274,8 +274,8 @@ define <vscale x 2 x double> @intrinsic_vfwcvt_f.f.v_nxv2f64_nxv2f32(<vscale x 2
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv2f64_nxv2f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v8
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x double> @llvm.riscv.vfwcvt.f.f.v.nxv2f64.nxv2f32(
@@ -317,8 +317,8 @@ define <vscale x 4 x double> @intrinsic_vfwcvt_f.f.v_nxv4f64_nxv4f32(<vscale x 4
 ; CHECK-LABEL: intrinsic_vfwcvt_f.f.v_nxv4f64_nxv4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwcvt.f.f.v v4, v8
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x double> @llvm.riscv.vfwcvt.f.f.v.nxv4f64.nxv4f32(

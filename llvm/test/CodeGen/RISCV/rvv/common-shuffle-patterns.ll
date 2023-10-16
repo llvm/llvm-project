@@ -8,10 +8,10 @@ define dso_local <16 x i16> @interleave(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: interleave:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v2, v8, v9
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a0, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vwmaccu.vx v2, a0, v9
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
 entry:
   %v2 = shufflevector <8 x i16> %v0, <8 x i16> poison, <16 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3, i32 undef, i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7, i32 undef>

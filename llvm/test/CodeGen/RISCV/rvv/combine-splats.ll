@@ -25,8 +25,8 @@ define <vscale x 2 x i64> @or_and_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: or_and_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vor.vi v8, v8, 3
-; CHECK-NEXT:    vand.vi v8, v8, 7
+; CHECK-NEXT:    vor.vi v2, v8, 3
+; CHECK-NEXT:    vand.vi v8, v2, 7
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 2 x i64> poison, i64 7, i32 0
   %splat1 = shufflevector <vscale x 2 x i64> %ins1, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer

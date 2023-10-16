@@ -5,8 +5,8 @@ define void @constant_splat_fixed(ptr %p) {
 ; CHECK-LABEL: constant_splat_fixed:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i32> zeroinitializer, ptr %p
   ret void
@@ -16,8 +16,8 @@ define void @constant_splat_scalable(ptr %p) {
 ; CHECK-LABEL: constant_splat_scalable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   store <vscale x 1 x i32> zeroinitializer, ptr %p
   ret void
@@ -29,11 +29,11 @@ define void @constant_splat_scalable_then_fixed(ptr %p, ptr %p2) {
 ; CHECK-LABEL: constant_splat_scalable_then_fixed:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a1)
 ; CHECK-NEXT:    ret
   store <vscale x 1 x i32> zeroinitializer, ptr %p
   store <4 x i32> zeroinitializer, ptr %p2
@@ -46,11 +46,11 @@ define void @constant_splat_fixed_then_scalable(ptr %p, ptr %p2) {
 ; CHECK-LABEL: constant_splat_fixed_then_scalable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a1)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i32> zeroinitializer, ptr %p2
   store <vscale x 1 x i32> zeroinitializer, ptr %p
@@ -61,8 +61,8 @@ define void @splat_scalable(ptr %p, i32 %v) {
 ; CHECK-LABEL: splat_scalable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -74,8 +74,8 @@ define void @splat_fixed(ptr %p, i32 %v) {
 ; CHECK-LABEL: splat_fixed:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <4 x i32> %elt.head, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -89,12 +89,12 @@ define void @mixed_splats1(ptr %p, i32 %v) {
 ; CHECK-LABEL: mixed_splats1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
+; CHECK-NEXT:    vmv.v.x v1, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vse32.v v2, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -108,11 +108,11 @@ define void @mixed_splats2(ptr %p, i32 %v) {
 ; CHECK-LABEL: mixed_splats2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -126,8 +126,8 @@ define void @extract_vector(ptr %p, i32 %v) {
 ; CHECK-LABEL: extract_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -141,9 +141,9 @@ define void @extract_vector_multiuse1(ptr %p, ptr %p2, i32 %v) {
 ; CHECK-LABEL: extract_vector_multiuse1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vmv.v.x v1, a2
+; CHECK-NEXT:    vse32.v v1, (a0)
+; CHECK-NEXT:    vse32.v v1, (a1)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -174,11 +174,11 @@ define void @extract_vector_mixed1(ptr %p, ptr %p2, i32 %v) {
 ; CHECK-LABEL: extract_vector_mixed1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
+; CHECK-NEXT:    vmv.v.x v1, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vse32.v v1, (a1)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -194,10 +194,10 @@ define void @extract_vector_mixed2(ptr %p, ptr %p2, i32 %v) {
 ; CHECK-LABEL: extract_vector_mixed2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a2
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vse32.v v1, (a1)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
@@ -212,10 +212,10 @@ define void @extract_vector_mixed3(ptr %p, ptr %p2, i32 %v) {
 ; CHECK-LABEL: extract_vector_mixed3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a3, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a2
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vmv.v.x v1, a2
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    vse32.v v1, (a1)
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 1 x i32> %elt.head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer

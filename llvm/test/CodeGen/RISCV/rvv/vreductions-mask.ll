@@ -34,8 +34,8 @@ define zeroext i1 @vreduce_and_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv1i1(<vscale x 1 x i1> %v)
@@ -61,8 +61,8 @@ define zeroext i1 @vreduce_smax_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv1i1(<vscale x 1 x i1> %v)
@@ -75,8 +75,8 @@ define zeroext i1 @vreduce_umin_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv1i1(<vscale x 1 x i1> %v)
@@ -128,8 +128,8 @@ define zeroext i1 @vreduce_and_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1> %v)
@@ -155,8 +155,8 @@ define zeroext i1 @vreduce_smax_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv2i1(<vscale x 2 x i1> %v)
@@ -169,8 +169,8 @@ define zeroext i1 @vreduce_umin_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv2i1(<vscale x 2 x i1> %v)
@@ -222,8 +222,8 @@ define zeroext i1 @vreduce_and_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv4i1(<vscale x 4 x i1> %v)
@@ -249,8 +249,8 @@ define zeroext i1 @vreduce_smax_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv4i1(<vscale x 4 x i1> %v)
@@ -263,8 +263,8 @@ define zeroext i1 @vreduce_umin_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv4i1(<vscale x 4 x i1> %v)
@@ -316,8 +316,8 @@ define zeroext i1 @vreduce_and_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv8i1(<vscale x 8 x i1> %v)
@@ -343,8 +343,8 @@ define zeroext i1 @vreduce_smax_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv8i1(<vscale x 8 x i1> %v)
@@ -357,8 +357,8 @@ define zeroext i1 @vreduce_umin_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv8i1(<vscale x 8 x i1> %v)
@@ -410,8 +410,8 @@ define zeroext i1 @vreduce_and_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv16i1(<vscale x 16 x i1> %v)
@@ -437,8 +437,8 @@ define zeroext i1 @vreduce_smax_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv16i1(<vscale x 16 x i1> %v)
@@ -451,8 +451,8 @@ define zeroext i1 @vreduce_umin_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv16i1(<vscale x 16 x i1> %v)
@@ -504,8 +504,8 @@ define zeroext i1 @vreduce_and_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv32i1(<vscale x 32 x i1> %v)
@@ -531,8 +531,8 @@ define zeroext i1 @vreduce_smax_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv32i1(<vscale x 32 x i1> %v)
@@ -545,8 +545,8 @@ define zeroext i1 @vreduce_umin_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv32i1(<vscale x 32 x i1> %v)
@@ -598,8 +598,8 @@ define zeroext i1 @vreduce_and_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.and.nxv64i1(<vscale x 64 x i1> %v)
@@ -625,8 +625,8 @@ define zeroext i1 @vreduce_smax_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.smax.nxv64i1(<vscale x 64 x i1> %v)
@@ -639,8 +639,8 @@ define zeroext i1 @vreduce_umin_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmnot.m v8, v0
-; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    vmnot.m v1, v0
+; CHECK-NEXT:    vcpop.m a0, v1
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.umin.nxv64i1(<vscale x 64 x i1> %v)

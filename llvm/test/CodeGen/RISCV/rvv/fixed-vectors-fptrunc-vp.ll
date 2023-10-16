@@ -11,8 +11,8 @@ define <2 x half> @vfptrunc_v2f16_v2f32(<2 x float> %a, <2 x i1> %m, i32 zeroext
 ; CHECK-LABEL: vfptrunc_v2f16_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.f.f.w v1, v8, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float> %a, <2 x i1> %m, i32 %vl)
   ret <2 x half> %v
@@ -22,8 +22,8 @@ define <2 x half> @vfptrunc_v2f16_v2f32_unmasked(<2 x float> %a, i32 zeroext %vl
 ; CHECK-LABEL: vfptrunc_v2f16_v2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.f.f.w v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x half> %v
@@ -35,9 +35,9 @@ define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroex
 ; CHECK-LABEL: vfptrunc_v2f16_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8, v0.t
+; CHECK-NEXT:    vfncvt.rod.f.f.w v1, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v8, v9, v0.t
+; CHECK-NEXT:    vfncvt.f.f.w v8, v1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> %m, i32 %vl)
   ret <2 x half> %v
@@ -47,9 +47,9 @@ define <2 x half> @vfptrunc_v2f16_v2f64_unmasked(<2 x double> %a, i32 zeroext %v
 ; CHECK-LABEL: vfptrunc_v2f16_v2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8
+; CHECK-NEXT:    vfncvt.rod.f.f.w v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v8, v9
+; CHECK-NEXT:    vfncvt.f.f.w v8, v1
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x half> %v
@@ -61,8 +61,8 @@ define <2 x float> @vfptrunc_v2f32_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroe
 ; CHECK-LABEL: vfptrunc_v2f32_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.f.f.w v1, v8, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.fptrunc.v2f64.v2f32(<2 x double> %a, <2 x i1> %m, i32 %vl)
   ret <2 x float> %v
@@ -72,8 +72,8 @@ define <2 x float> @vfptrunc_v2f32_v2f64_unmasked(<2 x double> %a, i32 zeroext %
 ; CHECK-LABEL: vfptrunc_v2f32_v2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.f.f.w v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.fptrunc.v2f64.v2f32(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
   ret <2 x float> %v
@@ -85,8 +85,8 @@ define <15 x float> @vfptrunc_v15f32_v15f64(<15 x double> %a, <15 x i1> %m, i32 
 ; CHECK-LABEL: vfptrunc_v15f32_v15f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v16, v8, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    vfncvt.f.f.w v4, v8, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v4
 ; CHECK-NEXT:    ret
   %v = call <15 x float> @llvm.vp.fptrunc.v15f64.v15f32(<15 x double> %a, <15 x i1> %m, i32 %vl)
   ret <15 x float> %v
@@ -100,7 +100,7 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    li a2, 16
-; CHECK-NEXT:    vslidedown.vi v12, v0, 2
+; CHECK-NEXT:    vslidedown.vi v1, v0, 2
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
@@ -113,7 +113,7 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vfncvt.f.f.w v24, v16, v0.t
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma

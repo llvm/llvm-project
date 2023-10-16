@@ -8,10 +8,10 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i1(<vscale x 2 x i1> %va, <vscal
 ; CHECK-LABEL: vuitofp_nxv2f16_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vfcvt.f.xu.v v8, v9, v0.t
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x half> @llvm.vp.uitofp.nxv2f16.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x half> %v
@@ -21,9 +21,9 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i1_unmasked(<vscale x 2 x i1> %v
 ; CHECK-LABEL: vuitofp_nxv2f16_nxv2i1_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, 1, v0
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x half> @llvm.vp.uitofp.nxv2f16.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x half> %v
@@ -35,10 +35,10 @@ define <vscale x 2 x float> @vuitofp_nxv2f32_nxv2i1(<vscale x 2 x i1> %va, <vsca
 ; CHECK-LABEL: vuitofp_nxv2f32_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vfcvt.f.xu.v v8, v9, v0.t
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x float> %v
@@ -48,9 +48,9 @@ define <vscale x 2 x float> @vuitofp_nxv2f32_nxv2i1_unmasked(<vscale x 2 x i1> %
 ; CHECK-LABEL: vuitofp_nxv2f32_nxv2i1_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, 1, v0
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x float> %v
@@ -62,10 +62,10 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i1(<vscale x 2 x i1> %va, <vsc
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vmerge.vim v2, v2, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vfcvt.f.xu.v v8, v10, v0.t
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v2, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x double> %v
@@ -75,9 +75,9 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i1_unmasked(<vscale x 2 x i1> 
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i1_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vmerge.vim v2, v2, 1, v0
+; CHECK-NEXT:    vfcvt.f.xu.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x double> %v

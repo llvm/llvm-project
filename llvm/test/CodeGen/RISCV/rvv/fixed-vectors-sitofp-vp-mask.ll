@@ -8,10 +8,10 @@ define <4 x half> @vsitofp_v4f16_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %ev
 ; CHECK-LABEL: vsitofp_v4f16_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vfcvt.f.x.v v8, v9, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v8, v1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.sitofp.v4f16.v4i1(<4 x i1> %va, <4 x i1> %m, i32 %evl)
   ret <4 x half> %v
@@ -21,9 +21,9 @@ define <4 x half> @vsitofp_v4f16_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v4f16_v4i1_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
-; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, -1, v0
+; CHECK-NEXT:    vfcvt.f.x.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.sitofp.v4f16.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x half> %v
@@ -35,10 +35,10 @@ define <4 x float> @vsitofp_v4f32_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %e
 ; CHECK-LABEL: vsitofp_v4f32_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vfcvt.f.x.v v8, v9, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v8, v1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.sitofp.v4f32.v4i1(<4 x i1> %va, <4 x i1> %m, i32 %evl)
   ret <4 x float> %v
@@ -48,9 +48,9 @@ define <4 x float> @vsitofp_v4f32_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) 
 ; CHECK-LABEL: vsitofp_v4f32_v4i1_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
-; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    vmv.v.i v1, 0
+; CHECK-NEXT:    vmerge.vim v1, v1, -1, v0
+; CHECK-NEXT:    vfcvt.f.x.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.sitofp.v4f32.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x float> %v
@@ -62,10 +62,10 @@ define <4 x double> @vsitofp_v4f64_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %
 ; CHECK-LABEL: vsitofp_v4f64_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v10, v10, -1, v0
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vmerge.vim v2, v2, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vfcvt.f.x.v v8, v10, v0.t
+; CHECK-NEXT:    vfcvt.f.x.v v8, v2, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.sitofp.v4f64.v4i1(<4 x i1> %va, <4 x i1> %m, i32 %evl)
   ret <4 x double> %v
@@ -75,9 +75,9 @@ define <4 x double> @vsitofp_v4f64_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl)
 ; CHECK-LABEL: vsitofp_v4f64_v4i1_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
-; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vmerge.vim v2, v2, -1, v0
+; CHECK-NEXT:    vfcvt.f.x.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.sitofp.v4f64.v4i1(<4 x i1> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x double> %v

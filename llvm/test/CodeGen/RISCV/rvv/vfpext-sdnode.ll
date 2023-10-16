@@ -13,8 +13,8 @@ define <vscale x 1 x float> @vfpext_nxv1f16_nxv1f32(<vscale x 1 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv1f16_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 1 x half> %va to <vscale x 1 x float>
   ret <vscale x 1 x float> %evec
@@ -25,9 +25,9 @@ define <vscale x 1 x double> @vfpext_nxv1f16_nxv1f64(<vscale x 1 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv1f16_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v1
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 1 x half> %va to <vscale x 1 x double>
   ret <vscale x 1 x double> %evec
@@ -38,8 +38,8 @@ define <vscale x 2 x float> @vfpext_nxv2f16_nxv2f32(<vscale x 2 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv2f16_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 2 x half> %va to <vscale x 2 x float>
   ret <vscale x 2 x float> %evec
@@ -50,9 +50,9 @@ define <vscale x 2 x double> @vfpext_nxv2f16_nxv2f64(<vscale x 2 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv2f16_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v1
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 2 x half> %va to <vscale x 2 x double>
   ret <vscale x 2 x double> %evec
@@ -63,8 +63,8 @@ define <vscale x 4 x float> @vfpext_nxv4f16_nxv4f32(<vscale x 4 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv4f16_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v8
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 4 x half> %va to <vscale x 4 x float>
   ret <vscale x 4 x float> %evec
@@ -75,9 +75,9 @@ define <vscale x 4 x double> @vfpext_nxv4f16_nxv4f64(<vscale x 4 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv4f16_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v12
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v2
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 4 x half> %va to <vscale x 4 x double>
   ret <vscale x 4 x double> %evec
@@ -88,8 +88,8 @@ define <vscale x 8 x float> @vfpext_nxv8f16_nxv8f32(<vscale x 8 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv8f16_nxv8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwcvt.f.f.v v4, v8
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 8 x half> %va to <vscale x 8 x float>
   ret <vscale x 8 x float> %evec
@@ -100,9 +100,9 @@ define <vscale x 8 x double> @vfpext_nxv8f16_nxv8f64(<vscale x 8 x half> %va) {
 ; CHECK-LABEL: vfpext_nxv8f16_nxv8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v16, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v4, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v16
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v4
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 8 x half> %va to <vscale x 8 x double>
   ret <vscale x 8 x double> %evec
@@ -125,8 +125,8 @@ define <vscale x 1 x double> @vfpext_nxv1f32_nxv1f64(<vscale x 1 x float> %va) {
 ; CHECK-LABEL: vfpext_nxv1f32_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
   ret <vscale x 1 x double> %evec
@@ -137,8 +137,8 @@ define <vscale x 2 x double> @vfpext_nxv2f32_nxv2f64(<vscale x 2 x float> %va) {
 ; CHECK-LABEL: vfpext_nxv2f32_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v8
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 2 x float> %va to <vscale x 2 x double>
   ret <vscale x 2 x double> %evec
@@ -149,8 +149,8 @@ define <vscale x 4 x double> @vfpext_nxv4f32_nxv4f64(<vscale x 4 x float> %va) {
 ; CHECK-LABEL: vfpext_nxv4f32_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwcvt.f.f.v v4, v8
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
   %evec = fpext <vscale x 4 x float> %va to <vscale x 4 x double>
   ret <vscale x 4 x double> %evec

@@ -8,20 +8,20 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_load_nxv16i
 ; CHECK-LABEL: vector_deinterleave_load_nxv16i1_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vlm.v v8, (a0)
+; CHECK-NEXT:    vlm.v v1, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a0
+; CHECK-NEXT:    vslidedown.vx v0, v1, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vnsrl.wi v10, v12, 8
-; CHECK-NEXT:    vmsne.vi v8, v10, 0
+; CHECK-NEXT:    vmv.v.i v2, 0
+; CHECK-NEXT:    vmerge.vim v6, v2, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v1
+; CHECK-NEXT:    vmerge.vim v4, v2, 1, v0
+; CHECK-NEXT:    vnsrl.wi v2, v4, 0
+; CHECK-NEXT:    vmsne.vi v0, v2, 0
+; CHECK-NEXT:    vnsrl.wi v2, v4, 8
+; CHECK-NEXT:    vmsne.vi v8, v2, 0
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 32 x i1>, ptr %p
   %retval = call {<vscale x 16 x i1>, <vscale x 16 x i1>} @llvm.experimental.vector.deinterleave2.nxv32i1(<vscale x 32 x i1> %vec)
@@ -43,10 +43,10 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_load_nxv16i
 define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i16_nxv16i16_align1(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_nxv8i16_nxv16i16_align1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl4r.v v12, (a0)
+; CHECK-NEXT:    vl4r.v v4, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-NEXT:    vnsrl.wi v10, v12, 16
+; CHECK-NEXT:    vnsrl.wi v8, v4, 0
+; CHECK-NEXT:    vnsrl.wi v10, v4, 16
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x i16>, ptr %p, align 1
   %retval = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.experimental.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %vec)

@@ -8,9 +8,9 @@ define <2 x float> @vfwadd_v2f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v9, v10
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vle16.v v2, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v1, v2
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x
   %b = load <2 x half>, ptr %y
@@ -24,9 +24,9 @@ define <4 x float> @vfwadd_v4f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v9, v10
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vle16.v v2, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v1, v2
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, ptr %x
   %b = load <4 x half>, ptr %y
@@ -40,9 +40,9 @@ define <8 x float> @vfwadd_v8f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v10, (a0)
-; CHECK-NEXT:    vle16.v v11, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v10, v11
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vle16.v v2, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v1, v2
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, ptr %x
   %b = load <8 x half>, ptr %y
@@ -56,9 +56,9 @@ define <16 x float> @vfwadd_v16f16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v12, (a0)
-; CHECK-NEXT:    vle16.v v14, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v12, v14
+; CHECK-NEXT:    vle16.v v2, (a0)
+; CHECK-NEXT:    vle16.v v4, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v2, v4
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, ptr %x
   %b = load <16 x half>, ptr %y
@@ -73,9 +73,9 @@ define <32 x float> @vfwadd_v32f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vle16.v v20, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v16, v20
+; CHECK-NEXT:    vle16.v v4, (a0)
+; CHECK-NEXT:    vle16.v v16, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v4, v16
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, ptr %x
   %b = load <32 x half>, ptr %y
@@ -137,9 +137,9 @@ define <2 x double> @vfwadd_v2f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v9, v10
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vle32.v v2, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v1, v2
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %b = load <2 x float>, ptr %y
@@ -153,9 +153,9 @@ define <4 x double> @vfwadd_v4f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
-; CHECK-NEXT:    vle32.v v11, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v10, v11
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vle32.v v2, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v1, v2
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %x
   %b = load <4 x float>, ptr %y
@@ -169,9 +169,9 @@ define <8 x double> @vfwadd_v8f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vle32.v v14, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v12, v14
+; CHECK-NEXT:    vle32.v v2, (a0)
+; CHECK-NEXT:    vle32.v v4, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v2, v4
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
   %b = load <8 x float>, ptr %y
@@ -185,9 +185,9 @@ define <16 x double> @vfwadd_v16f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: vfwadd_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v16, (a0)
-; CHECK-NEXT:    vle32.v v20, (a1)
-; CHECK-NEXT:    vfwadd.vv v8, v16, v20
+; CHECK-NEXT:    vle32.v v4, (a0)
+; CHECK-NEXT:    vle32.v v16, (a1)
+; CHECK-NEXT:    vfwadd.vv v8, v4, v16
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, ptr %x
   %b = load <16 x float>, ptr %y
@@ -248,8 +248,8 @@ define <2 x float> @vfwadd_vf_v2f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_vf_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x
   %b = insertelement <2 x half> poison, half %y, i32 0
@@ -264,8 +264,8 @@ define <4 x float> @vfwadd_vf_v4f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_vf_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, ptr %x
   %b = insertelement <4 x half> poison, half %y, i32 0
@@ -280,8 +280,8 @@ define <8 x float> @vfwadd_vf_v8f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_vf_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v10, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v10, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, ptr %x
   %b = insertelement <8 x half> poison, half %y, i32 0
@@ -296,8 +296,8 @@ define <16 x float> @vfwadd_vf_v16f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_vf_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v12, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v12, fa0
+; CHECK-NEXT:    vle16.v v2, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v2, fa0
 ; CHECK-NEXT:    ret
   %a = load <16 x half>, ptr %x
   %b = insertelement <16 x half> poison, half %y, i32 0
@@ -313,8 +313,8 @@ define <32 x float> @vfwadd_vf_v32f16(ptr %x, half %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v16, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v16, fa0
+; CHECK-NEXT:    vle16.v v4, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v4, fa0
 ; CHECK-NEXT:    ret
   %a = load <32 x half>, ptr %x
   %b = insertelement <32 x half> poison, half %y, i32 0
@@ -329,8 +329,8 @@ define <2 x double> @vfwadd_vf_v2f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_vf_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v9, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %b = insertelement <2 x float> poison, float %y, i32 0
@@ -345,8 +345,8 @@ define <4 x double> @vfwadd_vf_v4f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_vf_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v10, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %x
   %b = insertelement <4 x float> poison, float %y, i32 0
@@ -361,8 +361,8 @@ define <8 x double> @vfwadd_vf_v8f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_vf_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v12, fa0
+; CHECK-NEXT:    vle32.v v2, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v2, fa0
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
   %b = insertelement <8 x float> poison, float %y, i32 0
@@ -377,8 +377,8 @@ define <16 x double> @vfwadd_vf_v16f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_vf_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v16, (a0)
-; CHECK-NEXT:    vfwadd.vf v8, v16, fa0
+; CHECK-NEXT:    vle32.v v4, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v4, fa0
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, ptr %x
   %b = insertelement <16 x float> poison, float %y, i32 0
@@ -398,8 +398,8 @@ define <32 x double> @vfwadd_vf_v32f32(ptr %x, float %y) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v24, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v16
+; CHECK-NEXT:    vfmv.v.f v4, fa0
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v4
 ; CHECK-NEXT:    vfwadd.wv v16, v8, v0
 ; CHECK-NEXT:    vfwadd.wv v8, v8, v24
 ; CHECK-NEXT:    ret
@@ -417,8 +417,8 @@ define <2 x float> @vfwadd_wv_v2f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v9
+; CHECK-NEXT:    vle16.v v1, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v1
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %b = load <2 x half>, ptr %y
@@ -432,8 +432,8 @@ define <4 x float> @vfwadd_wv_v4f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v9
+; CHECK-NEXT:    vle16.v v1, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v1
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %x
   %b = load <4 x half>, ptr %y
@@ -447,8 +447,8 @@ define <8 x float> @vfwadd_wv_v8f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v10
+; CHECK-NEXT:    vle16.v v1, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v1
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
   %b = load <8 x half>, ptr %y
@@ -462,8 +462,8 @@ define <16 x float> @vfwadd_wv_v16f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vle16.v v12, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v12
+; CHECK-NEXT:    vle16.v v2, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v2
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, ptr %x
   %b = load <16 x half>, ptr %y
@@ -478,8 +478,8 @@ define <32 x float> @vfwadd_wv_v32f16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vle16.v v16, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v16
+; CHECK-NEXT:    vle16.v v4, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v4
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %x
   %b = load <32 x half>, ptr %y
@@ -493,8 +493,8 @@ define <2 x double> @vfwadd_wv_v2f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v9
+; CHECK-NEXT:    vle32.v v1, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v1
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %x
   %b = load <2 x float>, ptr %y
@@ -508,8 +508,8 @@ define <4 x double> @vfwadd_wv_v4f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v10
+; CHECK-NEXT:    vle32.v v1, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v1
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, ptr %x
   %b = load <4 x float>, ptr %y
@@ -523,8 +523,8 @@ define <8 x double> @vfwadd_wv_v8f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle32.v v12, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v12
+; CHECK-NEXT:    vle32.v v2, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v2
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, ptr %x
   %b = load <8 x float>, ptr %y
@@ -538,8 +538,8 @@ define <16 x double> @vfwadd_wv_v16f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle32.v v16, (a1)
-; CHECK-NEXT:    vfwadd.wv v8, v8, v16
+; CHECK-NEXT:    vle32.v v4, (a1)
+; CHECK-NEXT:    vfwadd.wv v8, v8, v4
 ; CHECK-NEXT:    ret
   %a = load <16 x double>, ptr %x
   %b = load <16 x float>, ptr %y
@@ -552,8 +552,8 @@ define <2 x float> @vfwadd_wf_v2f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_wf_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %b = insertelement <2 x half> poison, half %y, i32 0
@@ -567,8 +567,8 @@ define <4 x float> @vfwadd_wf_v4f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_wf_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %x
   %b = insertelement <4 x half> poison, half %y, i32 0
@@ -582,8 +582,8 @@ define <8 x float> @vfwadd_wf_v8f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_wf_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle32.v v2, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v2, fa0
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
   %b = insertelement <8 x half> poison, half %y, i32 0
@@ -597,8 +597,8 @@ define <16 x float> @vfwadd_wf_v16f16(ptr %x, half %y) {
 ; CHECK-LABEL: vfwadd_wf_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle32.v v4, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v4, fa0
 ; CHECK-NEXT:    ret
   %a = load <16 x float>, ptr %x
   %b = insertelement <16 x half> poison, half %y, i32 0
@@ -612,8 +612,8 @@ define <2 x double> @vfwadd_wf_v2f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_wf_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v1, fa0
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %x
   %b = insertelement <2 x float> poison, float %y, i32 0
@@ -627,8 +627,8 @@ define <4 x double> @vfwadd_wf_v4f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_wf_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v2, fa0
 ; CHECK-NEXT:    ret
   %a = load <4 x double>, ptr %x
   %b = insertelement <4 x float> poison, float %y, i32 0
@@ -642,8 +642,8 @@ define <8 x double> @vfwadd_wf_v8f32(ptr %x, float %y) {
 ; CHECK-LABEL: vfwadd_wf_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vle64.v v4, (a0)
+; CHECK-NEXT:    vfwadd.wf v8, v4, fa0
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, ptr %x
   %b = insertelement <8 x float> poison, float %y, i32 0

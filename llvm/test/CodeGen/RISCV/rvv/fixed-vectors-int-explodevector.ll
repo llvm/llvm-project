@@ -6,9 +6,9 @@ define i8 @explode_2xi8(<2 x i8> %v) {
 ; CHECK-LABEL: explode_2xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.s.x v1, zero
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <2 x i8> %v, i32 0
   %e1 = extractelement <2 x i8> %v, i32 1
@@ -20,14 +20,14 @@ define i8 @explode_4xi8(<4 x i8> %v) {
 ; CHECK-LABEL: explode_4xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vslidedown.vi v1, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v1
+; CHECK-NEXT:    vmv.s.x v1, zero
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a2, v8
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a2, v1
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    ret
@@ -46,22 +46,22 @@ define i8 @explode_8xi8(<8 x i8> %v) {
 ; CHECK-LABEL: explode_8xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    vmv.x.s a3, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 6
-; CHECK-NEXT:    vmv.x.s a4, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 7
-; CHECK-NEXT:    vmv.x.s a5, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vslidedown.vi v1, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 4
+; CHECK-NEXT:    vmv.x.s a2, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 5
+; CHECK-NEXT:    vmv.x.s a3, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 6
+; CHECK-NEXT:    vmv.x.s a4, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 7
+; CHECK-NEXT:    vmv.x.s a5, v1
+; CHECK-NEXT:    vmv.s.x v1, zero
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a6, v8
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a6, v1
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a6, a0
 ; CHECK-NEXT:    add a2, a2, a3
@@ -91,38 +91,38 @@ define i8 @explode_16xi8(<16 x i8> %v) {
 ; CHECK-LABEL: explode_16xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    vmv.x.s a3, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 6
-; CHECK-NEXT:    vmv.x.s a4, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 7
-; CHECK-NEXT:    vmv.x.s a5, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vmv.x.s a6, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 9
-; CHECK-NEXT:    vmv.x.s a7, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 10
-; CHECK-NEXT:    vmv.x.s t0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 11
-; CHECK-NEXT:    vmv.x.s t1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 12
-; CHECK-NEXT:    vmv.x.s t2, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 13
-; CHECK-NEXT:    vmv.x.s t3, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 14
-; CHECK-NEXT:    vmv.x.s t4, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 15
-; CHECK-NEXT:    vmv.x.s t5, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vslidedown.vi v1, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 4
+; CHECK-NEXT:    vmv.x.s a2, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 5
+; CHECK-NEXT:    vmv.x.s a3, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 6
+; CHECK-NEXT:    vmv.x.s a4, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 7
+; CHECK-NEXT:    vmv.x.s a5, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 8
+; CHECK-NEXT:    vmv.x.s a6, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 9
+; CHECK-NEXT:    vmv.x.s a7, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 10
+; CHECK-NEXT:    vmv.x.s t0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 11
+; CHECK-NEXT:    vmv.x.s t1, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 12
+; CHECK-NEXT:    vmv.x.s t2, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 13
+; CHECK-NEXT:    vmv.x.s t3, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 14
+; CHECK-NEXT:    vmv.x.s t4, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 15
+; CHECK-NEXT:    vmv.x.s t5, v1
+; CHECK-NEXT:    vmv.s.x v1, zero
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s t6, v8
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s t6, v1
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, t6, a0
 ; CHECK-NEXT:    add a2, a2, a3
@@ -176,9 +176,9 @@ define i16 @explode_2xi16(<2 x i16> %v) {
 ; CHECK-LABEL: explode_2xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.s.x v1, zero
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <2 x i16> %v, i32 0
   %e1 = extractelement <2 x i16> %v, i32 1
@@ -190,14 +190,14 @@ define i16 @explode_4xi16(<4 x i16> %v) {
 ; CHECK-LABEL: explode_4xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vslidedown.vi v1, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v1
+; CHECK-NEXT:    vmv.s.x v1, zero
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a2, v8
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a2, v1
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    ret
@@ -216,22 +216,22 @@ define i16 @explode_8xi16(<8 x i16> %v) {
 ; CHECK-LABEL: explode_8xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    vmv.x.s a3, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 6
-; CHECK-NEXT:    vmv.x.s a4, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 7
-; CHECK-NEXT:    vmv.x.s a5, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vslidedown.vi v1, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 4
+; CHECK-NEXT:    vmv.x.s a2, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 5
+; CHECK-NEXT:    vmv.x.s a3, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 6
+; CHECK-NEXT:    vmv.x.s a4, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 7
+; CHECK-NEXT:    vmv.x.s a5, v1
+; CHECK-NEXT:    vmv.s.x v1, zero
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a6, v8
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a6, v1
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, a6, a0
 ; CHECK-NEXT:    add a2, a2, a3
@@ -261,39 +261,39 @@ define i16 @explode_16xi16(<16 x i16> %v) {
 ; CHECK-LABEL: explode_16xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 5
-; CHECK-NEXT:    vmv.x.s a3, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 6
-; CHECK-NEXT:    vmv.x.s a4, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 7
-; CHECK-NEXT:    vmv.x.s a5, v10
+; CHECK-NEXT:    vslidedown.vi v1, v8, 2
+; CHECK-NEXT:    vmv.x.s a0, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 3
+; CHECK-NEXT:    vmv.x.s a1, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 4
+; CHECK-NEXT:    vmv.x.s a2, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 5
+; CHECK-NEXT:    vmv.x.s a3, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 6
+; CHECK-NEXT:    vmv.x.s a4, v1
+; CHECK-NEXT:    vslidedown.vi v1, v8, 7
+; CHECK-NEXT:    vmv.x.s a5, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 8
-; CHECK-NEXT:    vmv.x.s a6, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 9
-; CHECK-NEXT:    vmv.x.s a7, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 10
-; CHECK-NEXT:    vmv.x.s t0, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 11
-; CHECK-NEXT:    vmv.x.s t1, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 12
-; CHECK-NEXT:    vmv.x.s t2, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 13
-; CHECK-NEXT:    vmv.x.s t3, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 14
-; CHECK-NEXT:    vmv.x.s t4, v10
-; CHECK-NEXT:    vslidedown.vi v10, v8, 15
-; CHECK-NEXT:    vmv.x.s t5, v10
-; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vslidedown.vi v2, v8, 8
+; CHECK-NEXT:    vmv.x.s a6, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 9
+; CHECK-NEXT:    vmv.x.s a7, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 10
+; CHECK-NEXT:    vmv.x.s t0, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 11
+; CHECK-NEXT:    vmv.x.s t1, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 12
+; CHECK-NEXT:    vmv.x.s t2, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 13
+; CHECK-NEXT:    vmv.x.s t3, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 14
+; CHECK-NEXT:    vmv.x.s t4, v2
+; CHECK-NEXT:    vslidedown.vi v2, v8, 15
+; CHECK-NEXT:    vmv.x.s t5, v2
+; CHECK-NEXT:    vmv.s.x v1, zero
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s t6, v8
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s t6, v1
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    add a0, t6, a0
 ; CHECK-NEXT:    add a2, a2, a3
@@ -347,9 +347,9 @@ define i32 @explode_2xi32(<2 x i32> %v) {
 ; CHECK-LABEL: explode_2xi32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.s.x v1, zero
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ret
   %e0 = extractelement <2 x i32> %v, i32 0
   %e1 = extractelement <2 x i32> %v, i32 1
@@ -361,14 +361,14 @@ define i32 @explode_4xi32(<4 x i32> %v) {
 ; RV32-LABEL: explode_4xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    vslidedown.vi v9, v8, 3
-; RV32-NEXT:    vmv.x.s a1, v9
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vslidedown.vi v1, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v1
+; RV32-NEXT:    vslidedown.vi v1, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v1
+; RV32-NEXT:    vmv.s.x v1, zero
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vredxor.vs v8, v8, v9
-; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    vredxor.vs v1, v8, v1
+; RV32-NEXT:    vmv.x.s a2, v1
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a2, a0
 ; RV32-NEXT:    ret
@@ -376,14 +376,14 @@ define i32 @explode_4xi32(<4 x i32> %v) {
 ; RV64-LABEL: explode_4xi32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v9, v8, 2
-; RV64-NEXT:    vmv.x.s a0, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v9
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vslidedown.vi v1, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v1
+; RV64-NEXT:    vslidedown.vi v1, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v1
+; RV64-NEXT:    vmv.s.x v1, zero
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s a2, v1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    addw a0, a2, a0
 ; RV64-NEXT:    ret
@@ -402,23 +402,23 @@ define i32 @explode_8xi32(<8 x i32> %v) {
 ; RV32-LABEL: explode_8xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 2
-; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 3
-; RV32-NEXT:    vmv.x.s a1, v10
+; RV32-NEXT:    vslidedown.vi v1, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v1
+; RV32-NEXT:    vslidedown.vi v1, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 5
-; RV32-NEXT:    vmv.x.s a3, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 6
-; RV32-NEXT:    vmv.x.s a4, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 7
-; RV32-NEXT:    vmv.x.s a5, v10
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vslidedown.vi v2, v8, 4
+; RV32-NEXT:    vmv.x.s a2, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 5
+; RV32-NEXT:    vmv.x.s a3, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 6
+; RV32-NEXT:    vmv.x.s a4, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 7
+; RV32-NEXT:    vmv.x.s a5, v2
+; RV32-NEXT:    vmv.s.x v1, zero
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vredxor.vs v8, v8, v9
-; RV32-NEXT:    vmv.x.s a6, v8
+; RV32-NEXT:    vredxor.vs v1, v8, v1
+; RV32-NEXT:    vmv.x.s a6, v1
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a6, a0
 ; RV32-NEXT:    add a2, a2, a3
@@ -430,23 +430,23 @@ define i32 @explode_8xi32(<8 x i32> %v) {
 ; RV64-LABEL: explode_8xi32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 2
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    vslidedown.vi v10, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v10
+; RV64-NEXT:    vslidedown.vi v1, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v1
+; RV64-NEXT:    vslidedown.vi v1, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 4
-; RV64-NEXT:    vmv.x.s a2, v10
-; RV64-NEXT:    vslidedown.vi v10, v8, 5
-; RV64-NEXT:    vmv.x.s a3, v10
-; RV64-NEXT:    vslidedown.vi v10, v8, 6
-; RV64-NEXT:    vmv.x.s a4, v10
-; RV64-NEXT:    vslidedown.vi v10, v8, 7
-; RV64-NEXT:    vmv.x.s a5, v10
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vslidedown.vi v2, v8, 4
+; RV64-NEXT:    vmv.x.s a2, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 5
+; RV64-NEXT:    vmv.x.s a3, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 6
+; RV64-NEXT:    vmv.x.s a4, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 7
+; RV64-NEXT:    vmv.x.s a5, v2
+; RV64-NEXT:    vmv.s.x v1, zero
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s a6, v8
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s a6, v1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a6, a0
 ; RV64-NEXT:    add a2, a2, a3
@@ -485,19 +485,19 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    andi sp, sp, -64
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v8, 2
-; RV32-NEXT:    vmv.x.s a0, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 3
-; RV32-NEXT:    vmv.x.s a1, v12
+; RV32-NEXT:    vslidedown.vi v1, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v1
+; RV32-NEXT:    vslidedown.vi v1, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v8, 4
-; RV32-NEXT:    vmv.x.s a2, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 5
-; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 6
-; RV32-NEXT:    vmv.x.s a4, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 7
-; RV32-NEXT:    vmv.x.s a5, v12
+; RV32-NEXT:    vslidedown.vi v2, v8, 4
+; RV32-NEXT:    vmv.x.s a2, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 5
+; RV32-NEXT:    vmv.x.s a3, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 6
+; RV32-NEXT:    vmv.x.s a4, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 7
+; RV32-NEXT:    vmv.x.s a5, v2
 ; RV32-NEXT:    mv a6, sp
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a6)
@@ -509,10 +509,10 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV32-NEXT:    lw t3, 52(sp)
 ; RV32-NEXT:    lw t4, 56(sp)
 ; RV32-NEXT:    lw t5, 60(sp)
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vmv.s.x v1, zero
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vredxor.vs v8, v8, v9
-; RV32-NEXT:    vmv.x.s t6, v8
+; RV32-NEXT:    vredxor.vs v1, v8, v1
+; RV32-NEXT:    vmv.x.s t6, v1
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, t6, a0
 ; RV32-NEXT:    add a2, a2, a3
@@ -545,19 +545,19 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -64
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v8, 2
-; RV64-NEXT:    vmv.x.s a0, v12
-; RV64-NEXT:    vslidedown.vi v12, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v12
+; RV64-NEXT:    vslidedown.vi v1, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v1
+; RV64-NEXT:    vslidedown.vi v1, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v8, 4
-; RV64-NEXT:    vmv.x.s a2, v12
-; RV64-NEXT:    vslidedown.vi v12, v8, 5
-; RV64-NEXT:    vmv.x.s a3, v12
-; RV64-NEXT:    vslidedown.vi v12, v8, 6
-; RV64-NEXT:    vmv.x.s a4, v12
-; RV64-NEXT:    vslidedown.vi v12, v8, 7
-; RV64-NEXT:    vmv.x.s a5, v12
+; RV64-NEXT:    vslidedown.vi v2, v8, 4
+; RV64-NEXT:    vmv.x.s a2, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 5
+; RV64-NEXT:    vmv.x.s a3, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 6
+; RV64-NEXT:    vmv.x.s a4, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 7
+; RV64-NEXT:    vmv.x.s a5, v2
 ; RV64-NEXT:    mv a6, sp
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a6)
@@ -569,10 +569,10 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    lw t3, 52(sp)
 ; RV64-NEXT:    lw t4, 56(sp)
 ; RV64-NEXT:    lw t5, 60(sp)
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vmv.s.x v1, zero
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s t6, v8
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s t6, v1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, t6, a0
 ; RV64-NEXT:    add a2, a2, a3
@@ -630,21 +630,21 @@ define i64 @explode_2xi64(<2 x i64> %v) {
 ; RV32-LABEL: explode_2xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v9, zero
-; RV32-NEXT:    vredxor.vs v8, v8, v9
-; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vmv.s.x v1, zero
+; RV32-NEXT:    vredxor.vs v1, v8, v1
+; RV32-NEXT:    vmv.x.s a0, v1
 ; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v8, v8, a1
-; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    vsrl.vx v1, v1, a1
+; RV32-NEXT:    vmv.x.s a1, v1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_2xi64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v9, zero
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vmv.s.x v1, zero
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s a0, v1
 ; RV64-NEXT:    ret
   %e0 = extractelement <2 x i64> %v, i32 0
   %e1 = extractelement <2 x i64> %v, i32 1
@@ -656,22 +656,22 @@ define i64 @explode_4xi64(<4 x i64> %v) {
 ; RV32-LABEL: explode_4xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v10, v8, 2
+; RV32-NEXT:    vslidedown.vi v2, v8, 2
 ; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vsrl.vx v12, v10, a0
-; RV32-NEXT:    vmv.x.s a1, v12
-; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vslidedown.vi v10, v8, 3
-; RV32-NEXT:    vsrl.vx v12, v10, a0
-; RV32-NEXT:    vmv.x.s a3, v12
-; RV32-NEXT:    vmv.x.s a4, v10
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vsrl.vx v4, v2, a0
+; RV32-NEXT:    vmv.x.s a1, v4
+; RV32-NEXT:    vmv.x.s a2, v2
+; RV32-NEXT:    vslidedown.vi v2, v8, 3
+; RV32-NEXT:    vsrl.vx v4, v2, a0
+; RV32-NEXT:    vmv.x.s a3, v4
+; RV32-NEXT:    vmv.x.s a4, v2
+; RV32-NEXT:    vmv.s.x v1, zero
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vredxor.vs v1, v8, v1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v9, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    vmv.x.s a5, v8
+; RV32-NEXT:    vsrl.vx v2, v1, a0
+; RV32-NEXT:    vmv.x.s a0, v2
+; RV32-NEXT:    vmv.x.s a5, v1
 ; RV32-NEXT:    add a2, a5, a2
 ; RV32-NEXT:    sltu a5, a2, a5
 ; RV32-NEXT:    add a0, a0, a1
@@ -685,14 +685,14 @@ define i64 @explode_4xi64(<4 x i64> %v) {
 ; RV64-LABEL: explode_4xi64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v8, 2
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    vslidedown.vi v10, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v10
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vslidedown.vi v2, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v2
+; RV64-NEXT:    vmv.s.x v1, zero
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s a2, v1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a2, a0
 ; RV64-NEXT:    ret
@@ -711,38 +711,38 @@ define i64 @explode_8xi64(<8 x i64> %v) {
 ; RV32-LABEL: explode_8xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v8, 2
+; RV32-NEXT:    vslidedown.vi v4, v8, 2
 ; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vsrl.vx v16, v12, a0
-; RV32-NEXT:    vmv.x.s a1, v16
-; RV32-NEXT:    vmv.x.s a2, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 3
-; RV32-NEXT:    vsrl.vx v16, v12, a0
-; RV32-NEXT:    vmv.x.s a3, v16
-; RV32-NEXT:    vmv.x.s a4, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 4
-; RV32-NEXT:    vsrl.vx v16, v12, a0
-; RV32-NEXT:    vmv.x.s a5, v16
-; RV32-NEXT:    vmv.x.s a6, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 5
-; RV32-NEXT:    vsrl.vx v16, v12, a0
-; RV32-NEXT:    vmv.x.s a7, v16
-; RV32-NEXT:    vmv.x.s t0, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 6
-; RV32-NEXT:    vsrl.vx v16, v12, a0
-; RV32-NEXT:    vmv.x.s t1, v16
-; RV32-NEXT:    vmv.x.s t2, v12
-; RV32-NEXT:    vslidedown.vi v12, v8, 7
-; RV32-NEXT:    vsrl.vx v16, v12, a0
-; RV32-NEXT:    vmv.x.s t3, v16
-; RV32-NEXT:    vmv.x.s t4, v12
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vsrl.vx v12, v4, a0
+; RV32-NEXT:    vmv.x.s a1, v12
+; RV32-NEXT:    vmv.x.s a2, v4
+; RV32-NEXT:    vslidedown.vi v4, v8, 3
+; RV32-NEXT:    vsrl.vx v12, v4, a0
+; RV32-NEXT:    vmv.x.s a3, v12
+; RV32-NEXT:    vmv.x.s a4, v4
+; RV32-NEXT:    vslidedown.vi v4, v8, 4
+; RV32-NEXT:    vsrl.vx v12, v4, a0
+; RV32-NEXT:    vmv.x.s a5, v12
+; RV32-NEXT:    vmv.x.s a6, v4
+; RV32-NEXT:    vslidedown.vi v4, v8, 5
+; RV32-NEXT:    vsrl.vx v12, v4, a0
+; RV32-NEXT:    vmv.x.s a7, v12
+; RV32-NEXT:    vmv.x.s t0, v4
+; RV32-NEXT:    vslidedown.vi v4, v8, 6
+; RV32-NEXT:    vsrl.vx v12, v4, a0
+; RV32-NEXT:    vmv.x.s t1, v12
+; RV32-NEXT:    vmv.x.s t2, v4
+; RV32-NEXT:    vslidedown.vi v4, v8, 7
+; RV32-NEXT:    vsrl.vx v12, v4, a0
+; RV32-NEXT:    vmv.x.s t3, v12
+; RV32-NEXT:    vmv.x.s t4, v4
+; RV32-NEXT:    vmv.s.x v1, zero
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vredxor.vs v1, v8, v1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v9, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    vmv.x.s t5, v8
+; RV32-NEXT:    vsrl.vx v2, v1, a0
+; RV32-NEXT:    vmv.x.s a0, v2
+; RV32-NEXT:    vmv.x.s t5, v1
 ; RV32-NEXT:    add a2, t5, a2
 ; RV32-NEXT:    sltu t5, a2, t5
 ; RV32-NEXT:    add a0, a0, a1
@@ -781,10 +781,10 @@ define i64 @explode_8xi64(<8 x i64> %v) {
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -64
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v8, 2
-; RV64-NEXT:    vmv.x.s a0, v12
-; RV64-NEXT:    vslidedown.vi v12, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v12
+; RV64-NEXT:    vslidedown.vi v2, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v2
 ; RV64-NEXT:    mv a2, sp
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a2)
@@ -792,10 +792,10 @@ define i64 @explode_8xi64(<8 x i64> %v) {
 ; RV64-NEXT:    ld a3, 40(sp)
 ; RV64-NEXT:    ld a4, 48(sp)
 ; RV64-NEXT:    ld a5, 56(sp)
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vmv.s.x v1, zero
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s a6, v8
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s a6, v1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, a6, a0
 ; RV64-NEXT:    add a0, a0, a2
@@ -915,15 +915,15 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV32-NEXT:    vslidedown.vi v16, v8, 15
 ; RV32-NEXT:    vsrl.vx v24, v16, a0
 ; RV32-NEXT:    vmv.x.s s11, v24
-; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vmv.s.x v1, zero
 ; RV32-NEXT:    vmv.x.s ra, v16
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vredxor.vs v1, v8, v1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v9, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    vsrl.vx v2, v1, a0
+; RV32-NEXT:    vmv.x.s a0, v2
 ; RV32-NEXT:    add a1, a0, t6
-; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vmv.x.s a0, v1
 ; RV32-NEXT:    lw t6, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    add t6, a0, t6
 ; RV32-NEXT:    sltu a0, t6, a0
@@ -1009,10 +1009,10 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v16, v8, 2
-; RV64-NEXT:    vmv.x.s a0, v16
-; RV64-NEXT:    vslidedown.vi v16, v8, 3
-; RV64-NEXT:    vmv.x.s a1, v16
+; RV64-NEXT:    vslidedown.vi v2, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v2
+; RV64-NEXT:    vslidedown.vi v2, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v2
 ; RV64-NEXT:    mv a2, sp
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vse64.v v8, (a2)
@@ -1028,10 +1028,10 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV64-NEXT:    ld t3, 104(sp)
 ; RV64-NEXT:    ld t4, 112(sp)
 ; RV64-NEXT:    ld t5, 120(sp)
-; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vmv.s.x v1, zero
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vredxor.vs v8, v8, v9
-; RV64-NEXT:    vmv.x.s t6, v8
+; RV64-NEXT:    vredxor.vs v1, v8, v1
+; RV64-NEXT:    vmv.x.s t6, v1
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a0, t6, a0
 ; RV64-NEXT:    add a0, a0, a2

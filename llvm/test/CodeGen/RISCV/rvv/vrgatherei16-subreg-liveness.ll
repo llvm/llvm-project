@@ -13,41 +13,41 @@ define internal void @foo(<vscale x 1 x i16> %v15, <vscale x 1 x i16> %0, <vscal
 ; NOSUBREG-LABEL: foo:
 ; NOSUBREG:       # %bb.0: # %loopIR.preheader.i.i
 ; NOSUBREG-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; NOSUBREG-NEXT:    vmv.v.i v14, 0
+; NOSUBREG-NEXT:    vmv.v.i v2, 0
 ; NOSUBREG-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; NOSUBREG-NEXT:    vmv.v.i v9, 0
+; NOSUBREG-NEXT:    vmv.v.i v4, 0
 ; NOSUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; NOSUBREG-NEXT:    vmv1r.v v8, v9
-; NOSUBREG-NEXT:    vrgatherei16.vv v8, v9, v14
+; NOSUBREG-NEXT:    vmv1r.v v1, v4
+; NOSUBREG-NEXT:    vrgatherei16.vv v1, v4, v2
 ; NOSUBREG-NEXT:  .LBB0_1: # %loopIR3.i.i
 ; NOSUBREG-NEXT:    # =>This Inner Loop Header: Depth=1
-; NOSUBREG-NEXT:    vl1r.v v9, (zero)
+; NOSUBREG-NEXT:    vl1r.v v2, (zero)
 ; NOSUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; NOSUBREG-NEXT:    vmv1r.v v13, v12
-; NOSUBREG-NEXT:    vrgatherei16.vv v13, v9, v10
+; NOSUBREG-NEXT:    vmv1r.v v3, v12
+; NOSUBREG-NEXT:    vrgatherei16.vv v3, v2, v10
 ; NOSUBREG-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; NOSUBREG-NEXT:    vand.vv v9, v8, v13
-; NOSUBREG-NEXT:    vs1r.v v9, (zero)
+; NOSUBREG-NEXT:    vand.vv v2, v1, v3
+; NOSUBREG-NEXT:    vs1r.v v2, (zero)
 ; NOSUBREG-NEXT:    j .LBB0_1
 ;
 ; SUBREG-LABEL: foo:
 ; SUBREG:       # %bb.0: # %loopIR.preheader.i.i
 ; SUBREG-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; SUBREG-NEXT:    vmv.v.i v14, 0
+; SUBREG-NEXT:    vmv.v.i v2, 0
 ; SUBREG-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; SUBREG-NEXT:    vmv.v.i v9, 0
+; SUBREG-NEXT:    vmv.v.i v4, 0
 ; SUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; SUBREG-NEXT:    vmv1r.v v8, v9
-; SUBREG-NEXT:    vrgatherei16.vv v8, v9, v14
+; SUBREG-NEXT:    vmv1r.v v1, v4
+; SUBREG-NEXT:    vrgatherei16.vv v1, v4, v2
 ; SUBREG-NEXT:  .LBB0_1: # %loopIR3.i.i
 ; SUBREG-NEXT:    # =>This Inner Loop Header: Depth=1
-; SUBREG-NEXT:    vl1r.v v9, (zero)
+; SUBREG-NEXT:    vl1r.v v2, (zero)
 ; SUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
-; SUBREG-NEXT:    vmv1r.v v13, v12
-; SUBREG-NEXT:    vrgatherei16.vv v13, v9, v10
+; SUBREG-NEXT:    vmv1r.v v3, v12
+; SUBREG-NEXT:    vrgatherei16.vv v3, v2, v10
 ; SUBREG-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; SUBREG-NEXT:    vand.vv v9, v8, v13
-; SUBREG-NEXT:    vs1r.v v9, (zero)
+; SUBREG-NEXT:    vand.vv v2, v1, v3
+; SUBREG-NEXT:    vs1r.v v2, (zero)
 ; SUBREG-NEXT:    j .LBB0_1
 loopIR.preheader.i.i:
   %v18 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %vs12.i.i.i, i64 0)

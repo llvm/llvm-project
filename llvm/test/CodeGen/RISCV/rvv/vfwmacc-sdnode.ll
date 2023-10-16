@@ -20,10 +20,10 @@ define <vscale x 1 x float> @vfwmacc_vv_nxv1f32(<vscale x 1 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vv_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfmacc.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 1 x half> %vb to <vscale x 1 x float>
   %ve = fpext <vscale x 1 x half> %vc to <vscale x 1 x float>
@@ -41,10 +41,10 @@ define <vscale x 1 x float> @vfwmacc_vf_nxv1f32(<vscale x 1 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vf_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -64,10 +64,10 @@ define <vscale x 1 x float> @vfwnmacc_vv_nxv1f32(<vscale x 1 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vv_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfnmacc.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 1 x half> %vb to <vscale x 1 x float>
   %ve = fpext <vscale x 1 x half> %vc to <vscale x 1 x float>
@@ -87,10 +87,10 @@ define <vscale x 1 x float> @vfwnmacc_vf_nxv1f32(<vscale x 1 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vf_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -112,10 +112,10 @@ define <vscale x 1 x float> @vfwnmacc_fv_nxv1f32(<vscale x 1 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_fv_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -137,10 +137,10 @@ define <vscale x 1 x float> @vfwmsac_vv_nxv1f32(<vscale x 1 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vv_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfmsac.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 1 x half> %vb to <vscale x 1 x float>
   %ve = fpext <vscale x 1 x half> %vc to <vscale x 1 x float>
@@ -159,10 +159,10 @@ define <vscale x 1 x float> @vfwmsac_vf_nxv1f32(<vscale x 1 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vf_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -183,10 +183,10 @@ define <vscale x 1 x float> @vfwnmsac_vv_nxv1f32(<vscale x 1 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vv_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfnmsac.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 1 x half> %vb to <vscale x 1 x float>
   %ve = fpext <vscale x 1 x half> %vc to <vscale x 1 x float>
@@ -205,10 +205,10 @@ define <vscale x 1 x float> @vfwnmsac_vf_nxv1f32(<vscale x 1 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vf_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -229,10 +229,10 @@ define <vscale x 1 x float> @vfwnmsac_fv_nxv1f32(<vscale x 1 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_fv_nxv1f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 1 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 1 x half> %head, <vscale x 1 x half> poison, <vscale x 1 x i32> zeroinitializer
@@ -255,10 +255,10 @@ define <vscale x 2 x float> @vfwmacc_vv_nxv2f32(<vscale x 2 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vv_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfmacc.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 2 x half> %vb to <vscale x 2 x float>
   %ve = fpext <vscale x 2 x half> %vc to <vscale x 2 x float>
@@ -276,10 +276,10 @@ define <vscale x 2 x float> @vfwmacc_vf_nxv2f32(<vscale x 2 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vf_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
@@ -299,10 +299,10 @@ define <vscale x 2 x float> @vfwnmacc_vv_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vv_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfnmacc.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 2 x half> %vb to <vscale x 2 x float>
   %ve = fpext <vscale x 2 x half> %vc to <vscale x 2 x float>
@@ -322,10 +322,10 @@ define <vscale x 2 x float> @vfwnmacc_vf_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vf_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
@@ -347,10 +347,10 @@ define <vscale x 2 x float> @vfwnmacc_fv_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_fv_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
@@ -372,10 +372,10 @@ define <vscale x 2 x float> @vfwmsac_vv_nxv2f32(<vscale x 2 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vv_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfmsac.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 2 x half> %vb to <vscale x 2 x float>
   %ve = fpext <vscale x 2 x half> %vc to <vscale x 2 x float>
@@ -394,10 +394,10 @@ define <vscale x 2 x float> @vfwmsac_vf_nxv2f32(<vscale x 2 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vf_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
@@ -418,10 +418,10 @@ define <vscale x 2 x float> @vfwnmsac_vv_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vv_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vv v8, v11, v9
+; ZVFHMIN-NEXT:    vfnmsac.vv v8, v1, v2
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 2 x half> %vb to <vscale x 2 x float>
   %ve = fpext <vscale x 2 x half> %vc to <vscale x 2 x float>
@@ -440,10 +440,10 @@ define <vscale x 2 x float> @vfwnmsac_vf_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vf_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
@@ -464,10 +464,10 @@ define <vscale x 2 x float> @vfwnmsac_fv_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_fv_nxv2f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v9
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v10
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v1
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 2 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 2 x half> %head, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
@@ -491,10 +491,10 @@ define <vscale x 4 x float> @vfwmacc_vv_nxv4f32(<vscale x 4 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v11
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v11
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vv v8, v12, v14
+; ZVFHMIN-NEXT:    vfmacc.vv v8, v2, v4
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 4 x half> %vb to <vscale x 4 x float>
   %ve = fpext <vscale x 4 x half> %vc to <vscale x 4 x float>
@@ -512,10 +512,10 @@ define <vscale x 4 x float> @vfwmacc_vf_nxv4f32(<vscale x 4 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vf_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v12
+; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v2
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
@@ -535,10 +535,10 @@ define <vscale x 4 x float> @vfwnmacc_vv_nxv4f32(<vscale x 4 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v11
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v11
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vv v8, v12, v14
+; ZVFHMIN-NEXT:    vfnmacc.vv v8, v2, v4
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 4 x half> %vb to <vscale x 4 x float>
   %ve = fpext <vscale x 4 x half> %vc to <vscale x 4 x float>
@@ -558,10 +558,10 @@ define <vscale x 4 x float> @vfwnmacc_vf_nxv4f32(<vscale x 4 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vf_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v12
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v2
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
@@ -583,10 +583,10 @@ define <vscale x 4 x float> @vfwnmacc_fv_nxv4f32(<vscale x 4 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_fv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v12
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v2
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
@@ -608,10 +608,10 @@ define <vscale x 4 x float> @vfwmsac_vv_nxv4f32(<vscale x 4 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v11
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v11
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vv v8, v12, v14
+; ZVFHMIN-NEXT:    vfmsac.vv v8, v2, v4
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 4 x half> %vb to <vscale x 4 x float>
   %ve = fpext <vscale x 4 x half> %vc to <vscale x 4 x float>
@@ -630,10 +630,10 @@ define <vscale x 4 x float> @vfwmsac_vf_nxv4f32(<vscale x 4 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vf_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v12
+; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v2
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
@@ -654,10 +654,10 @@ define <vscale x 4 x float> @vfwnmsac_vv_nxv4f32(<vscale x 4 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v14, v11
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v11
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vv v8, v12, v14
+; ZVFHMIN-NEXT:    vfnmsac.vv v8, v2, v4
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 4 x half> %vb to <vscale x 4 x float>
   %ve = fpext <vscale x 4 x half> %vc to <vscale x 4 x float>
@@ -676,10 +676,10 @@ define <vscale x 4 x float> @vfwnmsac_vf_nxv4f32(<vscale x 4 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vf_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v12
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v2
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
@@ -700,10 +700,10 @@ define <vscale x 4 x float> @vfwnmsac_fv_nxv4f32(<vscale x 4 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_fv_nxv4f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v2, v10
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v12
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v2
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 4 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 4 x half> %head, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
@@ -726,10 +726,10 @@ define <vscale x 8 x float> @vfwmacc_vv_nxv8f32(<vscale x 8 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v14
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v14
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vv v8, v16, v20
+; ZVFHMIN-NEXT:    vfmacc.vv v8, v4, v16
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 8 x half> %vb to <vscale x 8 x float>
   %ve = fpext <vscale x 8 x half> %vc to <vscale x 8 x float>
@@ -747,10 +747,10 @@ define <vscale x 8 x float> @vfwmacc_vf_nxv8f32(<vscale x 8 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmacc_vf_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v16
+; ZVFHMIN-NEXT:    vfmacc.vf v8, fa5, v4
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -770,10 +770,10 @@ define <vscale x 8 x float> @vfwnmacc_vv_nxv8f32(<vscale x 8 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v14
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v14
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vv v8, v16, v20
+; ZVFHMIN-NEXT:    vfnmacc.vv v8, v4, v16
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 8 x half> %vb to <vscale x 8 x float>
   %ve = fpext <vscale x 8 x half> %vc to <vscale x 8 x float>
@@ -793,10 +793,10 @@ define <vscale x 8 x float> @vfwnmacc_vf_nxv8f32(<vscale x 8 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_vf_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v16
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v4
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -818,10 +818,10 @@ define <vscale x 8 x float> @vfwnmacc_fv_nxv8f32(<vscale x 8 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmacc_fv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v16
+; ZVFHMIN-NEXT:    vfnmacc.vf v8, fa5, v4
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -843,10 +843,10 @@ define <vscale x 8 x float> @vfwmsac_vv_nxv8f32(<vscale x 8 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v14
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v14
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vv v8, v16, v20
+; ZVFHMIN-NEXT:    vfmsac.vv v8, v4, v16
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 8 x half> %vb to <vscale x 8 x float>
   %ve = fpext <vscale x 8 x half> %vc to <vscale x 8 x float>
@@ -865,10 +865,10 @@ define <vscale x 8 x float> @vfwmsac_vf_nxv8f32(<vscale x 8 x float> %va, <vscal
 ; ZVFHMIN-LABEL: vfwmsac_vf_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v16
+; ZVFHMIN-NEXT:    vfmsac.vf v8, fa5, v4
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -889,10 +889,10 @@ define <vscale x 8 x float> @vfwnmsac_vv_nxv8f32(<vscale x 8 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v20, v14
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v14
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vv v8, v16, v20
+; ZVFHMIN-NEXT:    vfnmsac.vv v8, v4, v16
 ; ZVFHMIN-NEXT:    ret
   %vd = fpext <vscale x 8 x half> %vb to <vscale x 8 x float>
   %ve = fpext <vscale x 8 x half> %vc to <vscale x 8 x float>
@@ -911,10 +911,10 @@ define <vscale x 8 x float> @vfwnmsac_vf_nxv8f32(<vscale x 8 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_vf_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v16
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v4
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -935,10 +935,10 @@ define <vscale x 8 x float> @vfwnmsac_fv_nxv8f32(<vscale x 8 x float> %va, <vsca
 ; ZVFHMIN-LABEL: vfwnmsac_fv_nxv8f32:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v4, v12
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v16
+; ZVFHMIN-NEXT:    vfnmsac.vf v8, fa5, v4
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %c, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer

@@ -144,8 +144,8 @@ define void @combine_zero_stores_4xi32(ptr %p) {
 ; RV32-LABEL: combine_zero_stores_4xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vmv.v.i v1, 0
+; RV32-NEXT:    vse32.v v1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_zero_stores_4xi32:
@@ -167,15 +167,15 @@ define void @combine_zero_stores_8xi32(ptr %p) {
 ; RV32-LABEL: combine_zero_stores_8xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    vmv.v.i v2, 0
+; RV32-NEXT:    vse32.v v2, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_zero_stores_8xi32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    vmv.v.i v2, 0
+; RV64-NEXT:    vse64.v v2, (a0)
 ; RV64-NEXT:    ret
   store i32 zeroinitializer, ptr %p, align 32
   %gep1 = getelementptr i32, ptr %p, i64 1

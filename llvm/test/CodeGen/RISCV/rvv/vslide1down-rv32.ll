@@ -860,8 +860,8 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_vx_nxv1i64_nxv1i64_i64(<vscale 
 ; CHECK-NEXT:    vsetvli a2, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v1, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v1, a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.nxv1i64.i64(
@@ -887,10 +887,10 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_vx_nxv1i64_nxv1i64_i64(<vs
 ; CHECK-NEXT:    vsetvli a3, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v9, v9, a0
-; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vslide1down.vx v1, v9, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmerge.vvm v8, v8, v1, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vslide1down.mask.nxv1i64.i64(
@@ -915,8 +915,8 @@ define <vscale x 2 x i64> @intrinsic_vslide1down_vx_nxv2i64_nxv2i64_i64(<vscale 
 ; CHECK-NEXT:    vsetvli a2, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v2, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v2, a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vslide1down.nxv2i64.i64(
@@ -942,10 +942,10 @@ define <vscale x 2 x i64> @intrinsic_vslide1down_mask_vx_nxv2i64_nxv2i64_i64(<vs
 ; CHECK-NEXT:    vsetvli a3, a2, e64, m2, ta, ma
 ; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v10, a0
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
+; CHECK-NEXT:    vslide1down.vx v2, v10, a0
+; CHECK-NEXT:    vslide1down.vx v2, v2, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vmerge.vvm v8, v8, v2, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vslide1down.mask.nxv2i64.i64(
@@ -970,8 +970,8 @@ define <vscale x 4 x i64> @intrinsic_vslide1down_vx_nxv4i64_nxv4i64_i64(<vscale 
 ; CHECK-NEXT:    vsetvli a2, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
+; CHECK-NEXT:    vslide1down.vx v4, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v4, a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vslide1down.nxv4i64.i64(
@@ -997,10 +997,10 @@ define <vscale x 4 x i64> @intrinsic_vslide1down_mask_vx_nxv4i64_nxv4i64_i64(<vs
 ; CHECK-NEXT:    vsetvli a3, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    slli a3, a3, 1
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m4, ta, ma
-; CHECK-NEXT:    vslide1down.vx v12, v12, a0
-; CHECK-NEXT:    vslide1down.vx v12, v12, a1
+; CHECK-NEXT:    vslide1down.vx v4, v12, a0
+; CHECK-NEXT:    vslide1down.vx v4, v4, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    vmerge.vvm v8, v8, v4, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vslide1down.mask.nxv4i64.i64(

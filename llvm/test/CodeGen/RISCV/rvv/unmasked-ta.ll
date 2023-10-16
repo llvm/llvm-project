@@ -283,8 +283,8 @@ define <vscale x 1 x i64>  @intrinsic_vmacc_vx_nxv1i64_i64_nxv1i64(<vscale x 1 x
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vmacc.vv v8, v9, v10
+; RV32-NEXT:    vlse64.v v1, (a0), zero
+; RV32-NEXT:    vmacc.vv v8, v9, v1
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -318,8 +318,8 @@ define <vscale x 1 x i64>  @intrinsic_vmadd_vx_nxv1i64_i64_nxv1i64(<vscale x 1 x
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vmadd.vv v8, v10, v9
+; RV32-NEXT:    vlse64.v v1, (a0), zero
+; RV32-NEXT:    vmadd.vv v8, v1, v9
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -353,8 +353,8 @@ define <vscale x 1 x i64>  @intrinsic_vnmsac_vx_nxv1i64_i64_nxv1i64(<vscale x 1 
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vnmsac.vv v8, v9, v10
+; RV32-NEXT:    vlse64.v v1, (a0), zero
+; RV32-NEXT:    vnmsac.vv v8, v9, v1
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -388,8 +388,8 @@ define <vscale x 1 x i64>  @intrinsic_vnmsub_vx_nxv1i64_i64_nxv1i64(<vscale x 1 
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vnmsub.vv v8, v10, v9
+; RV32-NEXT:    vlse64.v v1, (a0), zero
+; RV32-NEXT:    vnmsub.vv v8, v1, v9
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -946,8 +946,8 @@ define <vscale x 1 x i8> @intrinsic_vcompress_um_nxv1i8_nxv1i8(<vscale x 1 x i8>
 ; CHECK-LABEL: intrinsic_vcompress_um_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v1, v8, v0
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vcompress.nxv1i8(

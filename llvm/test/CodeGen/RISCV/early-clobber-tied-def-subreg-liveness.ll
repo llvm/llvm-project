@@ -27,12 +27,12 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_48)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_48)
-; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vle8.v v1, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v10, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v1, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_46)
 ; CHECK-NEXT:    vle16.v v10, (a0)
@@ -54,33 +54,33 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_40)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_40)
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v2, (a0)
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_44)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_44)
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    vl2r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    vl2r.v v10, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    vl2r.v v12, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    vl2r.v v14, (a1) # Unknown-size Folded Reload
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    vl2r.v v16, (a1) # Unknown-size Folded Reload
-; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vle16.v v14, (a0)
 ; CHECK-NEXT:    lui a0, 1048572
 ; CHECK-NEXT:    addi a0, a0, 928
-; CHECK-NEXT:    vmsbc.vx v0, v8, a0
+; CHECK-NEXT:    vmsbc.vx v0, v2, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsext.vf2 v10, v8, v0.t
+; CHECK-NEXT:    vl1r.v v1, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsext.vf2 v8, v1, v0.t
 ; CHECK-NEXT:    lui a0, %hi(var_47)
 ; CHECK-NEXT:    addi a0, a0, %lo(var_47)
-; CHECK-NEXT:    vsseg4e16.v v10, (a0)
+; CHECK-NEXT:    vsseg4e16.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    mul a0, a0, a1

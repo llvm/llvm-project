@@ -17,10 +17,10 @@ body:             |
     ; CHECK: liveins: $v0, $v1, $v2, $v3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 1, 192 /* e8, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: renamable $v8 = PseudoVMERGE_VIM_M1 undef renamable $v8, killed renamable $v2, 1, killed renamable $v0, 1, 3 /* e8 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v4 = PseudoVMERGE_VIM_M1 undef renamable $v4, killed renamable $v2, 1, killed renamable $v0, 1, 3 /* e8 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: renamable $v0 = COPY killed renamable $v1
-    ; CHECK-NEXT: renamable $v9 = PseudoVMERGE_VIM_M1 undef renamable $v9, killed renamable $v3, 1, killed renamable $v0, 1, 3 /* e8 */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: renamable $v0 = PseudoVADD_VV_M1 undef renamable $v0, killed renamable $v8, killed renamable $v9, 1, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v2 = PseudoVMERGE_VIM_M1 undef renamable $v2, killed renamable $v3, 1, killed renamable $v0, 1, 3 /* e8 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: renamable $v0 = PseudoVADD_VV_M1 undef renamable $v0, killed renamable $v4, killed renamable $v2, 1, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:vr = COPY $v0
     %1:vr = COPY $v1

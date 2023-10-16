@@ -5,9 +5,9 @@ define i64 @reduce_add(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vredsum.vs v8, v8, v10
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.s.x v1, a0
+; CHECK-NEXT:    vredsum.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
@@ -19,10 +19,10 @@ define i64 @reduce_add2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_add2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 8
+; CHECK-NEXT:    vmv.v.i v1, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredsum.vs v8, v8, v10
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredsum.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %v)
@@ -34,8 +34,8 @@ define i64 @reduce_and(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_and:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredand.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vredand.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a1, v1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -48,8 +48,8 @@ define i64 @reduce_and2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_and2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredand.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredand.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    andi a0, a0, 8
 ; CHECK-NEXT:    ret
 entry:
@@ -62,8 +62,8 @@ define i64 @reduce_or(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_or:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredor.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vredor.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a1, v1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -76,8 +76,8 @@ define i64 @reduce_or2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_or2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredor.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredor.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ori a0, a0, 8
 ; CHECK-NEXT:    ret
 entry:
@@ -90,9 +90,9 @@ define i64 @reduce_xor(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_xor:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vredxor.vs v8, v8, v10
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.s.x v1, a0
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> %v)
@@ -104,9 +104,9 @@ define i64 @reduce_xor2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_xor2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v10
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vmv.s.x v1, zero
+; CHECK-NEXT:    vredxor.vs v1, v8, v1
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    andi a0, a0, 8
 ; CHECK-NEXT:    ret
 entry:
@@ -119,8 +119,8 @@ define i64 @reduce_umax(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredmaxu.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vredmaxu.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a1, v1
 ; CHECK-NEXT:    maxu a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -133,8 +133,8 @@ define i64 @reduce_umax2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_umax2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredmaxu.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredmaxu.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    li a1, 8
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -148,8 +148,8 @@ define i64 @reduce_umin(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredminu.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vredminu.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a1, v1
 ; CHECK-NEXT:    minu a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -162,8 +162,8 @@ define i64 @reduce_umin2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_umin2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredminu.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredminu.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    li a1, 8
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -177,8 +177,8 @@ define i64 @reduce_smax(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_smax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredmax.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vredmax.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a1, v1
 ; CHECK-NEXT:    max a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -191,8 +191,8 @@ define i64 @reduce_smax2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_smax2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredmax.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredmax.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    li a1, 8
 ; CHECK-NEXT:    max a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -206,8 +206,8 @@ define i64 @reduce_smin(i64 %x, <4 x i64> %v) {
 ; CHECK-LABEL: reduce_smin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredmin.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vredmin.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a1, v1
 ; CHECK-NEXT:    min a0, a1, a0
 ; CHECK-NEXT:    ret
 entry:
@@ -220,8 +220,8 @@ define i64 @reduce_smin2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_smin2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vredmin.vs v8, v8, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredmin.vs v1, v8, v8
+; CHECK-NEXT:    vmv.x.s a0, v1
 ; CHECK-NEXT:    li a1, 8
 ; CHECK-NEXT:    min a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -235,9 +235,9 @@ define float @reduce_fadd(float %x, <4 x float> %v) {
 ; CHECK-LABEL: reduce_fadd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float %x, <4 x float> %v)
@@ -248,9 +248,9 @@ define float @reduce_fadd2(float %x, <4 x float> %v) {
 ; CHECK-LABEL: reduce_fadd2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> %v)
@@ -262,12 +262,12 @@ define float @reduce_fadd3(float %x, <4 x float> %v, ptr %rdxptr) {
 ; CHECK-LABEL: reduce_fadd3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vmv.s.x v1, zero
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa5, v1
 ; CHECK-NEXT:    fadd.s fa0, fa5, fa0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    vse32.v v1, (a0)
 ; CHECK-NEXT:    ret
 entry:
   %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.0, <4 x float> %v)
@@ -280,12 +280,12 @@ define float @reduce_fadd4(float %x, float %y, <4 x float> %v, <4 x float> %w) {
 ; CHECK-LABEL: reduce_fadd4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfmv.s.f v8, fa1
-; CHECK-NEXT:    vfredusum.vs v8, v9, v8
-; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa5, v1
+; CHECK-NEXT:    vfmv.s.f v1, fa1
+; CHECK-NEXT:    vfredusum.vs v1, v9, v1
+; CHECK-NEXT:    vfmv.f.s fa4, v1
 ; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
 entry:
@@ -301,8 +301,8 @@ define float @reduce_fmax(float %x, <4 x float> %v) {
 ; CHECK-LABEL: reduce_fmax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfredmax.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v1
 ; CHECK-NEXT:    fmax.s fa0, fa0, fa5
 ; CHECK-NEXT:    ret
 entry:
@@ -315,8 +315,8 @@ define float @reduce_fmin(float %x, <4 x float> %v) {
 ; CHECK-LABEL: reduce_fmin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vfredmin.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa5, v1
 ; CHECK-NEXT:    fmin.s fa0, fa0, fa5
 ; CHECK-NEXT:    ret
 entry:

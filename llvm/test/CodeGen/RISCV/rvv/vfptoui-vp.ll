@@ -10,18 +10,18 @@ define <vscale x 2 x i7> @vfptoui_v4i7_v4f16(<vscale x 2 x half> %va, <vscale x 
 ; ZVFH-LABEL: vfptoui_v4i7_v4f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8, v0.t
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfncvt.rtz.x.f.w v1, v8, v0.t
+; ZVFH-NEXT:    vmv1r.v v8, v1
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_v4i7_v4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v8, v9, v0.t
+; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v2, v1, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; ZVFHMIN-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; ZVFHMIN-NEXT:    vnsrl.wi v8, v2, 0, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i7> @llvm.vp.fptoui.v4i7.v4f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i7> %v
@@ -33,18 +33,18 @@ define <vscale x 2 x i8> @vfptoui_nxv2i8_nxv2f16(<vscale x 2 x half> %va, <vscal
 ; ZVFH-LABEL: vfptoui_nxv2i8_nxv2f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8, v0.t
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v1, v8, v0.t
+; ZVFH-NEXT:    vmv1r.v v8, v1
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_nxv2i8_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v9, v0.t
+; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v2, v1, v0.t
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; ZVFHMIN-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; ZVFHMIN-NEXT:    vnsrl.wi v8, v2, 0, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -54,18 +54,18 @@ define <vscale x 2 x i8> @vfptoui_nxv2i8_nxv2f16_unmasked(<vscale x 2 x half> %v
 ; ZVFH-LABEL: vfptoui_nxv2i8_nxv2f16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v1, v8
+; ZVFH-NEXT:    vmv1r.v v8, v1
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_nxv2i8_nxv2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v9
+; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v2, v1
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; ZVFHMIN-NEXT:    vnsrl.wi v8, v8, 0
+; ZVFHMIN-NEXT:    vnsrl.wi v8, v2, 0
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -83,9 +83,9 @@ define <vscale x 2 x i16> @vfptoui_nxv2i16_nxv2f16(<vscale x 2 x half> %va, <vsc
 ; ZVFHMIN-LABEL: vfptoui_nxv2i16_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v9, v0.t
+; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v1, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -101,9 +101,9 @@ define <vscale x 2 x i16> @vfptoui_nxv2i16_nxv2f16_unmasked(<vscale x 2 x half> 
 ; ZVFHMIN-LABEL: vfptoui_nxv2i16_nxv2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v9
+; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v1
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -115,16 +115,16 @@ define <vscale x 2 x i32> @vfptoui_nxv2i32_nxv2f16(<vscale x 2 x half> %va, <vsc
 ; ZVFH-LABEL: vfptoui_nxv2i32_nxv2f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v9, v8, v0.t
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v1, v8, v0.t
+; ZVFH-NEXT:    vmv1r.v v8, v1
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_nxv2i32_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfcvt.rtz.xu.f.v v8, v9, v0.t
+; ZVFHMIN-NEXT:    vfcvt.rtz.xu.f.v v8, v1, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2i32.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i32> %v
@@ -134,16 +134,16 @@ define <vscale x 2 x i32> @vfptoui_nxv2i32_nxv2f16_unmasked(<vscale x 2 x half> 
 ; ZVFH-LABEL: vfptoui_nxv2i32_nxv2f16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v9, v8
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v1, v8
+; ZVFH-NEXT:    vmv1r.v v8, v1
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_nxv2i32_nxv2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfcvt.rtz.xu.f.v v8, v9
+; ZVFHMIN-NEXT:    vfcvt.rtz.xu.f.v v8, v1
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2i32.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i32> %v
@@ -155,17 +155,17 @@ define <vscale x 2 x i64> @vfptoui_nxv2i64_nxv2f16(<vscale x 2 x half> %va, <vsc
 ; ZVFH-LABEL: vfptoui_nxv2i64_nxv2f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
+; ZVFH-NEXT:    vfwcvt.f.f.v v1, v8, v0.t
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v10, v0.t
+; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v1, v0.t
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_nxv2i64_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.rtz.xu.f.v v8, v10, v0.t
+; ZVFHMIN-NEXT:    vfwcvt.rtz.xu.f.v v8, v1, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2i64.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -175,17 +175,17 @@ define <vscale x 2 x i64> @vfptoui_nxv2i64_nxv2f16_unmasked(<vscale x 2 x half> 
 ; ZVFH-LABEL: vfptoui_nxv2i64_nxv2f16_unmasked:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFH-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v10
+; ZVFH-NEXT:    vfwcvt.rtz.xu.f.v v8, v1
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptoui_nxv2i64_nxv2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v1, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.rtz.xu.f.v v8, v10
+; ZVFHMIN-NEXT:    vfwcvt.rtz.xu.f.v v8, v1
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2i64.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -197,9 +197,9 @@ define <vscale x 2 x i8> @vfptoui_nxv2i8_nxv2f32(<vscale x 2 x float> %va, <vsca
 ; CHECK-LABEL: vfptoui_nxv2i8_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8, v0.t
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v9, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -209,9 +209,9 @@ define <vscale x 2 x i8> @vfptoui_nxv2i8_nxv2f32_unmasked(<vscale x 2 x float> %
 ; CHECK-LABEL: vfptoui_nxv2i8_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v9, 0
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -223,8 +223,8 @@ define <vscale x 2 x i16> @vfptoui_nxv2i16_nxv2f32(<vscale x 2 x float> %va, <vs
 ; CHECK-LABEL: vfptoui_nxv2i16_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -234,8 +234,8 @@ define <vscale x 2 x i16> @vfptoui_nxv2i16_nxv2f32_unmasked(<vscale x 2 x float>
 ; CHECK-LABEL: vfptoui_nxv2i16_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -269,8 +269,8 @@ define <vscale x 2 x i64> @vfptoui_nxv2i64_nxv2f32(<vscale x 2 x float> %va, <vs
 ; CHECK-LABEL: vfptoui_nxv2i64_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v2, v8, v0.t
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2i64.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -280,8 +280,8 @@ define <vscale x 2 x i64> @vfptoui_nxv2i64_nxv2f32_unmasked(<vscale x 2 x float>
 ; CHECK-LABEL: vfptoui_nxv2i64_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v2, v8
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.fptoui.nxv2i64.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i64> %v
@@ -293,11 +293,11 @@ define <vscale x 2 x i8> @vfptoui_nxv2i8_nxv2f64(<vscale x 2 x double> %va, <vsc
 ; CHECK-LABEL: vfptoui_nxv2i8_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8, v0.t
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v1, v1, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -307,11 +307,11 @@ define <vscale x 2 x i8> @vfptoui_nxv2i8_nxv2f64_unmasked(<vscale x 2 x double> 
 ; CHECK-LABEL: vfptoui_nxv2i8_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    vnsrl.wi v1, v1, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.fptoui.nxv2i8.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i8> %v
@@ -323,9 +323,9 @@ define <vscale x 2 x i16> @vfptoui_nxv2i16_nxv2f64(<vscale x 2 x double> %va, <v
 ; CHECK-LABEL: vfptoui_nxv2i16_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8, v0.t
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -335,9 +335,9 @@ define <vscale x 2 x i16> @vfptoui_nxv2i16_nxv2f64_unmasked(<vscale x 2 x double
 ; CHECK-LABEL: vfptoui_nxv2i16_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.fptoui.nxv2i16.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i16> %v
@@ -349,8 +349,8 @@ define <vscale x 2 x i32> @vfptoui_nxv2i32_nxv2f64(<vscale x 2 x double> %va, <v
 ; CHECK-LABEL: vfptoui_nxv2i32_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2i32.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i32> %v
@@ -360,8 +360,8 @@ define <vscale x 2 x i32> @vfptoui_nxv2i32_nxv2f64_unmasked(<vscale x 2 x double
 ; CHECK-LABEL: vfptoui_nxv2i32_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v1, v8
+; CHECK-NEXT:    vmv.v.v v8, v1
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.fptoui.nxv2i32.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %evl)
   ret <vscale x 2 x i32> %v
@@ -394,7 +394,7 @@ declare <vscale x 32 x i16> @llvm.vp.fptoui.nxv32i16.nxv32f32(<vscale x 32 x flo
 define <vscale x 32 x i16> @vfptoui_nxv32i16_nxv32f32(<vscale x 32 x float> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_nxv32i16_nxv32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v1, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
@@ -411,7 +411,7 @@ define <vscale x 32 x i16> @vfptoui_nxv32i16_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB25_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vfncvt.rtz.xu.f.w v24, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    ret
@@ -424,7 +424,7 @@ declare <vscale x 32 x i32> @llvm.vp.fptoui.nxv32i32.nxv32f32(<vscale x 32 x flo
 define <vscale x 32 x i32> @vfptoui_nxv32i32_nxv32f32(<vscale x 32 x float> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_nxv32i32_nxv32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v1, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
@@ -441,7 +441,7 @@ define <vscale x 32 x i32> @vfptoui_nxv32i32_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB26_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i32> @llvm.vp.fptoui.nxv32i32.nxv32f32(<vscale x 32 x float> %va, <vscale x 32 x i1> %m, i32 %evl)

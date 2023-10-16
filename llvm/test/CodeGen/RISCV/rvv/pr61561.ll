@@ -4,22 +4,22 @@
 define <vscale x 4 x i8> @foo(ptr %p) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl1re16.v v8, (a0)
+; CHECK-NEXT:    vl1re16.v v1, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vsll.vi v8, v8, 3
+; CHECK-NEXT:    vsll.vi v1, v1, 3
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v2, v1
 ; CHECK-NEXT:    li a0, 248
-; CHECK-NEXT:    vand.vx v8, v10, a0
+; CHECK-NEXT:    vand.vx v2, v2, a0
 ; CHECK-NEXT:    lui a0, 4
-; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vmv.v.x v4, a0
 ; CHECK-NEXT:    lui a0, 1
 ; CHECK-NEXT:    addi a0, a0, -361
-; CHECK-NEXT:    vmacc.vx v10, a0, v8
+; CHECK-NEXT:    vmacc.vx v4, a0, v2
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 15
+; CHECK-NEXT:    vnsrl.wi v1, v4, 15
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnsrl.wi v8, v1, 0
 ; CHECK-NEXT:    ret
   %i13 = load <vscale x 4 x i16>, ptr %p, align 2
   %i14 = zext <vscale x 4 x i16> %i13 to <vscale x 4 x i32>

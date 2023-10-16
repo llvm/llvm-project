@@ -8,8 +8,8 @@ define <vscale x 1 x double> @vfwmul_vv_nxv1f64(<vscale x 1 x float> %va, <vscal
 ; CHECK-LABEL: vfwmul_vv_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwmul.vv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vfwmul.vv v1, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %vc = fpext <vscale x 1 x float> %va to <vscale x 1 x double>
   %vd = fpext <vscale x 1 x float> %vb to <vscale x 1 x double>
@@ -21,8 +21,8 @@ define <vscale x 1 x double> @vfwmul_vf_nxv1f64(<vscale x 1 x float> %va, float 
 ; CHECK-LABEL: vfwmul_vf_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwmul.vf v9, v8, fa0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwmul.vf v1, v8, fa0
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 1 x float> %head, <vscale x 1 x float> poison, <vscale x 1 x i32> zeroinitializer
@@ -36,8 +36,8 @@ define <vscale x 1 x double> @vfwmul_vf_nxv1f64_2(<vscale x 1 x float> %va, floa
 ; CHECK-LABEL: vfwmul_vf_nxv1f64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwmul.vf v9, v8, fa0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwmul.vf v1, v8, fa0
+; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
   %fpext = fpext float %b to double
   %head = insertelement <vscale x 1 x double> poison, double %fpext, i32 0
@@ -51,8 +51,8 @@ define <vscale x 2 x double> @vfwmul_vv_nxv2f64(<vscale x 2 x float> %va, <vscal
 ; CHECK-LABEL: vfwmul_vv_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwmul.vv v10, v8, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwmul.vv v2, v8, v9
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %vc = fpext <vscale x 2 x float> %va to <vscale x 2 x double>
   %vd = fpext <vscale x 2 x float> %vb to <vscale x 2 x double>
@@ -64,8 +64,8 @@ define <vscale x 2 x double> @vfwmul_vf_nxv2f64(<vscale x 2 x float> %va, float 
 ; CHECK-LABEL: vfwmul_vf_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwmul.vf v10, v8, fa0
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwmul.vf v2, v8, fa0
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 2 x float> %head, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
@@ -79,8 +79,8 @@ define <vscale x 2 x double> @vfwmul_vf_nxv2f64_2(<vscale x 2 x float> %va, floa
 ; CHECK-LABEL: vfwmul_vf_nxv2f64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwmul.vf v10, v8, fa0
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vfwmul.vf v2, v8, fa0
+; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
   %fpext = fpext float %b to double
   %head = insertelement <vscale x 2 x double> poison, double %fpext, i32 0
@@ -94,8 +94,8 @@ define <vscale x 4 x double> @vfwmul_vv_nxv4f64(<vscale x 4 x float> %va, <vscal
 ; CHECK-LABEL: vfwmul_vv_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwmul.vv v12, v8, v10
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwmul.vv v4, v8, v10
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
   %vc = fpext <vscale x 4 x float> %va to <vscale x 4 x double>
   %vd = fpext <vscale x 4 x float> %vb to <vscale x 4 x double>
@@ -107,8 +107,8 @@ define <vscale x 4 x double> @vfwmul_vf_nxv4f64(<vscale x 4 x float> %va, float 
 ; CHECK-LABEL: vfwmul_vf_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwmul.vf v12, v8, fa0
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwmul.vf v4, v8, fa0
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> poison, float %b, i32 0
   %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -122,8 +122,8 @@ define <vscale x 4 x double> @vfwmul_vf_nxv4f64_2(<vscale x 4 x float> %va, floa
 ; CHECK-LABEL: vfwmul_vf_nxv4f64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwmul.vf v12, v8, fa0
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vfwmul.vf v4, v8, fa0
+; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
   %fpext = fpext float %b to double
   %head = insertelement <vscale x 4 x double> poison, double %fpext, i32 0

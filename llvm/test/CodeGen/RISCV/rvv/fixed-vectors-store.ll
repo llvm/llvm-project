@@ -132,11 +132,11 @@ define void @store_constant_v2i32(ptr %p) {
 ; CHECK-LABEL: store_constant_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 3
-; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vmv.v.i v1, 3
+; CHECK-NEXT:    vid.v v2
 ; CHECK-NEXT:    li a1, 3
-; CHECK-NEXT:    vmadd.vx v9, a1, v8
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vmadd.vx v2, a1, v1
+; CHECK-NEXT:    vse32.v v2, (a0)
 ; CHECK-NEXT:    ret
   store <2 x i32> <i32 3, i32 6>, ptr %p
   ret void
@@ -159,10 +159,10 @@ define void @store_constant_v4i16(ptr %p) {
 ; CHECK-NEXT:    lui a1, 4176
 ; CHECK-NEXT:    addi a1, a1, 1539
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    vmv.s.x v1, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v9, v8
-; CHECK-NEXT:    vse16.v v9, (a0)
+; CHECK-NEXT:    vsext.vf2 v2, v1
+; CHECK-NEXT:    vse16.v v2, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i16> <i16 3, i16 6, i16 5, i16 1>, ptr %p
   ret void
@@ -174,9 +174,9 @@ define void @store_constant_v4i32(ptr %p) {
 ; CHECK-NEXT:    lui a1, 4176
 ; CHECK-NEXT:    addi a1, a1, 1539
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    vsext.vf4 v9, v8
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vmv.s.x v1, a1
+; CHECK-NEXT:    vsext.vf4 v2, v1
+; CHECK-NEXT:    vse32.v v2, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i32> <i32 3, i32 6, i32 5, i32 1>, ptr %p
   ret void
@@ -197,11 +197,11 @@ define void @store_constant_v2i8_align1(ptr %p) {
 ; CHECK-LABEL: store_constant_v2i8_align1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 3
-; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vmv.v.i v1, 3
+; CHECK-NEXT:    vid.v v2
 ; CHECK-NEXT:    li a1, 3
-; CHECK-NEXT:    vmadd.vx v9, a1, v8
-; CHECK-NEXT:    vse8.v v9, (a0)
+; CHECK-NEXT:    vmadd.vx v2, a1, v1
+; CHECK-NEXT:    vse8.v v2, (a0)
 ; CHECK-NEXT:    ret
   store <2 x i8> <i8 3, i8 6>, ptr %p, align 1
   ret void
@@ -231,8 +231,8 @@ define void @store_constant_v2i8_volatile(ptr %p) {
 ; CHECK-LABEL: store_constant_v2i8_volatile:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 1
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vmv.v.i v1, 1
+; CHECK-NEXT:    vse8.v v1, (a0)
 ; CHECK-NEXT:    ret
   store volatile <2 x i8> <i8 1, i8 1>, ptr %p
   ret void

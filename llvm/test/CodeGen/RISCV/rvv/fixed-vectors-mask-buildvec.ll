@@ -16,16 +16,16 @@ define <1 x i1> @buildvec_mask_nonconst_v1i1(i1 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmv.s.x v1, a0
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v1i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    andi a0, a0, 1
 ; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.s.x v8, a0
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vmv.s.x v1, a0
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <1 x i1> poison, i1 %x, i32 0
   ret <1 x i1> %1
@@ -36,16 +36,16 @@ define <1 x i1> @buildvec_mask_optsize_nonconst_v1i1(i1 %x) optsize {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmv.s.x v1, a0
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v1i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    andi a0, a0, 1
 ; ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vmv.s.x v8, a0
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vmv.s.x v1, a0
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <1 x i1> poison, i1 %x, i32 0
   ret <1 x i1> %1
@@ -55,19 +55,19 @@ define <2 x i1> @buildvec_mask_nonconst_v2i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v2i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <2 x i1> poison, i1 %x, i32 0
   %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
@@ -79,19 +79,19 @@ define <2 x i1> @buildvec_mask_optsize_nonconst_v2i1(i1 %x, i1 %y) optsize {
 ; CHECK-LABEL: buildvec_mask_optsize_nonconst_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v2i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <2 x i1> poison, i1 %x, i32 0
   %2 = insertelement <2 x i1> %1,  i1 %y, i32 1
@@ -148,20 +148,20 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1(i1 %x, i1 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 3
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vmerge.vxm v1, v1, a0, v0
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVE32F-NEXT:    vmv.v.i v0, 3
-; ZVE32F-NEXT:    vmv.v.x v8, a1
-; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vmv.v.x v1, a1
+; ZVE32F-NEXT:    vmerge.vxm v1, v1, a0, v0
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <4 x i1> poison, i1 %x, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
@@ -175,23 +175,23 @@ define <4 x i1> @buildvec_mask_optsize_nonconst_v4i1(i1 %x, i1 %y) optsize {
 ; CHECK-LABEL: buildvec_mask_optsize_nonconst_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v4i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <4 x i1> poison, i1 %x, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
@@ -204,25 +204,25 @@ define <4 x i1> @buildvec_mask_nonconst_v4i1_2(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v4i1_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, zero
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v4i1_2:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, zero
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
 ; ZVE32F-NEXT:    li a0, 1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <4 x i1> poison, i1 0, i32 0
   %2 = insertelement <4 x i1> %1,  i1 %x, i32 1
@@ -254,10 +254,10 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a2, 19
 ; CHECK-NEXT:    vmv.s.x v0, a2
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmv.v.x v1, a1
+; CHECK-NEXT:    vmerge.vxm v1, v1, a0, v0
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1:
@@ -265,10 +265,10 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; ZVE32F-NEXT:    li a2, 19
 ; ZVE32F-NEXT:    vmv.s.x v0, a2
-; ZVE32F-NEXT:    vmv.v.x v8, a1
-; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vmv.v.x v1, a1
+; ZVE32F-NEXT:    vmerge.vxm v1, v1, a0, v0
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
@@ -285,33 +285,33 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v8i1_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
 ; CHECK-NEXT:    li a4, 1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a4
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a4
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a3
+; CHECK-NEXT:    vslide1down.vx v1, v1, zero
+; CHECK-NEXT:    vslide1down.vx v1, v1, a2
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1_2:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
 ; ZVE32F-NEXT:    li a4, 1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a4
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a4
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a3
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, zero
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a2
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
@@ -328,33 +328,33 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
 ; CHECK-NEXT:    li a4, 1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a4
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a3
-; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a4
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a3
+; CHECK-NEXT:    vslide1down.vx v1, v1, zero
+; CHECK-NEXT:    vslide1down.vx v1, v1, a2
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v8i1_2:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
 ; ZVE32F-NEXT:    li a4, 1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a4
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a4
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a3
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, zero
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a2
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1
@@ -371,31 +371,31 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK-LABEL: buildvec_mask_optsize_nonconst_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vand.vi v8, v8, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a0
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vslide1down.vx v1, v1, a1
+; CHECK-NEXT:    vand.vi v1, v1, 1
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_nonconst_v8i1:
 ; ZVE32F:       # %bb.0:
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a0
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vand.vi v8, v8, 1
-; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a0
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vslide1down.vx v1, v1, a1
+; ZVE32F-NEXT:    vand.vi v1, v1, 1
+; ZVE32F-NEXT:    vmsne.vi v0, v1, 0
 ; ZVE32F-NEXT:    ret
   %1 = insertelement <8 x i1> poison, i1 %x, i32 0
   %2 = insertelement <8 x i1> %1,  i1 %x, i32 1

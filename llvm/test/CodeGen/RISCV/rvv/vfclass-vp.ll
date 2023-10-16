@@ -8,11 +8,11 @@ define <vscale x 2 x i1> @isnan_nxv2f16(<vscale x 2 x half> %x, <vscale x 2 x i1
 ; CHECK-LABEL: isnan_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8, v0.t
+; CHECK-NEXT:    vfclass.v v1, v8, v0.t
 ; CHECK-NEXT:    li a0, 768
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v1, v1, a0
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f16(<vscale x 2 x half> %x, i32 3, <vscale x 2 x i1> %m, i32 %evl)  ; nan
   ret <vscale x 2 x i1> %1
@@ -22,11 +22,11 @@ define <vscale x 2 x i1> @isnan_nxv2f16_unmasked(<vscale x 2 x half> %x, i32 zer
 ; CHECK-LABEL: isnan_nxv2f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vfclass.v v1, v8
 ; CHECK-NEXT:    li a0, 768
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v1, v1, a0
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
@@ -38,11 +38,11 @@ define <vscale x 2 x i1> @isnan_nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i
 ; CHECK-LABEL: isnan_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8, v0.t
+; CHECK-NEXT:    vfclass.v v1, v8, v0.t
 ; CHECK-NEXT:    li a0, 927
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v1, v1, a0
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f32(<vscale x 2 x float> %x, i32 639, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i1> %1
@@ -52,11 +52,11 @@ define <vscale x 2 x i1> @isnan_nxv2f32_unmasked(<vscale x 2 x float> %x, i32 ze
 ; CHECK-LABEL: isnan_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vfclass.v v1, v8
 ; CHECK-NEXT:    li a0, 927
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v1, v1, a0
+; CHECK-NEXT:    vmsne.vi v0, v1, 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
@@ -68,11 +68,11 @@ define <vscale x 4 x i1> @isnan_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x i
 ; CHECK-LABEL: isnan_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8, v0.t
+; CHECK-NEXT:    vfclass.v v2, v8, v0.t
 ; CHECK-NEXT:    li a0, 768
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v2, v2, a0
+; CHECK-NEXT:    vmsne.vi v0, v2, 0
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i1> @llvm.vp.is.fpclass.nxv4f32(<vscale x 4 x float> %x, i32 3, <vscale x 4 x i1> %m, i32 %evl)  ; nan
   ret <vscale x 4 x i1> %1
@@ -82,11 +82,11 @@ define <vscale x 4 x i1> @isnan_nxv4f32_unmasked(<vscale x 4 x float> %x, i32 ze
 ; CHECK-LABEL: isnan_nxv4f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vfclass.v v2, v8
 ; CHECK-NEXT:    li a0, 768
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v2, v2, a0
+; CHECK-NEXT:    vmsne.vi v0, v2, 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
@@ -98,10 +98,10 @@ define <vscale x 8 x i1> @isnan_nxv8f32(<vscale x 8 x float> %x,  <vscale x 8 x 
 ; CHECK-LABEL: isnan_nxv8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8, v0.t
+; CHECK-NEXT:    vfclass.v v4, v8, v0.t
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmseq.vx v0, v8, a0
+; CHECK-NEXT:    vmseq.vx v0, v4, a0
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 8 x i1> @llvm.vp.is.fpclass.nxv8f32(<vscale x 8 x float> %x, i32 2, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i1> %1
@@ -111,10 +111,10 @@ define <vscale x 8 x i1> @isnan_nxv8f32_unmasked(<vscale x 8 x float> %x, i32 ze
 ; CHECK-LABEL: isnan_nxv8f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vfclass.v v4, v8
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmseq.vx v0, v8, a0
+; CHECK-NEXT:    vmseq.vx v0, v4, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
@@ -154,11 +154,11 @@ define <vscale x 2 x i1> @isnormal_nxv2f64(<vscale x 2 x double> %x, <vscale x 2
 ; CHECK-LABEL: isnormal_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8, v0.t
+; CHECK-NEXT:    vfclass.v v2, v8, v0.t
 ; CHECK-NEXT:    li a0, 129
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v2, v2, a0
+; CHECK-NEXT:    vmsne.vi v0, v2, 0
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i1> @llvm.vp.is.fpclass.nxv2f64(<vscale x 2 x double> %x, i32 516, <vscale x 2 x i1> %m, i32 %evl) ; 0x204 = "inf"
   ret <vscale x 2 x i1> %1
@@ -168,11 +168,11 @@ define <vscale x 2 x i1> @isnormal_nxv2f64_unmasked(<vscale x 2 x double> %x, i3
 ; CHECK-LABEL: isnormal_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vfclass.v v2, v8
 ; CHECK-NEXT:    li a0, 129
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vand.vx v2, v2, a0
+; CHECK-NEXT:    vmsne.vi v0, v2, 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
@@ -184,10 +184,10 @@ define <vscale x 4 x i1> @isposinf_nxv4f64(<vscale x 4 x double> %x, <vscale x 4
 ; CHECK-LABEL: isposinf_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8, v0.t
+; CHECK-NEXT:    vfclass.v v4, v8, v0.t
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmseq.vx v0, v8, a0
+; CHECK-NEXT:    vmseq.vx v0, v4, a0
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i1> @llvm.vp.is.fpclass.nxv4f64(<vscale x 4 x double> %x, i32 512, <vscale x 4 x i1> %m, i32 %evl) ; 0x200 = "+inf"
   ret <vscale x 4 x i1> %1
@@ -197,10 +197,10 @@ define <vscale x 4 x i1> @isposinf_nxv4f64_unmasked(<vscale x 4 x double> %x, i3
 ; CHECK-LABEL: isposinf_nxv4f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vfclass.v v4, v8
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmseq.vx v0, v8, a0
+; CHECK-NEXT:    vmseq.vx v0, v4, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer

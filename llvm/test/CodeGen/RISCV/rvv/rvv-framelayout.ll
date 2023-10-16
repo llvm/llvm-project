@@ -19,12 +19,12 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    sub a2, s0, a2
 ; CHECK-NEXT:    addi a2, a2, -32
-; CHECK-NEXT:    vl1re64.v v8, (a2)
+; CHECK-NEXT:    vl1re64.v v1, (a2)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    sub a2, s0, a2
 ; CHECK-NEXT:    addi a2, a2, -32
-; CHECK-NEXT:    vl2re64.v v8, (a2)
+; CHECK-NEXT:    vl2re64.v v2, (a2)
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    lw zero, 0(a0)
@@ -62,9 +62,9 @@ define void @rvv_overaligned() nounwind {
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 112
-; CHECK-NEXT:    vl1re64.v v8, (a0)
+; CHECK-NEXT:    vl1re64.v v1, (a0)
 ; CHECK-NEXT:    addi a0, sp, 112
-; CHECK-NEXT:    vl2re64.v v8, (a0)
+; CHECK-NEXT:    vl2re64.v v2, (a0)
 ; CHECK-NEXT:    lw zero, 64(sp)
 ; CHECK-NEXT:    addi sp, s0, -128
 ; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
@@ -106,9 +106,9 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    add a2, s1, a2
 ; CHECK-NEXT:    addi a2, a2, 112
-; CHECK-NEXT:    vl1re64.v v8, (a2)
+; CHECK-NEXT:    vl1re64.v v1, (a2)
 ; CHECK-NEXT:    addi a2, s1, 112
-; CHECK-NEXT:    vl2re64.v v8, (a2)
+; CHECK-NEXT:    vl2re64.v v2, (a2)
 ; CHECK-NEXT:    lw zero, 64(s1)
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    add a0, a0, a1

@@ -10,12 +10,12 @@ define <8 x i7> @vmax_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroex
 ; CHECK-LABEL: vmax_vv_v8i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vsra.vi v9, v9, 1
-; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsra.vi v8, v8, 1
+; CHECK-NEXT:    vadd.vv v1, v9, v9
+; CHECK-NEXT:    vsra.vi v1, v1, 1
+; CHECK-NEXT:    vadd.vv v2, v8, v8
+; CHECK-NEXT:    vsra.vi v2, v2, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmax.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vmax.vv v8, v2, v1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.smax.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
   ret <8 x i7> %v
@@ -288,7 +288,7 @@ declare <256 x i8> @llvm.vp.smax.v258i8(<256 x i8>, <256 x i8>, <256 x i1>, i32)
 define <256 x i8> @vmax_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vmax_vx_v258i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v1, v0
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
@@ -303,7 +303,7 @@ define <256 x i8> @vmax_vx_v258i8(<256 x i8> %va, i8 %b, <256 x i1> %m, i32 zero
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:  .LBB22_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
@@ -345,10 +345,10 @@ define <256 x i8> @vmax_vx_v258i8_evl129(<256 x i8> %va, i8 %b, <256 x i1> %m) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a1)
+; CHECK-NEXT:    vlm.v v1, (a1)
 ; CHECK-NEXT:    vmax.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vmax.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
@@ -805,9 +805,9 @@ define <2 x i64> @vmax_vx_v2i64(<2 x i64> %va, i64 %b, <2 x i1> %m, i32 zeroext 
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vlse64.v v1, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; RV32-NEXT:    vmax.vv v8, v8, v9, v0.t
+; RV32-NEXT:    vmax.vv v8, v8, v1, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -831,9 +831,9 @@ define <2 x i64> @vmax_vx_v2i64_unmasked(<2 x i64> %va, i64 %b, i32 zeroext %evl
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vlse64.v v1, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; RV32-NEXT:    vmax.vv v8, v8, v9
+; RV32-NEXT:    vmax.vv v8, v8, v1
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -883,9 +883,9 @@ define <4 x i64> @vmax_vx_v4i64(<4 x i64> %va, i64 %b, <4 x i1> %m, i32 zeroext 
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
+; RV32-NEXT:    vlse64.v v2, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
-; RV32-NEXT:    vmax.vv v8, v8, v10, v0.t
+; RV32-NEXT:    vmax.vv v8, v8, v2, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -909,9 +909,9 @@ define <4 x i64> @vmax_vx_v4i64_unmasked(<4 x i64> %va, i64 %b, i32 zeroext %evl
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
+; RV32-NEXT:    vlse64.v v2, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
-; RV32-NEXT:    vmax.vv v8, v8, v10
+; RV32-NEXT:    vmax.vv v8, v8, v2
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -961,9 +961,9 @@ define <8 x i64> @vmax_vx_v8i64(<8 x i64> %va, i64 %b, <8 x i1> %m, i32 zeroext 
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v12, (a0), zero
+; RV32-NEXT:    vlse64.v v4, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
-; RV32-NEXT:    vmax.vv v8, v8, v12, v0.t
+; RV32-NEXT:    vmax.vv v8, v8, v4, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -987,9 +987,9 @@ define <8 x i64> @vmax_vx_v8i64_unmasked(<8 x i64> %va, i64 %b, i32 zeroext %evl
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v12, (a0), zero
+; RV32-NEXT:    vlse64.v v4, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
-; RV32-NEXT:    vmax.vv v8, v8, v12
+; RV32-NEXT:    vmax.vv v8, v8, v4
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1117,7 +1117,7 @@ define <32 x i64> @vmax_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    li a2, 16
-; RV64-NEXT:    vslidedown.vi v24, v0, 2
+; RV64-NEXT:    vslidedown.vi v1, v0, 2
 ; RV64-NEXT:    mv a1, a0
 ; RV64-NEXT:    bltu a0, a2, .LBB74_2
 ; RV64-NEXT:  # %bb.1:
@@ -1131,7 +1131,7 @@ define <32 x i64> @vmax_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl
 ; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV64-NEXT:    vmv1r.v v0, v24
+; RV64-NEXT:    vmv1r.v v0, v1
 ; RV64-NEXT:    vmax.vx v16, v16, a2, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <32 x i64> poison, i64 -1, i32 0

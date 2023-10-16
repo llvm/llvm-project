@@ -8,8 +8,8 @@ define half @vreduce_fadd_v1f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.f.s fa5, v1
 ; CHECK-NEXT:    fadd.h fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, ptr %x
@@ -21,10 +21,10 @@ define half @vreduce_ord_fadd_v1f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v1f16(half %s, <1 x half> %v)
@@ -37,10 +37,10 @@ define half @vreduce_fadd_v2f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v2f16(half %s, <2 x half> %v)
@@ -51,10 +51,10 @@ define half @vreduce_ord_fadd_v2f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v2f16(half %s, <2 x half> %v)
@@ -67,10 +67,10 @@ define half @vreduce_fadd_v4f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v4f16(half %s, <4 x half> %v)
@@ -81,10 +81,10 @@ define half @vreduce_ord_fadd_v4f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v4f16(half %s, <4 x half> %v)
@@ -97,10 +97,10 @@ define half @vreduce_fadd_v8f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v8f16(half %s, <8 x half> %v)
@@ -111,10 +111,10 @@ define half @vreduce_ord_fadd_v8f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v8f16(half %s, <8 x half> %v)
@@ -127,10 +127,10 @@ define half @vreduce_fadd_v16f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v2, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v2, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v16f16(half %s, <16 x half> %v)
@@ -141,10 +141,10 @@ define half @vreduce_ord_fadd_v16f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v2, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v2, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v16f16(half %s, <16 x half> %v)
@@ -158,10 +158,10 @@ define half @vreduce_fadd_v32f16(ptr %x, half %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v12, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v12
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v4, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v4, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v32f16(half %s, <32 x half> %v)
@@ -173,10 +173,10 @@ define half @vreduce_ord_fadd_v32f16(ptr %x, half %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v12, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v12
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v4, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v4, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v32f16(half %s, <32 x half> %v)
@@ -191,9 +191,9 @@ define half @vreduce_fadd_v64f16(ptr %x, half %s) {
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <64 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v64f16(half %s, <64 x half> %v)
@@ -206,9 +206,9 @@ define half @vreduce_ord_fadd_v64f16(ptr %x, half %s) {
 ; CHECK-NEXT:    li a1, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <64 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v64f16(half %s, <64 x half> %v)
@@ -226,9 +226,9 @@ define half @vreduce_fadd_v128f16(ptr %x, half %s) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v16
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <128 x half>, ptr %x
   %red = call reassoc half @llvm.vector.reduce.fadd.v128f16(half %s, <128 x half> %v)
@@ -243,10 +243,10 @@ define half @vreduce_ord_fadd_v128f16(ptr %x, half %s) {
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v16, (a1)
-; CHECK-NEXT:    vfmv.s.f v24, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v24
-; CHECK-NEXT:    vfredosum.vs v8, v16, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfredosum.vs v1, v16, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <128 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fadd.v128f16(half %s, <128 x half> %v)
@@ -259,8 +259,8 @@ define float @vreduce_fadd_v1f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.f.s fa5, v1
 ; CHECK-NEXT:    fadd.s fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x float>, ptr %x
@@ -272,10 +272,10 @@ define float @vreduce_ord_fadd_v1f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <1 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v1f32(float %s, <1 x float> %v)
@@ -286,10 +286,10 @@ define float @vreduce_fwadd_v1f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fwadd_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v1
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfmv.f.s fa5, v2
 ; CHECK-NEXT:    fadd.s fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, ptr %x
@@ -302,12 +302,12 @@ define float @vreduce_ord_fwadd_v1f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <1 x half>, ptr %x
   %e = fpext <1 x half> %v to <1 x float>
@@ -321,10 +321,10 @@ define float @vreduce_fadd_v2f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x float>, ptr %x
   %red = call reassoc float @llvm.vector.reduce.fadd.v2f32(float %s, <2 x float> %v)
@@ -335,10 +335,10 @@ define float @vreduce_ord_fadd_v2f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v2f32(float %s, <2 x float> %v)
@@ -349,12 +349,12 @@ define float @vreduce_fwadd_v2f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fwadd_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredusum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %x
   %e = fpext <2 x half> %v to <2 x float>
@@ -366,12 +366,12 @@ define float @vreduce_ord_fwadd_v2f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %x
   %e = fpext <2 x half> %v to <2 x float>
@@ -385,10 +385,10 @@ define float @vreduce_fadd_v4f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call reassoc float @llvm.vector.reduce.fadd.v4f32(float %s, <4 x float> %v)
@@ -399,10 +399,10 @@ define float @vreduce_ord_fadd_v4f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v4f32(float %s, <4 x float> %v)
@@ -413,12 +413,12 @@ define float @vreduce_fwadd_v4f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fwadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredusum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %e = fpext <4 x half> %v to <4 x float>
@@ -430,12 +430,12 @@ define float @vreduce_ord_fwadd_v4f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %e = fpext <4 x half> %v to <4 x float>
@@ -449,10 +449,10 @@ define float @vreduce_fadd_v8f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v2, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v2, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x float>, ptr %x
   %red = call reassoc float @llvm.vector.reduce.fadd.v8f32(float %s, <8 x float> %v)
@@ -463,10 +463,10 @@ define float @vreduce_ord_fadd_v8f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v2, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v2, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v8f32(float %s, <8 x float> %v)
@@ -477,13 +477,13 @@ define float @vreduce_fwadd_v8f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fwadd_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredusum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x half>, ptr %x
   %e = fpext <8 x half> %v to <8 x float>
@@ -495,13 +495,13 @@ define float @vreduce_ord_fwadd_v8f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x half>, ptr %x
   %e = fpext <8 x half> %v to <8 x float>
@@ -515,10 +515,10 @@ define float @vreduce_fadd_v16f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v12, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v12
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v4, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v4, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %x
   %red = call reassoc float @llvm.vector.reduce.fadd.v16f32(float %s, <16 x float> %v)
@@ -529,10 +529,10 @@ define float @vreduce_ord_fadd_v16f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v12, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v12
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v4, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v4, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v16f32(float %s, <16 x float> %v)
@@ -543,13 +543,13 @@ define float @vreduce_fwadd_v16f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fwadd_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v2, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v10
+; CHECK-NEXT:    vfwredusum.vs v1, v2, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x half>, ptr %x
   %e = fpext <16 x half> %v to <16 x float>
@@ -561,13 +561,13 @@ define float @vreduce_ord_fwadd_v16f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v2, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v10
+; CHECK-NEXT:    vfwredosum.vs v1, v2, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x half>, ptr %x
   %e = fpext <16 x half> %v to <16 x float>
@@ -583,9 +583,9 @@ define float @vreduce_fadd_v32f32(ptr %x, float %s) {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x float>, ptr %x
   %red = call reassoc float @llvm.vector.reduce.fadd.v32f32(float %s, <32 x float> %v)
@@ -598,9 +598,9 @@ define float @vreduce_ord_fadd_v32f32(ptr %x, float %s) {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v32f32(float %s, <32 x float> %v)
@@ -612,13 +612,13 @@ define float @vreduce_fwadd_v32f32(ptr %x, float %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v4, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v12
+; CHECK-NEXT:    vfwredusum.vs v1, v4, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x half>, ptr %x
   %e = fpext <32 x half> %v to <32 x float>
@@ -631,13 +631,13 @@ define float @vreduce_ord_fwadd_v32f32(ptr %x, float %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vle16.v v4, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v12
+; CHECK-NEXT:    vfwredosum.vs v1, v4, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x half>, ptr %x
   %e = fpext <32 x half> %v to <32 x float>
@@ -656,9 +656,9 @@ define float @vreduce_fadd_v64f32(ptr %x, float %s) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle32.v v16, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v16
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <64 x float>, ptr %x
   %red = call reassoc float @llvm.vector.reduce.fadd.v64f32(float %s, <64 x float> %v)
@@ -673,10 +673,10 @@ define float @vreduce_ord_fadd_v64f32(ptr %x, float %s) {
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v16, (a1)
-; CHECK-NEXT:    vfmv.s.f v24, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v24
-; CHECK-NEXT:    vfredosum.vs v8, v16, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfredosum.vs v1, v16, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <64 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fadd.v64f32(float %s, <64 x float> %v)
@@ -695,10 +695,10 @@ define float @vreduce_fwadd_v64f32(ptr %x, float %s) {
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v24, v8, v16
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vfredusum.vs v8, v24, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredusum.vs v1, v24, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <64 x half>, ptr %x
   %e = fpext <64 x half> %v to <64 x float>
@@ -716,12 +716,12 @@ define float @vreduce_ord_fwadd_v64f32(ptr %x, float %s) {
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v12
-; CHECK-NEXT:    vfwredosum.vs v8, v16, v8
+; CHECK-NEXT:    vfwredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfwredosum.vs v1, v16, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <64 x half>, ptr %x
   %e = fpext <64 x half> %v to <64 x float>
@@ -735,8 +735,8 @@ define double @vreduce_fadd_v1f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.f.s fa5, v8
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfmv.f.s fa5, v1
 ; CHECK-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x double>, ptr %x
@@ -748,10 +748,10 @@ define double @vreduce_ord_fadd_v1f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <1 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fadd.v1f64(double %s, <1 x double> %v)
@@ -762,10 +762,10 @@ define double @vreduce_fwadd_v1f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fwadd_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfwcvt.f.f.v v2, v1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v9
+; CHECK-NEXT:    vfmv.f.s fa5, v2
 ; CHECK-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK-NEXT:    ret
   %v = load <1 x float>, ptr %x
@@ -778,12 +778,12 @@ define double @vreduce_ord_fwadd_v1f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <1 x float>, ptr %x
   %e = fpext <1 x float> %v to <1 x double>
@@ -797,10 +797,10 @@ define double @vreduce_fadd_v2f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x double>, ptr %x
   %red = call reassoc double @llvm.vector.reduce.fadd.v2f64(double %s, <2 x double> %v)
@@ -811,10 +811,10 @@ define double @vreduce_ord_fadd_v2f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fadd.v2f64(double %s, <2 x double> %v)
@@ -825,12 +825,12 @@ define double @vreduce_fwadd_v2f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fwadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredusum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x float>, ptr %x
   %e = fpext <2 x float> %v to <2 x double>
@@ -842,12 +842,12 @@ define double @vreduce_ord_fwadd_v2f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x float>, ptr %x
   %e = fpext <2 x float> %v to <2 x double>
@@ -861,10 +861,10 @@ define double @vreduce_fadd_v4f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v2, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call reassoc double @llvm.vector.reduce.fadd.v4f64(double %s, <4 x double> %v)
@@ -875,10 +875,10 @@ define double @vreduce_ord_fadd_v4f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v2, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fadd.v4f64(double %s, <4 x double> %v)
@@ -889,13 +889,13 @@ define double @vreduce_fwadd_v4f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fwadd_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredusum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %e = fpext <4 x float> %v to <4 x double>
@@ -907,13 +907,13 @@ define double @vreduce_ord_fwadd_v4f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v1, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vfmv.s.f v2, fa0
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v9
+; CHECK-NEXT:    vfwredosum.vs v1, v1, v2
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %e = fpext <4 x float> %v to <4 x double>
@@ -927,10 +927,10 @@ define double @vreduce_fadd_v8f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v12, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v12
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v4, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v4, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x double>, ptr %x
   %red = call reassoc double @llvm.vector.reduce.fadd.v8f64(double %s, <8 x double> %v)
@@ -941,10 +941,10 @@ define double @vreduce_ord_fadd_v8f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v12, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v12
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v4, (a0)
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v4, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fadd.v8f64(double %s, <8 x double> %v)
@@ -955,13 +955,13 @@ define double @vreduce_fwadd_v8f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fwadd_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v2, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v10
+; CHECK-NEXT:    vfwredusum.vs v1, v2, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x float>, ptr %x
   %e = fpext <8 x float> %v to <8 x double>
@@ -973,13 +973,13 @@ define double @vreduce_ord_fwadd_v8f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v2, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v10
+; CHECK-NEXT:    vfwredosum.vs v1, v2, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <8 x float>, ptr %x
   %e = fpext <8 x float> %v to <8 x double>
@@ -994,9 +994,9 @@ define double @vreduce_fadd_v16f64(ptr %x, double %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x double>, ptr %x
   %red = call reassoc double @llvm.vector.reduce.fadd.v16f64(double %s, <16 x double> %v)
@@ -1008,9 +1008,9 @@ define double @vreduce_ord_fadd_v16f64(ptr %x, double %s) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fadd.v16f64(double %s, <16 x double> %v)
@@ -1021,13 +1021,13 @@ define double @vreduce_fwadd_v16f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fwadd_v16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v4, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfwredusum.vs v8, v8, v12
+; CHECK-NEXT:    vfwredusum.vs v1, v4, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %x
   %e = fpext <16 x float> %v to <16 x double>
@@ -1039,13 +1039,13 @@ define double @vreduce_ord_fwadd_v16f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_ord_fwadd_v16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vle32.v v4, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v12
+; CHECK-NEXT:    vfwredosum.vs v1, v4, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <16 x float>, ptr %x
   %e = fpext <16 x float> %v to <16 x double>
@@ -1063,9 +1063,9 @@ define double @vreduce_fadd_v32f64(ptr %x, double %s) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle64.v v16, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v16
-; CHECK-NEXT:    vfmv.s.f v16, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v16
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v8, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x double>, ptr %x
   %red = call reassoc double @llvm.vector.reduce.fadd.v32f64(double %s, <32 x double> %v)
@@ -1079,10 +1079,10 @@ define double @vreduce_ord_fadd_v32f64(ptr %x, double %s) {
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vle64.v v16, (a1)
-; CHECK-NEXT:    vfmv.s.f v24, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v24
-; CHECK-NEXT:    vfredosum.vs v8, v16, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfredosum.vs v1, v16, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fadd.v32f64(double %s, <32 x double> %v)
@@ -1100,9 +1100,9 @@ define double @vreduce_fwadd_v32f64(ptr %x, double %s) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v24, v8, v16
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v24, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.s.f v1, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v24, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x float>, ptr %x
   %e = fpext <32 x float> %v to <32 x double>
@@ -1119,12 +1119,12 @@ define double @vreduce_ord_fwadd_v32f64(ptr %x, double %s) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v12, fa0
+; CHECK-NEXT:    vfmv.s.f v1, fa0
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vfwredosum.vs v8, v8, v12
-; CHECK-NEXT:    vfwredosum.vs v8, v16, v8
+; CHECK-NEXT:    vfwredosum.vs v1, v8, v1
+; CHECK-NEXT:    vfwredosum.vs v1, v16, v1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x float>, ptr %x
   %e = fpext <32 x float> %v to <32 x double>
@@ -1138,9 +1138,9 @@ define half @vreduce_fmin_v2f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fmin.v2f16(<2 x half> %v)
@@ -1153,9 +1153,9 @@ define half @vreduce_fmin_v4f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fmin.v4f16(<4 x half> %v)
@@ -1166,9 +1166,9 @@ define half @vreduce_fmin_v4f16_nonans(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f16_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call nnan half @llvm.vector.reduce.fmin.v4f16(<4 x half> %v)
@@ -1179,9 +1179,9 @@ define half @vreduce_fmin_v4f16_nonans_noinfs(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f16_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call nnan ninf half @llvm.vector.reduce.fmin.v4f16(<4 x half> %v)
@@ -1199,8 +1199,8 @@ define half @vreduce_fmin_v128f16(ptr %x) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredmin.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <128 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fmin.v128f16(<128 x half> %v)
@@ -1213,9 +1213,9 @@ define float @vreduce_fmin_v2f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> %v)
@@ -1228,9 +1228,9 @@ define float @vreduce_fmin_v4f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %v)
@@ -1241,9 +1241,9 @@ define float @vreduce_fmin_v4f32_nonans(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> %v)
@@ -1254,9 +1254,9 @@ define float @vreduce_fmin_v4f32_nonans_noinfs(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f32_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call nnan ninf float @llvm.vector.reduce.fmin.v4f32(<4 x float> %v)
@@ -1280,8 +1280,8 @@ define float @vreduce_fmin_v128f32(ptr %x) {
 ; CHECK-NEXT:    vfmin.vv v16, v24, v16
 ; CHECK-NEXT:    vfmin.vv v8, v8, v0
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredmin.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <128 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fmin.v128f32(<128 x float> %v)
@@ -1294,9 +1294,9 @@ define double @vreduce_fmin_v2f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fmin.v2f64(<2 x double> %v)
@@ -1309,9 +1309,9 @@ define double @vreduce_fmin_v4f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v2, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %v)
@@ -1322,9 +1322,9 @@ define double @vreduce_fmin_v4f64_nonans(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v2, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call nnan double @llvm.vector.reduce.fmin.v4f64(<4 x double> %v)
@@ -1335,9 +1335,9 @@ define double @vreduce_fmin_v4f64_nonans_noinfs(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f64_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfredmin.vs v1, v2, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call nnan ninf double @llvm.vector.reduce.fmin.v4f64(<4 x double> %v)
@@ -1354,8 +1354,8 @@ define double @vreduce_fmin_v32f64(ptr %x) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle64.v v16, (a0)
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
-; CHECK-NEXT:    vfredmin.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredmin.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fmin.v32f64(<32 x double> %v)
@@ -1368,9 +1368,9 @@ define half @vreduce_fmax_v2f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fmax.v2f16(<2 x half> %v)
@@ -1383,9 +1383,9 @@ define half @vreduce_fmax_v4f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fmax.v4f16(<4 x half> %v)
@@ -1396,9 +1396,9 @@ define half @vreduce_fmax_v4f16_nonans(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f16_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call nnan half @llvm.vector.reduce.fmax.v4f16(<4 x half> %v)
@@ -1409,9 +1409,9 @@ define half @vreduce_fmax_v4f16_nonans_noinfs(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f16_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle16.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x half>, ptr %x
   %red = call nnan ninf half @llvm.vector.reduce.fmax.v4f16(<4 x half> %v)
@@ -1429,8 +1429,8 @@ define half @vreduce_fmax_v128f16(ptr %x) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredmax.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <128 x half>, ptr %x
   %red = call half @llvm.vector.reduce.fmax.v128f16(<128 x half> %v)
@@ -1443,9 +1443,9 @@ define float @vreduce_fmax_v2f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> %v)
@@ -1458,9 +1458,9 @@ define float @vreduce_fmax_v4f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %v)
@@ -1471,9 +1471,9 @@ define float @vreduce_fmax_v4f32_nonans(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> %v)
@@ -1484,9 +1484,9 @@ define float @vreduce_fmax_v4f32_nonans_noinfs(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f32_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> %v)
@@ -1510,8 +1510,8 @@ define float @vreduce_fmax_v128f32(ptr %x) {
 ; CHECK-NEXT:    vfmax.vv v16, v24, v16
 ; CHECK-NEXT:    vfmax.vv v8, v8, v0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredmax.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <128 x float>, ptr %x
   %red = call float @llvm.vector.reduce.fmax.v128f32(<128 x float> %v)
@@ -1524,9 +1524,9 @@ define double @vreduce_fmax_v2f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v1, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v1, v1
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <2 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fmax.v2f64(<2 x double> %v)
@@ -1539,9 +1539,9 @@ define double @vreduce_fmax_v4f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v2, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %v)
@@ -1552,9 +1552,9 @@ define double @vreduce_fmax_v4f64_nonans(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v2, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call nnan double @llvm.vector.reduce.fmax.v4f64(<4 x double> %v)
@@ -1565,9 +1565,9 @@ define double @vreduce_fmax_v4f64_nonans_noinfs(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f64_nonans_noinfs:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle64.v v2, (a0)
+; CHECK-NEXT:    vfredmax.vs v1, v2, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x double>, ptr %x
   %red = call nnan ninf double @llvm.vector.reduce.fmax.v4f64(<4 x double> %v)
@@ -1584,8 +1584,8 @@ define double @vreduce_fmax_v32f64(ptr %x) {
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle64.v v16, (a0)
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
-; CHECK-NEXT:    vfredmax.vs v8, v8, v8
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredmax.vs v1, v8, v8
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <32 x double>, ptr %x
   %red = call double @llvm.vector.reduce.fmax.v32f64(<32 x double> %v)
@@ -1596,10 +1596,10 @@ define float @vreduce_nsz_fadd_v4f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_nsz_fadd_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vfredusum.vs v8, v8, v9
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vle32.v v1, (a0)
+; CHECK-NEXT:    vfmv.s.f v2, fa0
+; CHECK-NEXT:    vfredusum.vs v1, v1, v2
+; CHECK-NEXT:    vfmv.f.s fa0, v1
 ; CHECK-NEXT:    ret
   %v = load <4 x float>, ptr %x
   %red = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float %s, <4 x float> %v)

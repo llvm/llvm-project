@@ -14,45 +14,45 @@ define <4 x i1> @vpmerge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 ; RV32-LABEL: vpmerge_vv_v4i1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    vmsltu.vx v10, v10, a0
-; RV32-NEXT:    vmand.mm v9, v9, v10
-; RV32-NEXT:    vmandn.mm v8, v8, v9
-; RV32-NEXT:    vmand.mm v9, v0, v9
-; RV32-NEXT:    vmor.mm v0, v9, v8
+; RV32-NEXT:    vid.v v1
+; RV32-NEXT:    vmsltu.vx v1, v1, a0
+; RV32-NEXT:    vmand.mm v1, v9, v1
+; RV32-NEXT:    vmandn.mm v2, v8, v1
+; RV32-NEXT:    vmand.mm v1, v0, v1
+; RV32-NEXT:    vmor.mm v0, v1, v2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpmerge_vv_v4i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    vmsltu.vx v12, v10, a0
-; RV64-NEXT:    vmand.mm v9, v9, v12
-; RV64-NEXT:    vmandn.mm v8, v8, v9
-; RV64-NEXT:    vmand.mm v9, v0, v9
-; RV64-NEXT:    vmor.mm v0, v9, v8
+; RV64-NEXT:    vid.v v2
+; RV64-NEXT:    vmsltu.vx v1, v2, a0
+; RV64-NEXT:    vmand.mm v1, v9, v1
+; RV64-NEXT:    vmandn.mm v2, v8, v1
+; RV64-NEXT:    vmand.mm v1, v0, v1
+; RV64-NEXT:    vmor.mm v0, v1, v2
 ; RV64-NEXT:    ret
 ;
 ; RV32ZVFHMIN-LABEL: vpmerge_vv_v4i1:
 ; RV32ZVFHMIN:       # %bb.0:
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32ZVFHMIN-NEXT:    vid.v v10
-; RV32ZVFHMIN-NEXT:    vmsltu.vx v10, v10, a0
-; RV32ZVFHMIN-NEXT:    vmand.mm v9, v9, v10
-; RV32ZVFHMIN-NEXT:    vmandn.mm v8, v8, v9
-; RV32ZVFHMIN-NEXT:    vmand.mm v9, v0, v9
-; RV32ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
+; RV32ZVFHMIN-NEXT:    vid.v v1
+; RV32ZVFHMIN-NEXT:    vmsltu.vx v1, v1, a0
+; RV32ZVFHMIN-NEXT:    vmand.mm v1, v9, v1
+; RV32ZVFHMIN-NEXT:    vmandn.mm v2, v8, v1
+; RV32ZVFHMIN-NEXT:    vmand.mm v1, v0, v1
+; RV32ZVFHMIN-NEXT:    vmor.mm v0, v1, v2
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vpmerge_vv_v4i1:
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vid.v v10
-; RV64ZVFHMIN-NEXT:    vmsltu.vx v12, v10, a0
-; RV64ZVFHMIN-NEXT:    vmand.mm v9, v9, v12
-; RV64ZVFHMIN-NEXT:    vmandn.mm v8, v8, v9
-; RV64ZVFHMIN-NEXT:    vmand.mm v9, v0, v9
-; RV64ZVFHMIN-NEXT:    vmor.mm v0, v9, v8
+; RV64ZVFHMIN-NEXT:    vid.v v2
+; RV64ZVFHMIN-NEXT:    vmsltu.vx v1, v2, a0
+; RV64ZVFHMIN-NEXT:    vmand.mm v1, v9, v1
+; RV64ZVFHMIN-NEXT:    vmandn.mm v2, v8, v1
+; RV64ZVFHMIN-NEXT:    vmand.mm v1, v0, v1
+; RV64ZVFHMIN-NEXT:    vmor.mm v0, v1, v2
 ; RV64ZVFHMIN-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.merge.v4i1(<4 x i1> %m, <4 x i1> %va, <4 x i1> %vb, i32 %evl)
   ret <4 x i1> %v
@@ -598,9 +598,9 @@ define <2 x i64> @vpmerge_vx_v2i64(i64 %a, <2 x i64> %vb, <2 x i1> %m, i32 zeroe
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vlse64.v v1, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v9, v0
+; RV32-NEXT:    vmerge.vvm v8, v8, v1, v0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -618,9 +618,9 @@ define <2 x i64> @vpmerge_vx_v2i64(i64 %a, <2 x i64> %vb, <2 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32ZVFHMIN-NEXT:    vlse64.v v9, (a0), zero
+; RV32ZVFHMIN-NEXT:    vlse64.v v1, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
-; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v9, v0
+; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v1, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
 ; RV32ZVFHMIN-NEXT:    ret
 ;
@@ -669,9 +669,9 @@ define <4 x i64> @vpmerge_vx_v4i64(i64 %a, <4 x i64> %vb, <4 x i1> %m, i32 zeroe
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v10, (a0), zero
+; RV32-NEXT:    vlse64.v v2, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m2, tu, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32-NEXT:    vmerge.vvm v8, v8, v2, v0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -689,9 +689,9 @@ define <4 x i64> @vpmerge_vx_v4i64(i64 %a, <4 x i64> %vb, <4 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32ZVFHMIN-NEXT:    vlse64.v v10, (a0), zero
+; RV32ZVFHMIN-NEXT:    vlse64.v v2, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m2, tu, ma
-; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v10, v0
+; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v2, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
 ; RV32ZVFHMIN-NEXT:    ret
 ;
@@ -740,9 +740,9 @@ define <8 x i64> @vpmerge_vx_v8i64(i64 %a, <8 x i64> %vb, <8 x i1> %m, i32 zeroe
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v12, (a0), zero
+; RV32-NEXT:    vlse64.v v4, (a0), zero
 ; RV32-NEXT:    vsetvli zero, a2, e64, m4, tu, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v12, v0
+; RV32-NEXT:    vmerge.vvm v8, v8, v4, v0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -760,9 +760,9 @@ define <8 x i64> @vpmerge_vx_v8i64(i64 %a, <8 x i64> %vb, <8 x i1> %m, i32 zeroe
 ; RV32ZVFHMIN-NEXT:    sw a0, 8(sp)
 ; RV32ZVFHMIN-NEXT:    addi a0, sp, 8
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32ZVFHMIN-NEXT:    vlse64.v v12, (a0), zero
+; RV32ZVFHMIN-NEXT:    vlse64.v v4, (a0), zero
 ; RV32ZVFHMIN-NEXT:    vsetvli zero, a2, e64, m4, tu, ma
-; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v12, v0
+; RV32ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v4, v0
 ; RV32ZVFHMIN-NEXT:    addi sp, sp, 16
 ; RV32ZVFHMIN-NEXT:    ret
 ;
@@ -884,9 +884,9 @@ define <2 x half> @vpmerge_vf_v2f16(half %a, <2 x half> %vb, <2 x i1> %m, i32 ze
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v9, fa5
+; ZVFHMIN-NEXT:    vfmv.v.f v1, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9, v0.t
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v1, v0.t
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <2 x half> poison, half %a, i32 0
   %va = shufflevector <2 x half> %elt.head, <2 x half> poison, <2 x i32> zeroinitializer
@@ -918,9 +918,9 @@ define <4 x half> @vpmerge_vf_v4f16(half %a, <4 x half> %vb, <4 x i1> %m, i32 ze
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v9, fa5
+; ZVFHMIN-NEXT:    vfmv.v.f v1, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9, v0.t
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v1, v0.t
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <4 x half> poison, half %a, i32 0
   %va = shufflevector <4 x half> %elt.head, <4 x half> poison, <4 x i32> zeroinitializer
@@ -952,9 +952,9 @@ define <8 x half> @vpmerge_vf_v8f16(half %a, <8 x half> %vb, <8 x i1> %m, i32 ze
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v10, fa5
+; ZVFHMIN-NEXT:    vfmv.v.f v2, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10, v0.t
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v2, v0.t
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <8 x half> poison, half %a, i32 0
   %va = shufflevector <8 x half> %elt.head, <8 x half> poison, <8 x i32> zeroinitializer
@@ -986,9 +986,9 @@ define <16 x half> @vpmerge_vf_v16f16(half %a, <16 x half> %vb, <16 x i1> %m, i3
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
+; ZVFHMIN-NEXT:    vfmv.v.f v4, fa5
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12, v0.t
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v4, v0.t
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <16 x half> poison, half %a, i32 0
   %va = shufflevector <16 x half> %elt.head, <16 x half> poison, <16 x i32> zeroinitializer
