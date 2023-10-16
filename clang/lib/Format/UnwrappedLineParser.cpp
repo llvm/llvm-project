@@ -2266,11 +2266,10 @@ bool UnwrappedLineParser::tryToParseLambda() {
       break;
     }
     case tok::equal:
-      if (InTemplateParameterList) {
-        nextToken();
-        break;
-      }
-      return true;
+      if (!InTemplateParameterList)
+        return true;
+      nextToken();
+      break;
     default:
       return true;
     }
