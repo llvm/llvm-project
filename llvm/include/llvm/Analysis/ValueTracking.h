@@ -46,26 +46,43 @@ class Value;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
-/// Determine which bits of V are known to be either zero or one.
+/// Determine which bits of V are known to be either zero or one and return
+/// them in the KnownZero/KnownOne bit sets.
 ///
 /// This function is defined on values with integer type, values with pointer
 /// type, and vectors of integers.  In the case
 /// where V is a vector, the known zero and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
-KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
-                           unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                           const Instruction *CxtI = nullptr,
-                           const DominatorTree *DT = nullptr,
-                           bool UseInstrInfo = true);
+void computeKnownBits(const Value *V, KnownBits &Known, const DataLayout &DL,
+                      unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                      const Instruction *CxtI = nullptr,
+                      const DominatorTree *DT = nullptr,
+                      bool UseInstrInfo = true);
 
-/// Determine which bits of V are known to be either zero or one.
+/// Determine which bits of V are known to be either zero or one and return
+/// them in the KnownZero/KnownOne bit sets.
 ///
 /// This function is defined on values with integer type, values with pointer
 /// type, and vectors of integers.  In the case
 /// where V is a vector, the known zero and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the demanded elements in the vector.
+void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                      KnownBits &Known, const DataLayout &DL,
+                      unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                      const Instruction *CxtI = nullptr,
+                      const DominatorTree *DT = nullptr,
+                      bool UseInstrInfo = true);
+
+/// Returns the known bits rather than passing by reference.
+KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
+                           unsigned Depth = 0, AssumptionCache *AC = nullptr,
+                           const Instruction *CxtI = nullptr,
+                           const DominatorTree *DT = nullptr,
+                           bool UseInstrInfo = true);
+
+/// Returns the known bits rather than passing by reference.
 KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            const DataLayout &DL, unsigned Depth = 0,
                            AssumptionCache *AC = nullptr,
