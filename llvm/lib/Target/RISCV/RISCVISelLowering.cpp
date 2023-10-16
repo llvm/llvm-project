@@ -13804,17 +13804,15 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
     Align = std::min(Align, Ld->getAlign());
   }
 
-  using PtrDiff = std::pair<SDValue, bool>;
-  auto GetPtrDiff = [&DAG, &DL](LoadSDNode *Ld1,
-                                LoadSDNode *Ld2) -> std::optional<PtrDiff> {
+  using PtrDiff = std::pair<std::variant<int64_t, SDValue>, bool>;
+  auto GetPtrDiff = [&DAG](LoadSDNode *Ld1,
+                           LoadSDNode *Ld2) -> std::optional<PtrDiff> {
     // If the load ptrs can be decomposed into a common (Base + Index) with a
     // common constant stride, then return the constant stride.
     BaseIndexOffset BIO1 = BaseIndexOffset::match(Ld1, DAG);
     BaseIndexOffset BIO2 = BaseIndexOffset::match(Ld2, DAG);
     if (BIO1.equalBaseIndex(BIO2, DAG))
-      return {{DAG.getConstant(BIO2.getOffset() - BIO1.getOffset(), DL,
-                               Ld1->getOffset().getValueType()),
-               false}};
+      return {{BIO2.getOffset() - BIO1.getOffset(), false}};
 
     // Otherwise try to match (add LastPtr, Stride) or (add NextPtr, Stride)
     SDValue P1 = Ld1->getBasePtr();
@@ -13855,7 +13853,11 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isLegalStridedLoadStore(WideVecVT, Align))
     return SDValue();
 
-  auto [Stride, MustNegateStride] = *BaseDiff;
+  auto [StrideVariant, MustNegateStride] = *BaseDiff;
+  SDValue Stride = std::holds_alternative<SDValue>(StrideVariant)
+                       ? std::get<SDValue>(StrideVariant)
+                       : DAG.getConstant(std::get<int64_t>(StrideVariant), DL,
+                                         Lds[0]->getOffset().getValueType());
   if (MustNegateStride)
     Stride = DAG.getNegative(Stride, DL, Stride.getValueType());
 
