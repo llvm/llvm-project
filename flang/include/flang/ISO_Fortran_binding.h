@@ -169,7 +169,7 @@ template <int r> struct CdescStorage : public CFI_cdesc_t {
 template <> struct CdescStorage<1> : public CFI_cdesc_t {};
 template <> struct CdescStorage<0> : public CFI_cdesc_t {};
 } // namespace cfi_internal
-#define CFI_CDESC_T(rank) cfi_internal::CdescStorage<rank>
+#define CFI_CDESC_T(rank) ::Fortran::ISO::cfi_internal::CdescStorage<rank>
 #else
 #define CFI_CDESC_T(_RANK) \
   struct { \
@@ -200,8 +200,8 @@ RT_API_ATTRS int CFI_setpointer(
 #ifdef __cplusplus
 } // extern "C"
 } // inline namespace Fortran_2018
-}
-}
+} // namespace ISO
+} // namespace Fortran
 #endif
 
 #endif /* CFI_ISO_FORTRAN_BINDING_H_ */
