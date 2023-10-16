@@ -665,29 +665,27 @@ public:
             srcDcvs.push_back(srcLcvs[lvl]);
           }
 
-          Value collapsed_size = constantIndex(builder, loc, 1);
+          Value collapseSize = constantIndex(builder, loc, 1);
           for (Dimension d = 0; d < srcRank; d++)
-            collapsed_size =
-                builder.create<arith::MulIOp>(loc, collapsed_size, srcSizes[d]);
-          SmallVector<Value, 1> collapsedSizes = {collapsed_size};
+            collapseSize =
+                builder.create<arith::MulIOp>(loc, collapseSize, srcSizes[d]);
+          SmallVector<Value, 1> collapsedSizes = {collapseSize};
 
-          ReassociationIndices collapse_indices;
+          ReassociationIndices collapseIdx;
           for (Dimension i = 0; i < srcRank; i++)
-            collapse_indices.push_back(i);
-          SmallVector<ReassociationIndices, 1> collapse_reassociation = {
-              collapse_indices};
+            collapseIdx.push_back(i);
+          SmallVector<ReassociationIndices, 1> collapseReass = {collapseIdx};
           SmallVector<Value, 1> collapsedDcvs;
-          reshapeCvs(builder, loc, collapse_reassociation, srcSizes, srcDcvs,
+          reshapeCvs(builder, loc, collapseReass, srcSizes, srcDcvs,
                      collapsedSizes, collapsedDcvs);
 
-          ReassociationIndices expand_indices;
+          ReassociationIndices expandIdx;
           for (Dimension i = 0; i < dstTp.getDimRank(); i++)
-            expand_indices.push_back(i);
-          SmallVector<ReassociationIndices, 1> expand_reassociation = {
-              expand_indices};
+            expandIdx.push_back(i);
+          SmallVector<ReassociationIndices, 1> expandReass = {expandIdx};
           SmallVector<Value> dstDcvs;
-          reshapeCvs(builder, loc, expand_reassociation, collapsedSizes,
-                     collapsedDcvs, dstSizes, dstDcvs);
+          reshapeCvs(builder, loc, expandReass, collapsedSizes, collapsedDcvs,
+                     dstSizes, dstDcvs);
 
           auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstDcvs);
           builder.create<sparse_tensor::YieldOp>(loc, t);
