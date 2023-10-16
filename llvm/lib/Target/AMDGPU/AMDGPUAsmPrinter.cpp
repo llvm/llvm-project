@@ -341,9 +341,6 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV3:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
-      break;
     case AMDGPU::AMDHSA_COV4:
       HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
       break;
