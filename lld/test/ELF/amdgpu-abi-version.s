@@ -1,11 +1,3 @@
-# REQUIRES: amdgpu
-# RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 -filetype=obj %s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-readobj --file-headers %t.so | FileCheck --check-prefix=COV3 %s
-
-# COV3: OS/ABI: AMDGPU_HSA (0x40)
-# COV3: ABIVersion: 1
-
 # RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=4 -filetype=obj %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj --file-headers %t.so | FileCheck --check-prefix=COV4 %s
