@@ -318,6 +318,11 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 3rd Wednesday of the month at 8:30am Beijing time, for 30 minutes.
     - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWQ0MjU0NjYtZjUyMi00YTU3LThmM2EtY2Y2YTE4NGM3NmFi%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%227b309d9c-a9bb-44c8-a940-ab97eef42d4d%22%7d>`__
     - English, Chinese
+  * - Amara Emerson
+    - GlobalISel questions.
+    - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
+    - `GoogleMeet <https://meet.google.com/pdd-dibg-cwv`__
+    - English
 
 
 Guidance for office hours hosts
