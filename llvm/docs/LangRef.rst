@@ -3888,7 +3888,7 @@ integer to memory.
 
 A bitcast from a vector type to a scalar integer type will see the elements
 being packed together (without padding). The order in which elements are
-inserted in the integer depends on endianess. For little endian element zero
+inserted in the integer depends on endianness. For little endian element zero
 is put in the least significant bits of the integer, and for big endian
 element zero is put in the most significant bits.
 
@@ -11681,7 +11681,7 @@ To convert pointers to other types, use the :ref:`inttoptr <i_inttoptr>`
 or :ref:`ptrtoint <i_ptrtoint>` instructions first.
 
 There is a caveat for bitcasts involving vector types in relation to
-endianess. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
+endianness. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
 of the vector in the least significant bits of the i16 for little-endian while
 element zero ends up in the most significant bits for big-endian.
 
@@ -11690,9 +11690,9 @@ Example:
 
 .. code-block:: text
 
-      %X = bitcast i8 255 to i8          ; yields i8 :-1
-      %Y = bitcast i32* %x to i16*       ; yields i16*:%x
-      %Z = bitcast <2 x i32> %V to i64;  ; yields i64: %V (depends on endianess)
+      %X = bitcast i8 255 to i8         ; yields i8 :-1
+      %Y = bitcast i32* %x to i16*      ; yields i16*:%x
+      %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
 
 .. _i_addrspacecast:
