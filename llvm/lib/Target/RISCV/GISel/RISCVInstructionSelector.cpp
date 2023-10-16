@@ -210,7 +210,6 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
   const LLT XLenLLT = LLT::scalar(STI.getXLen());
   auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
   MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
-  MRI.setType(PtrReg, XLenLLT);
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
 }
