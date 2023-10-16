@@ -2250,6 +2250,7 @@ struct ConvertConstructorToDeductionGuideTransform {
 
   Sema &SemaRef;
   ClassTemplateDecl *Template;
+  ClassTemplateDecl *NestedPattern = nullptr;
 
   DeclContext *DC = Template->getDeclContext();
   CXXRecordDecl *Primary = Template->getTemplatedDecl();
@@ -2327,6 +2328,8 @@ struct ConvertConstructorToDeductionGuideTransform {
     if (FTD) {
       Args.addOuterTemplateArguments(SubstArgs);
       Args.addOuterRetainedLevel();
+      if (NestedPattern)
+        Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
     }
 
     FunctionProtoTypeLoc FPTL = CD->getTypeSourceInfo()->getTypeLoc()
@@ -2438,10 +2441,17 @@ private:
     SmallVector<QualType, 4> ParamTypes;
     const FunctionProtoType *T = TL.getTypePtr();
 
+    MultiLevelTemplateArgumentList OuterInstantiationArgs;
+    if (NestedPattern)
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(Template);
+
     //    -- The types of the function parameters are those of the constructor.
     for (auto *OldParam : TL.getParams()) {
       ParmVarDecl *NewParam =
           transformFunctionTypeParam(OldParam, Args, MaterializedTypedefs);
+      if (NestedPattern && NewParam)
+        NewParam = transformFunctionTypeParam(NewParam, OuterInstantiationArgs,
+                                              MaterializedTypedefs);
       if (!NewParam)
         return QualType();
       ParamTypes.push_back(NewParam->getType());
@@ -2647,13 +2657,23 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   if (BuildingDeductionGuides.isInvalid())
     return;
 
+  // If the template is nested, then we need to use the original
+  // pattern to iterate over the constructors.
+  ClassTemplateDecl *Pattern = Transform.Template;
+  while (Pattern->getInstantiatedFromMemberTemplate()) {
+    if (Pattern->isMemberSpecialization())
+      break;
+    Pattern = Pattern->getInstantiatedFromMemberTemplate();
+    Transform.NestedPattern = Pattern;
+  }
+
   // Convert declared constructors into deduction guide templates.
   // FIXME: Skip constructors for which deduction must necessarily fail (those
   // for which some class template parameter without a default argument never
   // appears in a deduced context).
   llvm::SmallPtrSet<NamedDecl *, 8> ProcessedCtors;
   bool AddedAny = false;
-  for (NamedDecl *D : LookupConstructors(Transform.Primary)) {
+  for (NamedDecl *D : LookupConstructors(Pattern->getTemplatedDecl())) {
     D = D->getUnderlyingDecl();
     if (D->isInvalidDecl() || D->isImplicit())
       continue;
