@@ -10,7 +10,7 @@ define i128 @__multi3(i128 %0, i128 %1) {
 }
 
 define i64 @__udivmoddi4(i64 %0, i64 %1, ptr %2) {
-; CHECK-LABEL: define internal i64 @__udivmoddi4(
+; CHECK-LABEL: define i64 @__udivmoddi4(
 ; CHECK-SAME: i64 [[TMP0:%.*]], i64 [[TMP1:%.*]], ptr [[TMP2:%.*]]) {
 ; CHECK-NEXT:    ret i64 0
 ;
