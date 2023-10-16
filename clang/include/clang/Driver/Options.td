@@ -1003,9 +1003,13 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
 
 def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Basic algebraic expansions of some arithmetic operations involving "
-           "data of type COMPLEX are disabled.">,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">,
   MarshallingInfoFlag<LangOpts<"CxLimitedRange">>;
+def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Basic algebraic expansions of complex arithmetic operations "
+           "involving are enabled.">;
 
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,

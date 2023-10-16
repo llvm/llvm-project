@@ -2814,6 +2814,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
   if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
     CmdArgs.push_back("-fcx-limited-range");
+  if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_limited_range))
+    CmdArgs.push_back("-fno-cx-limited-range");
 
   for (const Arg *A : Args) {
     auto optID = A->getOption().getID();
