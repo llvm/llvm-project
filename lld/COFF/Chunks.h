@@ -219,6 +219,8 @@ public:
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *buf) const;
 
+  MachineTypes getMachine() const { return file->getMachineType(); }
+
   // Defend against unsorted relocations. This may be overly conservative.
   void sortRelocations();
 
