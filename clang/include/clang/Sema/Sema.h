@@ -8669,20 +8669,6 @@ public:
                                      const TemplateCompareNewDeclInfo &New,
                                      const Expr *NewConstr);
 
-//  // Calculates whether two constraint expressions are equal irrespective of a
-//  // difference in 'depth'.  This overload takes the information for the 'New'
-//  // declaration separately in order to support situations where we do not yet
-//  // have a declaration (such as when we are doing the checking of a partial
-//  // specialization.
-//  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
-//                                     const Expr *OldConstr,
-//                                     const DeclContext *NewLexicalContext,
-//                                     const DeclContext *NewDeclContext,
-//                                     SourceLocation NewDeclLocation,
-//                                     const TemplateArgumentList *NewArgs,
-//                                     const Expr *NewConstr);
-//
-
   bool CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams);
 
   /// Called when the parser has parsed a C++ typename
