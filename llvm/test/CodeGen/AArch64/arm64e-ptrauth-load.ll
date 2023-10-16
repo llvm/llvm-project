@@ -208,9 +208,9 @@ define i64* @test_load_auth_db_4096_pre(i64* %ptr, i64* %dst) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov x16, x0
 ; CHECK-NEXT:    autdzb x16
-; CHECK-NEXT:    add x0, x16, #1, lsl #12 ; =4096
 ; CHECK-NEXT:    ldr x8, [x16, #4096]
 ; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    add x0, x16, #1, lsl #12 ; =4096
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
   %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 3, i64 0)
@@ -281,9 +281,9 @@ define i64* @test_load_auth_da_256_pre_use(i64* %ptr, i64* %dst, i64* %dst2) {
 ; CHECK-NEXT:    mov x16, x0
 ; CHECK-NEXT:    autdza x16
 ; CHECK-NEXT:    ldr x8, [x16, #256]
-; CHECK-NEXT:    add x0, x16, #256
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    str x16, [x2]
+; CHECK-NEXT:    add x0, x16, #256
 ; CHECK-NEXT:    ret
   %tmp0 = ptrtoint i64* %ptr to i64
   %tmp1 = call i64 @llvm.ptrauth.auth(i64 %tmp0, i32 2, i64 0)
