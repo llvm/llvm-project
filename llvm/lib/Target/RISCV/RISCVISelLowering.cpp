@@ -17289,9 +17289,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
 
     // Handle passing f64 on RV32D with a soft float ABI as a special case.
-    bool IsF64OnRV32DSoftABI =
-        VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64;
-    if (IsF64OnRV32DSoftABI) {
+    if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) {
       assert(VA.isRegLoc() && "Expected register VA assignment");
       SDValue SplitF64 = DAG.getNode(
           RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32), ArgValue);
@@ -17317,9 +17315,6 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
       }
       continue;
     }
-
-    // IsF64OnRV32DSoftABI && VA.isMemLoc() is handled below in the same way
-    // as any other MemLoc.
 
     // Promote the value if needed.
     // For now, only handle fully promoted and indirect arguments.
