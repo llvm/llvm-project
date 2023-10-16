@@ -161,9 +161,29 @@ TEST(ShapedTypeTest, VectorTypeBuilder) {
     // Test for bug from:
     // https://github.com/llvm/llvm-project/commit/b44b3494f60296db6aca38a14cab061d9b747a0a
     // Constructs a temporary builder, modifies it, copies it to `builder`.
+    // This used to lead to a use-after-free. Running under sanitizers will
+    // catch any issues.
     VectorType::Builder builder = VectorType::Builder(vectorType).setDim(0, 16);
     VectorType newVectorType = VectorType(builder);
     ASSERT_EQ(newVectorType.getDimSize(0), 16);
+  }
+
+  {
+    // Make builder from scratch (without scalable dims) -- this use to lead to
+    // a use-after-free see: https://github.com/llvm/llvm-project/pull/68969.
+    // Running under sanitizers will catch any issues.
+    SmallVector<int64_t> shape{1, 2, 3, 4};
+    VectorType::Builder builder(shape, f32);
+    ASSERT_EQ(VectorType(builder).getShape(), ArrayRef(shape));
+  }
+
+  {
+    // Set vector shape (without scalable dims) -- this use to lead to
+    // a use-after-free see: https://github.com/llvm/llvm-project/pull/68969.
+    // Running under sanitizers will catch any issues.
+    VectorType::Builder builder(vectorType);
+    builder.setShape({2, 2});
+    ASSERT_EQ(VectorType(builder).getShape(), ArrayRef<int64_t>({2, 2}));
   }
 }
 
@@ -194,6 +214,8 @@ TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
     // Test for bug from:
     // https://github.com/llvm/llvm-project/commit/b44b3494f60296db6aca38a14cab061d9b747a0a
     // Constructs a temporary builder, modifies it, copies it to `builder`.
+    // This used to lead to a use-after-free. Running under sanitizers will
+    // catch any issues.
     RankedTensorType::Builder builder =
         RankedTensorType::Builder(tensorType).dropDim(0);
     RankedTensorType newTensorType = RankedTensorType(builder);

@@ -323,7 +323,7 @@ public:
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          unsigned numScalableDims = 0, ArrayRef<bool> scalableDims = {})
+          ArrayRef<bool> scalableDims = {})
       : shape(shape), elementType(elementType), scalableDims(scalableDims) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape,
