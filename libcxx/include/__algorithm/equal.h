@@ -45,7 +45,7 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
 template < class _Tp,
            class _Up,
            class _BinaryPredicate,
-           __enable_if_t<__desugars_to<_BinaryPredicate, equal_to<_Tp> >::value && !is_volatile<_Tp>::value &&
+           __enable_if_t<__desugars_to<_BinaryPredicate, equal_to<void> >::value && !is_volatile<_Tp>::value &&
                              !is_volatile<_Up>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                          int> = 0>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
@@ -94,7 +94,7 @@ template <class _Tp,
           class _Pred,
           class _Proj1,
           class _Proj2,
-          __enable_if_t<__desugars_to<_Pred, equal_to<_Tp> >::value && __is_identity<_Proj1>::value &&
+          __enable_if_t<__desugars_to<_Pred, equal_to<void> >::value && __is_identity<_Proj1>::value &&
                             __is_identity<_Proj2>::value && !is_volatile<_Tp>::value && !is_volatile<_Up>::value &&
                             __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                         int> = 0>
