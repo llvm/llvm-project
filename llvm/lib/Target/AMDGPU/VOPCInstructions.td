@@ -1081,6 +1081,8 @@ multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   }
 }
 
+defm : FCMP_Pattern <COND_O, V_CMP_O_F32_e64, f32>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F32_e64, f32>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F32_e64, f32>;
@@ -1088,6 +1090,8 @@ defm : FCMP_Pattern <COND_OGE, V_CMP_GE_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OLT, V_CMP_LT_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OLE, V_CMP_LE_F32_e64, f32>;
 
+defm : FCMP_Pattern <COND_O, V_CMP_O_F64_e64, f64>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F64_e64, f64>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F64_e64, f64>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F64_e64, f64>;
@@ -1110,6 +1114,8 @@ defm : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
 
 let OtherPredicates = [HasTrue16BitInsts] in {
+defm : FCMP_Pattern <COND_O, V_CMP_U_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_O_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_t16_e64, f16>;
@@ -1126,6 +1132,8 @@ defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_t16_e64, f16>;
 } // End OtherPredicates = [HasTrue16BitInsts]
 
 let OtherPredicates = [NotHasTrue16BitInsts] in {
+defm : FCMP_Pattern <COND_O, V_CMP_U_F16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_O_F16_e64, f16>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_e64, f16>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_e64, f16>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_e64, f16>;
