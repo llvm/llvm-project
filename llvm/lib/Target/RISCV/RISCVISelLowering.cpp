@@ -13826,6 +13826,10 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
     if (GetPtrDiff(*It, *std::next(It)) != BaseDiff)
       return SDValue();
 
+  // TODO: At this point, we've successfully matched a generalized gather
+  // load.  Maybe we should emit that, and then move the specialized
+  // matchers above and below into a DAG combine?
+
   // Get the widened scalar type, e.g. v4i8 -> i64
   unsigned WideScalarBitWidth =
       BaseLdVT.getScalarSizeInBits() * BaseLdVT.getVectorNumElements();
