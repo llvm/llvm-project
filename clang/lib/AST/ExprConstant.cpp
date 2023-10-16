@@ -2417,7 +2417,6 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       Info.Note(SubobjectDecl->getLocation(),
                 diag::note_constexpr_subobject_declared_here);
     } else {
-      // FIXME: We should add a test to check the output of this case.
       Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized) << false << Type;
     }
     return false;
