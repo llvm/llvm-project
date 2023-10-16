@@ -18,7 +18,7 @@
 // XFAIL: target=x86_64{{.*}}
 
 // Flaky on AArch64 Linux, see https://github.com/llvm/llvm-project/issues/69221.
-// UNSUPPORTED: target=aarch64-linux{{.*}}
+// UNSUPPORTED: target=aarch64{{.*}}
 
 #include <stdlib.h>
 // At least -O1 is needed for this function to not have a stack frame on
