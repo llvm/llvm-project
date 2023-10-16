@@ -3,8 +3,8 @@
 
 int recurse(int x) {
   if (x <= 1)
-    return 1; // recurse end
-  return recurse(x-1) + x; // recurse call
+    return 1;                // recurse end
+  return recurse(x - 1) + x; // recurse call
 }
 
 int main(int argc, char const *argv[]) {

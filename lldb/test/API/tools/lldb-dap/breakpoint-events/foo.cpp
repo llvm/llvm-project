@@ -7,5 +7,5 @@ static void unique_function_name() {
 int foo(int x) {
   // foo breakpoint 1
   unique_function_name();
-  return x+42;
+  return x + 42;
 }

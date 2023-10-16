@@ -7,9 +7,9 @@ struct bar {
 
 struct foo {
   int var1;
-  bar* my_bar_pointer;
+  bar *my_bar_pointer;
   bar my_bar_object;
-  foo* next_foo;
+  foo *next_foo;
 };
 
 struct baz {
@@ -28,7 +28,7 @@ int main(int argc, char const *argv[]) {
   std::vector<baz> vec;
   fun(vec);
   bar bar1 = {2};
-  bar* bar2 = &bar1;
-  foo foo1 = {3,&bar1, bar1, NULL};
+  bar *bar2 = &bar1;
+  foo foo1 = {3, &bar1, bar1, NULL};
   return 0; // breakpoint 2
 }

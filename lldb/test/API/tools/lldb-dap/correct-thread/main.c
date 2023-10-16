@@ -3,14 +3,12 @@
 
 int state_var;
 
-void *thread (void *in)
-{
+void *thread(void *in) {
   state_var++; // break here
   return NULL;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   pthread_t t1, t2;
 
   pthread_create(&t1, NULL, *thread, NULL);

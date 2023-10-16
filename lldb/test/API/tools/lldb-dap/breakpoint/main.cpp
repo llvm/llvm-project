@@ -11,10 +11,10 @@ int thirteen(int i) {
 }
 
 namespace a {
-  int fourteen(int i) {
-    return 14 + i; // break 14
-  }
+int fourteen(int i) {
+  return 14 + i; // break 14
 }
+} // namespace a
 int main(int argc, char const *argv[]) {
 #if defined(__APPLE__)
   const char *libother_name = "libother.dylib";
@@ -35,11 +35,11 @@ int main(int argc, char const *argv[]) {
   }
   foo(12); // before loop
 
-  for (int i=0; i<10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     int x = twelve(i) + thirteen(i) + a::fourteen(i); // break loop
   }
   try {
-    throw std::invalid_argument( "throwing exception for testing" );
+    throw std::invalid_argument("throwing exception for testing");
   } catch (...) {
     puts("caught exception...");
   }
