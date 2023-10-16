@@ -11214,7 +11214,7 @@ Value *BoUpSLP::vectorizeTree(
     TE->VectorizedValue = nullptr;
     auto *UserI =
         cast<Instruction>(TE->UserTreeIndices.front().UserTE->VectorizedValue);
-    Builder.SetInsertPoint(PrevVec);
+    Builder.SetInsertPoint(UserI);
     Builder.SetCurrentDebugLocation(UserI->getDebugLoc());
     Value *Vec = vectorizeTree(TE);
     PrevVec->replaceAllUsesWith(Vec);
