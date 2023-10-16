@@ -130,6 +130,8 @@ namespace nan {
                                              // expected-error {{must be initialized by a constant expression}} \
                                              // expected-note {{read of dereferenced one-past-the-end pointer}} \
                                              // expected-note {{in call to}}
+  static_assert(!__builtin_issignaling(__builtin_nan("")), "");
+  static_assert(__builtin_issignaling(__builtin_nans("")), "");
 }
 
 namespace fmin {
@@ -153,6 +155,15 @@ namespace inf {
 
   static_assert(__builtin_isnormal(1.0), "");
   static_assert(!__builtin_isnormal(__builtin_inf()), "");
+
+  static_assert(__builtin_issubnormal(0x1p-1070), "");
+  static_assert(!__builtin_issubnormal(__builtin_inf()), "");
+
+  static_assert(__builtin_iszero(0.0), "");
+  static_assert(!__builtin_iszero(__builtin_inf()), "");
+
+  static_assert(__builtin_issignaling(__builtin_nans("")), "");
+  static_assert(!__builtin_issignaling(__builtin_inf()), "");
 }
 
 namespace isfpclass {
