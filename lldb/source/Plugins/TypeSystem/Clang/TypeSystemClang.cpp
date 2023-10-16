@@ -7173,6 +7173,9 @@ GetNthTemplateArgument(const clang::ClassTemplateSpecializationDecl *decl,
   if (idx < last_idx)
     return &args[idx];
 
+  if (idx >= args.size())
+    return nullptr;
+
   // We're asked for the last template argument but we don't want/need to
   // expand it.
   if (!expand_pack || args[last_idx].getKind() != clang::TemplateArgument::Pack)
