@@ -198,6 +198,14 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           return false;
         if (!this->emitInitPtrPop(InitExpr))
           return false;
+      } else {
+        assert(Init->isDelegatingInitializer());
+        if (!this->emitThis(InitExpr))
+          return false;
+        if (!this->visitInitializer(Init->getInit()))
+          return false;
+        if (!this->emitPopPtr(InitExpr))
+          return false;
       }
     }
   }
