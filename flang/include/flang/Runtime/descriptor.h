@@ -390,14 +390,16 @@ public:
     if (leadingDimensions > raw_.rank) {
       leadingDimensions = raw_.rank;
     }
+    bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      if (bytes != dim.ByteStride()) {
-        return false;
-      }
+      stridesAreContiguous &= bytes == dim.ByteStride();
       bytes *= dim.Extent();
     }
-    return true;
+    // One and zero element arrays are contiguous even if the descriptor
+    // byte strides are not perfect multiples.
+    return stridesAreContiguous || bytes == 0 ||
+        bytes == static_cast<SubscriptValue>(ElementBytes());
   }
 
   // Establishes a pointer to a section or element.

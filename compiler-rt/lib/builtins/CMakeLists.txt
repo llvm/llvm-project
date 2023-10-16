@@ -553,6 +553,12 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
+if(COMPILER_RT_HAS_ASM_SME)
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+else()
+  message(STATUS "AArch64 SME ABI routines disabled")
+endif()
+
 # Generate outline atomics helpers from lse.S base
 set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
 file(MAKE_DIRECTORY "${OA_HELPERS_DIR}")
