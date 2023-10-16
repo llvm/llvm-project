@@ -769,6 +769,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // extract of relevant bits.
   setOperationAction(ISD::GET_FPMODE, MVT::i32, Legal);
 
+  setOperationAction(ISD::MUL, MVT::i1, Promote);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
