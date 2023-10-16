@@ -521,6 +521,8 @@ Bug Fixes to AST Handling
   computed RecordLayout is incorrect if fields are not completely imported and
   should not be cached.
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
+- Fixed ``hasAnyBase`` not binding nodes in its submatcher.
+  (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
