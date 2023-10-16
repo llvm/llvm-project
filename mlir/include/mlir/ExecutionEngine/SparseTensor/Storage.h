@@ -12,7 +12,6 @@
 // * `SparseTensorStorage<P, C, V>`
 // * `SparseTensorEnumeratorBase<V>`
 // * `SparseTensorEnumerator<P, C, V>`
-// * `SparseTensorNNZ`
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,14 +24,6 @@
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
-
-#define ASSERT_COMPRESSED_OR_SINGLETON_LVL(l)                                  \
-  do {                                                                         \
-    const DimLevelType dlt = getLvlType(l);                                    \
-    (void)dlt;                                                                 \
-    assert((isCompressedDLT(dlt) || isSingletonDLT(dlt)) &&                    \
-           "Level is neither compressed nor singleton");                       \
-  } while (false)
 
 namespace mlir {
 namespace sparse_tensor {
@@ -151,18 +142,6 @@ public:
   /// Gets the level-to-dimension mapping.
   // TODO: REMOVE THIS
   const std::vector<uint64_t> &getLvl2Dim() const { return lvl2dimVec; }
-
-  /// Allocates a new enumerator.  Callers must make sure to delete
-  /// the enumerator when they're done with it. The first argument
-  /// is the out-parameter for storing the newly allocated enumerator;
-  /// all other arguments are passed along to the `SparseTensorEnumerator`
-  /// ctor and must satisfy the preconditions/assertions thereof.
-#define DECL_NEWENUMERATOR(VNAME, V)                                           \
-  virtual void newEnumerator(SparseTensorEnumeratorBase<V> **, uint64_t,       \
-                             const uint64_t *, uint64_t, const uint64_t *)     \
-      const;
-  MLIR_SPARSETENSOR_FOREVERY_V(DECL_NEWENUMERATOR)
-#undef DECL_NEWENUMERATOR
 
   /// Gets positions-overhead storage for the given level.
 #define DECL_GETPOSITIONS(PNAME, P)                                            \
@@ -312,27 +291,6 @@ public:
              const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
              const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO);
 
-  /// Allocates a new sparse tensor and initializes it with the contents
-  /// of another sparse tensor.
-  //
-  // TODO: The `dimRank` and `dimShape` arguments are only used for
-  // verifying that the source tensor has the expected shape.  So if we
-  // wanted to skip that verification, then we could remove those arguments.
-  // Alternatively, if we required the `dimShape` to be "sizes" instead,
-  // then that would remove any constraints on `source.getDimSizes()`
-  // (other than compatibility with `src2lvl`) as well as removing the
-  // requirement that `src2lvl` be the inverse of `lvl2dim`.  Which would
-  // enable this factory to be used for performing a much larger class of
-  // transformations (which can already be handled by the `SparseTensorNNZ`
-  // implementation).
-  static SparseTensorStorage<P, C, V> *
-  newFromSparseTensor(uint64_t dimRank, const uint64_t *dimShape,
-                      uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes,
-                      const uint64_t *src2lvl, // FIXME: dim2lvl,
-                      const uint64_t *lvl2dim, uint64_t srcRank,
-                      const SparseTensorStorageBase &source);
-
   /// Allocates a new sparse tensor and initialize it with the data stored level
   /// buffers directly.
   static SparseTensorStorage<P, C, V> *packFromLvlBuffers(
@@ -361,7 +319,7 @@ public:
 
   /// Returns coordinate at given position.
   uint64_t getCrd(uint64_t lvl, uint64_t pos) const final {
-    ASSERT_COMPRESSED_OR_SINGLETON_LVL(lvl);
+    assert(isCompressedDLT(getLvlType(lvl)) || isSingletonDLT(getLvlType(lvl)));
     assert(pos < coordinates[lvl].size());
     return coordinates[lvl][pos]; // Converts the stored `C` into `uint64_t`.
   }
@@ -453,17 +411,6 @@ public:
       endPath(0);
   }
 
-  /// Allocates a new enumerator for this class's `<P,C,V>` types and
-  /// erase the `<P,C>` parts from the type.  Callers must make sure to
-  /// delete the enumerator when they're done with it.
-  void newEnumerator(SparseTensorEnumeratorBase<V> **out, uint64_t trgRank,
-                     const uint64_t *trgSizes, uint64_t srcRank,
-                     const uint64_t *src2trg) const final {
-    assert(out && "Received nullptr for out parameter");
-    *out = new SparseTensorEnumerator<P, C, V>(*this, trgRank, trgSizes,
-                                               srcRank, src2trg);
-  }
-
   /// Allocates a new COO object and initializes it with the contents
   /// of this tensor under the given mapping from the `getDimSizes()`
   /// coordinate-space to the `trgSizes` coordinate-space. Callers must
@@ -472,7 +419,6 @@ public:
                             uint64_t srcRank,
                             const uint64_t *src2trg, // FIXME: dim2lvl
                             const uint64_t *lvl2dim) const {
-    // We inline `newEnumerator` to avoid virtual dispatch and allocation.
     // TODO: use MapRef here too for the translation
     SparseTensorEnumerator<P, C, V> enumerator(*this, trgRank, trgSizes,
                                                srcRank, src2trg);
@@ -584,7 +530,7 @@ private:
   /// does not check that `crd` is semantically valid (i.e., in bounds
   /// for `dimSizes[lvl]` and not elsewhere occurring in the same segment).
   void writeCrd(uint64_t lvl, uint64_t pos, uint64_t crd) {
-    ASSERT_COMPRESSED_OR_SINGLETON_LVL(lvl);
+    assert(isCompressedDLT(getLvlType(lvl)) || isSingletonDLT(getLvlType(lvl)));
     // Subscript assignment to `std::vector` requires that the `pos`-th
     // entry has been initialized; thus we must be sure to check `size()`
     // here, instead of `capacity()` as would be ideal.
@@ -734,8 +680,6 @@ private:
   std::vector<uint64_t> lvlCursor; // cursor for lexicographic insertion.
   SparseTensorCOO<V> *lvlCOO;      // COO used during forwarding
 };
-
-#undef ASSERT_COMPRESSED_OR_SINGLETON_LVL
 
 //===----------------------------------------------------------------------===//
 //
@@ -907,83 +851,6 @@ private:
 
 //===----------------------------------------------------------------------===//
 //
-//  SparseTensorNNZ
-//
-//===----------------------------------------------------------------------===//
-
-/// Statistics regarding the number of nonzero subtensors in
-/// a source tensor, for direct sparse=>sparse conversion a la
-/// <https://arxiv.org/abs/2001.02609>.
-///
-/// N.B., this class stores references to the parameters passed to
-/// the constructor; thus, objects of this class must not outlive
-/// those parameters.
-///
-/// This class does not have the "dimension" vs "level" distinction, but
-/// since it is used for initializing the levels of a `SparseTensorStorage`
-/// object, we use the "level" name throughout for the sake of consistency.
-class SparseTensorNNZ final {
-public:
-  /// Allocates the statistics structure for the desired target-tensor
-  /// level structure (i.e., sizes and types).  This constructor does not
-  /// actually populate the statistics, however; for that see `initialize`.
-  ///
-  /// Precondition: `lvlSizes` must not contain zeros.
-  /// Asserts: `lvlSizes.size() == lvlTypes.size()`.
-  SparseTensorNNZ(const std::vector<uint64_t> &lvlSizes,
-                  const std::vector<DimLevelType> &lvlTypes);
-
-  // We disallow copying to help avoid leaking the stored references.
-  SparseTensorNNZ(const SparseTensorNNZ &) = delete;
-  SparseTensorNNZ &operator=(const SparseTensorNNZ &) = delete;
-
-  /// Gets the target-tensor's level-rank.
-  uint64_t getLvlRank() const { return lvlSizes.size(); }
-
-  /// Enumerates the source tensor to fill in the statistics.
-  /// The enumerator should already incorporate the mapping from
-  /// the source tensor-dimensions to the target storage-levels.
-  ///
-  /// Asserts:
-  /// * `enumerator.getTrgRank() == getLvlRank()`.
-  /// * `enumerator.getTrgSizes() == lvlSizes`.
-  template <typename V>
-  void initialize(SparseTensorEnumeratorBase<V> &enumerator) {
-    assert(enumerator.getTrgRank() == getLvlRank() && "Tensor rank mismatch");
-    assert(enumerator.getTrgSizes() == lvlSizes && "Tensor size mismatch");
-    enumerator.forallElements(
-        [this](const std::vector<uint64_t> &lvlCoords, V) { add(lvlCoords); });
-  }
-
-  /// The type of callback functions which receive an nnz-statistic.
-  using NNZConsumer = const std::function<void(uint64_t)> &;
-
-  /// Lexicographically enumerates all coordinates for levels strictly
-  /// less than `stopLvl`, and passes their nnz statistic to the callback.
-  /// Since our use-case only requires the statistic not the coordinates
-  /// themselves, we do not bother to construct those coordinates.
-  void forallCoords(uint64_t stopLvl, NNZConsumer yield) const;
-
-private:
-  /// Adds a new element (i.e., increment its statistics).  We use
-  /// a method rather than inlining into the lambda in `initialize`,
-  /// to avoid spurious templating over `V`.  And this method is private
-  /// to avoid needing to re-assert validity of `lvlCoords` (which is
-  /// guaranteed by `forallElements`).
-  void add(const std::vector<uint64_t> &lvlCoords);
-
-  /// Recursive component of the public `forallCoords`.
-  void forallCoords(NNZConsumer yield, uint64_t stopLvl, uint64_t parentPos,
-                    uint64_t l) const;
-
-  // All of these are in the target storage-order.
-  const std::vector<uint64_t> &lvlSizes;
-  const std::vector<DimLevelType> &lvlTypes;
-  std::vector<std::vector<uint64_t>> nnz;
-};
-
-//===----------------------------------------------------------------------===//
-//
 //  SparseTensorStorage Factories
 //
 //===----------------------------------------------------------------------===//
@@ -1023,33 +890,6 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
   }
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes.data(), lvlRank,
                                           lvlTypes, dim2lvl, lvl2dim, lvlCOO);
-}
-
-template <typename P, typename C, typename V>
-SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromSparseTensor(
-    uint64_t dimRank, const uint64_t *dimShape, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-    const uint64_t *src2lvl, // dim2lvl
-    const uint64_t *lvl2dim, uint64_t srcRank,
-    const SparseTensorStorageBase &source) {
-  // Verify that the `source` dimensions match the expected `dimShape`.
-  assert(dimShape && "Got nullptr for dimension shape");
-  assert(dimRank == source.getDimRank() && "Dimension-rank mismatch");
-  const auto &dimSizes = source.getDimSizes();
-#ifndef NDEBUG
-  for (uint64_t d = 0; d < dimRank; ++d) {
-    const uint64_t sz = dimShape[d];
-    assert((sz == 0 || sz == dimSizes[d]) &&
-           "Dimension-sizes do not match expected shape");
-  }
-#endif
-  SparseTensorEnumeratorBase<V> *lvlEnumerator;
-  source.newEnumerator(&lvlEnumerator, lvlRank, lvlSizes, srcRank, src2lvl);
-  auto *tensor = new SparseTensorStorage<P, C, V>(dimRank, dimSizes.data(),
-                                                  lvlRank, lvlTypes, src2lvl,
-                                                  lvl2dim, *lvlEnumerator);
-  delete lvlEnumerator;
-  return tensor;
 }
 
 template <typename P, typename C, typename V>
@@ -1126,106 +966,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
   assert(values.size() == 0);
   values.reserve(nse);
   fromCOO(elements, 0, nse, 0);
-}
-
-template <typename P, typename C, typename V>
-SparseTensorStorage<P, C, V>::SparseTensorStorage(
-    uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
-    const uint64_t *lvl2dim, SparseTensorEnumeratorBase<V> &lvlEnumerator)
-    : SparseTensorStorage(dimRank, dimSizes, lvlRank,
-                          lvlEnumerator.getTrgSizes().data(), lvlTypes, dim2lvl,
-                          lvl2dim) {
-  assert(lvlRank == lvlEnumerator.getTrgRank() && "Level-rank mismatch");
-  {
-    // Initialize the statistics structure.
-    SparseTensorNNZ nnz(getLvlSizes(), getLvlTypes());
-    nnz.initialize(lvlEnumerator);
-    // Initialize "positions" overhead (and allocate "coordinates", "values").
-    uint64_t parentSz = 1; // assembled-size of the `(l - 1)`-level.
-    for (uint64_t l = 0; l < lvlRank; ++l) {
-      const auto dlt = lvlTypes[l]; // Avoid redundant bounds checking.
-      if (isCompressedDLT(dlt)) {
-        positions[l].reserve(parentSz + 1);
-        positions[l].push_back(0);
-        uint64_t currentPos = 0;
-        nnz.forallCoords(l, [this, &currentPos, l](uint64_t n) {
-          currentPos += n;
-          appendPos(l, currentPos);
-        });
-        assert(positions[l].size() == parentSz + 1 &&
-               "Final positions size doesn't match allocated size");
-        // That assertion entails `assembledSize(parentSz, l)`
-        // is now in a valid state.  That is, `positions[l][parentSz]`
-        // equals the present value of `currentPos`, which is the
-        // correct assembled-size for `coordinates[l]`.
-      }
-      // Update assembled-size for the next iteration.
-      parentSz = assembledSize(parentSz, l);
-      // Ideally we need only `coordinates[l].reserve(parentSz)`, however
-      // the `std::vector` implementation forces us to initialize it too.
-      // That is, in the yieldPos loop we need random-access assignment
-      // to `coordinates[l]`; however, `std::vector`'s subscript-assignment
-      // only allows assigning to already-initialized positions.
-      if (isCompressedDLT(dlt) || isSingletonDLT(dlt))
-        coordinates[l].resize(parentSz, 0);
-      else
-        assert(isDenseDLT(dlt));
-    }
-    values.resize(parentSz, 0); // Both allocate and zero-initialize.
-  }
-  // The yieldPos loop
-  lvlEnumerator.forallElements([this](const auto &lvlCoords, V val) {
-    uint64_t parentSz = 1, parentPos = 0;
-    for (uint64_t lvlRank = getLvlRank(), l = 0; l < lvlRank; ++l) {
-      const auto dlt = getLvlTypes()[l]; // Avoid redundant bounds checking.
-      if (isCompressedDLT(dlt)) {
-        // If `parentPos == parentSz` then it's valid as an array-lookup;
-        // however, it's semantically invalid here since that entry
-        // does not represent a segment of `coordinates[l]`.  Moreover, that
-        // entry must be immutable for `assembledSize` to remain valid.
-        assert(parentPos < parentSz);
-        const uint64_t currentPos = positions[l][parentPos];
-        // This increment won't overflow the `P` type, since it can't
-        // exceed the original value of `positions[l][parentPos+1]`
-        // which was already verified to be within bounds for `P`
-        // when it was written to the array.
-        positions[l][parentPos]++;
-        writeCrd(l, currentPos, lvlCoords[l]);
-        parentPos = currentPos;
-      } else if (isSingletonDLT(dlt)) {
-        writeCrd(l, parentPos, lvlCoords[l]);
-        // the new parentPos equals the old parentPos.
-      } else { // Dense level.
-        assert(isDenseDLT(dlt));
-        parentPos = parentPos * getLvlSizes()[l] + lvlCoords[l];
-      }
-      parentSz = assembledSize(parentSz, l);
-    }
-    assert(parentPos < values.size());
-    values[parentPos] = val;
-  });
-  // The finalizeYieldPos loop
-  for (uint64_t parentSz = 1, l = 0; l < lvlRank; ++l) {
-    const auto dlt = lvlTypes[l]; // Avoid redundant bounds checking.
-    if (isCompressedDLT(dlt)) {
-      assert(parentSz == positions[l].size() - 1 &&
-             "Actual positions size doesn't match the expected size");
-      // Can't check all of them, but at least we can check the last one.
-      assert(positions[l][parentSz - 1] == positions[l][parentSz] &&
-             "Positions got corrupted");
-      for (uint64_t n = 0; n < parentSz; ++n) {
-        const uint64_t parentPos = parentSz - n;
-        positions[l][parentPos] = positions[l][parentPos - 1];
-      }
-      positions[l][0] = 0;
-    } else {
-      // Both dense and singleton are no-ops for the finalizeYieldPos loop.
-      // This assertion is for future-proofing.
-      assert((isDenseDLT(dlt) || isSingletonDLT(dlt)));
-    }
-    parentSz = assembledSize(parentSz, l);
-  }
 }
 
 template <typename P, typename C, typename V>
