@@ -11,8 +11,6 @@
 
 include "mlir/IR/OpBase.td"
 
-// The 'LinalgContractionOpInterface' provides access to the
-// 'ContractionOpInterface'.
 def StageWithSortSparseOpInterface : OpInterface<"StageWithSortSparseOp"> {
   let description = [{
     A stage-with-sort sparse tensor operation is an operation that produces
