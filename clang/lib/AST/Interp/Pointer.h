@@ -296,7 +296,7 @@ public:
   bool isUnion() const;
 
   /// Checks if the storage is extern.
-  bool isExtern() const { return Pointee->isExtern(); }
+  bool isExtern() const { return Pointee && Pointee->isExtern(); }
   /// Checks if the storage is static.
   bool isStatic() const { return Pointee->isStatic(); }
   /// Checks if the storage is temporary.
@@ -351,6 +351,8 @@ public:
 
   /// Checks if the index is one past end.
   bool isOnePastEnd() const {
+    if (!Pointee)
+      return false;
     return isElementPastEnd() || getSize() == getOffset();
   }
 

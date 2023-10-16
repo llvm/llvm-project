@@ -67,3 +67,15 @@ _Static_assert(&Test50 != (void*)0, ""); // ref-warning {{always true}} \
                                          // expected-warning {{always true}} \
                                          // pedantic-expected-warning {{always true}} \
                                          // pedantic-expected-warning {{is a GNU extension}}
+
+struct y {int x,y;};
+int a2[(long)&((struct y*)0)->y]; // expected-warning {{folded to constant array}} \
+                                  // pedantic-expected-warning {{folded to constant array}} \
+                                  // ref-warning {{folded to constant array}} \
+                                  // pedantic-ref-warning {{folded to constant array}}
+
+const struct y *yy = (struct y*)0;
+const long L = (long)(&(yy->y)); // expected-error {{not a compile-time constant}} \
+                                 // pedantic-expected-error {{not a compile-time constant}} \
+                                 // ref-error {{not a compile-time constant}} \
+                                 // pedantic-ref-error {{not a compile-time constant}}

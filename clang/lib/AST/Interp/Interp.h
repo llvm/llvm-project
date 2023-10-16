@@ -1155,7 +1155,7 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// 2) Pushes Pointer.atField(Off) on the stack
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Ptr, CSK_Field))
+  if (S.inConstantContext() && !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
