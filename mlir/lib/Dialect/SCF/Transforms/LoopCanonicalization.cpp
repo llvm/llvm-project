@@ -36,10 +36,9 @@ using namespace mlir::scf;
 /// type of the corresponding basic block argument of the loop.
 /// Note: This function handles only simple cases. Expand as needed.
 static bool isShapePreserving(ForOp forOp, int64_t arg) {
-  auto yieldOp = cast<YieldOp>(forOp.getBody()->getTerminator());
-  assert(arg < static_cast<int64_t>(yieldOp.getResults().size()) &&
+  assert(arg < static_cast<int64_t>(forOp.getNumResults()) &&
          "arg is out of bounds");
-  Value value = yieldOp.getResults()[arg];
+  Value value = forOp.getYieldedValues()[arg];
   while (value) {
     if (value == forOp.getRegionIterArgs()[arg])
       return true;

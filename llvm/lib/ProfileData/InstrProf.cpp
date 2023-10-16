@@ -982,8 +982,7 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
 // For writing/serializing,  Old is the host endianness, and  New is
 // byte order intended on disk. For Reading/deserialization, Old
 // is the on-disk source endianness, and New is the host endianness.
-void ValueProfRecord::swapBytes(support::endianness Old,
-                                support::endianness New) {
+void ValueProfRecord::swapBytes(llvm::endianness Old, llvm::endianness New) {
   using namespace support;
 
   if (Old == New)
@@ -1020,13 +1019,13 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
 }
 
 template <class T>
-static T swapToHostOrder(const unsigned char *&D, support::endianness Orig) {
+static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
-  if (Orig == little)
-    return endian::readNext<T, little, unaligned>(D);
+  if (Orig == llvm::endianness::little)
+    return endian::readNext<T, llvm::endianness::little, unaligned>(D);
   else
-    return endian::readNext<T, big, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::big, unaligned>(D);
 }
 
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
@@ -1060,7 +1059,7 @@ Error ValueProfData::checkIntegrity() {
 Expected<std::unique_ptr<ValueProfData>>
 ValueProfData::getValueProfData(const unsigned char *D,
                                 const unsigned char *const BufferEnd,
-                                support::endianness Endianness) {
+                                llvm::endianness Endianness) {
   using namespace support;
 
   if (D + sizeof(ValueProfData) > BufferEnd)
@@ -1083,7 +1082,7 @@ ValueProfData::getValueProfData(const unsigned char *D,
   return std::move(VPD);
 }
 
-void ValueProfData::swapBytesToHost(support::endianness Endianness) {
+void ValueProfData::swapBytesToHost(llvm::endianness Endianness) {
   using namespace support;
 
   if (Endianness == llvm::endianness::native)
@@ -1099,7 +1098,7 @@ void ValueProfData::swapBytesToHost(support::endianness Endianness) {
   }
 }
 
-void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
+void ValueProfData::swapBytesFromHost(llvm::endianness Endianness) {
   using namespace support;
 
   if (Endianness == llvm::endianness::native)
@@ -1450,7 +1449,7 @@ static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
 
 uint64_t Header::formatVersion() const {
   using namespace support;
-  return endian::byte_swap<uint64_t, little>(Version);
+  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1462,7 +1461,8 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
-  uint64_t Magic = endian::byte_swap<uint64_t, little>(H.Magic);
+  uint64_t Magic =
+      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
   if (Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 

@@ -4682,9 +4682,9 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
   Visibility<[ClangOption, CC1Option]>,
-  Values<"none,3,4,5">,
+  Values<"none,4,5">,
   NormalizedValuesScope<"TargetOptions">,
-  NormalizedValues<["COV_None", "COV_3", "COV_4", "COV_5"]>,
+  NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
 defm cumode : SimpleMFlag<"cumode",
@@ -5904,6 +5904,8 @@ def mtsxldtrk : Flag<["-"], "mtsxldtrk">, Group<m_x86_Features_Group>;
 def mno_tsxldtrk : Flag<["-"], "mno-tsxldtrk">, Group<m_x86_Features_Group>;
 def muintr : Flag<["-"], "muintr">, Group<m_x86_Features_Group>;
 def mno_uintr : Flag<["-"], "mno-uintr">, Group<m_x86_Features_Group>;
+def musermsr : Flag<["-"], "musermsr">, Group<m_x86_Features_Group>;
+def mno_usermsr : Flag<["-"], "mno-usermsr">, Group<m_x86_Features_Group>;
 def mvaes : Flag<["-"], "mvaes">, Group<m_x86_Features_Group>;
 def mno_vaes : Flag<["-"], "mno-vaes">, Group<m_x86_Features_Group>;
 def mvpclmulqdq : Flag<["-"], "mvpclmulqdq">, Group<m_x86_Features_Group>;
@@ -6264,6 +6266,9 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
+defm alias_analysis : BoolOptionWithoutMarshalling<"f", "alias-analysis",
+  PosFlag<SetTrue, [], [], "Pass alias information on to LLVM (default when optimizing for speed)">,
+  NegFlag<SetFalse, [], [], "Do not pass alias information on to LLVM (default for unoptimized builds)">>;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -7475,9 +7480,9 @@ def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and
   ImpliedByAnyOf<[open_cl.KeyPath, render_script.KeyPath, hlsl.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
-  Values<"cdecl,fastcall,stdcall,vectorcall,regcall">,
+  Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
   NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall"]>,
+  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall", "DCC_RtdCall"]>,
   MarshallingInfoEnum<LangOpts<"DefaultCallingConv">, "DCC_None">;
 
 // These options cannot be marshalled, because they are used to set up the LangOptions defaults.

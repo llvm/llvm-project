@@ -34,7 +34,7 @@ struct binary_function
 template <class T>
 class reference_wrapper
     : public unary_function<T1, R> // if wrapping a unary functor
-    : public binary_function<T1, T2, R> // if wraping a binary functor
+    : public binary_function<T1, T2, R> // if wrapping a binary functor
 {
 public:
     // types

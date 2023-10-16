@@ -20,15 +20,14 @@ using namespace mlir::sparse_tensor;
 SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
-    const uint64_t *lvl2dim)
+    const uint64_t *dim2lvl, const uint64_t *lvl2dim)
     : dimSizes(dimSizes, dimSizes + dimRank),
       lvlSizes(lvlSizes, lvlSizes + lvlRank),
       lvlTypes(lvlTypes, lvlTypes + lvlRank),
-      lvl2dim(lvl2dim, lvl2dim + lvlRank) {
-  assert(dimSizes && "Got nullptr for dimension sizes");
-  assert(lvlSizes && "Got nullptr for level sizes");
-  assert(lvlTypes && "Got nullptr for level types");
-  assert(lvl2dim && "Got nullptr for level-to-dimension mapping");
+      dim2lvlVec(dim2lvl, dim2lvl + dimRank),
+      lvl2dimVec(lvl2dim, lvl2dim + lvlRank),
+      map(dimRank, lvlRank, dim2lvlVec.data(), lvl2dimVec.data()) {
+  assert(dimSizes && lvlSizes && lvlTypes && dim2lvl && lvl2dim);
   // Validate dim-indexed parameters.
   assert(dimRank > 0 && "Trivial shape is unsupported");
   for (uint64_t d = 0; d < dimRank; ++d)
@@ -80,6 +79,13 @@ MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATES)
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETVALUES)
 #undef IMPL_GETVALUES
+
+#define IMPL_FORWARDINGINSERT(VNAME, V)                                        \
+  void SparseTensorStorageBase::forwardingInsert(const uint64_t *, V) {        \
+    FATAL_PIV("forwardingInsert" #VNAME);                                      \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_FORWARDINGINSERT)
+#undef IMPL_FORWARDINGINSERT
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
   void SparseTensorStorageBase::lexInsert(const uint64_t *, V) {               \

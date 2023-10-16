@@ -567,11 +567,24 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
 
   // All other predicates - rely on generic ConstantRange handling.
   const APInt *C;
-  if (!match(RHS, m_APInt(C)))
+  auto Zero = APInt::getZero(RHS->getType()->getScalarSizeInBits());
+  if (match(RHS, m_APInt(C))) {
+    ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(Pred, *C);
+    return !TrueValues.contains(Zero);
+  }
+
+  auto *VC = dyn_cast<ConstantDataVector>(RHS);
+  if (VC == nullptr)
     return false;
 
-  ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(Pred, *C);
-  return !TrueValues.contains(APInt::getZero(C->getBitWidth()));
+  for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
+       ++ElemIdx) {
+    ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(
+        Pred, VC->getElementAsAPInt(ElemIdx));
+    if (TrueValues.contains(Zero))
+      return false;
+  }
+  return true;
 }
 
 static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
@@ -2048,20 +2061,19 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
     return false;
   case Instruction::Mul:
-    return OrZero &&
-           isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
-           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+    return isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
+           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q) &&
+           (OrZero || isKnownNonZero(I, Depth, Q));
   case Instruction::And:
-    if (OrZero) {
-      // A power of two and'd with anything is a power of two or zero.
-      if (isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q) ||
-          isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q))
-        return true;
-      // X & (-X) is always a power of two or zero.
-      if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
-          match(I->getOperand(1), m_Neg(m_Specific(I->getOperand(0)))))
-        return true;
-    }
+    // A power of two and'd with anything is a power of two or zero.
+    if (OrZero &&
+        (isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q) ||
+         isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q)))
+      return true;
+    // X & (-X) is always a power of two or zero.
+    if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
+        match(I->getOperand(1), m_Neg(m_Specific(I->getOperand(0)))))
+      return OrZero || isKnownNonZero(I->getOperand(0), Depth, Q);
     return false;
   case Instruction::Add: {
     // Adding a power-of-two or zero to the same power-of-two or zero yields
@@ -8492,6 +8504,11 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
     if (match(BO.getOperand(1), m_APInt(C)))
       // 'and x, C' produces [0, C].
       Upper = *C + 1;
+    // X & -X is a power of two or zero. So we can cap the value at max power of
+    // two.
+    if (match(BO.getOperand(0), m_Neg(m_Specific(BO.getOperand(1)))) ||
+        match(BO.getOperand(1), m_Neg(m_Specific(BO.getOperand(0)))))
+      Upper = APInt::getSignedMinValue(Width) + 1;
     break;
 
   case Instruction::Or:
@@ -8553,7 +8570,20 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
           Lower = *C;
           Upper = C->shl(ShiftAmount) + 1;
         }
+      } else {
+        // If lowbit is set, value can never be zero.
+        if ((*C)[0])
+          Lower = APInt::getOneBitSet(Width, 0);
+        // If we are shifting a constant the largest it can be is if the longest
+        // sequence of consecutive ones is shifted to the highbits (breaking
+        // ties for which sequence is higher). At the moment we take a liberal
+        // upper bound on this by just popcounting the constant.
+        // TODO: There may be a bitwise trick for it longest/highest
+        // consecutative sequence of ones (naive method is O(Width) loop).
+        Upper = APInt::getHighBitsSet(Width, C->popcount()) + 1;
       }
+    } else if (match(BO.getOperand(1), m_APInt(C)) && C->ult(Width)) {
+      Upper = APInt::getBitsSetFrom(Width, C->getZExtValue()) + 1;
     }
     break;
 

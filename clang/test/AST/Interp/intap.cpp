@@ -3,6 +3,21 @@
 // RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
 // RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
 
+
+using MaxBitInt = _BitInt(128);
+
+constexpr _BitInt(2) A = 0;
+constexpr _BitInt(2) B = A + 1;
+constexpr _BitInt(2) C = B + 1; // expected-warning {{from 2 to -2}} \
+                                // ref-warning {{from 2 to -2}}
+static_assert(C == -2, "");
+
+
+constexpr MaxBitInt A_ = 0;
+constexpr MaxBitInt B_ = A_ + 1;
+static_assert(B_ == 1, "");
+
+
 #ifdef __SIZEOF_INT128__
 namespace i128 {
   typedef __int128 int128_t;
@@ -76,9 +91,13 @@ namespace i128 {
                                            // expected-note {{is outside the range of representable values of type}}
 }
 
-#else
-/// No int128 support, so no expected directives.
+namespace AddSubOffset {
+  constexpr __int128 A = 1;
+  constexpr int arr[] = {1,2,3};
+  constexpr const int *P = arr + A;
+  static_assert(*P == 2, "");
+  constexpr const int *P2 = P - A;
+  static_assert(*P2 == 1,"");
+}
 
-// expected-no-diagnostics
-// ref-no-diagnostics
 #endif

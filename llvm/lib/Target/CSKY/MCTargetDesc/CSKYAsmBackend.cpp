@@ -223,7 +223,7 @@ void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
-  bool IsLittleEndian = (Endian == support::little);
+  bool IsLittleEndian = (Endian == llvm::endianness::little);
   bool IsInstFixup = (Kind >= FirstTargetFixupKind);
 
   if (IsLittleEndian && IsInstFixup && (NumBytes == 4)) {
