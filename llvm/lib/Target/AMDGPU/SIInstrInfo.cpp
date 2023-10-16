@@ -2477,7 +2477,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
       if (!CandReg)
         continue;
 
-      if (CandReg == RegToFind || RI.regsOverlap(CandReg, RegToFind)) {
+      if (CandReg == RegToFind) {
         if (SingleUseIdx == -1 && CandMO.isUse()) {
           SingleUseIdx = i;
         } else {
