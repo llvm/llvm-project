@@ -811,7 +811,8 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     ExpectedType ToTypeOrErr = import(From.getParamTypeForDecl());
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
-    return TemplateArgument(*ToOrErr, *ToTypeOrErr, From.getIsDefaulted());
+    return TemplateArgument(dyn_cast<ValueDecl>((*ToOrErr)->getCanonicalDecl()),
+                            *ToTypeOrErr, From.getIsDefaulted());
   }
 
   case TemplateArgument::NullPtr: {
@@ -8978,6 +8979,10 @@ class AttrImporter {
 public:
   AttrImporter(ASTImporter &I) : Importer(I), NImporter(I) {}
 
+  // Useful for accessing the imported attribute.
+  template <typename T> T *castAttrAs() { return cast<T>(ToAttr); }
+  template <typename T> const T *castAttrAs() const { return cast<T>(ToAttr); }
+
   // Create an "importer" for an attribute parameter.
   // Result of the 'value()' of that object is to be passed to the function
   // 'importAttr', in the order that is expected by the attribute class.
@@ -9182,6 +9187,15 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     AI.importAttr(From,
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());
+    break;
+  }
+  case attr::CountedBy: {
+    AI.cloneAttr(FromAttr);
+    const auto *CBA = cast<CountedByAttr>(FromAttr);
+    Expected<SourceRange> SR = Import(CBA->getCountedByFieldLoc()).get();
+    if (!SR)
+      return SR.takeError();
+    AI.castAttrAs<CountedByAttr>()->setCountedByFieldLoc(SR.get());
     break;
   }
 
