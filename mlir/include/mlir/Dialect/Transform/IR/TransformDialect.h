@@ -315,6 +315,62 @@ public:
   BuildOnly() : DerivedTy(/*buildOnly=*/true) {}
 };
 
+namespace detail {
+
+/// Expands the given list of `paths` to a list of `.mlir` files.
+///
+/// Each entry in `paths` may either be a regular file, in which case it ends up
+/// in the result list, or a directory, in which case all (regular) `.mlir`
+/// files in that directory are added. Any other file types lead to a failure.
+LogicalResult expandPathsToMLIRFiles(ArrayRef<std::string> &paths,
+                                     MLIRContext *context,
+                                     SmallVectorImpl<std::string> &fileNames);
+
+/// Utility to parse and verify the content of a `transformFileName` MLIR file
+/// containing a transform dialect specification.
+LogicalResult
+parseTransformModuleFromFile(MLIRContext *context,
+                             llvm::StringRef transformFileName,
+                             OwningOpRef<ModuleOp> &transformModule);
+
+/// Utility to parse, verify, aggregate and link the content of all mlir files
+/// nested under `transformLibraryPaths` and containing transform dialect
+/// specifications.
+LogicalResult
+assembleTransformLibraryFromPaths(MLIRContext *context,
+                                  ArrayRef<std::string> transformLibraryPaths,
+                                  OwningOpRef<ModuleOp> &transformModule);
+
+/// Utility to load a transform interpreter `module` from a module that has
+/// already been preloaded in the context.
+/// This mode is useful in cases where explicit parsing of a transform library
+/// from file is expected to be prohibitively expensive.
+/// In such cases, the transform module is expected to be found in the preloaded
+/// library modules of the transform dialect.
+/// Returns null if the module is not found.
+ModuleOp getPreloadedTransformModule(MLIRContext *context);
+
+/// Merge all symbols from `other` into `target`. Both ops need to implement the
+/// `SymbolTable` trait. Operations are moved from `other`, i.e., `other` may be
+/// modified by this function and might not verify after the function returns.
+/// Upon merging, private symbols may be renamed in order to avoid collisions in
+/// the result. Public symbols may not collide, with the exception of
+/// instances of `SymbolOpInterface`, where collisions are allowed if at least
+/// one of the two is external, in which case the other op preserved (or any one
+/// of the two if both are external).
+// TODO: Reconsider cloning individual ops rather than forcing users of the
+//       function to clone (or move) `other` in order to improve efficiency.
+//       This might primarily make sense if we can also prune the symbols that
+//       are merged to a subset (such as those that are actually used).
+LogicalResult mergeSymbolsInto(Operation *target,
+                               OwningOpRef<Operation *> other);
+
+/// Merge all symbols from `others` into `target`. See overload of
+/// `mergeSymbolsInto` on one `other` op for details.
+LogicalResult
+mergeSymbolsInto(Operation *target,
+                 MutableArrayRef<OwningOpRef<Operation *>> others);
+} // namespace detail
 } // namespace transform
 } // namespace mlir
 

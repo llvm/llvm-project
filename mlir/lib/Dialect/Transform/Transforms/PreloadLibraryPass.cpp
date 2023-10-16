@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
-#include "mlir/Dialect/Transform/Transforms/TransformInterpreterUtils.h"
 
 using namespace mlir;
 
