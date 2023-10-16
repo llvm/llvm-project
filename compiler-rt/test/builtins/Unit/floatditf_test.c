@@ -17,7 +17,7 @@ COMPILER_RT_ABI long double __floatditf(di_int a);
 int test__floatditf(di_int a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __floatditf(a);
-    int ret = compareResultLD(x, expectedHi, expectedLo);
+    int ret = compareResultF128(x, expectedHi, expectedLo);
 
     if (ret)
         printf("error in __floatditf(%Ld) = %.20Lf, "
