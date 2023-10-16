@@ -131,13 +131,6 @@ extern "C" {
       return SparseTensorStorage<P, C, V>::newFromCOO(                         \
           dimRank, dimSizes, lvlRank, lvlTypes, dim2lvl, lvl2dim, coo);        \
     }                                                                          \
-    case Action::kSparseToSparse: {                                            \
-      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
-      auto &tensor = *static_cast<SparseTensorStorageBase *>(ptr);             \
-      return SparseTensorStorage<P, C, V>::newFromSparseTensor(                \
-          dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
-          dimRank, tensor);                                                    \
-    }                                                                          \
     case Action::kFromReader: {                                                \
       assert(ptr && "Received nullptr for SparseTensorReader object");         \
       SparseTensorReader &reader = *static_cast<SparseTensorReader *>(ptr);    \
