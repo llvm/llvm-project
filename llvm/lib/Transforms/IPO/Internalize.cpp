@@ -51,6 +51,12 @@ static cl::list<std::string>
     APIList("internalize-public-api-list", cl::value_desc("list"),
             cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
 
+static const char *PreservedLibcallSymbols[] = {
+#define HANDLE_LIBCALL(code, name) name,
+#include "llvm/IR/RuntimeLibcalls.def"
+#undef HANDLE_LIBCALL
+};
+
 namespace {
 // Helper to load an API list to preserve from file and expose it as a functor
 // for internalization.
@@ -125,6 +131,10 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
 
   // Check some special cases
   if (AlwaysPreserved.count(GV.getName()))
+    return true;
+
+  // Preserve built-in functions
+  if (llvm::is_contained(PreservedLibcallSymbols, GV.getName()))
     return true;
 
   return MustPreserveGV(GV);

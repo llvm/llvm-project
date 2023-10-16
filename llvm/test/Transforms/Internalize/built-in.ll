@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=internalize -S | FileCheck %s
 
 define i128 @__multi3(i128 %0, i128 %1) {
-; CHECK-LABEL: define internal i128 @__multi3(
+; CHECK-LABEL: define i128 @__multi3(
 ; CHECK-SAME: i128 [[TMP0:%.*]], i128 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    ret i128 0
 ;
