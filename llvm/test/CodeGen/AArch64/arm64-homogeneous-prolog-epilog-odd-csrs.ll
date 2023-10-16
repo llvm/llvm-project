@@ -27,5 +27,5 @@ define void @odd_num_callee_saved_registers_with_fpr(ptr swifterror %error, i32 
 ; CHECK:	ldr	x28, [sp, #16]
 ; CHECK:	ldp	d9, d8, [sp], #112
 
-; CHECK-LINUX-NOT: OUTLINED_FUNCTION_PROLOG:
-; CHECK-LINUX-NOT: OUTLINED_FUNCTION_EPILOG:
+; CHECK-LINUX-NOT: OUTLINED_FUNCTION_PROLOG
+; CHECK-LINUX-NOT: OUTLINED_FUNCTION_EPILOG
