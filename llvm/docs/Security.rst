@@ -208,23 +208,43 @@ The LLVM Security Policy may be changed by majority vote of the LLVM Security Gr
 What is considered a security issue?
 ====================================
 
-*FUTURE*: this section will be expanded once the Security Group is formed, and it agrees on an initial security surface area.
+The LLVM Project has a significant amount of code, and not all of it is
+considered security-sensitive. This is particularly true because LLVM is used in
+a wide variety of circumstances: there are different threat models, untrusted
+inputs differ, and the environment LLVM runs in is varied. Therefore, what the
+LLVM Project considers a security issue is what its members have signed up to
+maintain securely.
 
-The LLVM Project has a significant amount of code, and not all of it is considered security-sensitive. This is particularly true because LLVM is used in a wide variety of circumstances: there are different threat models, untrusted inputs differ, and the environment LLVM runs in is varied. Therefore, what the LLVM Project considers a security issue is what its members have signed up to maintain securely.
+As this security process matures, members of the LLVM community can propose that
+a part of the codebase be designated as security-sensitive (or no longer
+security-sensitive). This requires a rationale, and buy-in from the LLVM
+community as for any RFC. In some cases, parts of the codebase could be handled
+as security-sensitive but need significant work to get to the stage where that's
+manageable. The LLVM community will need to decide whether it wants to invest in
+making these parts of the code secure-able, and maintain these security
+properties over time. In all cases the LLVM Security Group should be consulted,
+since they'll be responding to security issues filed against these parts of the
+codebase.
 
-As this security process matures, members of the LLVM community can propose that a part of the codebase be designated as security-sensitive (or no longer security-sensitive). This requires a rationale, and buy-in from the LLVM community as for any RFC. In some cases, parts of the codebase could be handled as security-sensitive but need significant work to get to the stage where that's manageable. The LLVM community will need to decide whether it wants to invest in making these parts of the code secure-able, and maintain these security properties over time. In all cases the LLVM Security Group should be consulted, since they'll be responding to security issues filed against these parts of the codebase.
+If you're not sure whether an issue is in-scope for this security process or
+not, err towards assuming that it is. The Security Group might agree or disagree
+and will explain its rationale in the report, as well as update this document
+through the above process.
 
-If you're not sure whether an issue is in-scope for this security process or not, err towards assuming that it is. The Security Group might agree or disagree and will explain its rationale in the report, as well as  update this document through the above process.
+The security-sensitive parts of the LLVM Project currently are the following.
+Note that this list can change over time.
 
-The security-sensitive parts of the LLVM Project currently are:
+* None are currently defined. Please don't let this stop you from reporting
+  issues to the security group that you believe are security-sensitive.
 
-* None (this process is new, the list hasn't been populated yet)
-* *FUTURE*: this section will be expanded.
+The parts of the LLVM Project which are currently treated as non-security
+sensitive are the following. Note that this list can change over time.
 
-The parts of the LLVM Project which are currently treated as non-security sensitive are:
-
-* Language front-ends, such as clang, for which a malicious input file can cause undesirable behavior. For example, a maliciously crafted C or Rust source file can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been hardened, and compiling untrusted code usually also includes running utilities such as `make` which can more readily perform malicious things.
-* *FUTURE*: this section will be expanded.
+* Language front-ends, such as clang, for which a malicious input file can cause
+  undesirable behavior. For example, a maliciously crafted C or Rust source file
+  can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been
+  hardened, and compiling untrusted code usually also includes running utilities
+  such as `make` which can more readily perform malicious things.
 
 
 .. _CVE process: https://cve.mitre.org
