@@ -60,23 +60,10 @@ public:
   WithCache(PointerType Pointer, const KnownBits &Known)
       : Pointer(Pointer, true), Known(Known) {}
 
-  template <typename T, std::enable_if_t<PointerConvertible<T>, int> = 0>
-  WithCache(const T &Value) : Pointer(static_cast<PointerType>(Value), false) {}
-
-  template <typename T, std::enable_if_t<PointerConvertible<T>, int> = 0>
-  WithCache(const T &Value, const KnownBits &Known)
-      : Pointer(static_cast<PointerType>(Value), true), Known(Known) {}
-
   [[nodiscard]] PointerType getValue() { return Pointer.getPointer(); }
   [[nodiscard]] PointerType getValue() const { return Pointer.getPointer(); }
 
   [[nodiscard]] const KnownBits &getKnownBits(const SimplifyQuery &Q) const {
-    if (!hasKnownBits())
-      calculateKnownBits(Q);
-    return Known;
-  }
-
-  [[nodiscard]] KnownBits &getKnownBits(const SimplifyQuery &Q) {
     if (!hasKnownBits())
       calculateKnownBits(Q);
     return Known;
