@@ -42,6 +42,22 @@ public:
                                  *RISCVExprB.getSubExpr(), Comp);
   }
 
+  void getCalleeSavedRegs(BitVector &Regs) const override {
+    Regs |= getAliases(RISCV::X2);
+    Regs |= getAliases(RISCV::X8);
+    Regs |= getAliases(RISCV::X9);
+    Regs |= getAliases(RISCV::X18);
+    Regs |= getAliases(RISCV::X19);
+    Regs |= getAliases(RISCV::X20);
+    Regs |= getAliases(RISCV::X21);
+    Regs |= getAliases(RISCV::X22);
+    Regs |= getAliases(RISCV::X23);
+    Regs |= getAliases(RISCV::X24);
+    Regs |= getAliases(RISCV::X25);
+    Regs |= getAliases(RISCV::X26);
+    Regs |= getAliases(RISCV::X27);
+  }
+
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
