@@ -295,15 +295,15 @@ private:
 
   Instruction *transformSExtICmp(ICmpInst *Cmp, SExtInst &Sext);
 
-  bool willNotOverflowSignedAdd(const CachedBitsConstValue &LHS,
-                                const CachedBitsConstValue &RHS,
+  bool willNotOverflowSignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
                                 const Instruction &CxtI) const {
     return computeOverflowForSignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
   }
 
-  bool willNotOverflowUnsignedAdd(const CachedBitsConstValue &LHS,
-                                  const CachedBitsConstValue &RHS,
+  bool willNotOverflowUnsignedAdd(const WithCache<const Value *> &LHS,
+                                  const WithCache<const Value *> &RHS,
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedAdd(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
