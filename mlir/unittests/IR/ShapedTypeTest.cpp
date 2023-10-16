@@ -135,8 +135,9 @@ TEST(ShapedTypeTest, VectorTypeBuilder) {
   MLIRContext context;
   Type f32 = FloatType::getF32(&context);
 
-  VectorType vectorType =
-      VectorType::get({2, 4, 8, 9, 1}, f32, {true, false, true, false, false});
+  SmallVector<int64_t> shape{2, 4, 8, 9, 1};
+  SmallVector<bool> scalableDims{true, false, true, false, false};
+  VectorType vectorType = VectorType::get(shape, f32, scalableDims);
 
   {
     // Drop some dims.
@@ -182,8 +183,9 @@ TEST(ShapedTypeTest, VectorTypeBuilder) {
     // a use-after-free see: https://github.com/llvm/llvm-project/pull/68969.
     // Running under sanitizers will catch any issues.
     VectorType::Builder builder(vectorType);
-    builder.setShape({2, 2});
-    ASSERT_EQ(VectorType(builder).getShape(), ArrayRef<int64_t>({2, 2}));
+    SmallVector<int64_t> newShape{2, 2};
+    builder.setShape(newShape);
+    ASSERT_EQ(VectorType(builder).getShape(), ArrayRef(newShape));
   }
 }
 
@@ -191,7 +193,8 @@ TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
   MLIRContext context;
   Type f32 = FloatType::getF32(&context);
 
-  RankedTensorType tensorType = RankedTensorType::get({2, 4, 8, 16, 32}, f32);
+  SmallVector<int64_t> shape{2, 4, 8, 16, 32};
+  RankedTensorType tensorType = RankedTensorType::get(shape, f32);
 
   {
     // Drop some dims.
