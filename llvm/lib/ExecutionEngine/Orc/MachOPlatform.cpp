@@ -266,6 +266,33 @@ static StringRef ObjCRuntimeObjectSectionName =
 static StringRef ObjCImageInfoSymbolName =
     "__llvm_jitlink_macho_objc_imageinfo";
 
+struct ObjCImageInfoFlags {
+  uint16_t SwiftABIVersion;
+  uint16_t SwiftVersion;
+  bool HasCategoryClassProperties;
+  bool HasSignedObjCClassROs;
+
+  static constexpr uint32_t SIGNED_CLASS_RO = (1 << 4);
+  static constexpr uint32_t HAS_CATEGORY_CLASS_PROPERTIES = (1 << 6);
+
+  explicit ObjCImageInfoFlags(uint32_t RawFlags) {
+    HasSignedObjCClassROs = RawFlags & SIGNED_CLASS_RO;
+    HasCategoryClassProperties = RawFlags & HAS_CATEGORY_CLASS_PROPERTIES;
+    SwiftABIVersion = (RawFlags >> 8) & 0xFF;
+    SwiftVersion = (RawFlags >> 16) & 0xFFFF;
+  }
+
+  uint32_t rawFlags() const {
+    uint32_t Result = 0;
+    if (HasCategoryClassProperties)
+      Result |= HAS_CATEGORY_CLASS_PROPERTIES;
+    if (HasSignedObjCClassROs)
+      Result |= SIGNED_CLASS_RO;
+    Result |= (SwiftABIVersion << 8);
+    Result |= (SwiftVersion << 16);
+    return Result;
+  }
+};
 } // end anonymous namespace
 
 namespace llvm {
@@ -1029,15 +1056,19 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
               " does not match first registered version",
           inconvertibleErrorCode());
     if (ObjCImageInfoItr->second.Flags != Flags)
-      return make_error<StringError>("ObjC flags in " + G.getName() +
-                                         " do not match first registered flags",
-                                     inconvertibleErrorCode());
+      if (Error E = mergeImageInfoFlags(G, MR, ObjCImageInfoItr->second, Flags))
+        return E;
 
     // __objc_imageinfo is valid. Delete the block.
     for (auto *S : ObjCImageInfo->symbols())
       G.removeDefinedSymbol(*S);
     G.removeBlock(ObjCImageInfoBlock);
   } else {
+    LLVM_DEBUG({
+      dbgs() << "MachOPlatform: Registered __objc_imageinfo for "
+             << MR.getTargetJITDylib().getName() << " in " << G.getName()
+             << "; flags = " << formatv("{0:x4}", Flags) << "\n";
+    });
     // We haven't registered an __objc_imageinfo section yet. Register and
     // move on. The section should already be marked no-dead-strip.
     G.addDefinedSymbol(ObjCImageInfoBlock, 0, ObjCImageInfoSymbolName,
@@ -1047,9 +1078,63 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
             {{MR.getExecutionSession().intern(ObjCImageInfoSymbolName),
               JITSymbolFlags()}}))
       return Err;
-    ObjCImageInfos[&MR.getTargetJITDylib()] = {Version, Flags};
+    ObjCImageInfos[&MR.getTargetJITDylib()] = {Version, Flags, false};
   }
 
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR,
+    ObjCImageInfo &Info, uint32_t NewFlags) {
+  if (Info.Flags == NewFlags)
+    return Error::success();
+
+  ObjCImageInfoFlags Old(Info.Flags);
+  ObjCImageInfoFlags New(NewFlags);
+
+  // Check for incompatible flags.
+  if (Old.SwiftABIVersion && New.SwiftABIVersion &&
+      Old.SwiftABIVersion != New.SwiftABIVersion)
+    return make_error<StringError>("Swift ABI version in " + G.getName() +
+                                       " does not match first registered flags",
+                                   inconvertibleErrorCode());
+
+  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+    return make_error<StringError>("ObjC category class property support in " +
+                                       G.getName() +
+                                       " does not match first registered flags",
+                                   inconvertibleErrorCode());
+  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+    return make_error<StringError>("ObjC class_ro_t pointer signing in " +
+                                       G.getName() +
+                                       " does not match first registered flags",
+                                   inconvertibleErrorCode());
+
+  // If we cannot change the flags, ignore any remaining differences. Adding
+  // Swift or changing its version are unlikely to cause problems in practice.
+  if (Info.Finalized)
+    return Error::success();
+
+  // Use the minimum Swift version.
+  if (Old.SwiftVersion && New.SwiftVersion)
+    New.SwiftVersion = std::min(Old.SwiftVersion, New.SwiftVersion);
+  else if (Old.SwiftVersion)
+    New.SwiftVersion = Old.SwiftVersion;
+  // Add a Swift ABI version if it was pure objc before.
+  if (!New.SwiftABIVersion)
+    New.SwiftABIVersion = Old.SwiftABIVersion;
+
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform: Merging __objc_imageinfo flags for "
+           << MR.getTargetJITDylib().getName() << " (was "
+           << formatv("{0:x4}", Old.rawFlags()) << ")"
+           << " with " << G.getName() << " (" << formatv("{0:x4}", NewFlags)
+           << ")"
+           << " -> " << formatv("{0:x4}", New.rawFlags()) << "\n";
+  });
+
+  Info.Flags = New.rawFlags();
   return Error::success();
 }
 
@@ -1403,6 +1488,25 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
         for (auto *Sym : G.defined_symbols())
           if (Sym->hasName() && Sym->getName() == ObjCImageInfoSymbolName) {
             ObjCImageInfoSym = Sym;
+            std::optional<uint32_t> Flags;
+            {
+              std::lock_guard<std::mutex> Lock(PluginMutex);
+              auto It = ObjCImageInfos.find(&MR.getTargetJITDylib());
+              if (It != ObjCImageInfos.end()) {
+                It->second.Finalized = true;
+                Flags = It->second.Flags;
+              }
+            }
+
+            if (Flags) {
+              // We own the definition of __objc_image_info; write the final
+              // merged flags value.
+              auto Content = Sym->getBlock().getMutableContent(G);
+              assert(
+                  Content.size() == sizeof(uint32_t) * 2 &&
+                  "__objc_image_info size should have been verified already");
+              memcpy(&Content[sizeof(uint32_t)], &Flags, sizeof(uint32_t));
+            }
             break;
           }
       if (!ObjCImageInfoSym)

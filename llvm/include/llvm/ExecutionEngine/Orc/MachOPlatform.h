@@ -159,6 +159,9 @@ private:
     struct ObjCImageInfo {
       uint32_t Version = 0;
       uint32_t Flags = 0;
+      /// Whether this image info can no longer be mutated, as it may have been
+      /// registered with the objc runtime.
+      bool Finalized = false;
     };
 
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
@@ -173,6 +176,9 @@ private:
 
     Error processObjCImageInfo(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
+    Error mergeImageInfoFlags(jitlink::LinkGraph &G,
+                              MaterializationResponsibility &MR,
+                              ObjCImageInfo &Info, uint32_t NewFlags);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
