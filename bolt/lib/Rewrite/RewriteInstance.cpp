@@ -1583,7 +1583,7 @@ void RewriteInstance::adjustFunctionBoundaries() {
         break;
 
       // Ignore unnamed symbols. Used, for example, by debugging info on RISC-V.
-      if (cantFail(Symbol.getName()).empty()) {
+      if (BC->isRISCV() && cantFail(Symbol.getName()).empty()) {
         ++NextSymRefI;
         continue;
       }
