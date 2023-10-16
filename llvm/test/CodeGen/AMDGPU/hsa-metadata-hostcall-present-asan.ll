@@ -35,12 +35,12 @@ define amdgpu_kernel void @test_kernel(i8 %a) #0
 
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
-; CHECK-NEXT: - 0
+; CHECK-NEXT: - 1
 
 attributes #0 = { sanitize_address "amdgpu-implicitarg-num-bytes"="48" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
 !1 = !{i32 0}
 !2 = !{!"none"}
 !3 = !{!"char"}
