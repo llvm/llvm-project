@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +usermsr \
 // RUN: -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression | FileCheck %s
 
-#include <gprintrin.h>
+#include <x86gprintrin.h>
 
 unsigned long long test_urdmsr(unsigned long long __A) {
   // CHECK-LABEL: @test_urdmsr(
