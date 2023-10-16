@@ -158,11 +158,11 @@ define amdgpu_kernel void @num_spilled_vgprs() #1 {
 
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
-; CHECK-NEXT: - 0
+; CHECK-NEXT: - 1
 
 attributes #0 = { "amdgpu-num-sgpr"="14" }
 attributes #1 = { "amdgpu-num-vgpr"="20" }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

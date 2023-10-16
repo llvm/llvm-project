@@ -952,7 +952,7 @@ private:
     if (shapeAttrs.test(ShapeAttr::AssumedRank))
       TODO(loc, "assumed rank in procedure interface");
     if (shapeAttrs.test(ShapeAttr::Coarray))
-      TODO(loc, "coarray in procedure interface");
+      TODO(loc, "coarray: dummy argument coarray in procedure interface");
 
     // So far assume that if the argument cannot be passed by implicit interface
     // it must be by box. That may no be always true (e.g for simple optionals)

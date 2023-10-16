@@ -9175,6 +9175,64 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_TRUE(ToXType->typeMatchesDecl());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportTemplateArgumentWithPointerToDifferentInstantiation) {
+  const char *CodeTo =
+      R"(
+      template<class A>
+      A f1() {
+       return A();
+      }
+      template<class A, A (B)()>
+      class X {};
+
+      X<int, f1<int>> x;
+      )";
+  const char *CodeFrom =
+      R"(
+      template<class A>
+      A f1();
+      template<class A, A (B)()>
+      class X {};
+
+      X<int, f1<int>> x;
+      )";
+  Decl *ToTU = getToTuDecl(CodeTo, Lang_CXX11);
+  Decl *FromTU = getTuDecl(CodeFrom, Lang_CXX11);
+
+  auto *ToF1 = FirstDeclMatcher<FunctionDecl>().match(
+      ToTU, functionDecl(hasName("f1"), isInstantiated()));
+  auto *FromF1 = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f1"), isInstantiated()));
+  EXPECT_TRUE(ToF1->isThisDeclarationADefinition());
+  EXPECT_FALSE(FromF1->isThisDeclarationADefinition());
+
+  auto *ToX = FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      ToTU, classTemplateSpecializationDecl(hasName("X")));
+  auto *FromX = FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      FromTU, classTemplateSpecializationDecl(hasName("X")));
+
+  Decl *ToTArgF = ToX->getTemplateArgs().get(1).getAsDecl();
+  Decl *FromTArgF = FromX->getTemplateArgs().get(1).getAsDecl();
+  EXPECT_EQ(ToTArgF, ToF1);
+  EXPECT_EQ(FromTArgF, FromF1);
+
+  auto *ToXImported = Import(FromX, Lang_CXX11);
+  // The template argument 1 of 'X' in the "From" code points to a function
+  // that has no definition. The import must ensure that this template argument
+  // is imported in a way that it will point to the existing 'f1' function, not
+  // to the 'f1' that is imported. In this way when specialization of 'X' is
+  // imported it will have the same template arguments as the existing one.
+  EXPECT_EQ(ToXImported, ToX);
+  // FIXME: This matcher causes a crash "Tried to match orphan node".
+  // The code is removed until the problem is fixed.
+  // auto *ToF1Imported =
+  //    LastDeclMatcher<FunctionDecl>().match(ToTU,
+  //    functionDecl(hasName("f1"),isInstantiated()));
+  // EXPECT_NE(ToF1Imported, ToF1);
+  // EXPECT_EQ(ToF1Imported->getPreviousDecl(), ToF1);
+}
+
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
                          DefaultTestValuesForRunOptions);
 
