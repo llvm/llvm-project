@@ -122,6 +122,8 @@ Improvements to clang-tidy
   if any :program:`clang-tidy` subprocess exits with a non-zero code or if
   exporting fixes fails.
 
+- Do not emit a `return` for fixes of `modernize-avoid-bind` when the function returns void.
+
 New checks
 ^^^^^^^^^^
 
