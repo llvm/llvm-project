@@ -321,7 +321,7 @@ don't find anyone present, chances are they happen to be off that day.
   * - Amara Emerson
     - GlobalISel questions.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
-    - `GoogleMeet <https://meet.google.com/pdd-dibg-cwv`__
+    - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
     - English
 
 
