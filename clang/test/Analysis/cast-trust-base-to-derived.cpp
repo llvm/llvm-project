@@ -55,7 +55,7 @@ void trust_static_types(ActionHandler *p) {
   clang_analyzer_numTimesReached(); // expected-warning {{3}} we only have 3 paths here, not 4
   // 1) inlined 2 different callees
   // 2) inlined only 1st
-  // 3) non were inlined
+  // 3) none were inlined
   // 4) inlined only the second: This can't happen because if we conservative called a specific function on a path, we will always evaluate it like that.
   //    See ExprEngine::BifurcateCall and DynamicDispatchBifurcationMap.
 }
