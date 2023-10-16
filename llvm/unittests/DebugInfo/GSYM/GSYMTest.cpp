@@ -4005,3 +4005,155 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   // Make sure we don't see spurious errors in the output:
   EXPECT_TRUE(errors.find("error:") == std::string::npos);
 }
+
+
+TEST(GSYMTest, TestEmptyLinkageName) {
+  // This example has a single compile unit that has a DW_TAG_subprogram that
+  // has a function that has an empty linkage name and a valid normal name.
+  // Previously this would cause an encoding error:
+  //
+  // DWARF conversion failed: attempted to encode invalid FunctionInfo object
+  //
+  // This was because we would get a valid but empty linkage name and we would
+  // try to use this in the GSYM FunctionInfo and that would cause the error
+  // as the name was empty.
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name        ("/tmp/main.cpp")
+  //               DW_AT_language    (DW_LANG_C)
+  //               DW_AT_stmt_list   (0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name      ("foo")
+  //                 DW_AT_linkage_name      ("")
+  //                 DW_AT_low_pc    (0x0000000000001000)
+  //                 DW_AT_high_pc   (0x0000000000001050)
+  //
+  // 0x0000002e:   NULL
+
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - ''
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_linkage_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x2B
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x13
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          68
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  // Verify "foo" is present and has a line table and no inline info.
+  auto ExpFI = GR->getFunctionInfo(0x1000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+  EXPECT_TRUE(ExpFI->OptLineTable.has_value());
+  EXPECT_FALSE(ExpFI->Inline.has_value());
+  StringRef FuncName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(FuncName, "foo");
+
+  // Make sure we don't see spurious errors in the output:
+  EXPECT_TRUE(errors.find("error:") == std::string::npos);
+}
