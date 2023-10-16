@@ -19,17 +19,15 @@
 #include "llvm/Support/KnownBits.h"
 #include <type_traits>
 
+
 namespace llvm {
+  struct SimplifyQuery;
+}
 
-class DataLayout;
-class AssumptionCache;
-class Instruction;
-class DominatorTree;
-struct SimplifyQuery;
+llvm::KnownBits computeKnownBits(const llvm::Value *V, unsigned Depth,
+                                 const llvm::SimplifyQuery &Q);
 
-KnownBits computeKnownBits(const Value *V, unsigned Depth,
-                           const SimplifyQuery &Q);
-
+namespace llvm {
 namespace detail {
 /// Represents a pointer to an llvm::Value with known bits information
 template <bool ConstPointer = true> class ImplCachedBitsValue {

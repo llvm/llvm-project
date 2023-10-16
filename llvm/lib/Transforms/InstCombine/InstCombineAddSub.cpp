@@ -1567,8 +1567,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // A+B --> A|B iff A and B have no bits set in common.
   CachedBitsConstValue LHSCache(LHS), RHSCache(RHS);
-  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I),
-                          /* ComputeKnownBitsBeforeHand */ true))
+  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
     return BinaryOperator::CreateOr(LHS, RHS);
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))

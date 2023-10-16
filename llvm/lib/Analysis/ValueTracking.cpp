@@ -179,11 +179,17 @@ void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
       SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
+KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                                  unsigned Depth, const SimplifyQuery &Q);
+
+KnownBits computeKnownBits(const Value *V, unsigned Depth,
+                                  const SimplifyQuery &Q);
+
 KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  unsigned Depth, AssumptionCache *AC,
                                  const Instruction *CxtI,
                                  const DominatorTree *DT, bool UseInstrInfo) {
-  return computeKnownBits(
+  return ::computeKnownBits(
       V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
@@ -191,7 +197,7 @@ KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
                                  const DataLayout &DL, unsigned Depth,
                                  AssumptionCache *AC, const Instruction *CxtI,
                                  const DominatorTree *DT, bool UseInstrInfo) {
-  return computeKnownBits(
+  return ::computeKnownBits(
       V, DemandedElts, Depth,
       SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
@@ -1781,19 +1787,19 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them.
-KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
+KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                                  unsigned Depth, const SimplifyQuery &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
-  ::computeKnownBits(V, DemandedElts, Known, Depth, Q);
+  computeKnownBits(V, DemandedElts, Known, Depth, Q);
   return Known;
 }
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them.
-KnownBits llvm::computeKnownBits(const Value *V, unsigned Depth,
+KnownBits computeKnownBits(const Value *V, unsigned Depth,
                                  const SimplifyQuery &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
-  ::computeKnownBits(V, Known, Depth, Q);
+  computeKnownBits(V, Known, Depth, Q);
   return Known;
 }
 
