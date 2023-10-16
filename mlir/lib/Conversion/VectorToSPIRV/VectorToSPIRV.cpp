@@ -509,6 +509,99 @@ struct VectorShuffleOpConvert final
   }
 };
 
+struct VectorTransferReadOpConverter final
+    : public OpConversionPattern<vector::TransferReadOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferReadOp transferReadOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (transferReadOp.getMask())
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "unsupported transfer_read with mask");
+
+    if (transferReadOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(
+          transferReadOp,
+          "unsupported transfer_read with out-of-bound dimensions");
+
+    auto sourceType = transferReadOp.getSource().getType();
+    auto memrefType = dyn_cast<MemRefType>(sourceType);
+    if (!memrefType)
+      return rewriter.notifyMatchFailure(transferReadOp, "not a memref source");
+
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+    if (!attr)
+      return failure();
+
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto loc = transferReadOp.getLoc();
+    Value accessChain =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getSource(),
+                             adaptor.getIndices(), loc, rewriter);
+    if (!accessChain)
+      return failure();
+
+    spirv::StorageClass storageClass = attr.getValue();
+    auto vectorType = transferReadOp.getVectorType();
+    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    Value castedAccessChain =
+        rewriter.create<spirv::BitcastOp>(loc, vectorPtrType, accessChain);
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(transferReadOp, vectorType,
+                                               castedAccessChain);
+
+    return success();
+  }
+};
+
+struct VectorTransferWriteOpConverter final
+    : public OpConversionPattern<vector::TransferWriteOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferWriteOp transferWriteOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (transferWriteOp.getMask())
+      return rewriter.notifyMatchFailure(
+          transferWriteOp, "unsupported transfer_write with mask");
+
+    if (transferWriteOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(
+          transferWriteOp,
+          "unsupported transfer_write with out-of-bound dimensions");
+
+    auto sourceType = transferWriteOp.getSource().getType();
+    auto memrefType = dyn_cast<MemRefType>(sourceType);
+    if (!memrefType)
+      return rewriter.notifyMatchFailure(transferWriteOp,
+                                         "not a memref source");
+
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+    if (!attr)
+      return failure();
+
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto loc = transferWriteOp.getLoc();
+    Value accessChain =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getSource(),
+                             adaptor.getIndices(), loc, rewriter);
+    if (!accessChain)
+      return failure();
+
+    spirv::StorageClass storageClass = attr.getValue();
+    auto vectorType = transferWriteOp.getVectorType();
+    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    Value castedAccessChain =
+        rewriter.create<spirv::BitcastOp>(loc, vectorPtrType, accessChain);
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(
+        transferWriteOp, castedAccessChain, adaptor.getVector());
+
+    return success();
+  }
+};
+
 struct VectorReductionToDotProd final : OpRewritePattern<vector::ReductionOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -622,7 +715,9 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                VectorInsertOpConvert, VectorReductionPattern<GL_MAX_MIN_OPS>,
                VectorReductionPattern<CL_MAX_MIN_OPS>, VectorShapeCast,
                VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
-               VectorSplatPattern>(typeConverter, patterns.getContext());
+               VectorSplatPattern, VectorTransferReadOpConverter,
+               VectorTransferWriteOpConverter>(typeConverter,
+                                               patterns.getContext());
 }
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
