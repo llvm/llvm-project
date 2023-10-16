@@ -532,6 +532,27 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
+def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
+  HelpText<"Check for invalid arguments of C standard library functions, "
+           "and apply relations between arguments and return value">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "DisplayLoadedSummaries",
+                  "If set to true, the checker displays the found summaries "
+                  "for the given translation unit.",
+                  "false",
+                  Released,
+                  Hide>,
+    CmdLineOption<Boolean,
+                  "ModelPOSIX",
+                  "If set to true, the checker models additional functions "
+                  "from the POSIX standard.",
+                  "false",
+                  InAlpha>
+  ]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
+  Documentation<HasDocumentation>;
+
 def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
@@ -572,27 +593,6 @@ def SimpleStreamChecker : Checker<"SimpleStream">,
 
 def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
-  Documentation<HasDocumentation>;
-
-def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
-  HelpText<"Check for invalid arguments of C standard library functions, "
-           "and apply relations between arguments and return value">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "DisplayLoadedSummaries",
-                  "If set to true, the checker displays the found summaries "
-                  "for the given translation unit.",
-                  "false",
-                  Released,
-                  Hide>,
-    CmdLineOption<Boolean,
-                  "ModelPOSIX",
-                  "If set to true, the checker models additional functions "
-                  "from the POSIX standard.",
-                  "false",
-                  InAlpha>
-  ]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
@@ -1627,6 +1627,7 @@ def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
 def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
   HelpText<"Add test functions to the summary map, so testing of individual "
            "summary constituents becomes possible.">,
+  WeakDependencies<[StdCLibraryFunctionsChecker]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
