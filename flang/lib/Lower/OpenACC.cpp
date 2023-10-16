@@ -920,18 +920,27 @@ static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
                                  declareOp.getBase());
     return declareOp.getBase();
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
-    if (seqTy.hasDynamicExtents())
-      TODO(loc, "reduction recipe of array with dynamic extents");
     if (fir::isa_trivial(seqTy.getEleTy())) {
-      mlir::Value alloca = builder.create<fir::AllocaOp>(loc, seqTy);
-      auto shapeOp = genShapeOp(builder, seqTy, loc);
+      mlir::Value shape;
+      auto extents = builder.getBlock()->getArguments().drop_front(1);
+      if (seqTy.hasDynamicExtents())
+        shape = builder.create<fir::ShapeOp>(loc, extents);
+      else
+        shape = genShapeOp(builder, seqTy, loc);
+      mlir::Value alloca = builder.create<fir::AllocaOp>(
+          loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
       auto declareOp = builder.create<hlfir::DeclareOp>(
-          loc, alloca, accReductionInitName, shapeOp,
+          loc, alloca, accReductionInitName, shape,
           llvm::ArrayRef<mlir::Value>{}, fir::FortranVariableFlagsAttr{});
       mlir::Type idxTy = builder.getIndexType();
       mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
       llvm::SmallVector<fir::DoLoopOp> loops;
       llvm::SmallVector<mlir::Value> ivs;
+
+      if (seqTy.hasDynamicExtents()) {
+        builder.create<hlfir::AssignOp>(loc, initValue, declareOp.getBase());
+        return declareOp.getBase();
+      }
       for (auto ext : llvm::reverse(seqTy.getShape())) {
         auto lb = builder.createIntegerConstant(loc, idxTy, 0);
         auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
@@ -1052,6 +1061,18 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
   TODO(loc, "reduction operator");
 }
 
+static hlfir::DesignateOp::Subscripts
+getTripletsFromArgs(mlir::acc::ReductionRecipeOp recipe) {
+  hlfir::DesignateOp::Subscripts triplets;
+  for (unsigned i = 2; i < recipe.getCombinerRegion().getArguments().size();
+       i += 3)
+    triplets.emplace_back(hlfir::DesignateOp::Triplet{
+        recipe.getCombinerRegion().getArgument(i),
+        recipe.getCombinerRegion().getArgument(i + 1),
+        recipe.getCombinerRegion().getArgument(i + 2)});
+  return triplets;
+}
+
 static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::acc::ReductionOperator op, mlir::Type ty,
                         mlir::Value value1, mlir::Value value2,
@@ -1061,11 +1082,60 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   ty = fir::unwrapRefType(ty);
 
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-    assert(!seqTy.hasDynamicExtents() &&
-           "Assumed shaped array should be boxed for reduction");
     mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
     llvm::SmallVector<fir::DoLoopOp> loops;
     llvm::SmallVector<mlir::Value> ivs;
+    if (seqTy.hasDynamicExtents()) {
+      auto shape =
+          genShapeFromBoundsOrArgs(loc, builder, seqTy, bounds,
+                                   recipe.getCombinerRegion().getArguments());
+      auto v1DeclareOp = builder.create<hlfir::DeclareOp>(
+          loc, value1, llvm::StringRef{}, shape, llvm::ArrayRef<mlir::Value>{},
+          fir::FortranVariableFlagsAttr{});
+      auto v2DeclareOp = builder.create<hlfir::DeclareOp>(
+          loc, value2, llvm::StringRef{}, shape, llvm::ArrayRef<mlir::Value>{},
+          fir::FortranVariableFlagsAttr{});
+      hlfir::DesignateOp::Subscripts triplets = getTripletsFromArgs(recipe);
+
+      llvm::SmallVector<mlir::Value> lenParamsLeft;
+      auto leftEntity = hlfir::Entity{v1DeclareOp.getBase()};
+      hlfir::genLengthParameters(loc, builder, leftEntity, lenParamsLeft);
+      auto leftDesignate = builder.create<hlfir::DesignateOp>(
+          loc, v1DeclareOp.getBase().getType(), v1DeclareOp.getBase(),
+          /*component=*/"",
+          /*componentShape=*/mlir::Value{}, triplets,
+          /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+          shape, lenParamsLeft);
+      auto left = hlfir::Entity{leftDesignate.getResult()};
+
+      llvm::SmallVector<mlir::Value> lenParamsRight;
+      auto rightEntity = hlfir::Entity{v2DeclareOp.getBase()};
+      hlfir::genLengthParameters(loc, builder, rightEntity, lenParamsLeft);
+      auto rightDesignate = builder.create<hlfir::DesignateOp>(
+          loc, v2DeclareOp.getBase().getType(), v2DeclareOp.getBase(),
+          /*component=*/"",
+          /*componentShape=*/mlir::Value{}, triplets,
+          /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+          shape, lenParamsRight);
+      auto right = hlfir::Entity{rightDesignate.getResult()};
+
+      llvm::SmallVector<mlir::Value, 1> typeParams;
+      auto genKernel = [&builder, &loc, op, seqTy, &left, &right](
+                           mlir::Location l, fir::FirOpBuilder &b,
+                           mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+        auto leftElement = hlfir::getElementAt(l, b, left, oneBasedIndices);
+        auto rightElement = hlfir::getElementAt(l, b, right, oneBasedIndices);
+        auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
+        auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
+        return hlfir::Entity{genScalarCombiner(
+            builder, loc, op, seqTy.getEleTy(), leftVal, rightVal)};
+      };
+      mlir::Value elemental = hlfir::genElementalOp(
+          loc, builder, seqTy.getEleTy(), shape, typeParams, genKernel,
+          /*isUnordered=*/true);
+      builder.create<hlfir::AssignOp>(loc, elemental, v1DeclareOp.getBase());
+      return;
+    }
     if (allConstantBound) {
       // Use the constant bound directly in the combiner region so they do not
       // need to be passed as block argument.
@@ -1108,7 +1178,6 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     builder.create<fir::StoreOp>(loc, res, addr1);
     builder.setInsertionPointAfter(loops[0]);
   } else if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
-    llvm::SmallVector<mlir::Value> tripletArgs;
     mlir::Type innerTy = extractSequenceType(boxTy);
     fir::SequenceType seqTy =
         mlir::dyn_cast_or_null<fir::SequenceType>(innerTy);
@@ -1160,8 +1229,20 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   auto recipe =
       modBuilder.create<mlir::acc::ReductionRecipeOp>(loc, recipeName, ty, op);
+  llvm::SmallVector<mlir::Type> initArgsTy{ty};
+  llvm::SmallVector<mlir::Location> initArgsLoc{loc};
+  mlir::Type refTy = fir::unwrapRefType(ty);
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(refTy)) {
+    if (seqTy.hasDynamicExtents()) {
+      mlir::Type idxTy = builder.getIndexType();
+      for (unsigned i = 0; i < seqTy.getDimension(); ++i) {
+        initArgsTy.push_back(idxTy);
+        initArgsLoc.push_back(loc);
+      }
+    }
+  }
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                      {ty}, {loc});
+                      initArgsTy, initArgsLoc);
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
   mlir::Value initValue = genReductionInitRegion(builder, loc, ty, op);
   builder.create<mlir::acc::YieldOp>(loc, initValue);
