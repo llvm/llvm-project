@@ -113,3 +113,8 @@ void t92(void) {
   (0 ? (_Complex double) 2.0f : 2.0f);
 }
 
+// PR69218
+int t10(void) {
+  float _Complex a;
+  return (0 < &__real__ a) && (0 < &__imag__ a);
+}
