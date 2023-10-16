@@ -63,7 +63,7 @@ func.func @entry() {
   }
 
   // Load tile from "mem1" vertically.
-  %0 = arm_sme.tile_load %mem1[%c0, %c0], <vertical> : memref<?xi32>, vector<[4]x[4]xi32>
+  %0 = arm_sme.tile_load %mem1[%c0, %c0] layout<vertical> : memref<?xi32>, vector<[4]x[4]xi32>
 
   // 1. ORIGINAL HORIZONTAL LAYOUT
   // Dump "mem1". The smallest SVL is 128-bits so the tile will be at least
