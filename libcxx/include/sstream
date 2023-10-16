@@ -267,6 +267,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__fwd/sstream.h>
 #include <__utility/swap.h>
