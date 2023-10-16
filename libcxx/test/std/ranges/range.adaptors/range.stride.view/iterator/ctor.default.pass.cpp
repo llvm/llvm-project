@@ -13,8 +13,6 @@
 // std::views::stride_view
 
 #include "../test.h"
-#include "__concepts/same_as.h"
-#include "__ranges/stride_view.h"
 #include <cassert>
 #include <ranges>
 #include <type_traits>
@@ -45,8 +43,44 @@ constexpr bool non_simple_view_iter_ctor_test() {
   return true;
 }
 
+struct NonDefaultConstructibleIterator : InputIterBase<NonDefaultConstructibleIterator> {
+  NonDefaultConstructibleIterator() = delete;
+  constexpr NonDefaultConstructibleIterator(int) {}
+};
+
+struct View : std::ranges::view_base {
+  constexpr NonDefaultConstructibleIterator begin() const { return NonDefaultConstructibleIterator{5}; }
+  constexpr std::default_sentinel_t end() const { return {}; }
+};
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<View> = true;
+
+constexpr bool iterator_default_constructible() {
+  {
+    // If the type of the iterator of the range being strided is non-default
+    // constructible, then the stride view's iterator should not be default
+    // constructible, either!
+    constexpr View v{};
+    constexpr auto stride   = std::ranges::stride_view(v, 1);
+    using stride_iterator_t = decltype(stride.begin());
+    static_assert(!std::is_default_constructible<stride_iterator_t>(), "");
+  }
+  {
+    // If the type of the iterator of the range being strided is default
+    // constructible, then the stride view's iterator should be default
+    // constructible, too!
+    constexpr int arr[]     = {1, 2, 3};
+    auto stride             = std::ranges::stride_view(arr, 1);
+    using stride_iterator_t = decltype(stride.begin());
+    static_assert(std::is_default_constructible<stride_iterator_t>(), "");
+  }
+
+  return true;
+}
+
 int main(int, char**) {
   non_simple_view_iter_ctor_test();
   static_assert(non_simple_view_iter_ctor_test());
+  static_assert(iterator_default_constructible());
   return 0;
 }

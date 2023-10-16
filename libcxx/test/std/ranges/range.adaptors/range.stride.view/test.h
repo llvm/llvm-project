@@ -10,6 +10,7 @@
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
 #include "__concepts/movable.h"
+#include "__iterator/default_sentinel.h"
 #include "__ranges/concepts.h"
 #include "__ranges/enable_view.h"
 #include "__ranges/size.h"
@@ -99,6 +100,8 @@ struct ForwardIterBase {
   constexpr Derived operator++(int) { return {}; }
 
   friend constexpr bool operator==(const ForwardIterBase&, const ForwardIterBase&) { return true; }
+  friend constexpr bool operator==(const std::default_sentinel_t&, const ForwardIterBase&) { return true; }
+  friend constexpr bool operator==(const ForwardIterBase&, const std::default_sentinel_t&) { return true; }
 };
 
 template <class Derived>
@@ -113,6 +116,8 @@ struct InputIterBase {
   constexpr Derived operator++(int) { return {}; }
 
   friend constexpr bool operator==(const InputIterBase&, const InputIterBase&) { return true; }
+  friend constexpr bool operator==(const std::default_sentinel_t&, const InputIterBase&) { return true; }
+  friend constexpr bool operator==(const InputIterBase&, const std::default_sentinel_t&) { return true; }
 };
 
 struct NotSimpleViewIter : ForwardIterBase<NotSimpleViewIter> {
