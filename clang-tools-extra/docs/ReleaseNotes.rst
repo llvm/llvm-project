@@ -293,13 +293,13 @@ Changes in existing checks
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature, eliminating false-positives.
 
-- Improved :doc:`readability-const-params-in-decls
-  <clang-tidy/checks/readability/const-params-in-decls>` place the hint check under
-  the const token instead of the beginning of parameter declaration.
-
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
   ignore false-positive for ``if constexpr`` in lambda expression.
+
+- Improved :doc:`readability-const-params-in-decls
+  <clang-tidy/checks/readability/const-params-in-decls>` place the hint check under
+  the const token instead of the beginning of parameter declaration.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
