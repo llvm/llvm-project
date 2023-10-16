@@ -269,6 +269,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
 
+- Improved :doc:`modernize-avoid-bind
+  <clang-tidy/checks/modernize/avoid-bind>` check to
+  not emit a ``return`` for fixes when the function returns ``void``.
+
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
@@ -342,10 +346,6 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
-
-- Improved :doc:`modernize-avoid-bind
-  <clang-tidy/checks/modernize/avoid-bind>` check to
-  not emit a `return` for fixes when the function returns void.
 
 Removed checks
 ^^^^^^^^^^^^^^
