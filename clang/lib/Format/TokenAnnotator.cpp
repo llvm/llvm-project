@@ -3497,6 +3497,15 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           Tok->setType(TT_TrailingReturnArrow);
           break;
         }
+        if (Tok->isNot(TT_TrailingAnnotation))
+          continue;
+        const auto *Next = Tok->Next;
+        if (!Next || Next->isNot(tok::l_paren))
+          continue;
+        Tok = Next->MatchingParen;
+        if (Tok)
+          continue;
+        break;
       }
     }
   }
