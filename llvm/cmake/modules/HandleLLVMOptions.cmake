@@ -1008,7 +1008,7 @@ if (LLVM_USE_SPLIT_DWARF AND
   # Limit to clang and gcc so far. Add compilers supporting this option.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-gsplit-dwarf)
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-gsplit-dwarf>)
     include(LLVMCheckLinkerFlag)
     llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
     append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
