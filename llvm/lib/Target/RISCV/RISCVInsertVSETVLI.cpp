@@ -1463,6 +1463,55 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
   return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
+// If LMUL or the SEW/LMUL ratio aren't demanded and MI and NextMI have the same
+// AVL, then we can try and change MI's LMUL so that we can avoid setting VL in
+// NextMI, e.g:
+//
+// vsetivli  zero, 4, e32, m1, ta, ma
+// vsetivli  zero, 4, e16, mf4, ta, ma
+//
+// vsetivli  zero, 4, e32, mf2, ta, ma
+// vsetvli   zero, zero, e16, mf4, ta, ma
+//
+// If possible, returns the new VTYPE that should be used for MI.
+static std::optional<unsigned>
+canAdjustSEWLMULRatio(const MachineInstr &MI, const MachineInstr &NextMI,
+                      const DemandedFields &Used) {
+  if (Used.LMUL || Used.SEWLMULRatio)
+    return std::nullopt;
+  if (!NextMI.getOperand(0).isDead())
+    return std::nullopt;
+  // If we end up increasing the SEW/LMUL ratio, then we will decrease VLMAX,
+  // which means we might end up changing VL in the case that AVL > VLMAX. So
+  // bail if the exact VL value is needed.
+  //
+  // TODO: We could potentially relax this when we know we're increasing VLMAX.
+  if (Used.VLAny)
+    return std::nullopt;
+
+  // If NextMI is already zero, zero then bail. If MI is zero, zero then we
+  // won't be able to tell if it has the same AVL as NextMI, so also bail.
+  if (isVLPreservingConfig(MI) || isVLPreservingConfig(NextMI))
+    return std::nullopt;
+
+  VSETVLIInfo NextMIInfo = getInfoForVSETVLI(NextMI);
+  VSETVLIInfo MIInfo = getInfoForVSETVLI(MI);
+  if (!MIInfo.hasSameAVL(NextMIInfo))
+    return std::nullopt;
+
+  unsigned SEW = MIInfo.getSEW() * 8;
+  // Fixed point value with 3 fractional bits.
+  unsigned NewRatio = SEW / NextMIInfo.getSEWLMULRatio();
+  bool Fractional = NewRatio < 8;
+  RISCVII::VLMUL NewVLMul = RISCVVType::encodeLMUL(
+      Fractional ? 8 / NewRatio : NewRatio / 8, Fractional);
+
+  unsigned VType = MIInfo.encodeVTYPE();
+  return RISCVVType::encodeVTYPE(NewVLMul, SEW / 8,
+                                 RISCVVType::isTailAgnostic(VType),
+                                 RISCVVType::isMaskAgnostic(VType));
+}
+
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
@@ -1484,6 +1533,15 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       Used.demandVL();
 
     if (NextMI) {
+      if (auto NewVType = canAdjustSEWLMULRatio(MI, *NextMI, Used)) {
+        MI.getOperand(2).setImm(*NewVType);
+        // Convert NextMI to vsetvli zero, zero
+        NextMI->setDesc(TII->get(RISCV::PseudoVSETVLIX0));
+        NextMI->getOperand(0).setReg(RISCV::X0);
+        NextMI->getOperand(0).setIsDead(true);
+        NextMI->getOperand(1).ChangeToRegister(RISCV::X0, false, false, true);
+      }
+
       if (!Used.usedVL() && !Used.usedVTYPE()) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged

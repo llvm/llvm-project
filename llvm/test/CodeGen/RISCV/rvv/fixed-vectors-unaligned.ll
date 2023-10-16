@@ -341,9 +341,9 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:  .LBB6_4: # %else6
 ; RV64-SLOW-NEXT:    ret
 ; RV64-SLOW-NEXT:  .LBB6_5: # %cond.store
-; RV64-SLOW-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; RV64-SLOW-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
-; RV64-SLOW-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a2, v10
 ; RV64-SLOW-NEXT:    srli a3, a1, 8
 ; RV64-SLOW-NEXT:    sb a3, 1(a2)
