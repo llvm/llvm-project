@@ -173,10 +173,12 @@ void UnwrappedLineParser::reset() {
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
   MustBreakBeforeNextToken = false;
+  IsDecltypeAutoFunction = false;
   PreprocessorDirectives.clear();
   CurrentLines = &Lines;
   DeclarationScopeStack.clear();
   NestedTooDeep.clear();
+  NestedLambdas.clear();
   PPStack.clear();
   Line->FirstStartColumn = FirstStartColumn;
 
@@ -1757,6 +1759,17 @@ void UnwrappedLineParser::parseStructuralElement(
       if (parseStructLike())
         return;
       break;
+    case tok::kw_decltype:
+      nextToken();
+      if (FormatTok->is(tok::l_paren)) {
+        parseParens();
+        assert(FormatTok->Previous);
+        if (FormatTok->Previous->endsSequence(tok::r_paren, tok::kw_auto,
+                                              tok::l_paren)) {
+          Line->SeenDecltypeAuto = true;
+        }
+      }
+      break;
     case tok::period:
       nextToken();
       // In Java, classes have an implicit static member "class".
@@ -1818,6 +1831,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (NextLBracesType != TT_Unknown)
         FormatTok->setFinalizedType(NextLBracesType);
       if (!tryToParsePropertyAccessor() && !tryToParseBracedList()) {
+        IsDecltypeAutoFunction = Line->SeenDecltypeAuto;
         // A block outside of parentheses must be the last part of a
         // structural element.
         // FIXME: Figure out cases where this is not true, and add projections
@@ -1835,6 +1849,7 @@ void UnwrappedLineParser::parseStructuralElement(
         }
         FormatTok->setFinalizedType(TT_FunctionLBrace);
         parseBlock();
+        IsDecltypeAutoFunction = false;
         addUnwrappedLine();
         return;
       }
@@ -2249,9 +2264,15 @@ bool UnwrappedLineParser::tryToParseLambda() {
       return true;
     }
   }
+
   FormatTok->setFinalizedType(TT_LambdaLBrace);
   LSquare.setFinalizedType(TT_LambdaLSquare);
+
+  NestedLambdas.push_back(Line->SeenDecltypeAuto);
   parseChildBlock();
+  assert(!NestedLambdas.empty());
+  NestedLambdas.pop_back();
+
   return true;
 }
 
@@ -2471,6 +2492,8 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
                PrevPrev->endsSequence(tok::kw_constexpr, tok::kw_if))));
         const bool ReturnParens =
             Style.RemoveParentheses == FormatStyle::RPS_ReturnStatement &&
+            ((NestedLambdas.empty() && !IsDecltypeAutoFunction) ||
+             (!NestedLambdas.empty() && !NestedLambdas.back())) &&
             Prev && Prev->isOneOf(tok::kw_return, tok::kw_co_return) && Next &&
             Next->is(tok::semi);
         if ((DoubleParens && !Blacklisted) || ReturnParens) {
@@ -4386,6 +4409,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
   Line->FirstStartColumn = 0;
   Line->IsContinuation = false;
+  Line->SeenDecltypeAuto = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;
