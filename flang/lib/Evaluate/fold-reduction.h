@@ -228,7 +228,7 @@ public:
         test.Rewrite(context_, std::move(test)))};
     CHECK(folded.has_value());
     if (folded->IsTrue()) {
-      element = array_.At(at);
+      element = aAt;
     }
   }
   void Done(Scalar<T> &) const {}
