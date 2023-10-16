@@ -1,6 +1,8 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc-unknown-unknown -emit-llvm %s -o - \
 // RUN:   | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc-unknown-unknown -emit-llvm %s -o - \
+// RUN:   -target-cpu pwr9 | FileCheck %s --check-prefixes=P9,CHECK
 
 void test_eh_return_data_regno()
 {
@@ -43,8 +45,10 @@ void test_builtin_ppc_flm() {
   // CHECK: call double @llvm.ppc.setflm(double %2)
   res = __builtin_setflm(res);
 
-  // CHECK: call double @llvm.ppc.mffsl()
+#ifdef _ARCH_PWR9
+  // P9: call double @llvm.ppc.mffsl()
   res = __builtin_ppc_mffsl();
+#endif
 }
 
 double test_builtin_unpack_ldbl(long double x) {

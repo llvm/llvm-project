@@ -646,8 +646,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2f64, Custom);
 
+  // To handle counter-based loop conditions.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
-  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i8, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i16, Custom);
@@ -11595,50 +11595,6 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("ERROR:Should return for all cases within swtich.");
 }
 
-// Lower mffsl intrinsic with mffs in targets without ISA 3.0
-static SDValue lowerMFFSL(SDValue Op, SelectionDAG &DAG,
-                          const PPCSubtarget &Subtarget) {
-  assert(cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue() ==
-             Intrinsic::ppc_mffsl &&
-         "Should only be called on int_ppc_mffsl");
-  if (Subtarget.isISA3_0())
-    return Op;
-
-  SDLoc dl(Op);
-  SDValue Chain = Op.getOperand(0);
-  SDValue MFFS = DAG.getNode(PPCISD::MFFS, dl, {MVT::f64, MVT::Other}, Chain);
-  Chain = MFFS.getValue(1);
-
-  if (Subtarget.isPPC64()) {
-    SDValue Int = DAG.getNode(ISD::BITCAST, dl, MVT::i64, MFFS);
-    // Mask 29-31, 45-51 and 56-63 bits
-    SDValue Masked = DAG.getNode(ISD::AND, dl, MVT::i64, Int,
-                                 DAG.getConstant(0x70007f0ffULL, dl, MVT::i64));
-    SDValue Cast = DAG.getNode(ISD::BITCAST, dl, MVT::f64, Masked);
-    return DAG.getMergeValues({Cast, Chain}, dl);
-  }
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachinePointerInfo PtrInfo;
-  int SSFI = MF.getFrameInfo().CreateStackObject(8, Align(8), false);
-  SDValue Base = DAG.getFrameIndex(SSFI, MVT::i32);
-  Chain = DAG.getStore(Chain, dl, MFFS, Base, PtrInfo);
-
-  assert(!Subtarget.isLittleEndian() && "32-bit little endian is unsupported!");
-  SDValue Offset4 = DAG.getNode(ISD::ADD, dl, MVT::i32, Base,
-                                DAG.getConstant(4, dl, MVT::i32));
-  SDValue Hi = DAG.getLoad(MVT::i32, dl, Chain, Base, PtrInfo);
-  SDValue Lo = DAG.getLoad(MVT::i32, dl, Hi.getValue(1), Offset4, PtrInfo);
-  Chain = Lo.getValue(1);
-  Hi =
-      DAG.getNode(ISD::AND, dl, MVT::i32, Hi, DAG.getConstant(7, dl, MVT::i32));
-  Lo = DAG.getNode(ISD::AND, dl, MVT::i32, Lo,
-                   DAG.getConstant(0x7f0ffULL, dl, MVT::i32));
-  Chain = DAG.getStore(Chain, dl, Hi, Base, PtrInfo);
-  Chain = DAG.getStore(Chain, dl, Lo, Offset4, PtrInfo);
-  return DAG.getLoad(MVT::f64, dl, Chain, Base, PtrInfo);
-}
-
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -11713,12 +11669,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_ROUND(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
-  case ISD::INTRINSIC_W_CHAIN: {
-    if (cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue() ==
-        Intrinsic::ppc_mffsl)
-      return lowerMFFSL(Op, DAG, Subtarget);
-    return SDValue();
-  }
+  // For counter-based loop handling.
+  case ISD::INTRINSIC_W_CHAIN:  return SDValue();
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 

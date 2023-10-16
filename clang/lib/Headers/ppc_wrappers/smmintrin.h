@@ -83,7 +83,12 @@ extern __inline __m128d
 
   switch (__rounding) {
   case _MM_FROUND_TO_NEAREST_INT:
+#ifdef _ARCH_PWR9
     __fpscr_save.__fr = __builtin_ppc_mffsl();
+#else
+    __fpscr_save.__fr = __builtin_ppc_mffs();
+    __fpscr_save.__fpscr &= 0x70007f0ffL;
+#endif
     __attribute__((fallthrough));
   case _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC:
     __builtin_ppc_set_fpscr_rn(0b00);
@@ -128,7 +133,12 @@ extern __inline __m128d
      */
     __asm__("" : : "wa"(__r));
     /* Restore enabled exceptions.  */
+#ifdef _ARCH_PWR9
     __fpscr_save.__fr = __builtin_ppc_mffsl();
+#else
+    __fpscr_save.__fr = __builtin_ppc_mffs();
+    __fpscr_save.__fpscr &= 0x70007f0ffL;
+#endif
     __fpscr_save.__fpscr |= __enables_save.__fpscr;
     __builtin_ppc_mtfsf(0b00000011, __fpscr_save.__fr);
   }
@@ -174,7 +184,12 @@ extern __inline __m128
 
   switch (__rounding) {
   case _MM_FROUND_TO_NEAREST_INT:
+#ifdef _ARCH_PWR9
     __fpscr_save.__fr = __builtin_ppc_mffsl();
+#else
+    __fpscr_save.__fr = __builtin_ppc_mffs();
+    __fpscr_save.__fpscr &= 0x70007f0ffL;
+#endif
     __attribute__((fallthrough));
   case _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC:
     __builtin_ppc_set_fpscr_rn(0b00);
@@ -219,7 +234,12 @@ extern __inline __m128
      */
     __asm__("" : : "wa"(__r));
     /* Restore enabled exceptions.  */
+#ifdef _ARCH_PWR9
     __fpscr_save.__fr = __builtin_ppc_mffsl();
+#else
+    __fpscr_save.__fr = __builtin_ppc_mffs();
+    __fpscr_save.__fpscr &= 0x70007f0ffL;
+#endif
     __fpscr_save.__fpscr |= __enables_save.__fpscr;
     __builtin_ppc_mtfsf(0b00000011, __fpscr_save.__fr);
   }

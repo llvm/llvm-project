@@ -3188,6 +3188,7 @@ def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
 def : Pat<(int_ppc_readflm), (MFFS)>;
+def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
 // Hi and Lo for Darwin Global Addresses.
 def : Pat<(PPChi tglobaladdr:$in, 0), (LIS tglobaladdr:$in)>;
@@ -4508,9 +4509,6 @@ def : Pat<(int_ppc_dcbfl xoaddr:$dst),
           (DCBF 1, xoaddr:$dst)>;
 def : Pat<(int_ppc_dcbflp xoaddr:$dst),
           (DCBF 3, xoaddr:$dst)>;
-
-let Predicates = [IsISA3_0] in
-def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
 let Predicates = [IsISA3_1] in {
   def DCBFPS  : PPCAsmPseudo<"dcbfps $dst", (ins memrr:$dst)>;

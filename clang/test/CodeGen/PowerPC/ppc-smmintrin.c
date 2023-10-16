@@ -247,7 +247,8 @@ test_round() {
 // CHECK: call double @llvm.ppc.readflm()
 // CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <4 x float> asm "", "=^wa,0"
-// CHECK: call double @llvm.ppc.mffsl()
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
 // CHECK: call double @llvm.ppc.setrnd(i32 0)
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <4 x float> asm "", "=^wa,0"
 // CHECK: call <4 x float> @vec_rint(float vector[4])
@@ -258,7 +259,8 @@ test_round() {
 // CHECK: call <4 x float> @vec_trunc(float vector[4])
 // CHECK: call <4 x float> @vec_rint(float vector[4])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call double @llvm.ppc.mffsl()
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
 // CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_round_ss(<4 x float> noundef %{{[0-9a-zA-Z_.]+}}, <4 x float> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
@@ -269,7 +271,8 @@ test_round() {
 // CHECK: call double @llvm.ppc.readflm()
 // CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <2 x double> asm "", "=^wa,0"
-// CHECK: call double @llvm.ppc.mffsl()
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
 // CHECK: call double @llvm.ppc.setrnd(i32 0)
 // CHECK: %{{[0-9a-zA-Z_.]+}} = call <2 x double> asm "", "=^wa,0"
 // CHECK: call <2 x double> @vec_rint(double vector[2])
@@ -280,7 +283,8 @@ test_round() {
 // CHECK: call <2 x double> @vec_trunc(double vector[2])
 // CHECK: call <2 x double> @vec_rint(double vector[2])
 // CHECK: call void asm sideeffect "", "^wa"
-// CHECK: call double @llvm.ppc.mffsl()
+// CHECK: call double @llvm.ppc.readflm()
+// P10: call double @llvm.ppc.mffsl()
 // CHECK: call void @llvm.ppc.mtfsf(i32 3, double %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_round_sd(<2 x double> noundef %{{[0-9a-zA-Z_.]+}}, <2 x double> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef signext %{{[0-9a-zA-Z_.]+}})
