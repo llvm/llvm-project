@@ -115,16 +115,6 @@ MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_createCheckedSparseTensorReader(
     char *filename, StridedMemRefType<index_type, 1> *dimShapeRef,
     PrimaryType valTp);
 
-/// Constructs a new sparse-tensor storage object with the given encoding,
-/// initializes it by reading all the elements from the file, and then
-/// closes the file.
-MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensorFromReader(
-    void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef,
-    StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
-    OverheadType crdTp, PrimaryType valTp);
-
 /// SparseTensorReader method to obtain direct access to the
 /// dimension-sizes array.
 MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
@@ -197,23 +187,8 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELCOO)
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
 MLIR_CRUNNERUTILS_EXPORT char *getTensorFilename(index_type id);
 
-/// Helper function to read the header of a file and return the
-/// shape/sizes, without parsing the elements of the file.
-MLIR_CRUNNERUTILS_EXPORT void readSparseTensorShape(char *filename,
-                                                    std::vector<uint64_t> *out);
-
-/// Returns the rank of the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderRank(void *p);
-
-/// Returns the is_symmetric bit for the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT bool getSparseTensorReaderIsSymmetric(void *p);
-
 /// Returns the number of stored elements for the sparse tensor being read.
 MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderNSE(void *p);
-
-/// Returns the size of a dimension for the sparse tensor being read.
-MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
-                                                                 index_type d);
 
 /// Releases the SparseTensorReader and closes the associated file.
 MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);

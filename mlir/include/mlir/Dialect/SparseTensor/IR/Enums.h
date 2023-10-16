@@ -146,6 +146,7 @@ enum class Action : uint32_t {
   kEmptyForward = 1,
   kFromCOO = 2,
   kSparseToSparse = 3,
+  kFromReader = 4,
   kToCOO = 5,
   kPack = 7,
   kSortCOOInPlace = 8,
