@@ -1,3 +1,4 @@
+# REQUIRES: amdgpu
 # RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=4 -filetype=obj %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj --file-headers %t.so | FileCheck --check-prefix=COV4 %s
