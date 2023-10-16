@@ -159,25 +159,6 @@ static void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
   computeKnownBits(V, DemandedElts, Known, Depth, Q);
 }
 
-void llvm::computeKnownBits(const Value *V, KnownBits &Known,
-                            const DataLayout &DL, unsigned Depth,
-                            AssumptionCache *AC, const Instruction *CxtI,
-                            const DominatorTree *DT, bool UseInstrInfo) {
-  ::computeKnownBits(
-      V, Known, Depth,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
-}
-
-void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
-                            KnownBits &Known, const DataLayout &DL,
-                            unsigned Depth, AssumptionCache *AC,
-                            const Instruction *CxtI, const DominatorTree *DT,
-                            bool UseInstrInfo) {
-  ::computeKnownBits(
-      V, DemandedElts, Known, Depth,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
-}
-
 static KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                                   unsigned Depth, const SimplifyQuery &Q);
 
@@ -250,11 +231,9 @@ bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
         match(LHS, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
       return true;
   }
-  IntegerType *IT = cast<IntegerType>(LHS->getType()->getScalarType());
-  KnownBits LHSKnown(IT->getBitWidth());
-  KnownBits RHSKnown(IT->getBitWidth());
-  ::computeKnownBits(LHS, LHSKnown, 0, SQ);
-  ::computeKnownBits(RHS, RHSKnown, 0, SQ);
+
+  KnownBits LHSKnown = ::computeKnownBits(LHS, 0, SQ);
+  KnownBits RHSKnown = ::computeKnownBits(RHS, 0, SQ);
   return KnownBits::haveNoCommonBitsSet(LHSKnown, RHSKnown);
 }
 
@@ -8140,9 +8119,8 @@ static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
       // If X & C == 0 then (X | C) == X +_{nuw} C
       if (match(A, m_Or(m_Value(X), m_APInt(CA))) &&
           match(B, m_Or(m_Specific(X), m_APInt(CB)))) {
-        KnownBits Known(CA->getBitWidth());
-        computeKnownBits(X, Known, DL, Depth + 1, /*AC*/ nullptr,
-                         /*CxtI*/ nullptr, /*DT*/ nullptr);
+        KnownBits Known = computeKnownBits(X, DL, Depth + 1, /*AC*/ nullptr,
+                                           /*CxtI*/ nullptr, /*DT*/ nullptr);
         if (CA->isSubsetOf(Known.Zero) && CB->isSubsetOf(Known.Zero))
           return true;
       }

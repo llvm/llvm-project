@@ -466,11 +466,6 @@ public:
   /// methods should return the value returned by this function.
   virtual Instruction *eraseInstFromFunction(Instruction &I) = 0;
 
-  void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
-                        const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
-  }
-
   KnownBits computeKnownBits(const Value *V, unsigned Depth,
                              const Instruction *CxtI) const {
     return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);

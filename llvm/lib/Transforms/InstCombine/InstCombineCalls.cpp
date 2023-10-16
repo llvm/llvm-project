@@ -642,8 +642,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
     return CastInst::Create(Instruction::ZExt, NarrowPop, Ty);
   }
 
-  KnownBits Known(BitWidth);
-  IC.computeKnownBits(Op0, Known, 0, &II);
+  KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
 
   // If all bits are zero except for exactly one fixed bit, then the result
   // must be 0 or 1, and we can get that answer by shifting to LSB:
@@ -2875,8 +2874,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
-    KnownBits Known(1);
-    computeKnownBits(IIOperand, Known, 0, II);
+    KnownBits Known = computeKnownBits(IIOperand, 0, II);
     if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
       return eraseInstFromFunction(*II);
 
