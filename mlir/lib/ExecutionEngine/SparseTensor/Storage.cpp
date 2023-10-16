@@ -44,20 +44,9 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
   }
 }
 
-// Helper macro for generating error messages when some
-// `SparseTensorStorage<P,I,V>` is cast to `SparseTensorStorageBase`
-// and then the wrong "partial method specialization" is called.
+// Helper macro for wrong "partial method specialization" errors.
 #define FATAL_PIV(NAME)                                                        \
   MLIR_SPARSETENSOR_FATAL("<P,I,V> type mismatch for: " #NAME);
-
-#define IMPL_NEWENUMERATOR(VNAME, V)                                           \
-  void SparseTensorStorageBase::newEnumerator(                                 \
-      SparseTensorEnumeratorBase<V> **, uint64_t, const uint64_t *, uint64_t,  \
-      const uint64_t *) const {                                                \
-    FATAL_PIV("newEnumerator" #VNAME);                                         \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_NEWENUMERATOR)
-#undef IMPL_NEWENUMERATOR
 
 #define IMPL_GETPOSITIONS(PNAME, P)                                            \
   void SparseTensorStorageBase::getPositions(std::vector<P> **, uint64_t) {    \
