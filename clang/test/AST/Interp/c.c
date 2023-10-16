@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -verify=ref -std=c11 %s
 // RUN: %clang_cc1 -pedantic -verify=pedantic-ref -std=c11 %s
 
+typedef __INTPTR_TYPE__ intptr_t;
+
 _Static_assert(1, "");
 _Static_assert(0 != 1, "");
 _Static_assert(1.0 == 1.0, ""); // pedantic-ref-warning {{not an integer constant expression}} \
@@ -69,13 +71,13 @@ _Static_assert(&Test50 != (void*)0, ""); // ref-warning {{always true}} \
                                          // pedantic-expected-warning {{is a GNU extension}}
 
 struct y {int x,y;};
-int a2[(long)&((struct y*)0)->y]; // expected-warning {{folded to constant array}} \
-                                  // pedantic-expected-warning {{folded to constant array}} \
-                                  // ref-warning {{folded to constant array}} \
-                                  // pedantic-ref-warning {{folded to constant array}}
+int a2[(intptr_t)&((struct y*)0)->y]; // expected-warning {{folded to constant array}} \
+                                      // pedantic-expected-warning {{folded to constant array}} \
+                                      // ref-warning {{folded to constant array}} \
+                                      // pedantic-ref-warning {{folded to constant array}}
 
 const struct y *yy = (struct y*)0;
-const long L = (long)(&(yy->y)); // expected-error {{not a compile-time constant}} \
-                                 // pedantic-expected-error {{not a compile-time constant}} \
-                                 // ref-error {{not a compile-time constant}} \
-                                 // pedantic-ref-error {{not a compile-time constant}}
+const intptr_t L = (intptr_t)(&(yy->y)); // expected-error {{not a compile-time constant}} \
+                                         // pedantic-expected-error {{not a compile-time constant}} \
+                                         // ref-error {{not a compile-time constant}} \
+                                         // pedantic-ref-error {{not a compile-time constant}}
