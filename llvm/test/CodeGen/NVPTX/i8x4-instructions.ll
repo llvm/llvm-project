@@ -1269,4 +1269,163 @@ define <4 x i8> @test_fptoui_2xhalf_to_2xi8(<4 x half> %a) #0 {
   ret <4 x i8> %r
 }
 
+define void @test_srem_v4i8(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: test_srem_v4i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld.param.u64 %rd3, [test_srem_v4i8_param_2];
+; CHECK-NEXT:    ld.param.u64 %rd2, [test_srem_v4i8_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [test_srem_v4i8_param_0];
+; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.u32 %r2, [%rd2];
+; CHECK-NEXT:    bfe.s32 %r3, %r2, 0, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs1, %r3;
+; CHECK-NEXT:    bfe.s32 %r4, %r1, 0, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs2, %r4;
+; CHECK-NEXT:    rem.s16 %rs3, %rs2, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r5, %rs3;
+; CHECK-NEXT:    bfe.s32 %r6, %r2, 8, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs4, %r6;
+; CHECK-NEXT:    bfe.s32 %r7, %r1, 8, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs5, %r7;
+; CHECK-NEXT:    rem.s16 %rs6, %rs5, %rs4;
+; CHECK-NEXT:    cvt.u32.u16 %r8, %rs6;
+; CHECK-NEXT:    bfi.b32 %r9, %r8, %r5, 8, 8;
+; CHECK-NEXT:    bfe.s32 %r10, %r2, 16, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs7, %r10;
+; CHECK-NEXT:    bfe.s32 %r11, %r1, 16, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs8, %r11;
+; CHECK-NEXT:    rem.s16 %rs9, %rs8, %rs7;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs9;
+; CHECK-NEXT:    bfi.b32 %r13, %r12, %r9, 16, 8;
+; CHECK-NEXT:    bfe.s32 %r14, %r2, 24, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs10, %r14;
+; CHECK-NEXT:    bfe.s32 %r15, %r1, 24, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs11, %r15;
+; CHECK-NEXT:    rem.s16 %rs12, %rs11, %rs10;
+; CHECK-NEXT:    cvt.u32.u16 %r16, %rs12;
+; CHECK-NEXT:    bfi.b32 %r17, %r16, %r13, 24, 8;
+; CHECK-NEXT:    st.u32 [%rd3], %r17;
+; CHECK-NEXT:    ret;
+entry:
+  %t57 = load <4 x i8>, ptr %a, align 4
+  %t59 = load <4 x i8>, ptr %b, align 4
+  %x = srem <4 x i8> %t57, %t59
+  store <4 x i8> %x, ptr %c, align 4
+  ret void
+}
+
+;; v3i8 lowering, especially for unaligned loads is terrible. We end up doing
+;; tons of pointless scalar_to_vector/bitcast/extract_elt on v2i16/v4i8, which
+;; is further complicated by LLVM trying to use i16 as an intermediate type,
+;; because we don't have i8 registers. It's a mess.
+;; Ideally we want to split it into element-wise ops, but legalizer can't handle
+;; odd-sized vectors.  TL;DR; don't use odd-sized vectors of v8.
+define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: test_srem_v3i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<20>;
+; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld.param.u64 %rd3, [test_srem_v3i8_param_2];
+; CHECK-NEXT:    ld.param.u64 %rd2, [test_srem_v3i8_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [test_srem_v3i8_param_0];
+; CHECK-NEXT:    ld.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.u8 %rs2, [%rd1+1];
+; CHECK-NEXT:    shl.b16 %rs3, %rs2, 8;
+; CHECK-NEXT:    or.b16 %rs4, %rs3, %rs1;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-NEXT:    ld.s8 %rs5, [%rd1+2];
+; CHECK-NEXT:    ld.u8 %rs6, [%rd2];
+; CHECK-NEXT:    ld.u8 %rs7, [%rd2+1];
+; CHECK-NEXT:    shl.b16 %rs8, %rs7, 8;
+; CHECK-NEXT:    or.b16 %rs9, %rs8, %rs6;
+; CHECK-NEXT:    cvt.u32.u16 %r3, %rs9;
+; CHECK-NEXT:    ld.s8 %rs10, [%rd2+2];
+; CHECK-NEXT:    bfe.s32 %r5, %r3, 0, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs11, %r5;
+; CHECK-NEXT:    bfe.s32 %r6, %r1, 0, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs12, %r6;
+; CHECK-NEXT:    rem.s16 %rs13, %rs12, %rs11;
+; CHECK-NEXT:    cvt.u32.u16 %r7, %rs13;
+; CHECK-NEXT:    bfe.s32 %r8, %r3, 8, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs14, %r8;
+; CHECK-NEXT:    bfe.s32 %r9, %r1, 8, 8;
+; CHECK-NEXT:    cvt.s8.s32 %rs15, %r9;
+; CHECK-NEXT:    rem.s16 %rs16, %rs15, %rs14;
+; CHECK-NEXT:    cvt.u32.u16 %r10, %rs16;
+; CHECK-NEXT:    bfi.b32 %r11, %r10, %r7, 8, 8;
+; CHECK-NEXT:    // implicit-def: %r13
+; CHECK-NEXT:    bfi.b32 %r12, %r13, %r11, 16, 8;
+; CHECK-NEXT:    // implicit-def: %r15
+; CHECK-NEXT:    bfi.b32 %r14, %r15, %r12, 24, 8;
+; CHECK-NEXT:    rem.s16 %rs17, %rs5, %rs10;
+; CHECK-NEXT:    cvt.u16.u32 %rs18, %r14;
+; CHECK-NEXT:    st.u8 [%rd3], %rs18;
+; CHECK-NEXT:    shr.u16 %rs19, %rs18, 8;
+; CHECK-NEXT:    st.u8 [%rd3+1], %rs19;
+; CHECK-NEXT:    st.u8 [%rd3+2], %rs17;
+; CHECK-NEXT:    ret;
+entry:
+  %t57 = load <3 x i8>, ptr %a, align 1
+  %t59 = load <3 x i8>, ptr %b, align 1
+  %x = srem <3 x i8> %t57, %t59
+  store <3 x i8> %x, ptr %c, align 1
+  ret void
+}
+
+define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: test_sext_v4i1_to_v4i8(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<5>;
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<19>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    ld.param.u64 %rd3, [test_sext_v4i1_to_v4i8_param_2];
+; CHECK-NEXT:    ld.param.u64 %rd2, [test_sext_v4i1_to_v4i8_param_1];
+; CHECK-NEXT:    ld.param.u64 %rd1, [test_sext_v4i1_to_v4i8_param_0];
+; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.u32 %r2, [%rd2];
+; CHECK-NEXT:    bfe.s32 %r3, %r2, 24, 8;
+; CHECK-NEXT:    bfe.s32 %r4, %r1, 24, 8;
+; CHECK-NEXT:    setp.hi.u32 %p1, %r4, %r3;
+; CHECK-NEXT:    bfe.s32 %r5, %r2, 16, 8;
+; CHECK-NEXT:    bfe.s32 %r6, %r1, 16, 8;
+; CHECK-NEXT:    setp.hi.u32 %p2, %r6, %r5;
+; CHECK-NEXT:    bfe.s32 %r7, %r2, 0, 8;
+; CHECK-NEXT:    bfe.s32 %r8, %r1, 0, 8;
+; CHECK-NEXT:    setp.hi.u32 %p3, %r8, %r7;
+; CHECK-NEXT:    bfe.s32 %r9, %r2, 8, 8;
+; CHECK-NEXT:    bfe.s32 %r10, %r1, 8, 8;
+; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
+; CHECK-NEXT:    selp.s16 %rs1, -1, 0, %p4;
+; CHECK-NEXT:    selp.s16 %rs2, -1, 0, %p3;
+; CHECK-NEXT:    mov.b32 %r11, {%rs2, %rs1};
+; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r11;
+; CHECK-NEXT:    cvt.u32.u16 %r12, %rs3;
+; CHECK-NEXT:    cvt.u32.u16 %r13, %rs4;
+; CHECK-NEXT:    bfi.b32 %r14, %r13, %r12, 8, 8;
+; CHECK-NEXT:    selp.s32 %r15, -1, 0, %p2;
+; CHECK-NEXT:    bfi.b32 %r16, %r15, %r14, 16, 8;
+; CHECK-NEXT:    selp.s32 %r17, -1, 0, %p1;
+; CHECK-NEXT:    bfi.b32 %r18, %r17, %r16, 24, 8;
+; CHECK-NEXT:    st.u32 [%rd3], %r18;
+; CHECK-NEXT:    ret;
+entry:
+  %t1 = load <4 x i8>, ptr %a, align 4
+  %t2 = load <4 x i8>, ptr %b, align 4
+  %t5 = icmp ugt <4 x i8> %t1, %t2
+  %t6 = sext <4 x i1> %t5 to <4 x i8>
+  store <4 x i8> %t6, ptr %c, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }
