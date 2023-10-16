@@ -371,11 +371,11 @@ private:
 
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
-    TODO(getLoc(), "lowering CoarrayRef to HLFIR");
+    TODO(getLoc(), "coarray: lowering a reference to a coarray object");
   }
 
   mlir::Type visit(const Fortran::evaluate::CoarrayRef &, PartInfo &) {
-    TODO(getLoc(), "lowering CoarrayRef to HLFIR");
+    TODO(getLoc(), "coarray: lowering a reference to a coarray object");
   }
 
   fir::FortranVariableOpInterface
