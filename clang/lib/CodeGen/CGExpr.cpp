@@ -2992,9 +2992,21 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     return MakeAddrLValue(CGM.GetAddrOfMSGuidDecl(GD), T,
                           AlignmentSource::Decl);
 
-  if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND))
-    return MakeAddrLValue(CGM.GetAddrOfTemplateParamObject(TPO), T,
-                          AlignmentSource::Decl);
+  if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+    auto ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
+    auto AS = getLangASFromTargetAS(ATPO.getAddressSpace());
+
+    if (AS != T.getAddressSpace()) {
+      auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
+      auto PtrTy = ATPO.getElementType()->getPointerTo(TargetAS);
+      auto ASC = getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(),
+                                                       AS, T.getAddressSpace(),
+                                                       PtrTy);
+      ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
+    }
+
+    return MakeAddrLValue(ATPO, T, AlignmentSource::Decl);
+  }
 
   llvm_unreachable("Unhandled DeclRefExpr");
 }
