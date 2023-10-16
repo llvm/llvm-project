@@ -27,6 +27,13 @@ public:
   }
 };
 
+class MyOtherHandler final : public ActionHandler {
+public:
+  void onAction(int x, int &) override {
+    clang_analyzer_dump(x + 3); // expected-warning {{403}}
+  }
+};
+
 void trust_static_types(ActionHandler *p) {
   // This variable will help to see if conservative call evaluation happened or not.
   int invalidation_detector;
@@ -58,6 +65,17 @@ void trust_static_types(ActionHandler *p) {
   // 3) none were inlined
   // 4) inlined only the second: This can't happen because if we conservative called a specific function on a path, we will always evaluate it like that.
   //    See ExprEngine::BifurcateCall and DynamicDispatchBifurcationMap.
+}
+
+
+void conflicting_casts(ActionHandler *p) {
+  (void)static_cast<MyHandler *>(p);
+  (void)static_cast<MyOtherHandler *>(p);
+  int invalidation_detector = 4000;
+  p->onAction(400, invalidation_detector);
+  clang_analyzer_dump(invalidation_detector);
+  // expected-warning@-1 {{4000}}
+  // expected-warning@-2 {{conj}}
 }
 
 // -------
