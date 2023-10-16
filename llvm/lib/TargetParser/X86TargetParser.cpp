@@ -509,6 +509,7 @@ constexpr FeatureBitset ImpliedFeaturesSHSTK = {};
 constexpr FeatureBitset ImpliedFeaturesTBM = {};
 constexpr FeatureBitset ImpliedFeaturesTSXLDTRK = {};
 constexpr FeatureBitset ImpliedFeaturesUINTR = {};
+constexpr FeatureBitset ImpliedFeaturesUSERMSR = {};
 constexpr FeatureBitset ImpliedFeaturesWAITPKG = {};
 constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
