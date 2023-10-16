@@ -40,6 +40,7 @@ class APInt;
 class APFloat;
 class GISelKnownBits;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineInstrBuilder;
 class MachineFunction;
 class MachineOperand;
@@ -555,15 +556,15 @@ protected:
   /// and false otherwise.
   template <class TgtExecutor, class PredicateBitset, class ComplexMatcherMemFn,
             class CustomRendererFn>
-  bool executeMatchTable(
-      TgtExecutor &Exec, NewMIVector &OutMIs, MatcherState &State,
-      const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
-          &ISelInfo,
-      const int64_t *MatchTable, const TargetInstrInfo &TII,
-      MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-      const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
-      CodeGenCoverage *CoverageInfo,
-      GISelChangeObserver *Observer = nullptr) const;
+  bool executeMatchTable(TgtExecutor &Exec, MatcherState &State,
+                         const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn,
+                                          CustomRendererFn> &ExecInfo,
+                         MachineIRBuilder &Builder, const int64_t *MatchTable,
+                         const TargetInstrInfo &TII, MachineRegisterInfo &MRI,
+                         const TargetRegisterInfo &TRI,
+                         const RegisterBankInfo &RBI,
+                         const PredicateBitset &AvailableFeatures,
+                         CodeGenCoverage *CoverageInfo) const;
 
   virtual const int64_t *getMatchTable() const {
     llvm_unreachable("Should have been overridden by tablegen if used");

@@ -627,9 +627,8 @@ struct ForOpInterface
     auto forOp = cast<scf::ForOp>(op);
     OpOperand &forOperand = forOp.getOpOperandForResult(opResult);
     auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-    auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
     bool equivalentYield = state.areEquivalentBufferizedValues(
-        bbArg, yieldOp->getOperand(opResult.getResultNumber()));
+        bbArg, forOp.getYieldedValues()[opResult.getResultNumber()]);
     return equivalentYield ? BufferRelation::Equivalent
                            : BufferRelation::Unknown;
   }
