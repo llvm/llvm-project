@@ -4458,13 +4458,14 @@ define i32 @PR39665_c_ray_opt(<2 x double> %x, <2 x double> %y) {
 define i32 @pr67287(<2 x i64> %broadcast.splatinsert25) {
 ; SSE2-LABEL: pr67287:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movl $3, %eax
-; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    jne .LBB97_2
-; SSE2-NEXT:  # %bb.1: # %entry
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    testl %eax, %eax
+; SSE2-NEXT:    jne .LBB97_2
+; SSE2-NEXT:  # %bb.1: # %entry
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    jne .LBB97_2
