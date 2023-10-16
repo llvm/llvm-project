@@ -556,7 +556,8 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
   LP.Callable.Decl =
       getCallMethodDecl(Result, LP.Callable.Type, LP.Callable.Materialization);
   if (LP.Callable.Decl)
-    if (const Type *ReturnType = LP.Callable.Decl->getReturnType().getTypePtr())
+    if (const Type *ReturnType =
+            LP.Callable.Decl->getReturnType().getCanonicalType().getTypePtr())
       LP.Callable.DoesReturn = !ReturnType->isVoidType();
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
