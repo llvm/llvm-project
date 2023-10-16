@@ -3,6 +3,18 @@
 // RUN:   -transform-interpreter=entry-point=private_helper \
 // RUN:   -split-input-file -verify-diagnostics
 
+// RUN: mlir-opt %s \
+// RUN:   -transform-preload-library=transform-library-paths=%p%{fs-sep}test-interpreter-library/definitions-self-contained.mlir \
+// RUN:   -transform-preload-library=transform-library-paths=%p%{fs-sep}test-interpreter-library/definitions-with-unresolved.mlir \
+// RUN:   -transform-interpreter=entry-point=private_helper \
+// RUN:   -split-input-file -verify-diagnostics
+
+// RUN: mlir-opt %s \
+// RUN:   -transform-preload-library=transform-library-paths=%p%{fs-sep}test-interpreter-library/definitions-with-unresolved.mlir \
+// RUN:   -transform-preload-library=transform-library-paths=%p%{fs-sep}test-interpreter-library/definitions-self-contained.mlir \
+// RUN:   -transform-interpreter=entry-point=private_helper \
+// RUN:   -split-input-file -verify-diagnostics
+
 // expected-remark @below {{message}}
 module {}
 
