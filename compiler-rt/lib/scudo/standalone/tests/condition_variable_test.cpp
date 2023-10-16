@@ -27,17 +27,17 @@ template <typename ConditionVariableT> void simpleWaitAndNotifyAll() {
   for (scudo::u32 I = 0; I < NumThreads; ++I) {
     Threads[I] = std::thread(
         [&](scudo::u32 Id) {
-          bool Running = true;
           do {
             scudo::ScopedLock L(M);
             if (Counter % NumThreads != Id && Counter < CounterMax)
               CV.wait(M);
-            if (Counter >= CounterMax)
-              Running = false;
-            else
+            if (Counter >= CounterMax) {
+              break;
+            } else {
               ++Counter;
-            CV.notifyAll(M);
-          } while (Running);
+              CV.notifyAll(M);
+            }
+          } while (true);
         },
         I);
   }

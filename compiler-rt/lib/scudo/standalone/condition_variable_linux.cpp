@@ -22,18 +22,18 @@
 namespace scudo {
 
 void ConditionVariableLinux::notifyAllImpl(UNUSED HybridMutex &M) {
-  const u32 V = atomic_load_relaxed(&Counter) + 1;
-  atomic_store_relaxed(&Counter, V);
+  const u32 V = atomic_load_relaxed(&Counter);
+  atomic_store_relaxed(&Counter, V + 1);
 
   // TODO(chiahungduan): Move the waiters from the futex waiting queue
   // `Counter` to futex waiting queue `M` so that the awoken threads won't be
   // blocked again due to locked `M` by current thread.
-  if (LastNotifyAll + 1 != V) {
+  if (LastNotifyAll != V) {
     syscall(SYS_futex, reinterpret_cast<uptr>(&Counter), FUTEX_WAKE_PRIVATE,
             INT_MAX, nullptr, nullptr, 0);
   }
 
-  LastNotifyAll = V;
+  LastNotifyAll = V + 1;
 }
 
 void ConditionVariableLinux::waitImpl(HybridMutex &M) {
