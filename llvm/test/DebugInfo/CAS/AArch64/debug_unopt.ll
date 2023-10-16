@@ -2,6 +2,7 @@
 ; RUN: llvm-cas-dump --cas=%t/cas --casid-file %t/debug_unopt.id | FileCheck %s
 ; CHECK: mc:debug_string_section llvmcas://
 ; CHECK-NEXT: mc:debug_string llvmcas://
+; CHECK-NEXT: mc:padding      llvmcas://
 ; CHECK-NEXT: mc:section      llvmcas://
 ; CHECK: mc:debug_line_section llvmcas://
 ; CHECK-NEXT: mc:debug_line_unopt llvmcas://

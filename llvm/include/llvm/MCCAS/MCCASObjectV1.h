@@ -479,6 +479,7 @@ struct DwarfSectionsCache {
   MCSection *Line;
   MCSection *Str;
   MCSection *Abbrev;
+  MCSection *StrOffsets;
 };
 
 /// Queries `Asm` for all dwarf sections and returns an object with (possibly
@@ -580,6 +581,10 @@ private:
   struct CUSplit {
     SmallVector<MutableArrayRef<char>> SplitCUData;
     SmallVector<size_t> AbbrevOffsets;
+    /// A list of Dwarf versions of the compile units, to help determine what
+    /// the Compile Unit header format and size is like when creating
+    /// CASObjects.
+    SmallVector<uint16_t> DwarfVersions;
   };
   /// Split the data of the __debug_info section it into multiple pieces, one
   /// per Compile Unit(CU) and return them. The abbreviation offset for each CU
