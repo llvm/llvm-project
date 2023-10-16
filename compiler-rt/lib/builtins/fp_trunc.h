@@ -22,7 +22,8 @@ typedef uint32_t src_rep_t;
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
 static const int srcSigFracBits = 23;
 // -1 accounts for the sign bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1;
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 8;
 
 #elif defined SRC_DOUBLE
 typedef double src_t;
@@ -31,7 +32,8 @@ typedef uint64_t src_rep_t;
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
 static const int srcSigFracBits = 52;
 // -1 accounts for the sign bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1;
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 11;
 
 #elif defined SRC_QUAD
 // TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
@@ -46,7 +48,8 @@ typedef __uint128_t src_rep_t;
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
 static const int srcSigFracBits = 112;
 // -1 accounts for the sign bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1;
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 15;
 
 #else
 #error Source should be double precision or quad precision!
@@ -59,7 +62,8 @@ typedef uint64_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 52;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 11;
 
 #elif defined DST_80
 typedef long double dst_t;
@@ -69,7 +73,8 @@ static const int dstBits = 80;
 static const int dstSigFracBits = 63;
 // -1 accounts for the sign bit.
 // -1 accounts for the explicitly stored integer bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1 - 1;
+// dstBits - dstSigFracBits - 1 - 1
+static const int dstExpBits = 15;
 
 #elif defined DST_SINGLE
 typedef float dst_t;
@@ -78,7 +83,8 @@ typedef uint32_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 23;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 8;
 
 #elif defined DST_HALF
 #ifdef COMPILER_RT_HAS_FLOAT16
@@ -91,7 +97,8 @@ typedef uint16_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 10;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 5;
 
 #elif defined DST_BFLOAT
 typedef __bf16 dst_t;
@@ -100,7 +107,8 @@ typedef uint16_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 7;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 8;
 
 #else
 #error Destination should be single precision or double precision!
