@@ -2050,11 +2050,41 @@ bool llvm::promoteLoopAccessesToScalars(
   // We cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
   Type *AccessTy = nullptr;
+  const char *FunName = "signal";
   for (Value *ASIV : PointerMustAliases) {
     for (Use &U : ASIV->uses()) {
       // Ignore instructions that are outside the loop.
       Instruction *UI = dyn_cast<Instruction>(U.getUser());
-      if (!UI || !CurLoop->contains(UI))
+      if (!UI)
+        continue;
+
+      if (StoreSafety == StoreSafe && !CurLoop->contains(UI)) {
+        if (LoadInst *NotCurLoopLoad = dyn_cast<LoadInst>(UI)) {
+          Function *NotCurLoopFun = UI->getParent()->getParent();
+          for (Use &UseFun : NotCurLoopFun->uses()) {
+            Instruction *UUseFun = dyn_cast<Instruction>(UseFun.getUser());
+            if (UUseFun) {
+              bool isSignal = false;
+              for (int i = 0; i < UUseFun->getNumOperands(); ++i) {
+                if (!strcmp(FunName, UUseFun->getOperand(i)->getName().data()))
+                  isSignal = true;
+              }
+              if (!isSignal)
+                continue;
+              for (BasicBlock *BB = &CurLoop->getLoopPreheader()
+                                         ->getParent()
+                                         ->getEntryBlock();
+                   BB != CurLoop->getLoopPreheader()->getNextNode();
+                   BB = BB->getNextNode()) {
+                if (BB == UUseFun->getParent())
+                  return false;
+              }
+            }
+          }
+        }
+      }
+
+      if (!CurLoop->contains(UI))
         continue;
 
       // If there is an non-load/store instruction in the loop, we can't promote
