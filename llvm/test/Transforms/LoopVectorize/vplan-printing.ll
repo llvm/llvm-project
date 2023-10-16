@@ -691,7 +691,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:   CLONE ir<%ld.addr> = getelementptr inbounds ir<%src>, vp<%2>
+; CHECK-NEXT:   CLONE ir<%ld.addr> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%ld.value> = load ir<%ld.addr>
 ; CHECK-NEXT:   WIDEN ir<%ifcond> = fcmp oeq ir<%ld.value>, ir<5.000000e+00>
 ; CHECK-NEXT:  Successor(s): pred.call
@@ -707,17 +707,17 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:    Successor(s): pred.call.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.call.continue:
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%foo.ret.1>
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%foo.ret.2>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[PHI1:%.+]]> = ir<%foo.ret.1>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[PHI2:%.+]]> = ir<%foo.ret.2>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): if.then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.1:
-; CHECK-NEXT:    WIDEN ir<%fadd> = fadd vp<%8>, vp<%9>
-; CHECK-NEXT:    EMIT vp<%11> = not ir<%ifcond>
-; CHECK-NEXT:    BLEND ir<%st.value> = ir<%ld.value>/vp<%11> ir<%fadd>/ir<%ifcond>
-; CHECK-NEXT:    CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<%2>
+; CHECK-NEXT:    WIDEN ir<%fadd> = fadd vp<[[PHI1]]>, vp<[[PHI2]]>
+; CHECK-NEXT:    EMIT vp<[[NOT_COND:%.+]]> = not ir<%ifcond>
+; CHECK-NEXT:    BLEND ir<%st.value> = ir<%ld.value>/vp<[[NOT_COND]]> ir<%fadd>/ir<%ifcond>
+; CHECK-NEXT:    CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<[[STEPS]]>
 ; CHECK-NEXT:    WIDEN store ir<%st.addr>, ir<%st.value>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
