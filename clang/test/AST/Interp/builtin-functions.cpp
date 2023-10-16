@@ -156,7 +156,9 @@ namespace inf {
   static_assert(__builtin_isnormal(1.0), "");
   static_assert(!__builtin_isnormal(__builtin_inf()), "");
 
+#ifndef __AVR__
   static_assert(__builtin_issubnormal(0x1p-1070), "");
+#endit
   static_assert(!__builtin_issubnormal(__builtin_inf()), "");
 
   static_assert(__builtin_iszero(0.0), "");
