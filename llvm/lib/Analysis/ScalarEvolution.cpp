@@ -7722,8 +7722,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         unsigned LZ = A.countl_zero();
         unsigned TZ = A.countr_zero();
         unsigned BitWidth = A.getBitWidth();
-        KnownBits Known =
-            computeKnownBits(BO->LHS, getDataLayout(), 0, &AC, nullptr, &DT);
+        KnownBits Known(BitWidth);
+        computeKnownBits(BO->LHS, Known, getDataLayout(),
+                         0, &AC, nullptr, &DT);
 
         APInt EffectiveMask =
             APInt::getLowBitsSet(BitWidth, BitWidth - LZ - TZ).shl(TZ);
