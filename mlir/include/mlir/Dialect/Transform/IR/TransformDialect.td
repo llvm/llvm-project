@@ -78,20 +78,19 @@ def Transform_Dialect : Dialect {
     using ExtensionTypePrintingHook =
         std::function<void(::mlir::Type, ::mlir::AsmPrinter &)>;
 
-    /// Appends the given module as a transform symbol library available to
-    /// all dialect users.
-    void registerLibraryModule(::mlir::OwningOpRef<::mlir::ModuleOp> &&
-                                library) {
-      libraryModules.push_back(std::move(library));
-    }
+    /// Loads the given module into the transform symbol library module.
+    void initializeLibraryModule();
 
-    /// Returns a range of registered library modules.
-    auto getLibraryModules() const {
-      return ::llvm::map_range(
-          libraryModules,
-          [](const ::mlir::OwningOpRef<::mlir::ModuleOp> &library) {
-        return library.get();
-      });
+    /// Loads the given module into the transform symbol library module.
+    LogicalResult loadIntoLibraryModule(::mlir::OwningOpRef<::mlir::ModuleOp> &&
+                                        library);
+
+    /// Returns the transform symbol library module available to all dialect
+    /// users.
+    ModuleOp getLibraryModule() const {
+      if (libraryModule)
+        return libraryModule.get();
+      return ModuleOp();
     }
 
   private:
@@ -153,10 +152,9 @@ def Transform_Dialect : Dialect {
     ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
         typePrintingHooks;
 
-    /// Modules containing symbols, e.g. named sequences, that will be
-    /// resolved by the interpreter when used.
-    ::llvm::SmallVector<::mlir::OwningOpRef<::mlir::ModuleOp>, 2>
-        libraryModules;
+    /// Module containing symbols, e.g. named sequences, that will be resolved
+    /// by the interpreter when used.
+    ::mlir::OwningOpRef<::mlir::ModuleOp> libraryModule;
   }];
 }
 

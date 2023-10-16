@@ -32,7 +32,9 @@ public:
     // TODO: investigate using a resource blob if some ownership mode allows it.
     auto *dialect =
         getContext().getOrLoadDialect<transform::TransformDialect>();
-    dialect->registerLibraryModule(std::move(mergedParsedLibraries));
+    if (failed(
+            dialect->loadIntoLibraryModule(std::move(mergedParsedLibraries))))
+      signalPassFailure();
   }
 };
 } // namespace

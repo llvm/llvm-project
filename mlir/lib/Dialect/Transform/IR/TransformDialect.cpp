@@ -73,6 +73,7 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
   initializeTypes();
+  initializeLibraryModule();
 }
 
 Type transform::TransformDialect::parseType(DialectAsmParser &parser) const {
@@ -95,6 +96,20 @@ void transform::TransformDialect::printType(Type type,
   auto it = typePrintingHooks.find(type.getTypeID());
   assert(it != typePrintingHooks.end() && "printing unknown type");
   it->getSecond()(type, printer);
+}
+
+void transform::TransformDialect::initializeLibraryModule() {
+  MLIRContext *context = getContext();
+  auto loc =
+      FileLineColLoc::get(context, "<transform-dialect-library-module>", 0, 0);
+  libraryModule = ModuleOp::create(loc, "__transform_library");
+  libraryModule.get()->setAttr(TransformDialect::kWithNamedSequenceAttrName,
+                               UnitAttr::get(context));
+}
+
+LogicalResult transform::TransformDialect::loadIntoLibraryModule(
+    ::mlir::OwningOpRef<::mlir::ModuleOp> &&library) {
+  return detail::mergeSymbolsInto(getLibraryModule(), std::move(library));
 }
 
 void transform::TransformDialect::reportDuplicateTypeRegistration(
@@ -260,12 +275,8 @@ LogicalResult transform::detail::parseTransformModuleFromFile(
 }
 
 ModuleOp transform::detail::getPreloadedTransformModule(MLIRContext *context) {
-  auto preloadedLibraryRange =
-      context->getOrLoadDialect<transform::TransformDialect>()
-          ->getLibraryModules();
-  if (!preloadedLibraryRange.empty())
-    return *preloadedLibraryRange.begin();
-  return ModuleOp();
+  return context->getOrLoadDialect<transform::TransformDialect>()
+      ->getLibraryModule();
 }
 
 LogicalResult transform::detail::assembleTransformLibraryFromPaths(
