@@ -2420,11 +2420,11 @@ command line.
 
 The current set of options correspond to the existing "subtarget features" for
 the target with or without a "-mno-" in front corresponding to the absence
-of the feature, as well as ``arch="CPU"`` which will change the default "CPU"
-for the function.
+of the feature, as well as ``arch="CPU"`` and ``cpu="CPU"`` which will change
+the default "CPU" for the function.
 
-For X86, the attribute also allows ``tune="CPU"`` to optimize the generated
-code for the given CPU without changing the available instructions.
+For X86 and PowerPC, the attribute also allows ``tune="CPU"`` to optimize the
+generated code for the given CPU without changing the available instructions.
 
 For AArch64, ``arch="Arch"`` will set the architecture, similar to the -march
 command line options. ``cpu="CPU"`` can be used to select a specific cpu,
