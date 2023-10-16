@@ -35,10 +35,6 @@ template <typename Arg> class WithCache {
   using PointerType = conditionally_const_t<UnderlyingType *, IsConst>;
   using ReferenceType = conditionally_const_t<UnderlyingType &, IsConst>;
 
-  template <typename T>
-  constexpr static bool PointerConvertible =
-      std::is_convertible_v<T, UnderlyingType>;
-
   // Store the presence of the KnownBits information in one of the bits of
   // Pointer.
   // true  -> present
@@ -52,7 +48,6 @@ template <typename Arg> class WithCache {
   }
 
 public:
-  WithCache() = default;
   WithCache(PointerType Pointer) : Pointer(Pointer, false) {}
   WithCache(PointerType Pointer, const KnownBits &Known)
       : Pointer(Pointer, true), Known(Known) {}
