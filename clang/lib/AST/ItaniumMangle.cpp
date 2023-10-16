@@ -3372,9 +3372,16 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
 #define SVE_VECTOR_TYPE(InternalName, MangledName, Id, SingletonId, NumEls,    \
                         ElBits, IsSigned, IsFP, IsBF)                          \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == InternalName ? "u" : "") << type_name.size()          \
-        << type_name;                                                          \
+    if (T->getKind() == BuiltinType::SveBFloat16 &&                            \
+        isCompatibleWith(LangOptions::ClangABI::Ver17)) {                      \
+      /* Prior to Clang 18.0 we used this incorrect mangled name */            \
+      type_name = "__SVBFloat16_t";                                            \
+      Out << "u" << type_name.size() << type_name;                             \
+    } else {                                                                   \
+      type_name = MangledName;                                                 \
+      Out << (type_name == InternalName ? "u" : "") << type_name.size()        \
+          << type_name;                                                        \
+    }                                                                          \
     break;
 #define SVE_PREDICATE_TYPE(InternalName, MangledName, Id, SingletonId, NumEls) \
   case BuiltinType::Id:                                                        \
