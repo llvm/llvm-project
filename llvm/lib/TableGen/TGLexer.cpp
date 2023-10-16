@@ -35,13 +35,9 @@ namespace {
 struct {
   tgtok::TokKind Kind;
   const char *Word;
-} PreprocessorDirs[] = {
-  { tgtok::Ifdef, "ifdef" },
-  { tgtok::Ifndef, "ifndef" },
-  { tgtok::Else, "else" },
-  { tgtok::Endif, "endif" },
-  { tgtok::Define, "define" }
-};
+} PreprocessorDirs[] = {{tgtok::Ifdef, "ifdef"},   {tgtok::Ifndef, "ifndef"},
+                        {tgtok::Else, "else"},     {tgtok::Endif, "endif"},
+                        {tgtok::Define, "define"}, {tgtok::Undef, "undef"}};
 } // end anonymous namespace
 
 TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
@@ -835,6 +831,23 @@ tgtok::TokKind TGLexer::lexPreprocessor(
     }
 
     return LexToken();
+  } else if (Kind == tgtok::Undef) {
+    StringRef MacroName = prepLexMacroName();
+    if (MacroName.empty())
+      return ReturnError(TokStart, "Expected macro name after #undef");
+
+    DefinedMacros.erase(MacroName);
+
+    if (!prepSkipDirectiveEnd())
+      return ReturnError(CurPtr,
+                         "Only comments are supported after #undef NAME");
+
+    if (!ReturnNextLiveToken) {
+      PrintFatalError("#undef must be ignored during the lines skipping");
+      return tgtok::Error;
+    }
+
+    return LexToken();
   }
 
   PrintFatalError("Preprocessing directive is not supported");
@@ -867,7 +880,7 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
     // If we did not find a preprocessing directive or it is #define,
     // then just skip to the next line.  We do not have to do anything
     // for #define in the line-skipping mode.
-    if (Kind == tgtok::Error || Kind == tgtok::Define)
+    if (Kind == tgtok::Error || Kind == tgtok::Define || Kind == tgtok::Undef)
       continue;
 
     tgtok::TokKind ProcessedKind = lexPreprocessor(Kind, false);
