@@ -531,7 +531,7 @@ public:
                     continue;
                   return coordinates[l][lhs] < coordinates[l][rhs];
                 }
-                assert(false && "duplicate coordinates");
+                assert(lhs == rhs && "duplicate coordinates");
                 return false;
               });
 
