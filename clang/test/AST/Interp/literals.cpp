@@ -31,6 +31,33 @@ static_assert(b, "");
 constexpr int one = true;
 static_assert(one == 1, "");
 
+constexpr bool b2 = bool();
+static_assert(!b2, "");
+
+namespace ScalarTypes {
+  constexpr int ScalarInitInt = int();
+  static_assert(ScalarInitInt == 0, "");
+  constexpr float ScalarInitFloat = float();
+  static_assert(ScalarInitFloat == 0.0f, "");
+
+  static_assert(decltype(nullptr)() == nullptr, "");
+
+  template<typename T>
+  constexpr T getScalar() { return T(); }
+
+  static_assert(getScalar<const int>() == 0, "");
+  static_assert(getScalar<const double>() == 0.0, "");
+
+  static_assert(getScalar<void*>() == nullptr, "");
+  static_assert(getScalar<void(*)(void)>() == nullptr, "");
+
+  enum E {
+    First = 0,
+  };
+  static_assert(getScalar<E>() == First, "");
+  /// FIXME: Member pointers.
+}
+
 namespace IntegralCasts {
   constexpr int i = 12;
   constexpr unsigned int ui = i;

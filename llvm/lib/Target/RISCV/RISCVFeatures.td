@@ -159,7 +159,7 @@ def HasStdExtZhinxOrZhinxmin
                                    "'Zhinxmin' (Half Float in Integer Minimal)">;
 
 def FeatureStdExtZfa
-    : SubtargetFeature<"experimental-zfa", "HasStdExtZfa", "true",
+    : SubtargetFeature<"zfa", "HasStdExtZfa", "true",
                        "'Zfa' (Additional Floating-Point)",
                        [FeatureStdExtF]>;
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
@@ -901,6 +901,9 @@ def FeatureUnalignedVectorMem
    : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
+
+def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
 def TuneNoOptimizedZeroStrideLoad
    : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",

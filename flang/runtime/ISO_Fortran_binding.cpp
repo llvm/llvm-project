@@ -19,7 +19,9 @@
 namespace Fortran::ISO {
 extern "C" {
 
-void *CFI_address(
+RT_EXT_API_GROUP_BEGIN
+
+RT_API_ATTRS void *CFI_address(
     const CFI_cdesc_t *descriptor, const CFI_index_t subscripts[]) {
   char *p{static_cast<char *>(descriptor->base_addr)};
   const CFI_rank_t rank{descriptor->rank};
@@ -30,8 +32,9 @@ void *CFI_address(
   return p;
 }
 
-int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
-    const CFI_index_t upper_bounds[], std::size_t elem_len) {
+RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *descriptor,
+    const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
+    std::size_t elem_len) {
   if (!descriptor) {
     return CFI_INVALID_DESCRIPTOR;
   }
@@ -81,7 +84,7 @@ int CFI_allocate(CFI_cdesc_t *descriptor, const CFI_index_t lower_bounds[],
   return CFI_SUCCESS;
 }
 
-int CFI_deallocate(CFI_cdesc_t *descriptor) {
+RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *descriptor) {
   if (!descriptor) {
     return CFI_INVALID_DESCRIPTOR;
   }
@@ -101,7 +104,7 @@ int CFI_deallocate(CFI_cdesc_t *descriptor) {
   return CFI_SUCCESS;
 }
 
-int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
+RT_API_ATTRS int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
     CFI_attribute_t attribute, CFI_type_t type, std::size_t elem_len,
     CFI_rank_t rank, const CFI_index_t extents[]) {
   int cfiStatus{VerifyEstablishParameters(descriptor, base_addr, attribute,
@@ -121,18 +124,23 @@ int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
   return CFI_SUCCESS;
 }
 
-int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
+  bool stridesAreContiguous{true};
   CFI_index_t bytes = descriptor->elem_len;
   for (int j{0}; j < descriptor->rank; ++j) {
-    if (bytes != descriptor->dim[j].sm) {
-      return 0;
-    }
+    stridesAreContiguous &= bytes == descriptor->dim[j].sm;
     bytes *= descriptor->dim[j].extent;
   }
-  return 1;
+  // One and zero element arrays are contiguous even if the descriptor
+  // byte strides are not perfect multiples.
+  if (stridesAreContiguous || bytes == 0 ||
+      bytes == static_cast<CFI_index_t>(descriptor->elem_len)) {
+    return 1;
+  }
+  return 0;
 }
 
-int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
     const CFI_index_t strides[]) {
   CFI_index_t extent[CFI_MAX_RANK];
@@ -208,7 +216,7 @@ int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   return CFI_SUCCESS;
 }
 
-int CFI_select_part(CFI_cdesc_t *result, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_select_part(CFI_cdesc_t *result, const CFI_cdesc_t *source,
     std::size_t displacement, std::size_t elem_len) {
   if (!result || !source) {
     return CFI_INVALID_DESCRIPTOR;
@@ -243,7 +251,7 @@ int CFI_select_part(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   return CFI_SUCCESS;
 }
 
-int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[]) {
   if (!result) {
     return CFI_INVALID_DESCRIPTOR;
@@ -285,5 +293,7 @@ int CFI_setpointer(CFI_cdesc_t *result, const CFI_cdesc_t *source,
   }
   return CFI_SUCCESS;
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::ISO

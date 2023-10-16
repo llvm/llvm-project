@@ -34,7 +34,7 @@ SimpleTypeSerializer::~SimpleTypeSerializer() = default;
 
 template <typename T>
 ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
-  BinaryStreamWriter Writer(ScratchBuffer, support::little);
+  BinaryStreamWriter Writer(ScratchBuffer, llvm::endianness::little);
   TypeRecordMapping Mapping(Writer);
 
   // Write the record prefix first with a dummy length but real kind.

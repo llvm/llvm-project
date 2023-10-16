@@ -904,19 +904,18 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
     // zext (X == 0) to i32 --> (X>>1)^1 iff X has only the 2nd bit set.
     // zext (X != 0) to i32 --> X        iff X has only the low bit set.
     // zext (X != 0) to i32 --> X>>1     iff X has only the 2nd bit set.
-    if (Op1CV->isZero() && Cmp->isEquality() &&
-        (Cmp->getOperand(0)->getType() == Zext.getType() ||
-         Cmp->getPredicate() == ICmpInst::ICMP_NE)) {
-      // If Op1C some other power of two, convert:
-      KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
 
+    if (Op1CV->isZero() && Cmp->isEquality()) {
       // Exactly 1 possible 1? But not the high-bit because that is
       // canonicalized to this form.
+      KnownBits Known = computeKnownBits(Cmp->getOperand(0), 0, &Zext);
       APInt KnownZeroMask(~Known.Zero);
-      if (KnownZeroMask.isPowerOf2() &&
-          (Zext.getType()->getScalarSizeInBits() !=
-           KnownZeroMask.logBase2() + 1)) {
-        uint32_t ShAmt = KnownZeroMask.logBase2();
+      uint32_t ShAmt = KnownZeroMask.logBase2();
+      bool IsExpectShAmt = KnownZeroMask.isPowerOf2() &&
+                           (Zext.getType()->getScalarSizeInBits() != ShAmt + 1);
+      if (IsExpectShAmt &&
+          (Cmp->getOperand(0)->getType() == Zext.getType() ||
+           Cmp->getPredicate() == ICmpInst::ICMP_NE || ShAmt == 0)) {
         Value *In = Cmp->getOperand(0);
         if (ShAmt) {
           // Perform a logical shr by shiftamt.
@@ -1445,9 +1444,11 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // TODO: Eventually this could be subsumed by EvaluateInDifferentType.
   Constant *BA = nullptr, *CA = nullptr;
   if (match(Src, m_AShr(m_Shl(m_Trunc(m_Value(A)), m_Constant(BA)),
-                        m_Constant(CA))) &&
+                        m_ImmConstant(CA))) &&
       BA->isElementWiseEqual(CA) && A->getType() == DestTy) {
-    Constant *WideCurrShAmt = ConstantExpr::getSExt(CA, DestTy);
+    Constant *WideCurrShAmt =
+        ConstantFoldCastOperand(Instruction::SExt, CA, DestTy, DL);
+    assert(WideCurrShAmt && "Constant folding of ImmConstant cannot fail");
     Constant *NumLowbitsLeft = ConstantExpr::getSub(
         ConstantInt::get(DestTy, SrcTy->getScalarSizeInBits()), WideCurrShAmt);
     Constant *NewShAmt = ConstantExpr::getSub(

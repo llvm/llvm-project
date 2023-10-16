@@ -245,12 +245,14 @@ public:
   // - unlinking the local stats from the global ones (destroying the cache does
   //   the last two items).
   void commitBack(TSD<ThisT> *TSD) {
+    TSD->assertLocked(/*BypassCheck=*/true);
     Quarantine.drain(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()));
     TSD->getCache().destroy(&Stats);
   }
 
   void drainCache(TSD<ThisT> *TSD) {
+    TSD->assertLocked(/*BypassCheck=*/true);
     Quarantine.drainAndRecycle(&TSD->getQuarantineCache(),
                                QuarantineCallback(*this, TSD->getCache()));
     TSD->getCache().drain();
@@ -363,11 +365,11 @@ public:
       DCHECK_NE(ClassId, 0U);
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
+      TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
       Block = TSD->getCache().allocate(ClassId);
-      // If the allocation failed, the most likely reason with a 32-bit primary
-      // is the region being full. In that event, retry in each successively
-      // larger class until it fits. If it fails to fit in the largest class,
-      // fallback to the Secondary.
+      // If the allocation failed, retry in each successively larger class until
+      // it fits. If it fails to fit in the largest class, fallback to the
+      // Secondary.
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId && !Block)
           Block = TSD->getCache().allocate(++ClassId);
@@ -385,6 +387,7 @@ public:
     if (UNLIKELY(!Block)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
+      printStats();
       reportOutOfMemory(NeededSize);
     }
 
@@ -1147,6 +1150,7 @@ private:
       if (LIKELY(ClassId)) {
         bool UnlockRequired;
         auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
+        TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
         const bool CacheDrained =
             TSD->getCache().deallocate(ClassId, BlockBegin);
         if (UnlockRequired)
@@ -1166,6 +1170,7 @@ private:
     } else {
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
+      TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
       if (UnlockRequired)

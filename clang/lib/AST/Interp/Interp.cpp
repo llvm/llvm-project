@@ -139,7 +139,7 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (!S.checkingPotentialConstantExpression()) {
+  if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
     const auto *VD = Ptr.getDeclDesc()->asValueDecl();
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_constexpr, 1) << VD;
@@ -467,6 +467,12 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
   // Check Fields in all bases
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
+    if (!P.isInitialized()) {
+      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+               diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType();
+      return false;
+    }
     Result &= CheckFieldsInitialized(S, OpPC, P, B.R);
   }
 

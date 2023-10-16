@@ -75,6 +75,7 @@ define void @fcvt_v4f128_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [x0, #48]
 ; CHECK-NEXT:    bl __trunctfdf2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
@@ -85,6 +86,7 @@ define void @fcvt_v4f128_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
@@ -98,6 +100,7 @@ define void @fcvt_v4f128_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
@@ -108,6 +111,7 @@ define void @fcvt_v4f128_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2

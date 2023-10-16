@@ -2215,6 +2215,10 @@ unsigned AffineForOp::getNumIterOperands() {
   return getNumOperands() - lbMap.getNumInputs() - ubMap.getNumInputs();
 }
 
+ValueRange AffineForOp::getYieldedValues() {
+  return cast<AffineYieldOp>(getBody()->getTerminator()).getOperands();
+}
+
 void AffineForOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printRegionArgument(getBody()->getArgument(0), /*argAttrs=*/{},
@@ -3915,6 +3919,49 @@ void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
   setStepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
 }
 
+// check whether resultType match op or not in affine.parallel
+static bool isResultTypeMatchAtomicRMWKind(Type resultType,
+                                           arith::AtomicRMWKind op) {
+  switch (op) {
+  case arith::AtomicRMWKind::addf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::addi:
+    return isa<IntegerType>(resultType);
+  case arith::AtomicRMWKind::assign:
+    return true;
+  case arith::AtomicRMWKind::mulf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::muli:
+    return isa<IntegerType>(resultType);
+  case arith::AtomicRMWKind::maximumf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::minimumf:
+    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::maxs: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isSigned();
+  }
+  case arith::AtomicRMWKind::mins: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isSigned();
+  }
+  case arith::AtomicRMWKind::maxu: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isUnsigned();
+  }
+  case arith::AtomicRMWKind::minu: {
+    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    return intType && intType.isUnsigned();
+  }
+  case arith::AtomicRMWKind::ori:
+    return isa<IntegerType>(resultType);
+  case arith::AtomicRMWKind::andi:
+    return isa<IntegerType>(resultType);
+  default:
+    return false;
+  }
+}
+
 LogicalResult AffineParallelOp::verify() {
   auto numDims = getNumDims();
   if (getLowerBoundsGroups().getNumElements() != numDims ||
@@ -3946,11 +3993,16 @@ LogicalResult AffineParallelOp::verify() {
   if (getReductions().size() != getNumResults())
     return emitOpError("a reduction must be specified for each output");
 
-  // Verify reduction  ops are all valid
-  for (Attribute attr : getReductions()) {
+  // Verify reduction ops are all valid and each result type matches reduction
+  // ops
+  for (auto it : llvm::enumerate((getReductions()))) {
+    Attribute attr = it.value();
     auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
     if (!intAttr || !arith::symbolizeAtomicRMWKind(intAttr.getInt()))
       return emitOpError("invalid reduction attribute");
+    auto kind = arith::symbolizeAtomicRMWKind(intAttr.getInt()).value();
+    if (!isResultTypeMatchAtomicRMWKind(getResult(it.index()).getType(), kind))
+      return emitOpError("result type cannot match reduction attribute");
   }
 
   // Verify that the bound operands are valid dimension/symbols.

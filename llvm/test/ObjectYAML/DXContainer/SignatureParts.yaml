@@ -1,0 +1,254 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        600
+  PartCount:       3
+  PartOffsets:     [ 64, 124, 184 ]
+Parts:
+  - Name:            ISG1
+    Size:            52
+    Signature:
+      Parameters:
+        - Stream:          0
+          Name:            AAA_HSFoo
+          Index:           0
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        0
+          Mask:            7
+          ExclusiveMask:   2
+          MinPrecision:    Default
+  - Name:            OSG1
+    Size:            52
+    Signature:
+      Parameters:
+        - Stream:          0
+          Name:            SV_Position
+          Index:           0
+          SystemValue:     Position
+          CompType:        Float32
+          Register:        0
+          Mask:            15
+          ExclusiveMask:   0
+          MinPrecision:    Default
+  - Name:            PSG1
+    Size:            372
+    Signature:
+      Parameters:
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           0
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        0
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            BBB
+          Index:           0
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        0
+          Mask:            7
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           1
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        1
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            BBB
+          Index:           1
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        1
+          Mask:            7
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           2
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        2
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            BBB
+          Index:           2
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        2
+          Mask:            7
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           3
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        3
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_InsideTessFactor
+          Index:           0
+          SystemValue:     FinalQuadInsideTessfactor
+          CompType:        Float32
+          Register:        4
+          Mask:            8
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_InsideTessFactor
+          Index:           1
+          SystemValue:     FinalQuadInsideTessfactor
+          CompType:        Float32
+          Register:        5
+          Mask:            8
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            AAA
+          Index:           0
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        6
+          Mask:            15
+          ExclusiveMask:   4
+          MinPrecision:    Default
+...
+
+# CHECK: - Name:            ISG1
+# CHECK-NEXT:   Size:            52
+# CHECK-NEXT:   Signature:
+# CHECK-NEXT:     Parameters:
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            AAA_HSFoo
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         SystemValue:     Undefined
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        0
+# CHECK-NEXT:         Mask:            7
+# CHECK-NEXT:         ExclusiveMask:   2
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT: - Name:            OSG1
+# CHECK-NEXT:   Size:            52
+# CHECK-NEXT:   Signature:
+# CHECK-NEXT:     Parameters:
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_Position
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         SystemValue:     Position
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        0
+# CHECK-NEXT:         Mask:            15
+# CHECK-NEXT:         ExclusiveMask:   0
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT: - Name:            PSG1
+# CHECK-NEXT:   Size:            372
+# CHECK-NEXT:   Signature:
+# CHECK-NEXT:     Parameters:
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_TessFactor
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         SystemValue:     FinalQuadEdgeTessfactor
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        0
+# CHECK-NEXT:         Mask:            8
+# CHECK-NEXT:         ExclusiveMask:   8
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            BBB
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         SystemValue:     Undefined
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        0
+# CHECK-NEXT:         Mask:            7
+# CHECK-NEXT:         ExclusiveMask:   0
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_TessFactor
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         SystemValue:     FinalQuadEdgeTessfactor
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        1
+# CHECK-NEXT:         Mask:            8
+# CHECK-NEXT:         ExclusiveMask:   8
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            BBB
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         SystemValue:     Undefined
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        1
+# CHECK-NEXT:         Mask:            7
+# CHECK-NEXT:         ExclusiveMask:   0
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_TessFactor
+# CHECK-NEXT:         Index:           2
+# CHECK-NEXT:         SystemValue:     FinalQuadEdgeTessfactor
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        2
+# CHECK-NEXT:         Mask:            8
+# CHECK-NEXT:         ExclusiveMask:   8
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            BBB
+# CHECK-NEXT:         Index:           2
+# CHECK-NEXT:         SystemValue:     Undefined
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        2
+# CHECK-NEXT:         Mask:            7
+# CHECK-NEXT:         ExclusiveMask:   0
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_TessFactor
+# CHECK-NEXT:         Index:           3
+# CHECK-NEXT:         SystemValue:     FinalQuadEdgeTessfactor
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        3
+# CHECK-NEXT:         Mask:            8
+# CHECK-NEXT:         ExclusiveMask:   8
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_InsideTessFactor
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         SystemValue:     FinalQuadInsideTessfactor
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        4
+# CHECK-NEXT:         Mask:            8
+# CHECK-NEXT:         ExclusiveMask:   0
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            SV_InsideTessFactor
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         SystemValue:     FinalQuadInsideTessfactor
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        5
+# CHECK-NEXT:         Mask:            8
+# CHECK-NEXT:         ExclusiveMask:   0
+# CHECK-NEXT:         MinPrecision:    Default
+# CHECK-NEXT:       - Stream:          0
+# CHECK-NEXT:         Name:            AAA
+# CHECK-NEXT:         Index:           0
+# CHECK-NEXT:         SystemValue:     Undefined
+# CHECK-NEXT:         CompType:        Float32
+# CHECK-NEXT:         Register:        6
+# CHECK-NEXT:         Mask:            15
+# CHECK-NEXT:         ExclusiveMask:   4
+# CHECK-NEXT:         MinPrecision:    Default

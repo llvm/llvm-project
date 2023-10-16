@@ -734,10 +734,10 @@ void MachODumper::printStackMap() const {
 
   if (Obj->isLittleEndian())
     prettyPrintStackMap(
-        W, StackMapParser<support::little>(StackMapContentsArray));
+        W, StackMapParser<llvm::endianness::little>(StackMapContentsArray));
   else
     prettyPrintStackMap(
-        W, StackMapParser<support::big>(StackMapContentsArray));
+        W, StackMapParser<llvm::endianness::big>(StackMapContentsArray));
 }
 
 void MachODumper::printCGProfile() {
@@ -760,8 +760,8 @@ void MachODumper::printCGProfile() {
   StringRef CGProfileContents =
       unwrapOrError(Obj->getFileName(), CGProfileSection.getContents());
   BinaryStreamReader Reader(CGProfileContents, Obj->isLittleEndian()
-                                                   ? llvm::support::little
-                                                   : llvm::support::big);
+                                                   ? llvm::endianness::little
+                                                   : llvm::endianness::big);
 
   ListScope L(W, "CGProfile");
   while (!Reader.empty()) {
