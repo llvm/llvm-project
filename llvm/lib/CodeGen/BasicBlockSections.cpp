@@ -77,7 +77,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
@@ -315,48 +314,41 @@ static bool hasInstrProfHashMismatch(MachineFunction &MF) {
   return false;
 }
 
-// Returns `Error::success` if we can legally apply all clonings specified in
-// `ClonePaths`, and `Error` otherwise.
-static Error
-CheckValidCloning(const MachineFunction &MF,
-                  const SmallVector<SmallVector<unsigned>> &ClonePaths) {
-  // Map from the final BB IDs to the `MachineBasicBlock`s.
-  DenseMap<unsigned, const MachineBasicBlock *> BBIDToBlock;
-  for (auto &BB : MF)
-    BBIDToBlock.try_emplace(*BB.getBBID(), &BB);
-
-  for (auto &ClonePath : ClonePaths) {
-    const MachineBasicBlock *PrevBB = nullptr;
-    for (size_t I = 0; I < ClonePath.size(); ++I) {
-      unsigned BBID = ClonePath[I];
-      const MachineBasicBlock *PathBB = BBIDToBlock.lookup(BBID);
-      if (!PathBB) {
-        return make_error<StringError>(Twine("no block with id ") +
-                                           Twine(BBID) + " in function " +
-                                           MF.getName(),
-                                       inconvertibleErrorCode());
-      }
-
-      if (PrevBB && !PrevBB->isSuccessor(PathBB)) {
-        return make_error<StringError>(
-            Twine("block #") + Twine(BBID) + " is not a successor of block #" +
-                Twine(*PrevBB->getBBID()) + " in function " + MF.getName(),
-            inconvertibleErrorCode());
-      }
-
-      if (I != ClonePath.size() - 1 && !PathBB->empty() &&
-          PathBB->back().isIndirectBranch()) {
-        return make_error<StringError>(
-            Twine("block #") + Twine(BBID) +
-                " has indirect branch can only appear as the last block of the "
-                "path, in function " +
-                MF.getName(),
-            inconvertibleErrorCode());
-      }
-      PrevBB = PathBB;
+// Returns if we can legally apply all clonings specified in `ClonePaths`.
+static bool
+IsValidCloning(const MachineFunction &MF,
+               const DenseMap<unsigned, MachineBasicBlock *> &BBIDToBlock,
+               const SmallVector<unsigned> &ClonePath) {
+  const MachineBasicBlock *PrevBB = nullptr;
+  for (size_t I = 0; I < ClonePath.size(); ++I) {
+    unsigned BBID = ClonePath[I];
+    const MachineBasicBlock *PathBB = BBIDToBlock.lookup(BBID);
+    if (!PathBB) {
+      WithColor::warning() << "no block with id " << BBID << " in function "
+                           << MF.getName() << "\n";
+      return false;
     }
+
+    if (PrevBB && !PrevBB->isSuccessor(PathBB)) {
+      WithColor::warning() << "block #" << BBID
+                           << " is not a successor of block #"
+                           << *PrevBB->getBBID() << " in function "
+                           << MF.getName() << "\n";
+      return false;
+    }
+
+    if (I != ClonePath.size() - 1 && !PathBB->empty() &&
+        PathBB->back().isIndirectBranch()) {
+      WithColor::warning()
+          << "block #" << BBID
+          << " has indirect branch and appears as the non-tail block of a "
+             "path in function "
+          << MF.getName() << "\n";
+      return false;
+    }
+    PrevBB = PathBB;
   }
-  return Error::success();
+  return true;
 }
 
 // Applies all clonings specified in `ClonePaths` to `MF` and returns a map
@@ -374,7 +366,13 @@ ApplyCloning(MachineFunction &MF,
   DenseMap<unsigned, unsigned> NClonesForBBID;
   auto TII = MF.getSubtarget().getInstrInfo();
   for (const auto &ClonePath : ClonePaths) {
-
+    if (!IsValidCloning(MF, BBIDToBlock, ClonePath)) {
+      // We still need to increment the number of clones so we can map
+      // to the cluster info correctly.
+      for (unsigned BBID : ClonePath)
+        ++NClonesForBBID[BBID];
+      continue;
+    }
     MachineBasicBlock *PrevBB = nullptr;
     for (unsigned BBID : ClonePath) {
       MachineBasicBlock *OrigBB = BBIDToBlock.at(BBID);
@@ -411,12 +409,9 @@ ApplyCloning(MachineFunction &MF,
 //       updates the CFG accordingly.
 //    2. Creates and returns the cluster profile for the final blocks (original
 //       and cloned) based on `PathAndClusterInfo.ClusterInfo`.
-static Expected<DenseMap<unsigned, BBClusterInfo<unsigned>>>
+static DenseMap<unsigned, BBClusterInfo<unsigned>>
 ProcessProfile(MachineFunction &MF,
                const FunctionPathAndClusterInfo &PathAndClusterInfo) {
-  if (auto Err = CheckValidCloning(MF, PathAndClusterInfo.ClonePaths))
-    return std::move(Err);
-
   // Apply the clonings and obtain the map from the input block ID of cloned
   // blocks to their final BB IDs.
   DenseMap<ProfileBBID, unsigned> CloneBBIDMap =
@@ -427,9 +422,15 @@ ProcessProfile(MachineFunction &MF,
   // This step creates all the necessary clones. It does not adjust the
   // branches.
   for (const BBClusterInfo<ProfileBBID> &P : PathAndClusterInfo.ClusterInfo) {
-    unsigned FinalBBID = P.BasicBlockID.CloneID == 0
-                             ? P.BasicBlockID.BBID
-                             : CloneBBIDMap.at(P.BasicBlockID);
+    unsigned FinalBBID = P.BasicBlockID.BBID;
+    if (P.BasicBlockID.CloneID != 0) {
+      auto I = CloneBBIDMap.find(P.BasicBlockID);
+      // If there is no match, it means cloning was not applied for that block.
+      // We simply ignore these entries.
+      if (I == CloneBBIDMap.end())
+        continue;
+      FinalBBID = I->second;
+    }
     ClusterInfoByBBID.try_emplace(
         FinalBBID,
         BBClusterInfo<unsigned>{FinalBBID, P.ClusterID, P.PositionInCluster});
@@ -467,18 +468,13 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
             .getPathAndClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return true;
-    auto ClusterInfoOrErr = ProcessProfile(MF, PathAndClusterInfo);
-    if (!ClusterInfoOrErr) {
-      auto Err =
-          handleErrors(ClusterInfoOrErr.takeError(), [&](const StringError &E) {
-            WithColor::warning()
-                << "Rejecting the BBSections profile for function "
-                << MF.getName() << " : " << E.getMessage() << "\n";
-          });
-      assert(!Err);
-      return true;
+    // Empty ClusterInfo represents basic block sections for all blocks in this
+    // function.
+    if (!PathAndClusterInfo.ClusterInfo.empty()) {
+      ClusterInfoByBBID = ProcessProfile(MF, PathAndClusterInfo);
+      if (ClusterInfoByBBID.empty())
+        return true;
     }
-    ClusterInfoByBBID = *std::move(ClusterInfoOrErr);
   }
 
   MF.setBBSectionsType(BBSectionsType);
