@@ -34,7 +34,9 @@ public:
   uint32_t block_size() const { return 1; }
   uint32_t block_count() const { return Blocks.size(); }
 
-  endianness getEndian() const override { return little; }
+  llvm::endianness getEndian() const override {
+    return llvm::endianness::little;
+  }
 
   Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
@@ -412,7 +414,7 @@ TEST(MappedBlockStreamTest, TestWriteContiguousStreamRef) {
       F.block_size(), F.layout(), F, F.Allocator);
 
   // First write "Test Str" into the source stream.
-  MutableBinaryByteStream SourceStream(SrcData, little);
+  MutableBinaryByteStream SourceStream(SrcData, llvm::endianness::little);
   BinaryStreamWriter SourceWriter(SourceStream);
   EXPECT_THAT_ERROR(SourceWriter.writeCString("Test Str"), Succeeded());
   EXPECT_EQ(SrcDataBytes, std::vector<uint8_t>(

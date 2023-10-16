@@ -231,6 +231,7 @@ MachineBasicBlock &llvm::AArch64PAuth::checkAuthenticatedRegister(
         .addMBB(BreakBlock);
     return *SuccessBlock;
   }
+  llvm_unreachable("Unknown AuthCheckMethod enum");
 }
 
 unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
@@ -244,6 +245,7 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
   case AuthCheckMethod::XPACHint:
     return 20;
   }
+  llvm_unreachable("Unknown AuthCheckMethod enum");
 }
 
 bool AArch64PointerAuth::checkAuthenticatedLR(
