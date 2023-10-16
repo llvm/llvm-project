@@ -23,7 +23,8 @@ typedef uint32_t src_rep_t;
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
 static const int srcSigFracBits = 23;
 // -1 accounts for the sign bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1;
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 8;
 #define src_rep_t_clz clzsi
 
 #elif defined SRC_DOUBLE
@@ -33,7 +34,8 @@ typedef uint64_t src_rep_t;
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
 static const int srcSigFracBits = 52;
 // -1 accounts for the sign bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1;
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 11;
 
 static inline int src_rep_t_clz_impl(src_rep_t a) {
 #if defined __LP64__
@@ -56,7 +58,8 @@ static const int srcBits = 80;
 static const int srcSigFracBits = 63;
 // -1 accounts for the sign bit.
 // -1 accounts for the explicitly stored integer bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1 - 1;
+// srcBits - srcSigFracBits - 1 - 1
+static const int srcExpBits = 15;
 
 #elif defined SRC_HALF
 #ifdef COMPILER_RT_HAS_FLOAT16
@@ -69,7 +72,8 @@ typedef uint16_t src_rep_t;
 static const int srcBits = sizeof(src_t) * CHAR_BIT;
 static const int srcSigFracBits = 10;
 // -1 accounts for the sign bit.
-static const int srcExpBits = srcBits - srcSigFracBits - 1;
+// srcBits - srcSigFracBits - 1
+static const int srcExpBits = 5;
 
 #define src_rep_t_clz __builtin_clz
 
@@ -84,7 +88,8 @@ typedef uint32_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 23;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 8;
 
 #elif defined DST_DOUBLE
 typedef double dst_t;
@@ -93,7 +98,8 @@ typedef uint64_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 52;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 11;
 
 #elif defined DST_QUAD
 // TODO: use fp_lib.h once QUAD_PRECISION is available on x86_64.
@@ -108,7 +114,8 @@ typedef __uint128_t dst_rep_t;
 static const int dstBits = sizeof(dst_t) * CHAR_BIT;
 static const int dstSigFracBits = 112;
 // -1 accounts for the sign bit.
-static const int dstExpBits = dstBits - dstSigFracBits - 1;
+// dstBits - dstSigFracBits - 1
+static const int dstExpBits = 15;
 
 #else
 #error Destination should be single, double, or quad precision!
