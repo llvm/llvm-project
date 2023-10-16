@@ -13844,8 +13844,8 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isLegalStridedLoadStore(WideVecVT, Align))
     return SDValue();
 
-  auto [Stride, Reversed] = *BaseDiff;
-  if (Reversed)
+  auto [Stride, MustNegateStride] = *BaseDiff;
+  if (MustNegateStride)
     Stride = DAG.getNegative(Stride, DL, Stride.getValueType());
 
   SDVTList VTs = DAG.getVTList({WideVecVT, MVT::Other});
