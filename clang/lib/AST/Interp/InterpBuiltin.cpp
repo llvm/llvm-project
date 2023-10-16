@@ -304,7 +304,8 @@ static bool interp__builtin_isnan(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_issignaling(InterpState &S, CodePtr OpPC,
-                                  const InterpFrame *Frame, const Function *F) {
+                                        const InterpFrame *Frame,
+                                        const Function *F) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
   pushInt(S, Arg.isSignaling());

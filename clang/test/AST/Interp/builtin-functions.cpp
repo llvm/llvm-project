@@ -158,7 +158,7 @@ namespace inf {
 
 #ifndef __AVR__
   static_assert(__builtin_issubnormal(0x1p-1070), "");
-#endit
+#endif
   static_assert(!__builtin_issubnormal(__builtin_inf()), "");
 
   static_assert(__builtin_iszero(0.0), "");
