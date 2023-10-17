@@ -145,7 +145,7 @@ def main():
                 for pwidth in bitwidths:
                     for iwidth in bitwidths:
                         attr = st.EncodingAttr.get(
-                            level, ordering, pwidth, iwidth
+                            level, ordering, None, pwidth, iwidth
                         )
                         build_compile_and_run_SpMM(attr, compiler)
                         count = count + 1

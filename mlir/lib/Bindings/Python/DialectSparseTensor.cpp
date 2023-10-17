@@ -41,16 +41,17 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
       .def_classmethod(
           "get",
           [](py::object cls, std::vector<MlirSparseTensorDimLevelType> lvlTypes,
-             std::optional<MlirAffineMap> dimToLvl, int posWidth, int crdWidth,
+             std::optional<MlirAffineMap> dimToLvl,
+             std::optional<MlirAffineMap> lvlToDim, int posWidth, int crdWidth,
              MlirContext context) {
-            // TODO: provide dimToLvl
             return cls(mlirSparseTensorEncodingAttrGet(
                 context, lvlTypes.size(), lvlTypes.data(),
-                dimToLvl ? *dimToLvl : MlirAffineMap{nullptr}, posWidth,
+                dimToLvl ? *dimToLvl : MlirAffineMap{nullptr},
+                lvlToDim ? *lvlToDim : MlirAffineMap{nullptr}, posWidth,
                 crdWidth));
           },
           py::arg("cls"), py::arg("lvl_types"), py::arg("dim_to_lvl"),
-          py::arg("pos_width"), py::arg("crd_width"),
+          py::arg("lvl_to_dim"), py::arg("pos_width"), py::arg("crd_width"),
           py::arg("context") = py::none(),
           "Gets a sparse_tensor.encoding from parameters.")
       .def_property_readonly(
@@ -67,6 +68,14 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           "dim_to_lvl",
           [](MlirAttribute self) -> std::optional<MlirAffineMap> {
             MlirAffineMap ret = mlirSparseTensorEncodingAttrGetDimToLvl(self);
+            if (mlirAffineMapIsNull(ret))
+              return {};
+            return ret;
+          })
+      .def_property_readonly(
+          "lvl_to_dim",
+          [](MlirAttribute self) -> std::optional<MlirAffineMap> {
+            MlirAffineMap ret = mlirSparseTensorEncodingAttrGetLvlToDim(self);
             if (mlirAffineMapIsNull(ret))
               return {};
             return ret;

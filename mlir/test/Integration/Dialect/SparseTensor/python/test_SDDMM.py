@@ -155,7 +155,7 @@ def main():
                     for iwidth in [32]:
                         for e in [True]:
                             attr = st.EncodingAttr.get(
-                                level, ordering, pwidth, iwidth
+                                level, ordering, None, pwidth, iwidth
                             )
                             opt = f"parallelization-strategy=none"
                             compiler = sparse_compiler.SparseCompiler(
