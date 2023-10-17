@@ -1168,7 +1168,8 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                                         const std::string &m_description,
                                         llvm::raw_ostream &error,
                                         bool &got_serialized_options,
-                                        bool &found_swift_modules) {
+                                        bool &found_swift_modules,
+                                        bool search_paths_only = false) {
   bool found_validation_errors = false;
   got_serialized_options = false;
 
@@ -1278,7 +1279,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
 
       /// Initialize the compiler invocation with it the search paths from a
       /// serialized AST.
-      auto deserializeCompilerFlags = [&]() -> bool {
+      auto deserializeCompilerFlags = [&](swift::CompilerInvocation &invocation) {
         auto result = invocation.loadFromSerializedAST(moduleData);
         if (result != swift::serialization::Status::Valid) {
           error << "Could not deserialize " << info.name << ":\n"
@@ -1401,13 +1402,17 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
         return true;
       };
 
-      got_serialized_options |= deserializeCompilerFlags();
-
-      LOG_PRINTF(
-          GetLog(LLDBLog::Types), "SDK path from module \"%s\" was \"%s\".",
-          info.name.str().c_str(), invocation.getSDKPath().str().c_str());
-      // We will deduce a matching SDK path from DWARF later.
-      invocation.setSDKPath("");
+      if (search_paths_only) {
+        swift::CompilerInvocation fresh_invocation;
+        got_serialized_options |= deserializeCompilerFlags(fresh_invocation);
+      } else {
+        got_serialized_options |= deserializeCompilerFlags(invocation);
+        LOG_PRINTF(
+            GetLog(LLDBLog::Types), "SDK path from module \"%s\" was \"%s\".",
+            info.name.str().c_str(), invocation.getSDKPath().str().c_str());
+        // We will deduce a matching SDK path from DWARF later.
+        invocation.setSDKPath("");
+      }
     }
   }
 
@@ -8371,7 +8376,7 @@ bool SwiftASTContextForExpressions::CacheUserImports(
                       invocation, ast_file, {file_or_err->get()->getBuffer()},
                       path_remap, discover_implicit_search_paths,
                       m_description.str().str(), errs, got_serialized_options,
-                      found_swift_modules)) {
+                      found_swift_modules, /*search_paths_only = */true)) {
                 LOG_PRINTF(GetLog(LLDBLog::Types), "Could not parse %s: %s",
                            ast_file.str().c_str(), error.str().str().c_str());
               }
