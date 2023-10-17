@@ -469,7 +469,8 @@ static mlir::Value genInlinedStructureCtorLitImpl(
           loc, fieldTy, parentRecTy.getTypeList()[0].first, parentType,
           /*typeParams=*/mlir::ValueRange{} /*TODO*/);
       res = builder.create<fir::InsertValueOp>(
-          loc, recTy, undef, res, builder.getArrayAttr(field.getAttributes()));
+          loc, parentRecTy, undef, res,
+          builder.getArrayAttr(field.getAttributes()));
     }
   };
 
