@@ -13,7 +13,6 @@
 #include <cassert>
 #include <codecvt>
 #include <locale>
-#include <string>
 
 #include "test_macros.h"
 
