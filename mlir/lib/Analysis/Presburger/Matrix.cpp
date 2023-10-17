@@ -437,6 +437,7 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
 MPInt IntMatrix::determinant() {
   unsigned r = getNumRows();
   unsigned c = getNumColumns();
+  ASSERT(r == c);
 
   FracMatrix m(r, c);
   for (unsigned i = 0; i < r; i++)
@@ -475,6 +476,7 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 Fraction FracMatrix::determinant() {
   unsigned r = getNumRows();
   unsigned c = getNumColumns();
+  ASSERT(r == c);
 
   FracMatrix m(*this);
 

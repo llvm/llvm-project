@@ -36,6 +36,8 @@ namespace presburger {
 /// This class only works for the types MPInt and Fraction, since the method
 /// implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
+/// Note that the determinant() functions (for both integers and fractions)
+/// assume that the matrix is square.
 template <typename T>
 class Matrix {
   static_assert(std::is_same_v<T, MPInt> || std::is_same_v<T, Fraction>,
