@@ -510,15 +510,18 @@ public:
                                              SQ.getWithInstruction(CxtI));
   }
 
-  OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
-                                               const Value *RHS,
-                                               const Instruction *CxtI) const {
+  OverflowResult
+  computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
+                                const Instruction *CxtI) const {
     return llvm::computeOverflowForUnsignedAdd(LHS, RHS,
                                                SQ.getWithInstruction(CxtI));
   }
 
-  OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
+  OverflowResult
+  computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
+                              const WithCache<const Value *> &RHS,
+                              const Instruction *CxtI) const {
     return llvm::computeOverflowForSignedAdd(LHS, RHS,
                                              SQ.getWithInstruction(CxtI));
   }
