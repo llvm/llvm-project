@@ -26,10 +26,7 @@ define i1 @select_v_eq_nz(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp ne i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C]], [[V:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -47,10 +44,7 @@ define i1 @inv_select_v_ugt_nz(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp ne i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[C]], [[V:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[V]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -89,10 +83,7 @@ define i1 @select_v_uge_nz(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp ne i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -110,10 +101,7 @@ define i1 @select_v_sgt_nonneg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp sge i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -152,10 +140,7 @@ define i1 @inv_select_v_sgt_neg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp slt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[V]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -173,10 +158,7 @@ define i1 @inv_select_v_sgt_nonneg_nz(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp sgt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[C]], [[V:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[V]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -194,10 +176,7 @@ define i1 @select_v_slt_nonneg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp sge i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[C]], [[V:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -236,10 +215,7 @@ define i1 @select_v_slt_neg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp slt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -257,10 +233,7 @@ define i1 @select_v_sge_nonneg_nz(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp sgt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -278,10 +251,7 @@ define i1 @select_v_sge_neg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp slt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[C]], [[V:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -316,10 +286,7 @@ define i1 @select_v_sle_neg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp slt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -337,10 +304,7 @@ define i1 @select_v_sle_nonneg_nz(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp sgt i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[C]], [[V:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[V]], i8 [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)
@@ -379,10 +343,7 @@ define i1 @inv_select_v_sle_nonneg(i8 %v, i8 %C, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[PCOND0:%.*]] = icmp sge i8 [[C:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PCOND0]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[V:%.*]], [[C]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[V]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[S]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ynz = icmp ne i8 %y, 0
   call void @llvm.assume(i1 %ynz)

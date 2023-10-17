@@ -270,9 +270,7 @@ define i1 @phi_uge_non_zero_non_const(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X:%.*]], [[YY]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;
@@ -320,9 +318,7 @@ define i1 @phi_slt_non_zero_non_const(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[YY]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;
@@ -424,9 +420,7 @@ define i1 @phi_eq_non_zero_non_const(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[YY]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;

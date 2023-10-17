@@ -552,7 +552,9 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 // example Pred=EQ, RHS=isKnownNonZero. cmpExcludesZero is called in loops
 // so the extra compile time may not be worth it, but possibly a second API
 // should be created for use outside of loops.
-static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
+static bool cmpExcludesZero(CmpInst::Predicate Pred, Value *RHS,
+                            const SimplifyQuery *Q = nullptr,
+                            unsigned Depth = 0) {
   // v u> y implies v != 0.
   if (Pred == ICmpInst::ICMP_UGT)
     return true;
@@ -562,6 +564,7 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
     return match(RHS, m_Zero());
 
   // All other predicates - rely on generic ConstantRange handling.
+
   const APInt *C;
   auto Zero = APInt::getZero(RHS->getType()->getScalarSizeInBits());
   if (match(RHS, m_APInt(C))) {
@@ -569,18 +572,29 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
     return !TrueValues.contains(Zero);
   }
 
+  auto *FVTy = dyn_cast<FixedVectorType>(RHS->getType());
   auto *VC = dyn_cast<ConstantDataVector>(RHS);
-  if (VC == nullptr)
-    return false;
-
-  for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
-       ++ElemIdx) {
-    ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(
-        Pred, VC->getElementAsAPInt(ElemIdx));
-    if (TrueValues.contains(Zero))
-      return false;
+  if (FVTy != nullptr && VC != nullptr) {
+    for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
+         ++ElemIdx) {
+      ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(
+          Pred, VC->getElementAsAPInt(ElemIdx));
+      if (TrueValues.contains(Zero))
+       return false;
+    }
+    return true;
   }
-  return true;
+
+  if (Q != nullptr && RHS->getType()->isIntOrIntVectorTy()) {
+    ConstantRange TrueValues = ConstantRange::makeAllowedICmpRegion(
+        Pred,
+        computeConstantRange(RHS, ICmpInst::isSigned(Pred), Q->IIQ.UseInstrInfo,
+                             Q->AC, Q->CxtI, Q->DT, Depth));
+    if (!TrueValues.contains(Zero))
+      return true;
+  }
+
+  return false;
 }
 
 static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
@@ -2666,15 +2680,21 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 
       // The condition of the select dominates the true/false arm. Check if the
       // condition implies that a given arm is non-zero.
-      Value *X;
+      Value *X, *Y;
       CmpInst::Predicate Pred;
-      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_Specific(Op), m_Value(X))))
+      if (!match(I->getOperand(0), m_ICmp(Pred, m_Value(X), m_Value(Y))))
+        return false;
+      if (Y == Op) {
+        Pred = ICmpInst::getSwappedPredicate(Pred);
+        std::swap(X, Y);
+      }
+      if (X != Op)
         return false;
 
       if (!IsTrueArm)
         Pred = ICmpInst::getInversePredicate(Pred);
 
-      return cmpExcludesZero(Pred, X);
+      return cmpExcludesZero(Pred, Y, &Q, Depth);
     };
 
     if (SelectArmIsNonZero(/* IsTrueArm */ true) &&
@@ -2696,18 +2716,25 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       RecQ.CxtI = PN->getIncomingBlock(U)->getTerminator();
       // Check if the branch on the phi excludes zero.
       ICmpInst::Predicate Pred;
-      Value *X;
+      Value *X, *Y;
       BasicBlock *TrueSucc, *FalseSucc;
       if (match(RecQ.CxtI,
-                m_Br(m_c_ICmp(Pred, m_Specific(U.get()), m_Value(X)),
+                m_Br(m_ICmp(Pred, m_Value(X), m_Value(Y)),
                      m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
         // Check for cases of duplicate successors.
         if ((TrueSucc == PN->getParent()) != (FalseSucc == PN->getParent())) {
           // If we're using the false successor, invert the predicate.
-          if (FalseSucc == PN->getParent())
-            Pred = CmpInst::getInversePredicate(Pred);
-          if (cmpExcludesZero(Pred, X))
-            return true;
+
+          if (Y == U.get()) {
+            Pred = ICmpInst::getSwappedPredicate(Pred);
+            std::swap(X, Y);
+          }
+          if (X == U.get()) {
+            if (FalseSucc == PN->getParent())
+              Pred = CmpInst::getInversePredicate(Pred);
+            if (cmpExcludesZero(Pred, Y, &Q, NewDepth))
+              return true;
+          }
         }
       }
       // Finally recurse on the edge and check it directly.
