@@ -306,7 +306,7 @@ func.func @call_non_llvm() {
 // -----
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
-  // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect-compatible type}}
+  // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
   "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
   llvm.return
 }
