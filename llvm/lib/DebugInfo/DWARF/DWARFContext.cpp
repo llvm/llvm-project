@@ -92,8 +92,8 @@ void fixupIndexV4(DWARFContext &C, DWARFUnitIndex &Index) {
       if (Error ExtractionErr = Header.extract(
               C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
         logAllUnhandledErrors(
-            joinErrors(createError("Failed to parse CU header in DWP file"),
-                       std::move(ExtractionErr)),
+            createError("Failed to parse CU header in DWP file: " +
+                        toString(std::move(ExtractionErr))),
             errs());
         Map.clear();
         break;
@@ -155,8 +155,8 @@ void fixupIndexV5(DWARFContext &C, DWARFUnitIndex &Index) {
       if (Error ExtractionErr = Header.extract(
               C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
         logAllUnhandledErrors(
-            joinErrors(createError("Failed to parse CU header in DWP file"),
-                       std::move(ExtractionErr)),
+            createError("Failed to parse CU header in DWP file: " +
+                        toString(std::move(ExtractionErr))),
             errs());
         break;
       }

@@ -13,12 +13,10 @@
 # CHECK-NOT: .debug_info.dwo contents:
 
 # CHECK-DAG: .debug_cu_index contents:
-# CHECK: Failed to parse CU header in DWP file
-# CHECK-NEXT: DWARF unit at offset 0x00000000 has unsupported version 6, supported are 2-5
+# CHECK: Failed to parse CU header in DWP file: DWARF unit at offset 0x00000000 has unsupported version 6, supported are 2-5
 
 # CHECK-DAG: .debug_tu_index contents:
-# CHECK: Failed to parse CU header in DWP file
-# CHECK-NEXT: DWARF unit at offset 0x00000000 has unsupported version 6, supported are 2-5
+# CHECK: Failed to parse CU header in DWP file: DWARF unit at offset 0x00000000 has unsupported version 6, supported are 2-5
 
     .section	.debug_info.dwo,"e",@progbits
     .long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
