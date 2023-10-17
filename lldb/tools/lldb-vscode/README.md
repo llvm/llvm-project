@@ -212,6 +212,38 @@ This loads the coredump file `/cores/123.core` associated with the program
 }
 ```
 
+### Connect to a Debug Server on the Current Machine
+
+This connects to a debug server (e.g. `lldb-server`, `gdbserver`) on
+the current machine, that is debugging the program `/tmp/a.out` and listening
+locally on port `2345`.
+
+```javascript
+{
+  "name": "Local Debug Server",
+  "type": "lldb-vscode",
+  "request": "attach",
+  "program": "/tmp/a.out",
+  "attachCommands": ["gdb-remote 2345"],
+}
+```
+
+### Connect to a Debug Server on Another Machine
+
+This connects to a debug server running on another machine with hostname
+`hostnmame`. Which is debugging the program `/tmp/a.out` and listening on
+port `5678` of that other machine.
+
+```javascript
+{
+  "name": "Remote Debug Server",
+  "type": "lldb-vscode",
+  "request": "attach",
+  "program": "/tmp/a.out",
+  "attachCommands": ["gdb-remote hostname:5678"],
+}
+```
+
 # Custom debugger commands
 
 The `lldb-vscode` tool includes additional custom commands to support the Debug
