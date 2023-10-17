@@ -47,6 +47,10 @@ TEST(YAMLParser, ParsesEmptyArray) {
   ExpectParseSuccess("Empty array", "[]");
 }
 
+TEST(YAMLParser, ParsesComplexMap) {
+  ExpectParseSuccess("Complex block map", "? a\n: b");
+}
+
 TEST(YAMLParser, FailsIfNotClosingArray) {
   ExpectParseError("Not closing array", "[");
   ExpectParseError("Not closing array", "  [  ");
@@ -221,11 +225,21 @@ TEST(YAMLParser, HandlesEndOfFileGracefully) {
   ExpectParseError("In array hitting EOF", "[[] ");
   ExpectParseError("In array hitting EOF", "[[]");
   ExpectParseError("In object hitting EOF", "{\"\"");
+  // This one is valid, equivalent to the JSON {"": null}
+  ExpectParseSuccess("In complex block map hitting EOF", "?");
+  // Equivalent to JSON [null]
+  ExpectParseSuccess("In block sequence hitting EOF", "-");
 }
 
 TEST(YAMLParser, HandlesNullValuesInKeyValueNodesGracefully) {
   ExpectParseError("KeyValueNode with null key", "? \"\n:");
   ExpectParseError("KeyValueNode with null value", "test: '");
+}
+
+TEST(YAMLParser, BlockSequenceEOF) {
+  SourceMgr SM;
+  yaml::Stream Stream("-", SM);
+  EXPECT_TRUE(isa_and_present<yaml::SequenceNode>(Stream.begin()->getRoot()));
 }
 
 // Checks that the given string can be parsed into an identical string inside
