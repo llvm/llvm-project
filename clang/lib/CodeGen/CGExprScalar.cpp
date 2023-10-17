@@ -3084,8 +3084,7 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
             .getQuantity();
     return llvm::ConstantInt::get(CGF.SizeTy, Alignment);
   } else if (E->getKind() == UETT_VectorElements) {
-    auto *VecTy =
-        dyn_cast<llvm::VectorType>(ConvertType(E->getTypeOfArgument()));
+    auto *VecTy = cast<llvm::VectorType>(ConvertType(E->getTypeOfArgument()));
     return Builder.CreateElementCount(CGF.SizeTy, VecTy->getElementCount());
   }
 
