@@ -450,6 +450,11 @@ MPInt IntMatrix::determinant() {
 }
 
 std::optional<IntMatrix> IntMatrix::integerInverse() {
+  // Compute the integer inverse of a matrix, i.e.,
+  // the matrix M' such that M • M' = det(M) • I.
+
+  // First, find the normal inverse by treating it
+  // as a real matrix.
   Fraction det = Fraction(determinant(), 1);
   FracMatrix newMat(getNumRows(), getNumColumns());
   for (unsigned i = 0; i < getNumRows(); i++)
@@ -461,6 +466,8 @@ std::optional<IntMatrix> IntMatrix::integerInverse() {
   if (!fracInverse)
     return {};
 
+  // Then, if the inverse exists, scale it by the
+  // determinant and convert to integers.
   IntMatrix intInverse(getNumRows(), getNumColumns());
   for (unsigned i = 0; i < getNumRows(); i++)
     for (unsigned j = 0; j < getNumColumns(); j++)
