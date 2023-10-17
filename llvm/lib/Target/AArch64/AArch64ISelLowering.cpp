@@ -19100,9 +19100,14 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   case Intrinsic::aarch64_neon_sshl:
   case Intrinsic::aarch64_neon_ushl:
     // For positive shift amounts we can use SHL, as ushl/sshl perform a regular
-    // left shift for positive shift amounts. Below, we only replace the current
-    // node with VSHL, if this condition is met.
-    Opcode = AArch64ISD::VSHL;
+    // left shift for positive shift amounts. For negative shifts we can use a
+    // VASHR/VLSHR as appropiate.
+    if (ShiftAmount < 0) {
+      Opcode = IID == Intrinsic::aarch64_neon_sshl ? AArch64ISD::VASHR
+                                                   : AArch64ISD::VLSHR;
+      ShiftAmount = -ShiftAmount;
+    } else
+      Opcode = AArch64ISD::VSHL;
     IsRightShift = false;
     break;
   }
