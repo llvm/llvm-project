@@ -1541,18 +1541,6 @@ struct Attributor {
                                     /* ForceUpdate */ false);
   }
 
-  /// Similar to getAAFor but the return abstract attribute will be updated (via
-  /// `AbstractAttribute::update`) even if it is found in the cache. This is
-  /// especially useful for AAIsDead as changes in liveness can make updates
-  /// possible/useful that were not happening before as the abstract attribute
-  /// was assumed dead.
-  template <typename AAType>
-  const AAType *getAndUpdateAAFor(const AbstractAttribute &QueryingAA,
-                                  const IRPosition &IRP, DepClassTy DepClass) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, DepClass,
-                                    /* ForceUpdate */ true);
-  }
-
   /// The version of getAAFor that allows to omit a querying abstract
   /// attribute. Using this after Attributor started running is restricted to
   /// only the Attributor itself. Initial seeding of AAs can be done via this
