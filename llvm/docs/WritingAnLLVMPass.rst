@@ -1020,8 +1020,7 @@ series of passes:
    instead of traversing the entire program.  It reduces the memory consumption
    of compiler, because, for example, only one `DominatorSet
    <https://llvm.org/doxygen/classllvm_1_1DominatorSet.html>`_ needs to be
-   calculated at a time.  This also makes it possible to implement some
-   :ref:`interesting enhancements <writing-an-llvm-pass-SMP>` in the future.
+   calculated at a time.
 
 The effectiveness of the ``PassManager`` is influenced directly by how much
 information it has about the behaviors of the passes it is scheduling.  For
