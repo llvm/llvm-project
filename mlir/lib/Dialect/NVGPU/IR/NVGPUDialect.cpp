@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -367,10 +368,10 @@ LogicalResult TmaCreateDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_GenerateGmmaDescriptorOp
+// NVGPU_WarpgroupGenerateDescriptorOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GenerateGmmaDescriptorOp::verify() {
+LogicalResult WarpgroupGenerateDescriptorOp::verify() {
   MemRefType memrefType = getTensor().getType();
   MemRefType tensorMapType = getTensorMap().getType().getTensor();
 
@@ -526,6 +527,39 @@ LogicalResult WarpgroupMmaOp::verify() {
                          << ", it is not supported yet";
   }
 
+  return success();
+}
+
+LogicalResult WarpgroupMmaStoreOp::verify() {
+  MemRefType dstMemrefType = getDstMemref().getType();
+  VectorType firstVtype = getMatrixD()
+                              .front()
+                              .getType()
+                              .cast<WarpgroupAccumulatorType>()
+                              .getFragmented();
+
+  int64_t totalFirstDimension = 0;
+  for (Value result : getMatrixD()) {
+    VectorType vtype =
+        result.getType().cast<WarpgroupAccumulatorType>().getFragmented();
+    if (vtype != firstVtype)
+      return emitOpError() << "all fragmented types must be the same";
+    // Limitation
+    if (!vtype.getElementType().isF32()) {
+      return emitOpError()
+             << "hit a limitation: only f32 results for the time being";
+    }
+    totalFirstDimension += vtype.getDimSize(0);
+  }
+  if (totalFirstDimension != dstMemrefType.getDimSize(0) ||
+      firstVtype.getDimSize(1) != dstMemrefType.getDimSize(1)) {
+    return emitOpError() << "results [" << totalFirstDimension << "]["
+                         << firstVtype.getDimSize(1)
+                         << "] values. However, destination memref["
+                         << dstMemrefType.getDimSize(0) << "]["
+                         << dstMemrefType.getDimSize(1)
+                         << "]  does not have same size as results";
+  }
   return success();
 }
 

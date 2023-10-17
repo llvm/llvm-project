@@ -329,6 +329,20 @@ RocmInstallationDetector::RocmInstallationDetector(
   RocmDeviceLibPathArg =
       Args.getAllArgValues(clang::driver::options::OPT_rocm_device_lib_path_EQ);
   HIPPathArg = Args.getLastArgValue(clang::driver::options::OPT_hip_path_EQ);
+  HIPStdParPathArg =
+    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_path_EQ);
+  HasHIPStdParLibrary =
+    !HIPStdParPathArg.empty() && D.getVFS().exists(HIPStdParPathArg +
+                                                   "/hipstdpar_lib.hpp");
+  HIPRocThrustPathArg =
+    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_thrust_path_EQ);
+  HasRocThrustLibrary = !HIPRocThrustPathArg.empty() &&
+                        D.getVFS().exists(HIPRocThrustPathArg + "/thrust");
+  HIPRocPrimPathArg =
+    Args.getLastArgValue(clang::driver::options::OPT_hipstdpar_prim_path_EQ);
+  HasRocPrimLibrary = !HIPRocPrimPathArg.empty() &&
+                      D.getVFS().exists(HIPRocPrimPathArg + "/rocprim");
+
   if (auto *A = Args.getLastArg(clang::driver::options::OPT_hip_version_EQ)) {
     HIPVersionArg = A->getValue();
     unsigned Major = ~0U;
@@ -507,6 +521,7 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
   bool UsesRuntimeWrapper = VersionMajorMinor > llvm::VersionTuple(3, 5) &&
                             !DriverArgs.hasArg(options::OPT_nohipwrapperinc);
+  bool HasHipStdPar = DriverArgs.hasArg(options::OPT_hipstdpar);
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // HIP header includes standard library wrapper headers under clang
@@ -529,8 +544,45 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
+    if (!hasHIPStdParLibrary()) {
+      D.Diag(diag::err_drv_no_hipstdpar_lib);
+      return;
+    }
+    if (!HasRocThrustLibrary &&
+        !D.getVFS().exists(getIncludePath() + "/thrust")) {
+      D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
+      return;
+    }
+    if (!HasRocPrimLibrary &&
+        !D.getVFS().exists(getIncludePath() + "/rocprim")) {
+      D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
+      return;
+    }
+
+    const char *ThrustPath;
+    if (HasRocThrustLibrary)
+      ThrustPath = DriverArgs.MakeArgString(HIPRocThrustPathArg);
+    else
+      ThrustPath = DriverArgs.MakeArgString(getIncludePath() + "/thrust");
+
+    const char *PrimPath;
+    if (HasRocPrimLibrary)
+      PrimPath = DriverArgs.MakeArgString(HIPRocPrimPathArg);
+    else
+      PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
+
+    CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
+                    "-idirafter", DriverArgs.MakeArgString(HIPStdParPathArg),
+                    "-include", "hipstdpar_lib.hpp"});
+  };
+
+  if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
+    if (HasHipStdPar)
+      HandleHipStdPar();
+
     return;
+  }
 
   if (!hasHIPRuntime()) {
     D.Diag(diag::err_drv_no_hip_runtime);
@@ -541,6 +593,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
   CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
   if (UsesRuntimeWrapper)
     CC1Args.append({"-include", "__clang_hip_runtime_wrapper.h"});
+  if (HasHipStdPar)
+    HandleHipStdPar();
 }
 
 void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,

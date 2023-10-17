@@ -175,6 +175,7 @@ condition_variable cstdlib
 condition_variable cstring
 condition_variable ctime
 condition_variable initializer_list
+condition_variable iosfwd
 condition_variable limits
 condition_variable new
 condition_variable ratio

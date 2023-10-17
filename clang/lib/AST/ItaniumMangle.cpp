@@ -112,8 +112,8 @@ public:
   void mangleCXXRTTI(QualType T, raw_ostream &) override;
   void mangleCXXRTTIName(QualType T, raw_ostream &,
                          bool NormalizeIntegers) override;
-  void mangleTypeName(QualType T, raw_ostream &,
-                      bool NormalizeIntegers) override;
+  void mangleCanonicalTypeName(QualType T, raw_ostream &,
+                               bool NormalizeIntegers) override;
 
   void mangleCXXCtorComdat(const CXXConstructorDecl *D, raw_ostream &) override;
   void mangleCXXDtorComdat(const CXXDestructorDecl *D, raw_ostream &) override;
@@ -1721,7 +1721,7 @@ void CXXNameMangler::mangleUnqualifiedName(
 
       // If we have a member function, we need to include the 'this' pointer.
       if (const auto *MD = dyn_cast<CXXMethodDecl>(ND))
-        if (!MD->isStatic())
+        if (MD->isImplicitObjectMemberFunction())
           Arity++;
     }
     [[fallthrough]];
@@ -1781,6 +1781,8 @@ void CXXNameMangler::mangleNestedName(GlobalDecl GD,
     Qualifiers MethodQuals = Method->getMethodQualifiers();
     // We do not consider restrict a distinguishing attribute for overloading
     // purposes so we must not mangle it.
+    if (Method->isExplicitObjectMemberFunction())
+      Out << 'H';
     MethodQuals.removeRestrict();
     mangleQualifiers(MethodQuals);
     mangleRefQualifier(Method->getRefQualifier());
@@ -3048,7 +3050,17 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+  //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
+  //
+  //  <fixed-point-size>
+  //                 ::= s # short
+  //                 ::= t # unsigned short
+  //                 ::= i # plain
+  //                 ::= j # unsigned
+  //                 ::= l # long
+  //                 ::= m # unsigned long
   std::string type_name;
   // Normalize integer types as vendor extended types:
   // u<length>i<type size>
@@ -3193,30 +3205,77 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "DF16_";
     break;
   case BuiltinType::ShortAccum:
+    Out << "DAs";
+    break;
   case BuiltinType::Accum:
+    Out << "DAi";
+    break;
   case BuiltinType::LongAccum:
+    Out << "DAl";
+    break;
   case BuiltinType::UShortAccum:
+    Out << "DAt";
+    break;
   case BuiltinType::UAccum:
+    Out << "DAj";
+    break;
   case BuiltinType::ULongAccum:
+    Out << "DAm";
+    break;
   case BuiltinType::ShortFract:
+    Out << "DRs";
+    break;
   case BuiltinType::Fract:
+    Out << "DRi";
+    break;
   case BuiltinType::LongFract:
+    Out << "DRl";
+    break;
   case BuiltinType::UShortFract:
+    Out << "DRt";
+    break;
   case BuiltinType::UFract:
+    Out << "DRj";
+    break;
   case BuiltinType::ULongFract:
+    Out << "DRm";
+    break;
   case BuiltinType::SatShortAccum:
+    Out << "DSDAs";
+    break;
   case BuiltinType::SatAccum:
+    Out << "DSDAi";
+    break;
   case BuiltinType::SatLongAccum:
+    Out << "DSDAl";
+    break;
   case BuiltinType::SatUShortAccum:
+    Out << "DSDAt";
+    break;
   case BuiltinType::SatUAccum:
+    Out << "DSDAj";
+    break;
   case BuiltinType::SatULongAccum:
+    Out << "DSDAm";
+    break;
   case BuiltinType::SatShortFract:
+    Out << "DSDRs";
+    break;
   case BuiltinType::SatFract:
+    Out << "DSDRi";
+    break;
   case BuiltinType::SatLongFract:
+    Out << "DSDRl";
+    break;
   case BuiltinType::SatUShortFract:
+    Out << "DSDRt";
+    break;
   case BuiltinType::SatUFract:
+    Out << "DSDRj";
+    break;
   case BuiltinType::SatULongFract:
-    llvm_unreachable("Fixed point types are disabled for c++");
+    Out << "DSDRm";
+    break;
   case BuiltinType::Half:
     Out << "Dh";
     break;
@@ -7073,8 +7132,8 @@ void ItaniumMangleContextImpl::mangleCXXRTTIName(
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out,
-                                              bool NormalizeIntegers = false) {
+void ItaniumMangleContextImpl::mangleCanonicalTypeName(
+    QualType Ty, raw_ostream &Out, bool NormalizeIntegers = false) {
   mangleCXXRTTIName(Ty, Out, NormalizeIntegers);
 }
 

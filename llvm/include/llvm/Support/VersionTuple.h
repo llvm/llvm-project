@@ -22,8 +22,7 @@
 #include <tuple>
 
 namespace llvm {
-template <typename HasherT, support::endianness Endianness>
-class HashBuilderImpl;
+template <typename HasherT, support::endianness Endianness> class HashBuilder;
 class raw_ostream;
 class StringRef;
 
@@ -175,7 +174,7 @@ public:
   }
 
   template <typename HasherT, llvm::support::endianness Endianness>
-  friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
+  friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
                       const VersionTuple &VT) {
     HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }

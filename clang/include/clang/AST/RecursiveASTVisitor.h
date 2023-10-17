@@ -3890,6 +3890,11 @@ bool RecursiveASTVisitor<Derived>::VisitOMPXAttributeClause(
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPXBareClause(OMPXBareClause *C) {
+  return true;
+}
+
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods
 // returning decls or qualtypes or nestednamespecifier -- though I'm

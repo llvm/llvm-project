@@ -18,6 +18,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -381,6 +382,7 @@ void DbiStreamBuilder::createSectionMap(
 
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
                                WritableBinaryStreamRef MsfBuffer) {
+  llvm::TimeTraceScope timeScope("Commit DBI stream");
   if (auto EC = finalize())
     return EC;
 

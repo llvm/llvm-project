@@ -1026,14 +1026,15 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   }
 };
 
-/// `fir.disptach_table` operation has no specific CodeGen. The operation is
-/// only used to carry information during FIR to FIR passes.
-struct DispatchTableOpConversion
-    : public FIROpConversion<fir::DispatchTableOp> {
+/// `fir.type_info` operation has no specific CodeGen. The operation is
+/// only used to carry information during FIR to FIR passes. It may be used
+/// in the future to generate the runtime type info data structures instead
+/// of generating them in lowering.
+struct TypeInfoOpConversion : public FIROpConversion<fir::TypeInfoOp> {
   using FIROpConversion::FIROpConversion;
 
   mlir::LogicalResult
-  matchAndRewrite(fir::DispatchTableOp op, OpAdaptor,
+  matchAndRewrite(fir::TypeInfoOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
     return mlir::success();
@@ -3787,19 +3788,19 @@ public:
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
         BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
         ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-        FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion,
-        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-        NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, TypeDescOpConversion, UnboxCharOpConversion,
-        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        DTEntryOpConversion, DivcOpConversion, EmboxOpConversion,
+        EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
+        FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+        MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+        TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion,
         UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
         XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
                                                                   options);

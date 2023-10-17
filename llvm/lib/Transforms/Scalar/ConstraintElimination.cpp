@@ -859,18 +859,18 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
-  if (!AR)
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!AR || !LoopPred)
     return;
 
   const SCEV *StartSCEV = AR->getStart();
   Value *StartValue = nullptr;
-  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV))
+  if (auto *C = dyn_cast<SCEVConstant>(StartSCEV)) {
     StartValue = C->getValue();
-  else if (auto *U = dyn_cast<SCEVUnknown>(StartSCEV))
-    StartValue = U->getValue();
-
-  if (!StartValue)
-    return;
+  } else {
+    StartValue = PN->getIncomingValueForBlock(LoopPred);
+    assert(SE.getSCEV(StartValue) == StartSCEV && "inconsistent start value");
+  }
 
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
   auto Inc = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);

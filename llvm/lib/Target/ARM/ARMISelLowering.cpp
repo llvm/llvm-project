@@ -8375,7 +8375,7 @@ bool ARMTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   unsigned EltSize = VT.getScalarSizeInBits();
   if (EltSize >= 32 ||
       ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
-      ShuffleVectorInst::isIdentityMask(M) ||
+      ShuffleVectorInst::isIdentityMask(M, M.size()) ||
       isVREVMask(M, VT, 64) ||
       isVREVMask(M, VT, 32) ||
       isVREVMask(M, VT, 16))
@@ -9875,7 +9875,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
 
     ArgListEntry Entry;
     Entry.Node = SRet;
-    Entry.Ty = RetTy->getPointerTo();
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
     Entry.IsSExt = false;
     Entry.IsZExt = false;
     Entry.IsSRet = true;
@@ -21632,13 +21632,6 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     // to something legal.
     VecTy = FixedVectorType::get(VecTy->getElementType(),
                                  VecTy->getNumElements() / NumLoads);
-
-    // We will compute the pointer operand of each load from the original base
-    // address using GEPs. Cast the base address to a pointer to the scalar
-    // element type.
-    BaseAddr = Builder.CreateBitCast(
-        BaseAddr,
-        VecTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
   }
 
   assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");

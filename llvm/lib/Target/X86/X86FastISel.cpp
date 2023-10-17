@@ -2391,7 +2391,7 @@ bool X86FastISel::X86SelectIntToFP(const Instruction *I, bool IsSigned) {
     return false;
 
   // TODO: We could sign extend narrower types.
-  MVT SrcVT = TLI.getSimpleValueType(DL, I->getOperand(0)->getType());
+  EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
   if (SrcVT != MVT::i32 && SrcVT != MVT::i64)
     return false;
 

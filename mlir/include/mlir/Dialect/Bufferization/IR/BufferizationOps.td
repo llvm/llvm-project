@@ -216,33 +216,58 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
-        [BufferizableOpInterface, SameOperandsAndResultType,
-         DestinationStyleOpInterface,
+        [AllShapesMatch<["source", "dest"]>,
+         AllElementTypesMatch<["source", "dest"]>,
+         BufferizableOpInterface, DestinationStyleOpInterface,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
          DeclareOpInterfaceMethods<SubsetInsertionOpInterface,
             ["getSourceOperand", "getValuesNeededToBuildSubsetExtraction",
-             "buildSubsetExtraction", "isEquivalentSubset"]>]> {
+             "buildSubsetExtraction", "isEquivalentSubset"]>,
+         DeclareOpInterfaceMethods<MemoryEffectsOpInterface, ["getEffects"]>]> {
   let summary = "copy a tensor";
 
   let description = [{
     This op indicates that the data of the `source` tensor should materialize
-    in the future buffer of the `dest` tensors. Both tensors must have the same
-    shape and element type at runtime.
+    in `dest`, which can be a tensor or a memref. In case of a tensor, `source`
+    should materialize in the future buffer of `dest` and a the updated
+    destination tensor is returned. In case of a memref, `source` should
+    materialize in `dest`, which is already a buffer. The op has no results in
+    that case.
+
+    `source`, `dest` and `result` (if present) must have the same shape and
+    element type. If the op has a result, the types of `result` and `dest` must
+    match exactly (e.g., including any tensor encodings).
 
     By default, this op bufferizes to a memcpy from the future buffer of the
-    `source` tensor to the future buffer of the `dest` tensor. However,
-    transformations such as "empty tensor elimination" may rewrite IR such that
-    a computation is performed directly in the future buffer of the `dest`
-    tensor and no memcpy is needed.
+    `source` tensor to the future buffer of the `dest` tensor or to the `dest`
+    buffer. However, transformations such as "empty tensor elimination" may
+    rewrite IR such that a computation is performed directly in `dest` and no
+    memcpy is needed.
 
-    Note: "tensor.insert_slice" could be used for the same purpose, but since
-    tensor dialect ops only indicate *what* should be computed but not *where*,
-    it could fold away, causing the computation to materialize in a different
-    buffer.
+    If `dest` is a buffer, the `restrict` and `writable` attributes must be
+    specified. These attributes have the same meaning as the respective
+    attributes of `bufferization.to_tensor`. `writable` indicates that the
+    `dest` buffer is considered writable. It does not make sense to materialize
+    a computation in a read-only buffer, so `writable` is required. `restrict`
+    indicates that this op is the only way for the tensor IR to access `dest`
+    (or an alias thereof). E.g., there must be no other `to_tensor` ops with
+    `dest` or with an alias of `dest`. Such IR is not supported by
+    One-Shot Bufferize.
+
+    Note: `restrict` and `writable` could be removed from this op because they
+    must always be set for memref destinations. This op has these attributes to
+    make clear the requirements on the `dest` operand in the op assembly format.
+    Moreover, these requirements may be relaxed at some point in the future.
+
+    Note: If `dest` is a tensor, `tensor.insert_slice` could be used for the
+    same purpose, but since tensor dialect ops only indicate *what* should be
+    computed but not *where*, it could fold away, causing the computation to
+    materialize in a different buffer.
   }];
 
-  let arguments = (ins AnyTensor:$source, AnyTensor:$dest);
-  let results = (outs AnyTensor:$result);
+  let arguments = (ins AnyTensor:$source, AnyShaped:$dest,
+                       UnitAttr:$restrict, UnitAttr:$writable);
+  let results = (outs Optional<AnyTensor>:$result);
 
   let extraClassDeclaration = [{
     LogicalResult bufferize(RewriterBase &rewriter,
@@ -264,10 +289,23 @@ def Bufferization_MaterializeInDestinationOp
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
 
-    MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
+    MutableOperandRange getDpsInitsMutable();
+
+    bool isWritable(Value value, const AnalysisState &state);
   }];
 
-  let assemblyFormat = "$source `in` $dest attr-dict `:` type($source)";
+  let builders = [
+    // Builder that materializes a source tensor in a tensor destination.
+    // Asserts that `dest` has tensor type. Infers the result type of this op
+    // from the destination tensor.
+    OpBuilder<(ins "Value":$source, "Value":$dest)>
+  ];
+
+  let assemblyFormat = [{
+    $source `in` (`restrict` $restrict^)? (`writable` $writable^)? $dest
+        attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -361,10 +399,15 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     thereof) will bufferize out-of-place to prevent emitting any writes to
     `memref` during bufferization.
 
-    If the given memref does not alias with any other memref passed to another
-    `to_tensor` op, the `restrict` unit attribute can be set. Only such
-    operations are supported by One-Shot Bufferize. (Otherwise, potential memref
-    aliasing relationships would have to be captured in One-Shot Bufferize.)
+    The `restrict` unit attribute (similar to the C `restrict` keyword)
+    indicates that the produced tensor result is the only way for the tensor
+    IR to gain access to the `memref` operand (or an alias thereof). E.g.,
+    there must be no other `to_tensor` op with the same or with an aliasing
+    `memref` operand.
+
+    Note: Only `to_tensor` ops with the `restrict` unit attribute are supported
+    by One-Shot Bufferize. Other IR is rejected. (To support `to_tensor`
+    without `restrict`, One-Shot Bufferize would have to analyze memref IR.)
 
     Example:
 
@@ -383,7 +426,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref,
+                           "the reference to load from",
+                           [MemReadAt<0, FullEffect>]>:$memref,
                        UnitAttr:$restrict, UnitAttr:$writable);
   let results = (outs AnyTensor:$result);
 

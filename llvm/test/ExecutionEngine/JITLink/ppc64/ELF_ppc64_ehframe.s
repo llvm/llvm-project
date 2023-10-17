@@ -16,15 +16,13 @@
 # CHECK:       Extracted {{.*}} section = .eh_frame
 # CHECK: EHFrameEdgeFixer: Processing .eh_frame in "{{.*}}"...
 # CHECK:   Processing block at
-# CHECK:     Processing CFI record at
-# CHECK:       Record is CIE
+# CHECK:     Record is CIE
 # CHECK:   Processing block at
-# CHECK:     Processing CFI record at
-# CHECK:       Record is FDE
-# CHECK:         Adding edge at {{.*}} to CIE at: {{.*}}
-# CHECK:         Processing PC-begin at
-# CHECK:         Existing edge at {{.*}} to PC begin at {{.*}}
-# CHECK:         Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
+# CHECK:     Record is FDE
+# CHECK:       Adding edge at {{.*}} to CIE at: {{.*}}
+# CHECK:       Processing PC-begin at
+# CHECK:       Existing edge at {{.*}} to PC begin at {{.*}}
+# CHECK:       Adding keep-alive edge from target at {{.*}} to FDE at {{.*}}
 
 	.text
 	.abiversion 2

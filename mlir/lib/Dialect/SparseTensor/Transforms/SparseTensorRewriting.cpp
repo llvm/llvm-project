@@ -1220,9 +1220,9 @@ private:
       assert(xPerm.isPermutation()); // must be a permutation.
 
       Value xs = genToCoordinatesBuffer(rewriter, loc, src);
-      rewriter.create<SortCooOp>(loc, nnz, xs, ValueRange{y}, xPerm,
-                                 rewriter.getIndexAttr(0),
-                                 SparseTensorSortKind::HybridQuickSort);
+      rewriter.create<SortOp>(loc, nnz, xs, ValueRange{y}, xPerm,
+                              rewriter.getIndexAttr(0),
+                              SparseTensorSortKind::HybridQuickSort);
     }
 
     // For each element in the COO tensor, insert the element to the dst tensor.
@@ -1474,17 +1474,17 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
                                                bool enableRT,
                                                bool enableForeach,
                                                bool enableConvert) {
-  patterns.add<ReshapeRewriter<tensor::ExpandShapeOp>,
-               ReshapeRewriter<tensor::CollapseShapeOp>, TensorReshapeRewriter>(
-      patterns.getContext());
+  patterns.add<ConcatenateRewriter, ReshapeRewriter<tensor::ExpandShapeOp>,
+               ReshapeRewriter<tensor::CollapseShapeOp>,
+               Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
+               Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,
+               TensorReshapeRewriter>(patterns.getContext());
   if (enableForeach)
     patterns.add<ForeachRewriter>(patterns.getContext());
+
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT) {
-    patterns.add<ConcatenateRewriter, NewRewriter, OutRewriter,
-                 Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
-                 Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>>(
-        patterns.getContext());
+    patterns.add<NewRewriter, OutRewriter>(patterns.getContext());
     if (enableConvert)
       patterns.add<ConvertRewriter>(patterns.getContext());
   }

@@ -127,6 +127,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   // LLVM 'unreachable' to ISD::TRAP and then lower that to WebAssembly's
   // 'unreachable' instructions which is meant for that case.
   this->Options.TrapUnreachable = true;
+  this->Options.NoTrapAfterNoreturn = false;
 
   // WebAssembly treats each function as an independent unit. Force
   // -ffunction-sections, effectively, so that we can emit them independently.

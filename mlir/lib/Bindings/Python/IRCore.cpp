@@ -2207,9 +2207,9 @@ private:
 };
 
 /// A list of operation operands. Internally, these are stored as consecutive
-/// elements, random access is cheap. The result list is associated with the
-/// operation whose results these are, and extends the lifetime of this
-/// operation.
+/// elements, random access is cheap. The (returned) operand list is associated
+/// with the operation whose operands these are, and thus extends the lifetime
+/// of this operation.
 class PyOpOperandList : public Sliceable<PyOpOperandList, PyValue> {
 public:
   static constexpr const char *pyClassName = "OpOperandList";
@@ -2262,9 +2262,9 @@ private:
 };
 
 /// A list of operation results. Internally, these are stored as consecutive
-/// elements, random access is cheap. The result list is associated with the
-/// operation whose results these are, and extends the lifetime of this
-/// operation.
+/// elements, random access is cheap. The (returned) result list is associated
+/// with the operation whose results these are, and thus extends the lifetime of
+/// this operation.
 class PyOpResultList : public Sliceable<PyOpResultList, PyOpResult> {
 public:
   static constexpr const char *pyClassName = "OpResultList";
@@ -2302,6 +2302,52 @@ private:
 
   PyOpResultList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
     return PyOpResultList(operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+};
+
+/// A list of operation successors. Internally, these are stored as consecutive
+/// elements, random access is cheap. The (returned) successor list is
+/// associated with the operation whose successors these are, and thus extends
+/// the lifetime of this operation.
+class PyOpSuccessors : public Sliceable<PyOpSuccessors, PyBlock> {
+public:
+  static constexpr const char *pyClassName = "OpSuccessors";
+
+  PyOpSuccessors(PyOperationRef operation, intptr_t startIndex = 0,
+                 intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumSuccessors(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+  void dunderSetItem(intptr_t index, PyBlock block) {
+    index = wrapIndex(index);
+    mlirOperationSetSuccessor(operation->get(), index, block.get());
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def("__setitem__", &PyOpSuccessors::dunderSetItem);
+  }
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpSuccessors, PyBlock>;
+
+  intptr_t getRawNumElements() {
+    operation->checkValid();
+    return mlirOperationGetNumSuccessors(operation->get());
+  }
+
+  PyBlock getRawElement(intptr_t pos) {
+    MlirBlock block = mlirOperationGetSuccessor(operation->get(), pos);
+    return PyBlock(operation, block);
+  }
+
+  PyOpSuccessors slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpSuccessors(operation, startIndex, length, step);
   }
 
   PyOperationRef operation;
@@ -2924,16 +2970,28 @@ void mlir::python::populateIRCore(py::module &m) {
                              &PyOperation::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
       .def_property_readonly("operation", [](py::object self) { return self; })
-      .def_property_readonly("opview", &PyOperation::createOpView);
+      .def_property_readonly("opview", &PyOperation::createOpView)
+      .def_property_readonly(
+          "successors",
+          [](PyOperationBase &self) {
+            return PyOpSuccessors(self.getOperation().getRef());
+          },
+          "Returns the list of Operation successors.");
 
   auto opViewClass =
       py::class_<PyOpView, PyOperationBase>(m, "OpView", py::module_local())
           .def(py::init<py::object>(), py::arg("operation"))
           .def_property_readonly("operation", &PyOpView::getOperationObject)
           .def_property_readonly("opview", [](py::object self) { return self; })
-          .def("__str__", [](PyOpView &self) {
-            return py::str(self.getOperationObject());
-          });
+          .def(
+              "__str__",
+              [](PyOpView &self) { return py::str(self.getOperationObject()); })
+          .def_property_readonly(
+              "successors",
+              [](PyOperationBase &self) {
+                return PyOpSuccessors(self.getOperation().getRef());
+              },
+              "Returns the list of Operation successors.");
   opViewClass.attr("_ODS_REGIONS") = py::make_tuple(0, true);
   opViewClass.attr("_ODS_OPERAND_SEGMENTS") = py::none();
   opViewClass.attr("_ODS_RESULT_SEGMENTS") = py::none();
@@ -3430,35 +3488,32 @@ void mlir::python::populateIRCore(py::module &m) {
           kValueDunderStrDocstring)
       .def(
           "get_name",
-          [](PyValue &self, std::optional<bool> useLocalScope,
-             std::optional<std::reference_wrapper<PyAsmState>> state) {
+          [](PyValue &self, bool useLocalScope) {
             PyPrintAccumulator printAccum;
-            MlirOpPrintingFlags flags;
-            MlirAsmState valueState;
-            // Use state if provided, else create a new state.
-            if (state) {
-              valueState = state.value().get().get();
-              // Don't allow setting using local scope and state at same time.
-              if (useLocalScope.has_value())
-                throw py::value_error(
-                    "setting AsmState and local scope together not supported");
-            } else {
-              flags = mlirOpPrintingFlagsCreate();
-              if (useLocalScope.value_or(false))
-                mlirOpPrintingFlagsUseLocalScope(flags);
-              valueState = mlirAsmStateCreateForValue(self.get(), flags);
-            }
-            mlirValuePrintAsOperand(self.get(), valueState, printAccum.getCallback(),
+            MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+            if (useLocalScope)
+              mlirOpPrintingFlagsUseLocalScope(flags);
+            MlirAsmState valueState =
+                mlirAsmStateCreateForValue(self.get(), flags);
+            mlirValuePrintAsOperand(self.get(), valueState,
+                                    printAccum.getCallback(),
                                     printAccum.getUserData());
-            // Release state if allocated locally.
-            if (!state) {
-              mlirOpPrintingFlagsDestroy(flags);
-              mlirAsmStateDestroy(valueState);
-            }
+            mlirOpPrintingFlagsDestroy(flags);
+            mlirAsmStateDestroy(valueState);
             return printAccum.join();
           },
-          py::arg("use_local_scope") = std::nullopt,
-          py::arg("state") = std::nullopt, kGetNameAsOperand)
+          py::arg("use_local_scope") = false)
+      .def(
+          "get_name",
+          [](PyValue &self, std::reference_wrapper<PyAsmState> state) {
+            PyPrintAccumulator printAccum;
+            MlirAsmState valueState = state.get().get();
+            mlirValuePrintAsOperand(self.get(), valueState,
+                                    printAccum.getCallback(),
+                                    printAccum.getUserData());
+            return printAccum.join();
+          },
+          py::arg("state"), kGetNameAsOperand)
       .def_property_readonly(
           "type", [](PyValue &self) { return mlirValueGetType(self.get()); })
       .def(
@@ -3523,6 +3578,7 @@ void mlir::python::populateIRCore(py::module &m) {
   PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
   PyOpResultList::bind(m);
+  PyOpSuccessors::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 

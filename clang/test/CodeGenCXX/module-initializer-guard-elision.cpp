@@ -27,6 +27,16 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 S.pcm -S -emit-llvm \
 // RUN:    -o - | FileCheck %s --check-prefix=CHECK-S
 
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 T.cpp \
+// RUN:    -emit-module-interface -fmodule-file=S=S.pcm -fmodule-file=R=R.pcm -o T.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 T.pcm -S -emit-llvm \
+// RUN:    -o - | FileCheck %s --check-prefix=CHECK-T
+
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 U.cpp \
+// RUN:    -emit-module-interface -fmodule-file=T=T.pcm -fmodule-file=R=R.pcm -o U.pcm
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 U.pcm -S -emit-llvm \
+// RUN:    -o - | FileCheck %s --check-prefix=CHECK-U
+
 // Testing cases where we can elide the module initializer guard variable.
 
 // This module has no global inits and does not import any other module
@@ -96,3 +106,25 @@ export import R;
 // CHECK-S: define void @_ZGIW1S
 // CHECK-S: store i8 1, ptr @_ZGIW1S__in_chrg
 // CHECK-S: call{{.*}}@_ZGIW1R
+
+// The module itself doesn't have a global init and it doesn't import any module.
+// But the global module fragment imports a module that needs an init. So needs a guard.
+//--- T.cpp
+module;
+import S;
+export module T;
+
+// CHECK-T: define void @_ZGIW1T
+// CHECK-T: store i8 1, ptr @_ZGIW1T__in_chrg
+// CHECK-T: call{{.*}}@_ZGIW1S
+
+// The module itself doesn't have a global init and it doesn't import any module.
+// But the private module fragment imports a module that needs an init. So needs a guard.
+//--- U.cpp
+export module U;
+module :private;
+import T;
+
+// CHECK-U: define void @_ZGIW1U
+// CHECK-U: store i8 1, ptr @_ZGIW1U__in_chrg
+// CHECK-U: call{{.*}}@_ZGIW1T

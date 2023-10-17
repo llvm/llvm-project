@@ -131,3 +131,17 @@ define i1 @foo2(i32 %x, i32 %y) {
   %cmp = icmp eq i32 %and, %and1
   ret i1 %cmp
 }
+
+; tests from PR67783
+define <2 x i1> @foo3(<2 x i8> %x) {
+; CHECK-LABEL: @foo3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -2, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[XOR]], <i8 9, i8 79>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+entry:
+  %xor = xor <2 x i8> %x, <i8 -2, i8 -1>
+  %cmp = icmp ne <2 x i8> %xor, <i8 9, i8 79>
+  ret <2 x i1> %cmp
+}

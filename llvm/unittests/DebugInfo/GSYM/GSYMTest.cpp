@@ -628,7 +628,7 @@ TEST(GSYMTest, TestAddressRangeEncodeDecode) {
   // the base address of the parent range for subranges.
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = llvm::support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   const uint64_t BaseAddr = 0x1000;
   const AddressRange Range1(0x1000, 0x1010);
@@ -651,7 +651,7 @@ static void TestAddressRangeEncodeDecodeHelper(const AddressRanges &Ranges,
                                                const uint64_t BaseAddr) {
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = llvm::support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   encodeRanges(Ranges, FW, BaseAddr);
 
@@ -1163,7 +1163,7 @@ TEST(GSYMTest, TestGsymReader) {
   constexpr uint64_t FuncSize = 0x10;
   const uint32_t Func1Name = GC.insertString("foo");
   const uint32_t Func2Name = GC.insertString("bar");
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   GC.addFunctionInfo(FunctionInfo(Func1Addr, FuncSize, Func1Name));
   GC.addFunctionInfo(FunctionInfo(Func2Addr, FuncSize, Func2Name));
   Error FinalizeErr = GC.finalize(llvm::nulls());
@@ -1201,7 +1201,7 @@ TEST(GSYMTest, TestGsymLookups) {
   // symbolication.
   GsymCreator GC;
   FunctionInfo FI(0x1000, 0x100, GC.insertString("main"));
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FI.OptLineTable = LineTable();
   const uint32_t MainFileIndex = GC.insertFile("/tmp/main.c");
   const uint32_t FooFileIndex = GC.insertFile("/tmp/foo.h");
@@ -1354,7 +1354,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddresses) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1431,7 +1431,7 @@ TEST(GSYMTest, TestDWARFFunctionWithAddressAndOffset) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1538,7 +1538,7 @@ TEST(GSYMTest, TestDWARFStructMethodNoMangled) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1643,7 +1643,7 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1672,7 +1672,7 @@ TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -1841,7 +1841,7 @@ TEST(GSYMTest, TestDWARFInlineInfo) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2101,7 +2101,7 @@ TEST(GSYMTest, TestDWARFNoLines) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2280,7 +2280,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr4) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2420,7 +2420,7 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -2507,7 +2507,7 @@ static Expected<GsymReader> FinalizeEncodeAndDecode(GsymCreator &GC) {
     return std::move(FinalizeErr);
   SmallString<1024> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   llvm::Error Err = GC.encode(FW);
   if (Err)
@@ -3057,7 +3057,7 @@ TEST(GSYMTest, TestDWARFInlineRangeScopes) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -3284,7 +3284,7 @@ TEST(GSYMTest, TestDWARFEmptyInline) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -3520,7 +3520,7 @@ TEST(GSYMTest, TestFinalizeForLineTables) {
   ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -3800,7 +3800,7 @@ TEST(GSYMTest, TestRangeWarnings) {
   OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
@@ -4002,7 +4002,7 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
-  const auto ByteOrder = support::endian::system_endianness();
+  const auto ByteOrder = llvm::endianness::native;
   FileWriter FW(OutStrm, ByteOrder);
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
   Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
