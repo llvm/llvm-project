@@ -413,10 +413,11 @@ static void writeInstrProfile(StringRef OutputFilename,
 
 static void
 mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
-                  SymbolRemapper *Remapper, StringRef OutputFilename,
-                  ProfileFormat OutputFormat, uint64_t TraceReservoirSize,
-                  uint64_t MaxTraceLength, int MaxDbgCorrelationWarnings,
-                  bool OutputSparse, unsigned NumThreads, FailureMode FailMode,
+                  StringRef ObjectFilename, SymbolRemapper *Remapper,
+                  StringRef OutputFilename, ProfileFormat OutputFormat,
+                  uint64_t TraceReservoirSize, uint64_t MaxTraceLength,
+                  int MaxDbgCorrelationWarnings, bool OutputSparse,
+                  unsigned NumThreads, FailureMode FailMode,
                   const StringRef ProfiledBinary) {
   if (OutputFormat == PF_Compact_Binary)
     exitWithError("Compact Binary is deprecated");
@@ -425,12 +426,17 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
     exitWithError("unknown format is specified");
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (!DebugInfoFilename.empty()) {
+  if (!DebugInfoFilename.empty() || !ObjectFilename.empty()) {
+    InstrProfCorrelator::ProfCorrelatorKind Kind =
+        DebugInfoFilename.empty() ? InstrProfCorrelator::BINARY
+                                  : InstrProfCorrelator::DEBUG_INFO;
+    StringRef FileName =
+        DebugInfoFilename.empty() ? ObjectFilename : DebugInfoFilename;
     if (auto Err =
-            InstrProfCorrelator::get(DebugInfoFilename).moveInto(Correlator))
-      exitWithError(std::move(Err), DebugInfoFilename);
+            InstrProfCorrelator::get(FileName, Kind).moveInto(Correlator))
+      exitWithError(std::move(Err), FileName);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
-      exitWithError(std::move(Err), DebugInfoFilename);
+      exitWithError(std::move(Err), FileName);
   }
 
   std::mutex ErrorLock;
@@ -1279,6 +1285,10 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<std::string> DebugInfoFilename(
       "debug-info", cl::init(""),
       cl::desc("Use the provided debug info to correlate the raw profile."));
+  cl::opt<std::string> ObjectFilename(
+      "object-file", cl::init(""),
+      cl::desc("Read and extract profile metadata from object file and show "
+               "the functions it found."));
   cl::opt<unsigned> MaxDbgCorrelationWarnings(
       "max-debug-info-correlation-warnings",
       cl::desc("The maximum number of warnings to emit when correlating "
@@ -1304,6 +1314,9 @@ static int merge_main(int argc, const char *argv[]) {
                "(default: 10000)"));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
+  if (!DebugInfoFilename.empty() && !ObjectFilename.empty()) {
+    exitWithError("Expected only one of -debug-info, -object-file");
+  }
 
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
@@ -1342,8 +1355,8 @@ static int merge_main(int argc, const char *argv[]) {
   }
 
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, DebugInfoFilename, Remapper.get(),
-                      OutputFilename, OutputFormat,
+    mergeInstrProfile(WeightedInputs, DebugInfoFilename, ObjectFilename,
+                      Remapper.get(), OutputFilename, OutputFormat,
                       TemporalProfTraceReservoirSize,
                       TemporalProfMaxTraceLength, MaxDbgCorrelationWarnings,
                       OutputSparse, NumThreads, FailureMode, ProfiledBinary);
@@ -2893,7 +2906,9 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
+  if (auto Err =
+          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
+              .moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))

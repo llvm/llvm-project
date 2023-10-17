@@ -31,6 +31,10 @@
 // is textually included.
 #define COVMAP_V3
 
+namespace llvm {
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
+} // namespace llvm
+
 static llvm::cl::opt<bool> EmptyLineCommentCoverage(
     "emptyline-comment-coverage",
     llvm::cl::desc("Emit emptylines and comment lines as skipped regions (only "
@@ -1830,6 +1834,22 @@ void CoverageMappingModuleGen::emit() {
     new llvm::GlobalVariable(CGM.getModule(), NamesArrTy, true,
                              llvm::GlobalValue::InternalLinkage, NamesArrVal,
                              llvm::getCoverageUnusedNamesVarName());
+  }
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  llvm::Type *IntTy64 = llvm::Type::getInt64Ty(Ctx);
+  uint64_t ProfileVersion = INSTR_PROF_RAW_VERSION;
+  if (llvm::ProfileCorrelate == llvm::InstrProfCorrelator::BINARY)
+    ProfileVersion |= VARIANT_MASK_BIN_CORRELATE;
+  auto *VersionVariable = new llvm::GlobalVariable(
+      CGM.getModule(), llvm::Type::getInt64Ty(Ctx), true,
+      llvm::GlobalValue::WeakAnyLinkage,
+      llvm::Constant::getIntegerValue(IntTy64, llvm::APInt(64, ProfileVersion)),
+      VarName);
+  VersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  llvm::Triple TT(CGM.getModule().getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    VersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    VersionVariable->setComdat(CGM.getModule().getOrInsertComdat(VarName));
   }
 }
 

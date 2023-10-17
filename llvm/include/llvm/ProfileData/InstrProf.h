@@ -328,8 +328,8 @@ enum class instrprof_error {
   too_large,
   truncated,
   malformed,
-  missing_debug_info_for_correlation,
-  unexpected_debug_info_for_correlation,
+  missing_correlation_info,
+  unexpected_correlation_info,
   unable_to_correlate_profile,
   unknown_function,
   invalid_prof,
@@ -460,7 +460,7 @@ public:
   /// only initialize the symtab with reference to the data and
   /// the section base address. The decompression will be delayed
   /// until before it is used. See also \c create(StringRef) method.
-  Error create(object::SectionRef &Section);
+  Error create(object::SectionRef &Section, bool MightHasNullByte = false);
 
   /// This interface is used by reader of CoverageMapping test
   /// format.

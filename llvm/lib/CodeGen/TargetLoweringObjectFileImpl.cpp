@@ -57,6 +57,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -70,6 +71,10 @@
 
 using namespace llvm;
 using namespace dwarf;
+
+namespace llvm {
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
+} // namespace llvm
 
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
@@ -472,7 +477,15 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covfun, Triple::ELF,
                                       /*AddSegmentInfo=*/false) ||
-      Name == ".llvmbc" || Name == ".llvmcmd")
+      Name == ".llvmbc" || Name == ".llvmcmd" ||
+      // Instead of checking the flag, maybe we should check if
+      // VARIANT_MASK_BIN_CORRELATE flag is set at the profile version global
+      // variable.
+      (ProfileCorrelate == InstrProfCorrelator::BINARY &&
+       (Name == getInstrProfSectionName(llvm::IPSK_name, Triple::ELF,
+                                        /*AddSegmentInfo=*/false) ||
+        Name == getInstrProfSectionName(llvm::IPSK_data, Triple::ELF,
+                                        /*AddSegmentInfo=*/false))))
     return SectionKind::getMetadata();
 
   if (Name.empty() || Name[0] != '.') return K;
@@ -1674,9 +1687,15 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  StringRef Name = GO->getSection();
+  if (ProfileCorrelate == InstrProfCorrelator::BINARY &&
+      (Name == getInstrProfSectionName(llvm::IPSK_name, Triple::COFF,
+                                       /*AddSegmentInfo=*/false) ||
+       Name == getInstrProfSectionName(llvm::IPSK_data, Triple::COFF,
+                                       /*AddSegmentInfo=*/false)))
+    Kind = SectionKind::getMetadata();
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
-  StringRef Name = GO->getSection();
   StringRef COMDATSymName = "";
   if (GO->hasComdat()) {
     Selection = getSelectionForCOFF(GO);

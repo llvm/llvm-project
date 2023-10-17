@@ -24,15 +24,43 @@
 
 using namespace llvm;
 
-/// Get the __llvm_prf_cnts section.
-Expected<object::SectionRef> getCountersSection(const object::ObjectFile &Obj) {
+namespace llvm {
+cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+    "profile-correlate",
+    cl::desc("Use debug info or binary file to correlate profiles."),
+    cl::init(InstrProfCorrelator::NONE),
+    cl::values(clEnumValN(InstrProfCorrelator::NONE, "",
+                          "No profile correlation"),
+               clEnumValN(InstrProfCorrelator::DEBUG_INFO, "debug-info",
+                          "Use debug info to correlate"),
+               clEnumValN(InstrProfCorrelator::BINARY, "binary",
+                          "Use binary to correlate")));
+} // namespace llvm
+
+/// Get profile section.
+Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
+                                                 InstrProfSectKind IPSK) {
+  // On COFF, the object file section name may end in "$M". This tells the
+  // linker to sort these sections between "$A" and "$Z". The linker removes the
+  // dollar and everything after it in the final binary. Do the same to match.
+  Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
+  std::string ExpectedSectionName =
+      getInstrProfSectionName(IPSK, ObjFormat,
+                              /*AddSegmentInfo=*/false);
   for (auto &Section : Obj.sections())
     if (auto SectionName = Section.getName())
-      if (SectionName.get() == INSTR_PROF_CNTS_SECT_NAME)
+      if (SectionName.get() == ExpectedSectionName) {
+        // There will be extra profile name and data sections in COFF used for
+        // runtime to detect start/stop of those sections, skipping them.
+        // (details at compiler-rt/lib/profile/InstrProfilingPlatformWindows.c)
+        if (ObjFormat == Triple::COFF && IPSK != IPSK_cnts && Section.isData())
+          continue;
         return Section;
+      }
+
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
-      "could not find counter section (" INSTR_PROF_CNTS_SECT_NAME ")");
+      "could not find section (" + Twine(ExpectedSectionName) + ")");
 }
 
 const char *InstrProfCorrelator::FunctionNameAttributeName = "Function Name";
@@ -41,56 +69,84 @@ const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
-                                  const object::ObjectFile &Obj) {
-  auto CountersSection = getCountersSection(Obj);
+                                  const object::ObjectFile &Obj,
+                                  ProfCorrelatorKind FileKind) {
+  auto C = std::make_unique<Context>();
+  auto CountersSection = getInstrProfSection(Obj, IPSK_cnts);
   if (auto Err = CountersSection.takeError())
     return std::move(Err);
-  auto C = std::make_unique<Context>();
+  if (FileKind == InstrProfCorrelator::BINARY) {
+    auto DataSection = getInstrProfSection(Obj, IPSK_data);
+    if (auto Err = DataSection.takeError())
+      return std::move(Err);
+    auto DataOrErr = DataSection->getContents();
+    if (!DataOrErr)
+      return DataOrErr.takeError();
+    auto NameSection = getInstrProfSection(Obj, IPSK_name);
+    if (auto Err = NameSection.takeError())
+      return std::move(Err);
+    auto NameOrErr = NameSection->getContents();
+    if (!NameOrErr)
+      return NameOrErr.takeError();
+    C->DataStart = DataOrErr->data();
+    C->DataEnd = DataOrErr->data() + DataOrErr->size();
+    C->NameStart = NameOrErr->data();
+    C->NameSize = NameOrErr->size();
+  }
   C->Buffer = std::move(Buffer);
   C->CountersSectionStart = CountersSection->getAddress();
   C->CountersSectionEnd = C->CountersSectionStart + CountersSection->getSize();
+  // In COFF object file, there's a null byte at the beginning of the counter
+  // section which doesn't exist in raw profile.
+  if (Obj.getTripleObjectFormat() == Triple::COFF)
+    C->CountersSectionStart++;
+
   C->ShouldSwapBytes = Obj.isLittleEndian() != sys::IsLittleEndianHost;
   return Expected<std::unique_ptr<Context>>(std::move(C));
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-InstrProfCorrelator::get(StringRef DebugInfoFilename) {
-  auto DsymObjectsOrErr =
-      object::MachOObjectFile::findDsymObjectMembers(DebugInfoFilename);
-  if (auto Err = DsymObjectsOrErr.takeError())
-    return std::move(Err);
-  if (!DsymObjectsOrErr->empty()) {
-    // TODO: Enable profile correlation when there are multiple objects in a
-    // dSYM bundle.
-    if (DsymObjectsOrErr->size() > 1)
-      return make_error<InstrProfError>(
-          instrprof_error::unable_to_correlate_profile,
-          "using multiple objects is not yet supported");
-    DebugInfoFilename = *DsymObjectsOrErr->begin();
+InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind) {
+  if (FileKind == DEBUG_INFO) {
+    auto DsymObjectsOrErr =
+        object::MachOObjectFile::findDsymObjectMembers(Filename);
+    if (auto Err = DsymObjectsOrErr.takeError())
+      return std::move(Err);
+    if (!DsymObjectsOrErr->empty()) {
+      // TODO: Enable profile correlation when there are multiple objects in a
+      // dSYM bundle.
+      if (DsymObjectsOrErr->size() > 1)
+        return make_error<InstrProfError>(
+            instrprof_error::unable_to_correlate_profile,
+            "using multiple objects is not yet supported");
+      Filename = *DsymObjectsOrErr->begin();
+    }
   }
-  auto BufferOrErr =
-      errorOrToExpected(MemoryBuffer::getFile(DebugInfoFilename));
+  auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
   if (auto Err = BufferOrErr.takeError())
     return std::move(Err);
 
-  return get(std::move(*BufferOrErr));
+  return get(std::move(*BufferOrErr), FileKind);
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
-InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer) {
+InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer,
+                         ProfCorrelatorKind FileKind) {
   auto BinOrErr = object::createBinary(*Buffer);
   if (auto Err = BinOrErr.takeError())
     return std::move(Err);
 
   if (auto *Obj = dyn_cast<object::ObjectFile>(BinOrErr->get())) {
-    auto CtxOrErr = Context::get(std::move(Buffer), *Obj);
+    auto CtxOrErr = Context::get(std::move(Buffer), *Obj, FileKind);
     if (auto Err = CtxOrErr.takeError())
       return std::move(Err);
     auto T = Obj->makeTriple();
     if (T.isArch64Bit())
-      return InstrProfCorrelatorImpl<uint64_t>::get(std::move(*CtxOrErr), *Obj);
+      return InstrProfCorrelatorImpl<uint64_t>::get(std::move(*CtxOrErr), *Obj,
+                                                    FileKind);
     if (T.isArch32Bit())
-      return InstrProfCorrelatorImpl<uint32_t>::get(std::move(*CtxOrErr), *Obj);
+      return InstrProfCorrelatorImpl<uint32_t>::get(std::move(*CtxOrErr), *Obj,
+                                                    FileKind);
   }
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile, "not an object file");
@@ -132,29 +188,35 @@ template <class IntPtrT>
 llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
 InstrProfCorrelatorImpl<IntPtrT>::get(
     std::unique_ptr<InstrProfCorrelator::Context> Ctx,
-    const object::ObjectFile &Obj) {
-  if (Obj.isELF() || Obj.isMachO()) {
-    auto DICtx = DWARFContext::create(Obj);
-    return std::make_unique<DwarfInstrProfCorrelator<IntPtrT>>(std::move(DICtx),
-                                                               std::move(Ctx));
+    const object::ObjectFile &Obj, ProfCorrelatorKind FileKind) {
+  if (FileKind == DEBUG_INFO) {
+    if (Obj.isELF() || Obj.isMachO()) {
+      auto DICtx = DWARFContext::create(Obj);
+      return std::make_unique<DwarfInstrProfCorrelator<IntPtrT>>(
+          std::move(DICtx), std::move(Ctx));
+    }
+    return make_error<InstrProfError>(
+        instrprof_error::unable_to_correlate_profile,
+        "unsupported debug info format (only DWARF is supported)");
   }
+  if (Obj.isELF() || Obj.isCOFF())
+    return std::make_unique<BinaryInstrProfCorrelator<IntPtrT>>(std::move(Ctx));
   return make_error<InstrProfError>(
-      instrprof_error::unable_to_correlate_profile,
-      "unsupported debug info format (only DWARF is supported)");
+        instrprof_error::unable_to_correlate_profile,
+        "unsupported binary format (only ELF and COFF are supported)");
 }
 
 template <class IntPtrT>
 Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData(int MaxWarnings) {
   assert(Data.empty() && Names.empty() && NamesVec.empty());
   correlateProfileDataImpl(MaxWarnings);
-  if (Data.empty() || NamesVec.empty())
+  if (this->Data.empty())
     return make_error<InstrProfError>(
         instrprof_error::unable_to_correlate_profile,
-        "could not find any profile metadata in debug info");
-  auto Result =
-      collectPGOFuncNameStrings(NamesVec, /*doCompression=*/false, Names);
-  CounterOffsets.clear();
-  NamesVec.clear();
+        "could not find any profile data metadata in correlated file");
+  Error Result = correlateProfileNameImpl();
+  this->CounterOffsets.clear();
+  this->NamesVec.clear();
   return Result;
 }
 
@@ -360,4 +422,65 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   if (!UnlimitedWarnings && NumSuppressedWarnings > 0)
     WithColor::warning() << format("Suppressed %d additional warnings\n",
                                    NumSuppressedWarnings);
+}
+
+template <class IntPtrT>
+Error DwarfInstrProfCorrelator<IntPtrT>::correlateProfileNameImpl() {
+  if (this->NamesVec.empty()) {
+    return make_error<InstrProfError>(
+        instrprof_error::unable_to_correlate_profile,
+        "could not find any profile name metadata in debug info");
+  }
+  auto Result = collectPGOFuncNameStrings(this->NamesVec,
+                                          /*doCompression=*/false, this->Names);
+  return Result;
+}
+
+template <class IntPtrT>
+void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
+    int MaxWarnings, InstrProfCorrelator::CorrelationData *CorrelateData) {
+  bool UnlimitedWarnings = (MaxWarnings == 0);
+  // -N suppressed warnings means we can emit up to N (unsuppressed) warnings
+  int NumSuppressedWarnings = -MaxWarnings;
+
+  const RawInstrProf::ProfileData<IntPtrT> *DataStart =
+      (const RawInstrProf::ProfileData<IntPtrT> *)this->Ctx->DataStart;
+  const RawInstrProf::ProfileData<IntPtrT> *DataEnd =
+      (const RawInstrProf::ProfileData<IntPtrT> *)this->Ctx->DataEnd;
+  // We need to use < here because the last data record may have no padding.
+  for (const RawInstrProf::ProfileData<IntPtrT> *I = DataStart; I < DataEnd;
+       ++I) {
+    uint64_t CounterPtr = this->template maybeSwap<IntPtrT>(I->CounterPtr);
+    uint64_t CountersStart = this->Ctx->CountersSectionStart;
+    uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
+    if (CounterPtr < CountersStart || CounterPtr >= CountersEnd) {
+      if (UnlimitedWarnings || ++NumSuppressedWarnings < 1) {
+        WithColor::warning() << format(
+            "CounterPtr out of range for function: Actual=0x%x "
+            "Expected=[0x%x, 0x%x) at data offset=0x%x\n",
+            CounterPtr, CountersStart, CountersEnd,
+            (I - DataStart) * sizeof(RawInstrProf::ProfileData<IntPtrT>));
+      }
+    }
+    IntPtrT CounterOffset = CounterPtr - CountersStart;
+    this->Data.push_back({I->NameRef,
+                          I->FuncHash,
+                          this->template maybeSwap<IntPtrT>(CounterOffset),
+                          I->FunctionPointer,
+                          // Value profiling is not supported.
+                          0,
+                          I->NumCounters,
+                          {0, 0}});
+  }
+}
+
+template <class IntPtrT>
+Error BinaryInstrProfCorrelator<IntPtrT>::correlateProfileNameImpl() {
+  if (this->Ctx->NameSize == 0) {
+    return make_error<InstrProfError>(
+        instrprof_error::unable_to_correlate_profile,
+        "could not find any profile data metadata in object file");
+  }
+  this->Names.append(this->Ctx->NameStart, this->Ctx->NameSize);
+  return Error::success();
 }

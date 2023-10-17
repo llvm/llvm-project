@@ -457,7 +457,7 @@ Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
   return Tag == Counter::Zero;
 }
 
-Error InstrProfSymtab::create(SectionRef &Section) {
+Error InstrProfSymtab::create(SectionRef &Section, bool MightHasNullByte) {
   Expected<StringRef> DataOrErr = Section.getContents();
   if (!DataOrErr)
     return DataOrErr.takeError();
@@ -467,7 +467,8 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   // If this is a linked PE/COFF file, then we have to skip over the null byte
   // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
   const ObjectFile *Obj = Section.getObject();
-  if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
+  if (MightHasNullByte && isa<COFFObjectFile>(Obj) &&
+      !Obj->isRelocatableObject())
     Data = Data.drop_front(1);
 
   return Error::success();
@@ -1070,11 +1071,24 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   InstrProfSymtab ProfileNames;
   std::vector<SectionRef> NamesSectionRefs = *NamesSection;
-  if (NamesSectionRefs.size() != 1)
-    return make_error<CoverageMapError>(
-        coveragemap_error::malformed,
-        "the size of coverage mapping section is not one");
-  if (Error E = ProfileNames.create(NamesSectionRefs.back()))
+  bool MightHasNullByte = true;
+  if (NamesSectionRefs.size() != 1) {
+    // By default, the profile name section in the binary starts with a null
+    // byte and followed by names. But if binary correlation is enabled, there
+    // will be 2 name sections. One contains only two null bytes, and another
+    // one contains the names without the dummy null byte at the beginning.
+    if (ObjFormat == Triple::COFF) {
+      NamesSectionRefs.erase(
+          std::remove_if(NamesSectionRefs.begin(), NamesSectionRefs.end(),
+                         [](const SectionRef &S) { return S.isData(); }));
+      MightHasNullByte = false;
+    }
+    if (NamesSectionRefs.size() != 1)
+      return make_error<CoverageMapError>(
+          coveragemap_error::malformed,
+          "the size of coverage mapping section is not one");
+  }
+  if (Error E = ProfileNames.create(NamesSectionRefs.back(), MightHasNullByte))
     return std::move(E);
 
   // Look for the coverage records section (Version4 only).

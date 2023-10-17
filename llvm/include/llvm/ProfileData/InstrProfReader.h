@@ -126,6 +126,8 @@ public:
   /// Return true if we must provide debug info to create PGO profiles.
   virtual bool useDebugInfoCorrelate() const { return false; }
 
+  virtual bool useBinaryCorrelate() const { return false; }
+
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
 
@@ -372,6 +374,14 @@ public:
 
   bool useDebugInfoCorrelate() const override {
     return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
+  }
+
+  bool useBinaryCorrelate() const override {
+    return (Version & VARIANT_MASK_BIN_CORRELATE) != 0;
+  }
+
+  bool useCorrelate() const {
+    return useDebugInfoCorrelate() || useBinaryCorrelate();
   }
 
   bool hasSingleByteCoverage() const override {

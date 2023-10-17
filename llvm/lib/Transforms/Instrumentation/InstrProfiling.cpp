@@ -60,10 +60,7 @@ using namespace llvm;
 #define DEBUG_TYPE "instrprof"
 
 namespace llvm {
-cl::opt<bool>
-    DebugInfoCorrelate("debug-info-correlate",
-                       cl::desc("Use debug info to correlate profiles."),
-                       cl::init(false));
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
 namespace {
@@ -627,7 +624,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
   assert(
-      !DebugInfoCorrelate &&
+      ProfileCorrelate == InstrProfCorrelator::NONE &&
       "Value profiling is not yet supported with lightweight instrumentation");
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
@@ -965,8 +962,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
 
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if (DebugInfoCorrelate && TT.isOSBinFormatMachO() &&
-      Linkage == GlobalValue::PrivateLinkage)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO &&
+      TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
   // Due to the limitation of binder as of 2021/09/28, the duplicate weak
@@ -1030,7 +1027,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   CounterPtr->setLinkage(Linkage);
   MaybeSetComdat(CounterPtr);
   PD.RegionCounters = CounterPtr;
-  if (DebugInfoCorrelate) {
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     if (auto *SP = Fn->getSubprogram()) {
       DIBuilder DB(*M, true, SP->getUnit());
       Metadata *FunctionNameAnnotation[] = {
@@ -1083,7 +1080,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
         ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
   }
 
-  if (DebugInfoCorrelate) {
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     // Mark the counter variable as used so that it isn't optimized out.
     CompilerUsedVars.push_back(PD.RegionCounters);
     return PD.RegionCounters;
@@ -1124,11 +1121,17 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   }
   auto *Data =
       new GlobalVariable(*M, DataTy, false, Linkage, nullptr, DataVarName);
-  // Reference the counter variable with a label difference (link-time
-  // constant).
-  auto *RelativeCounterPtr =
-      ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
-                           ConstantExpr::getPtrToInt(Data, IntPtrTy));
+  Constant *RelativeCounterPtr;
+  if (ProfileCorrelate == InstrProfCorrelator::BINARY) {
+    // CounterPtr needs to be absolute when we make data section strippable.
+    RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
+  } else {
+    // Reference the counter variable with a label difference (link-time
+    // constant).
+    RelativeCounterPtr =
+        ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
+                             ConstantExpr::getPtrToInt(Data, IntPtrTy));
+  }
 
   Constant *DataVals[] = {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,

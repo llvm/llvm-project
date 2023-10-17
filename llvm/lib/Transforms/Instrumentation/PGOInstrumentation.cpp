@@ -327,6 +327,7 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
 static cl::opt<bool>
@@ -381,7 +382,7 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
   if (PGOInstrumentEntry)
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
-  if (DebugInfoCorrelate)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
     ProfileVersion |=

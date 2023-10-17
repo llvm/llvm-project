@@ -267,6 +267,9 @@ uint64_t __llvm_profile_get_num_data(const __llvm_profile_data *Begin,
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End);
 
+/*! \brief Get the size of the profile name section in bytes. */
+uint64_t __llvm_profile_get_name_size(const char *Begin, const char *End);
+
 /*! \brief Get the size in bytes of a single counter entry. */
 size_t __llvm_profile_counter_entry_size(void);
 

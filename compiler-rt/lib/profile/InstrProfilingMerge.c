@@ -66,8 +66,9 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
       Header->NumCounters !=
           __llvm_profile_get_num_counters(__llvm_profile_begin_counters(),
                                           __llvm_profile_end_counters()) ||
-      Header->NamesSize != (uint64_t)(__llvm_profile_end_names() -
-                                      __llvm_profile_begin_names()) ||
+      Header->NamesSize !=
+          __llvm_profile_get_name_size(__llvm_profile_begin_names(),
+                                       __llvm_profile_end_names()) ||
       Header->ValueKindLast != IPVK_Last)
     return 1;
 
@@ -132,7 +133,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
   // Merge counters by iterating the entire counter section when debug info
   // correlation is enabled.
-  if (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) {
+  if ((__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) ||
+      (__llvm_profile_get_version() & VARIANT_MASK_BIN_CORRELATE)) {
     for (SrcCounter = SrcCountersStart,
         DstCounter = __llvm_profile_begin_counters();
          SrcCounter < SrcCountersEnd;) {
