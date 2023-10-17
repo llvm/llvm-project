@@ -586,6 +586,12 @@ public:
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
 
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
+    // There's rarely any point of packing something into a vector type if we
+    // already have the source data.
+    return true;
+  }
+
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;

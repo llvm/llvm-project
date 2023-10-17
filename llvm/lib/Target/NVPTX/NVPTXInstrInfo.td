@@ -3485,6 +3485,9 @@ def : Pat<(v2bf16 (build_vector (bf16 Int16Regs:$a), (bf16 Int16Regs:$b))),
 def : Pat<(v2i16 (build_vector (i16 Int16Regs:$a), (i16 Int16Regs:$b))),
           (V2I16toI32 Int16Regs:$a, Int16Regs:$b)>;
 
+def: Pat<(v2i16 (scalar_to_vector (i16 Int16Regs:$a))),
+         (CVT_u32_u16 Int16Regs:$a, CvtNONE)>;
+
 // Count leading zeros
 let hasSideEffects = false in {
   def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
