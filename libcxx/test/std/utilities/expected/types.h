@@ -9,7 +9,9 @@
 #ifndef TEST_STD_UTILITIES_EXPECTED_TYPES_H
 #define TEST_STD_UTILITIES_EXPECTED_TYPES_H
 
+#include <cstring>
 #include <utility>
+#include <type_traits>
 #include "test_macros.h"
 
 template <bool copyMoveNoexcept, bool convertNoexcept = true>
@@ -100,6 +102,20 @@ struct TrackedMove {
     x.swapCalled = true;
     y.swapCalled = true;
   }
+};
+
+// This type has one byte of tail padding where `std::expected` will put its
+// "has value" flag. The constructor will clobber all bytes including the
+// tail padding. With this type we can check that `std::expected` will set
+// its "has value" flag _after_ the value/error object is constructed.
+template <int c>
+struct TailClobberer {
+  constexpr TailClobberer() {
+    if (!std::is_constant_evaluated()) {
+      std::memset(this, c, sizeof(*this));
+    }
+  }
+  alignas(2) bool b;
 };
 
 #ifndef TEST_HAS_NO_EXCEPTIONS

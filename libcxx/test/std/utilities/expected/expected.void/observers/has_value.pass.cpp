@@ -16,6 +16,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test noexcept
 template <class T>
@@ -40,6 +41,13 @@ constexpr bool test() {
   // !has_value
   {
     const std::expected<void, int> e(std::unexpect, 5);
+    assert(!e.has_value());
+  }
+
+  // See comments of the corresponding test in "expected.expected".
+  {
+    const std::expected<void, TailClobberer<1>> e(std::unexpect);
+    static_assert(sizeof(TailClobberer<1>) == sizeof(e));
     assert(!e.has_value());
   }
 
