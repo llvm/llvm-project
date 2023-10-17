@@ -1204,8 +1204,9 @@ define amdgpu_ps [4 x float] @load_2dmsaa_v4f32_dmask1_different_rsrc(<8 x i32> 
 ; MSAA-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC1]], i32 0, i32 0)
 ; MSAA-NEXT:    [[I:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
 ; MSAA-NEXT:    [[I1:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
-; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP0]], i64 0
-; MSAA-NEXT:    [[I3:%.*]] = extractelement <4 x float> [[TMP0]], i64 1
+; MSAA-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.amdgcn.image.msaa.load.2dmsaa.v4f32.i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC2]], i32 0, i32 0)
+; MSAA-NEXT:    [[I2:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
+; MSAA-NEXT:    [[I3:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
 ; MSAA-NEXT:    [[I4:%.*]] = insertvalue [4 x float] undef, float [[I]], 0
 ; MSAA-NEXT:    [[I5:%.*]] = insertvalue [4 x float] [[I4]], float [[I1]], 1
 ; MSAA-NEXT:    [[I6:%.*]] = insertvalue [4 x float] [[I5]], float [[I2]], 2
