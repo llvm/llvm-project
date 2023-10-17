@@ -1065,18 +1065,18 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-bool ConvertOp::directConvertable() {
+bool ConvertOp::needsExtraSort() {
   SparseTensorType srcStt = getSparseTensorType(getSource());
   SparseTensorType dstStt = getSparseTensorType(getDest());
 
-  // We can always directly convert to unordered sparse tensor or dense tensor
-  // since dense tensor support random access.
+  // We do not need an extra sort when returning unordered sparse tensors or
+  // dense tensor since dense tensor support random access.
   if (dstStt.isAllDense() || !dstStt.isAllOrdered())
-    return true;
+    return false;
 
   if (srcStt.isAllOrdered() && dstStt.isAllOrdered() &&
       srcStt.hasSameDimToLvl(dstStt)) {
-    return true;
+    return false;
   }
 
   // Source and dest tensors are ordered in different ways. We only do direct
@@ -1086,9 +1086,9 @@ bool ConvertOp::directConvertable() {
   // performance.
   if (auto constOp = getSource().getDefiningOp<arith::ConstantOp>())
     if (isa<SparseElementsAttr>(constOp.getValue()))
-      return true;
+      return false;
 
-  return false;
+  return true;
 }
 
 LogicalResult ToPositionsOp::verify() {
@@ -1246,6 +1246,23 @@ LogicalResult UnaryOp::verify() {
         verifyNumBlockArgs(this, absent, "absent", TypeRange{}, outputType))
   }
   return success();
+}
+
+bool ConcatenateOp::needsExtraSort() {
+  SparseTensorType dstStt = getSparseTensorType(*this);
+  if (dstStt.isAllDense() || !dstStt.isAllOrdered())
+    return false;
+
+  bool allSameOrdered = llvm::all_of(getInputs(), [dstStt](Value op) {
+    return getSparseTensorType(op).hasSameDimToLvl(dstStt);
+  });
+  // TODO: When conDim != 0, as long as conDim corresponding to the first level
+  // in all input/output buffers, and all input/output buffers have the same
+  // dimToLvl, the tmp COO buffer is still unnecessary (e.g, concatenate
+  // CSC matrices along column).
+  bool directLowerable =
+      allSameOrdered && getDimension() == 0 && dstStt.isIdentity();
+  return !directLowerable;
 }
 
 LogicalResult ConcatenateOp::verify() {
