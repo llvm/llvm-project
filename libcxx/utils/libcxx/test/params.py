@@ -110,7 +110,7 @@ DEFAULT_PARAMETERS = [
         type=str,
         help="The version of the standard to compile the test suite with.",
         default=lambda cfg: next(
-            s for s in reversed(_allStandards) if getStdFlag(cfg, s)
+            s for s in reversed(_allStandards) if True
         ),
         actions=lambda std: [
             AddFeature(std),
