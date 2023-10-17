@@ -565,6 +565,8 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
                                             const VirtRegMap *VRM,
                                             const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   // Call the base implementation first to set any hints based on the usual
   // heuristics and decide what the return value should be. We want to return
@@ -582,15 +584,20 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   if (MF.getSubtarget<PPCSubtarget>().isISAFuture())
     return BaseImplRetVal;
 
-  // We are interested in instructions that copy values to ACC/UACC.
-  // The copy into UACC will be simply a COPY to a subreg so we
-  // want to allocate the corresponding physical subreg for the source.
-  // The copy into ACC will be a BUILD_UACC so we want to allocate
-  // the same number UACC for the source.
+  MachineBasicBlock *LastUseMBB = nullptr;
+  bool UseInOneMBB = true;
   const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
+    if (LastUseMBB && Use.getParent() != LastUseMBB)
+      UseInOneMBB = false;
+    LastUseMBB = Use.getParent();
     const MachineOperand *ResultOp = nullptr;
     Register ResultReg;
+    // We are interested in instructions that copy values to ACC/UACC.
+    // The copy into UACC will be simply a COPY to a subreg so we
+    // want to allocate the corresponding physical subreg for the source.
+    // The copy into ACC will be a BUILD_UACC so we want to allocate
+    // the same number UACC for the source.
     switch (Use.getOpcode()) {
     case TargetOpcode::COPY: {
       ResultOp = &Use.getOperand(0);
@@ -628,6 +635,46 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     }
   }
+
+  // In single MBB, allocate different CRs for different definitions can improve
+  // performance.
+  if (UseInOneMBB && LastUseMBB &&
+      (RegClass->hasSuperClassEq(&PPC::CRRCRegClass) ||
+       RegClass->hasSuperClassEq(&PPC::CRBITRCRegClass))) {
+    std::set<MCPhysReg> ModifiedRegisters;
+    bool Skip = true;
+    // Scan from the last instruction writes VirtReg to the beginning of the
+    // MBB.
+    for (MachineInstr &MI :
+         llvm::make_range(LastUseMBB->rbegin(), LastUseMBB->rend())) {
+      if (MI.isDebugInstr())
+        continue;
+      if (MI.modifiesRegister(VirtReg, TRI))
+        Skip = false;
+      if (Skip)
+        continue;
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||
+            !MO.isDef())
+          continue;
+        MCPhysReg PhysReg = VRM->getPhys(MO.getReg());
+        if (PhysReg == VirtRegMap::NO_PHYS_REG)
+          continue;
+        llvm::copy_if(
+            TRI->superregs_inclusive(PhysReg),
+            std::inserter(ModifiedRegisters, ModifiedRegisters.begin()),
+            [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
+      }
+    }
+    llvm::copy_if(llvm::make_range(Order.begin(), Order.end()),
+                  std::back_inserter(Hints), [&](MCPhysReg Reg) {
+                    return llvm::all_of(TRI->superregs_inclusive(Reg),
+                                        [&](MCPhysReg SR) {
+                                          return !ModifiedRegisters.count(SR);
+                                        });
+                  });
+  }
+
   return BaseImplRetVal;
 }
 
