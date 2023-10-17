@@ -231,9 +231,10 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
     .Cases("assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", true)
     .Cases("float.h", "inttypes.h", "iso646.h", "limits.h", "locale.h", true)
     .Cases("math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", true)
-    .Cases("stdatomic.h", "stdbool.h", "stddef.h", "stdint.h", "stdio.h", true)
-    .Cases("stdlib.h", "stdnoreturn.h", "string.h", "tgmath.h", "threads.h", true)
-    .Cases("time.h", "uchar.h", "wchar.h", "wctype.h", true)
+    .Cases("stdatomic.h", "stdbool.h", "stdckdint.h", "stddef.h", true)
+    .Cases("stdint.h", "stdio.h", "stdlib.h", "stdnoreturn.h", true)
+    .Cases("string.h", "tgmath.h", "threads.h", "time.h", "uchar.h", true)
+    .Cases("wchar.h", "wctype.h", true)
 
     // C++ headers for C library facilities
     .Cases("cassert", "ccomplex", "cctype", "cerrno", "cfenv", true)
