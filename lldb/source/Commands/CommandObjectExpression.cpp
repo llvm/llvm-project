@@ -414,6 +414,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
                                                  Stream &output_stream,
                                                  Stream &error_stream,
                                                  CommandReturnObject &result) {
+  auto start = std::chrono::steady_clock::now();
+
   // Don't use m_exe_ctx as this might be called asynchronously after the
   // command object DoExecute has finished when doing multi-line expression
   // that use an input reader...
@@ -514,6 +516,9 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     error_stream.Printf("error: unknown error\n");
   }
 
+  auto end = std::chrono::steady_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  error_stream.Printf("Finished expr in: %" PRIu64, duration.count());
   return (success != eExpressionSetupError &&
           success != eExpressionParseError);
 }
