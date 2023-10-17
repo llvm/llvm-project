@@ -191,6 +191,15 @@ struct TarjanSCC {
       FindSCC(Start);
   }
 
+  // ExtraEdges is designed to handle the value edges possibly but not yet
+  // inserted.
+  void
+  Start(const Instruction *Start,
+        const DenseMap<const Value *, SmallVector<Value *, 4>> &ExtraEdges) {
+    if (Root.lookup(Start) == 0)
+      FindSCC(Start, ExtraEdges);
+  }
+
   const SmallPtrSetImpl<const Value *> &getComponentFor(const Value *V) const {
     unsigned ComponentID = ValueToComponent.lookup(V);
 
@@ -201,17 +210,30 @@ struct TarjanSCC {
 
 private:
   void FindSCC(const Instruction *I) {
+    FindSCC(I, DenseMap<const Value *, SmallVector<Value *, 4>>());
+  }
+
+  void
+  FindSCC(const Instruction *I,
+          const DenseMap<const Value *, SmallVector<Value *, 4>> &ExtraEdges) {
     Root[I] = ++DFSNum;
     // Store the DFS Number we had before it possibly gets incremented.
     unsigned int OurDFS = DFSNum;
-    for (const auto &Op : I->operands()) {
-      if (auto *InstOp = dyn_cast<Instruction>(Op)) {
-        if (Root.lookup(Op) == 0)
-          FindSCC(InstOp);
-        if (!InComponent.count(Op))
-          Root[I] = std::min(Root.lookup(I), Root.lookup(Op));
+
+    auto ProcessValueSuccs = [&](Value *Succ) {
+      if (auto *InstOp = dyn_cast<Instruction>(Succ)) {
+        if (Root.lookup(Succ) == 0)
+          FindSCC(InstOp, ExtraEdges);
+        if (!InComponent.count(Succ))
+          Root[I] = std::min(Root.lookup(I), Root.lookup(Succ));
       }
-    }
+    };
+
+    llvm::for_each(I->operands(), ProcessValueSuccs);
+
+    if (ExtraEdges.count(I))
+      llvm::for_each(ExtraEdges.lookup(I), ProcessValueSuccs);
+
     // See if we really were the root of a component, by seeing if we still have
     // our DFSNumber.  If we do, we are the root of the component, and we have
     // completed a component. If we do not, we are not the root of a component,
@@ -3808,13 +3830,47 @@ Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
   if (alwaysAvailable(CC->getLeader()))
     return CC->getLeader();
 
+  // TODO: May too expensive to perform SCC finding here
+  TarjanSCC CycleFinder;
+  DenseMap<const Value *, SmallVector<Value *, 4>> Edges;
+  Value *OrigInstLeader =
+      lookupOperandLeader(const_cast<Value *>((const Value *)OrigInst));
+  auto *LeaderInst = dyn_cast<Instruction>(OrigInstLeader);
+
+  SmallVector<Value *, 4> Members(CC->begin(), CC->end());
+  Edges[OrigInst] = Members;
+
+  CycleFinder.Start(OrigInst, Edges);
+  if (LeaderInst) {
+    Edges[LeaderInst] = Members;
+    CycleFinder.Start(LeaderInst, Edges);
+  }
+
+  const SmallPtrSetImpl<const Value *> &Empty = SmallPtrSet<const Value *, 1>();
+  auto &SCC = CycleFinder.getComponentFor(OrigInst);
+  auto &LeaderSCC =
+      LeaderInst ? CycleFinder.getComponentFor(OrigInstLeader) : Empty;
+
   for (auto *Member : *CC) {
     auto *MemberInst = dyn_cast<Instruction>(Member);
+
     if (MemberInst == OrigInst)
       continue;
+
     // Anything that isn't an instruction is always available.
     if (!MemberInst)
       return Member;
+
+    // Prevent cyclic reference, such as:
+    // %a = add i64 %phi, 1
+    // %foundinst = add i64 %a, 1
+    // =>
+    // %phiofops = phi i64 [1, %BB1], [%foundinst, %BB2]
+    // %foundinst = add i64 %phiofops, 1
+    if (SCC.contains(Member) ||
+        (Member != OrigInstLeader && LeaderSCC.contains(Member)))
+      continue;
+
     if (DT->dominates(getBlockForValue(MemberInst), BB))
       return Member;
   }

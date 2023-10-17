@@ -5,15 +5,15 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @foo(i32 %arg, i32 %arg1, ptr %arg2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %bb3
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ %arg1, %bb ], [ [[TMP:%.*]]4, %bb7 ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ %arg, %bb ], [ [[TMP]], %bb7 ]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 %arg2(i32 [[TMP4]], i32 [[TMP]])
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[ARG1:%.*]], [[BB:%.*]] ], [ [[TMP4:%.*]], [[BB7:%.*]] ]
+; CHECK-NEXT:    [[TMP4]] = phi i32 [ [[ARG:%.*]], [[BB]] ], [ [[TMP]], [[BB7]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 [[ARG2:%.*]](i32 [[TMP4]], i32 [[TMP]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %bb7, label %bb8
+; CHECK-NEXT:    br i1 [[TMP6]], label [[BB7]], label [[BB8:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br label %bb3
+; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
@@ -34,4 +34,132 @@ bb7:                                              ; preds = %bb3
 
 bb8:                                              ; preds = %bb3
   ret void
+}
+
+; Don't let %b be the candidate when making %a phi of ops
+define i64 @phis_of_ops_cyclic() {
+; CHECK-LABEL: @phis_of_ops_cyclic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[A:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[A]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[B:%.*]] = add i64 [[A]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i64 [[A]], 100
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_BODY]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i64 [[B]]
+;
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %a = add i64 %indvars.iv, 1
+  %b = add i64 %a, 1
+
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %tobool = icmp slt i64 %indvars.iv.next, 100
+  br i1 %tobool, label %for.body, label %end
+
+end:
+  ret i64 %b
+}
+
+define i64 @phis_of_ops_cyclic_multiple() {
+; CHECK-LABEL: @phis_of_ops_cyclic_multiple(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[A:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[A]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[B:%.*]] = add i64 [[A]], 1
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[B]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i64 [[A]], 100
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_BODY]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i64 [[D]]
+;
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %a = add i64 %indvars.iv, 1
+  %b = add i64 %a, 1
+  %c = add i64 %a, 1
+  %d = add i64 %b, 1
+
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %tobool = icmp slt i64 %indvars.iv.next, 100
+  br i1 %tobool, label %for.body, label %end
+
+end:
+  ret i64 %d
+}
+
+define i64 @phis_of_ops_cyclic_indirect1(i64 %e) {
+; CHECK-LABEL: @phis_of_ops_cyclic_indirect1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ORIGINAL:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ORIGINAL]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[B:%.*]] = add i64 [[ORIGINAL]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i64 [[ORIGINAL]], 100
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_BODY]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i64 [[B]]
+;
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %original = add i64 %indvars.iv, 1
+
+  %b = add i64 %original, 1
+  %c = sub i64 %b, 1
+
+  %phileader = add i64 %c, 1
+
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %tobool = icmp slt i64 %indvars.iv.next, 100
+  br i1 %tobool, label %for.body, label %end
+
+end:
+  ret i64 %phileader
+}
+
+define i64 @phis_of_ops_cyclic_indirect2(i64 %e) {
+; CHECK-LABEL: @phis_of_ops_cyclic_indirect2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ORIGINAL:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ORIGINAL]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[B:%.*]] = add i64 [[ORIGINAL]], 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i64 [[ORIGINAL]], 100
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[FOR_BODY]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i64 [[B]]
+;
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %original = add i64 %indvars.iv, 1
+
+  %b = add i64 %original, 1
+  %c = sub i64 %b, 1
+
+  %phileader = add i64 %c, 1
+
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %tobool = icmp slt i64 %indvars.iv.next, 100
+  br i1 %tobool, label %for.body, label %end
+
+end:
+  ret i64 %phileader
 }
