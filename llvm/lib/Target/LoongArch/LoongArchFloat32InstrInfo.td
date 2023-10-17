@@ -135,7 +135,7 @@ def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">;
 // fcmp.cueq.s $dst, $fa0, $fa0
 def SET_CFR_TRUE  : SET_CFR<0x0c160000, "fcmp.cueq.s">;
 
-// Pseudo instruction for COPY CFRs.
+// Pseudo instruction for copying CFRs.
 def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)> {
   let mayLoad = 0;
   let mayStore = 0;
