@@ -42,7 +42,8 @@ template <> void llvm::invalidateParentIListOrdering(BasicBlock *BB) {
 
 // Explicit instantiation of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<Instruction>;
+template class llvm::SymbolTableListTraits<Instruction,
+                                           ilist_iterator_bits<true>>;
 
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
@@ -221,7 +222,13 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
-  return getFirstNonPHI()->getIterator();
+  const Instruction *I = getFirstNonPHI();
+  BasicBlock::const_iterator It = I->getIterator();
+  // Set the head-inclusive bit to indicate that this iterator includes
+  // any debug-info at the start of the block. This is a no-op unless the
+  // appropriate CMake flag is set.
+  It.setHeadBit(true);
+  return It;
 }
 
 const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
@@ -261,6 +268,10 @@ BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
 
   const_iterator InsertPt = FirstNonPHI->getIterator();
   if (InsertPt->isEHPad()) ++InsertPt;
+  // Set the head-inclusive bit to indicate that this iterator includes
+  // any debug-info at the start of the block. This is a no-op unless the
+  // appropriate CMake flag is set.
+  InsertPt.setHeadBit(true);
   return InsertPt;
 }
 
