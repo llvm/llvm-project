@@ -759,6 +759,7 @@ AffineMap mlir::sparse_tensor::inferLvlToDim(AffineMap dimToLvl,
   } else if (map.isPermutation()) {
     lvlToDim = inversePermutation(map);
   } else {
+    // TODO: check if it's block sparsity
     lvlToDim = inverseBlockSparsity(map, context);
   }
   return lvlToDim;
