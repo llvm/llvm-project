@@ -5964,6 +5964,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "llvm.ptrmask intrinsic arguments must have the same number of "
             "elements",
             &Call);
+    Check(DL.getIndexTypeSizeInBits(Ty0) == Ty1->getScalarSizeInBits(),
+          "llvm.ptrmask intrinsic second argument bitwidth must match "
+          "pointer index type size of first argument",
+          &Call);
     break;
   }
   };

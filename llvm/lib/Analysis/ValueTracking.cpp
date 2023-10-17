@@ -1637,8 +1637,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         const Value *Mask = I->getOperand(1);
         Known2 = KnownBits(Mask->getType()->getScalarSizeInBits());
         computeKnownBits(Mask, Known2, Depth + 1, Q);
-        // This is basically a pointer typed and.
-        Known &= Known2.zextOrTrunc(Known.getBitWidth());
+        // TODO: 1-extend would be more precise.
+        Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
       case Intrinsic::x86_sse42_crc32_64_64:

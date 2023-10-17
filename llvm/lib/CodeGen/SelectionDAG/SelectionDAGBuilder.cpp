@@ -7420,11 +7420,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::ptrmask: {
     SDValue Ptr = getValue(I.getOperand(0));
-    SDValue Const = getValue(I.getOperand(1));
+    SDValue Mask = getValue(I.getOperand(1));
 
     EVT PtrVT = Ptr.getValueType();
-    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr,
-                             DAG.getZExtOrTrunc(Const, sdl, PtrVT)));
+    assert(PtrVT == Mask.getValueType() &&
+           "Pointers with different index type are not supported by SDAG");
+    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
   case Intrinsic::threadlocal_address: {

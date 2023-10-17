@@ -26952,7 +26952,8 @@ Arguments:
 """"""""""
 
 The first argument is a pointer or vector of pointers. The second argument is
-an integer or vector of integers.
+an integer or vector of integers with the same bit width as the index type
+size of the first argument.
 
 Overview:
 """"""""""
@@ -26965,10 +26966,20 @@ to facilitate alias analysis and underlying-object detection.
 Semantics:
 """"""""""
 
-The result of ``ptrmask(ptr, mask)`` is equivalent to
-``getelementptr ptr, (ptrtoint(ptr) & mask) - ptrtoint(ptr)``. Both the returned
-pointer(s) and the first argument are based on the same underlying object (for more
-information on the *based on* terminology see
+The result of ``ptrmask(%ptr, %mask)`` is equivalent to the following expansion,
+where ``iPtrIdx`` is the index type size of the pointer::
+
+    %intptr = ptrtoint ptr %ptr to iPtrIdx ; this may truncate
+    %masked = and iPtrIdx %intptr, %mask
+    %diff = sub iPtrIdx %masked, %intptr
+    %result = getelementptr i8, ptr %ptr, iPtrIdx %diff
+
+Considering this as an operation on the integer representation of the pointer,
+if the pointer index type size is smaller than the pointer type size, this
+implies that the mask is extended with 1 bits to the pointer type size.
+
+Both the returned pointer(s) and the first argument are based on the same
+underlying object (for more information on the *based on* terminology see
 :ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
 mask argument does not match the pointer size of the target, the mask is
 zero-extended or truncated accordingly.
