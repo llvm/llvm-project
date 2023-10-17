@@ -53,14 +53,14 @@ struct __always_false {
 
 // uninitialized_copy
 
-template <class _ValueType, class _InputIterator, class _Sentinel1, class _ForwardIterator, class _OutputIterCompare>
+template <class _ValueType, class _InputIterator, class _Sentinel1, class _ForwardIterator, class _EndPredicate>
 inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_copy(
-    _InputIterator __ifirst, _Sentinel1 __ilast, _ForwardIterator __ofirst, _OutputIterCompare __out_iter_at_end) {
+    _InputIterator __ifirst, _Sentinel1 __ilast, _ForwardIterator __ofirst, _EndPredicate __stop_copying) {
   _ForwardIterator __idx = __ofirst;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif
-    for (; __ifirst != __ilast && !__out_iter_at_end(__idx); ++__ifirst, (void)++__idx)
+    for (; __ifirst != __ilast && !__stop_copying(__idx); ++__ifirst, (void)++__idx)
       ::new (_VSTD::__voidify(*__idx)) _ValueType(*__ifirst);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
@@ -84,14 +84,14 @@ _ForwardIterator uninitialized_copy(_InputIterator __ifirst, _InputIterator __il
 
 // uninitialized_copy_n
 
-template <class _ValueType, class _InputIterator, class _Size, class _ForwardIterator, class _OutputIterCompare>
+template <class _ValueType, class _InputIterator, class _Size, class _ForwardIterator, class _EndPredicate>
 inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_copy_n(
-    _InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _OutputIterCompare __out_iter_at_end) {
+    _InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _EndPredicate __stop_copying) {
   _ForwardIterator __idx = __ofirst;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif
-    for (; __n > 0 && !__out_iter_at_end(__idx); ++__ifirst, (void)++__idx, (void)--__n)
+    for (; __n > 0 && !__stop_copying(__idx); ++__ifirst, (void)++__idx, (void)--__n)
       ::new (_VSTD::__voidify(*__idx)) _ValueType(*__ifirst);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
@@ -300,19 +300,19 @@ template <class _ValueType,
           class _InputIterator,
           class _Sentinel1,
           class _ForwardIterator,
-          class _OutputIterCompare,
+          class _EndPredicate,
           class _IterMove>
 inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_move(
     _InputIterator __ifirst,
     _Sentinel1 __ilast,
     _ForwardIterator __ofirst,
-    _OutputIterCompare __out_iter_at_end,
+    _EndPredicate __stop_moving,
     _IterMove __iter_move) {
   auto __idx = __ofirst;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif
-    for (; __ifirst != __ilast && !__out_iter_at_end(__idx); ++__idx, (void)++__ifirst) {
+    for (; __ifirst != __ilast && !__stop_moving(__idx); ++__idx, (void)++__ifirst) {
       ::new (_VSTD::__voidify(*__idx)) _ValueType(__iter_move(__ifirst));
     }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -342,19 +342,15 @@ template <class _ValueType,
           class _InputIterator,
           class _Size,
           class _ForwardIterator,
-          class _OutputIterCompare,
+          class _EndPredicate,
           class _IterMove>
 inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_move_n(
-    _InputIterator __ifirst,
-    _Size __n,
-    _ForwardIterator __ofirst,
-    _OutputIterCompare __out_iter_at_end,
-    _IterMove __iter_move) {
+    _InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _EndPredicate __stop_moving, _IterMove __iter_move) {
   auto __idx = __ofirst;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   try {
 #endif
-    for (; __n > 0 && !__out_iter_at_end(__idx); ++__idx, (void)++__ifirst, --__n)
+    for (; __n > 0 && !__stop_moving(__idx); ++__idx, (void)++__ifirst, --__n)
       ::new (_VSTD::__voidify(*__idx)) _ValueType(__iter_move(__ifirst));
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
