@@ -393,7 +393,8 @@ public:
     bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      stridesAreContiguous &= (bytes == dim.ByteStride()) | (dim.Extent() == 1);
+      stridesAreContiguous &=
+          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
       bytes *= dim.Extent();
     }
     // One and zero element arrays are contiguous even if the descriptor
