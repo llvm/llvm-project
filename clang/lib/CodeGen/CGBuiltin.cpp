@@ -9713,9 +9713,6 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
     llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
 
     llvm::Value *VecNum = Ops[2];
-    if (auto *C = dyn_cast<ConstantInt>(VecNum))
-      VecNum = Builder.getInt64(C->getZExtValue());
-
     llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
 
     Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
