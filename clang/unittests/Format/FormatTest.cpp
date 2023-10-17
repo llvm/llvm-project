@@ -18928,6 +18928,15 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "                 \"bb\"};\n"
                "int   bbbbbbb = 0;",
                Alignment);
+  // http://llvm.org/PR68079
+  verifyFormat("using Fn   = int (A::*)();\n"
+               "using RFn  = int (A::*)() &;\n"
+               "using RRFn = int (A::*)() &&;",
+               Alignment);
+  verifyFormat("using Fn   = int    (A::*)();\n"
+               "using RFn  = int   *(A::*)() &;\n"
+               "using RRFn = double (A::*)() &&;",
+               Alignment);
 
   // PAS_Right
   verifyFormat("void SomeFunction(int parameter = 0) {\n"
