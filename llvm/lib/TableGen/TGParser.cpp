@@ -111,7 +111,7 @@ static void checkConcrete(Record &R) {
 
 /// Return an Init with a qualifier prefix referring
 /// to CurRec's name.
-static Init *QualifyName(Record &CurRec, Init *Name, bool IsMC) {
+static Init *QualifyName(Record &CurRec, Init *Name, bool IsMC = false) {
   RecordKeeper &RK = CurRec.getRecords();
   Init *NewName = BinOpInit::getStrConcat(
       CurRec.getNameInit(), StringInit::get(RK, IsMC ? "::" : ":"));
@@ -120,6 +120,10 @@ static Init *QualifyName(Record &CurRec, Init *Name, bool IsMC) {
   if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
     NewName = BinOp->Fold(&CurRec);
   return NewName;
+}
+
+static Init *QualifyName(MultiClass *MC, Init *Name) {
+  return QualifyName(MC->Rec, Name, /*IsMC=*/true);
 }
 
 /// Return the qualified version of the implicit 'NAME' template argument.
@@ -3245,13 +3249,13 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
                                   HasField ? RecordVal::FK_NonconcreteOK
                                            : RecordVal::FK_Normal));
   } else if (CurRec) { // class template argument
-    DeclName = QualifyName(*CurRec, DeclName, /*IsMC=*/false);
+    DeclName = QualifyName(*CurRec, DeclName);
     BadField =
         AddValue(CurRec, IdLoc,
                  RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg));
   } else { // multiclass template argument
     assert(CurMultiClass && "invalid context for template argument");
-    DeclName = QualifyName(CurMultiClass->Rec, DeclName, /*IsMC=*/true);
+    DeclName = QualifyName(CurMultiClass, DeclName);
     BadField =
         AddValue(CurRec, IdLoc,
                  RecordVal(DeclName, IdLoc, Type, RecordVal::FK_TemplateArg));
