@@ -437,7 +437,7 @@ MPInt IntMatrix::normalizeRow(unsigned row) {
 MPInt IntMatrix::determinant() {
   unsigned r = getNumRows();
   unsigned c = getNumColumns();
-  ASSERT(r == c);
+  assert(r == c);
 
   FracMatrix m(r, c);
   for (unsigned i = 0; i < r; i++)
@@ -476,7 +476,7 @@ FracMatrix FracMatrix::identity(unsigned dimension) {
 Fraction FracMatrix::determinant() {
   unsigned r = getNumRows();
   unsigned c = getNumColumns();
-  ASSERT(r == c);
+  assert(r == c);
 
   FracMatrix m(*this);
 
@@ -516,57 +516,54 @@ std::optional<FracMatrix> FracMatrix::inverse() {
   unsigned dim = getNumRows();
   if (dim != getNumColumns()) return {};
 
-  // Construct the augmented matrix [M | I]
-  FracMatrix augmented(dim, dim + dim);
+  // We treat the augmented matrix [M | I]
+  // as two separate matrices, M and I.
+  FracMatrix modified(dim, dim);
+  FracMatrix inverse = FracMatrix::identity(dim);
   for (unsigned i = 0; i < dim; i++) {
     for (unsigned j = 0; j < dim; j++)
-      augmented(i, j) = at(i, j);
-    augmented(i, dim + i) = 1;
+      modified(i, j) = at(i, j);
   }
 
   Fraction a, b;
   // For each row in the matrix,
   for (unsigned i = 0; i < dim; i++) {
-    if (augmented(i, i) == 0)
+    if (modified(i, i) == 0)
     // First ensure that the diagonal
     // element is nonzero, by adding
     // a nonzero row to it.
       for (unsigned j = i + 1; j < dim; j++)
-        if (augmented(j, i) != 0) {
-          augmented.addToRow(j, i, 1);
+        if (modified(j, i) != 0) {
+          modified.addToRow(j, i, 1);
+          inverse.addToRow(j, i, 1);
           break;
         }
 
-    b = augmented(i, i);
+    b = modified(i, i);
     // If it is still zero, the matrix is singular.
     if (b == 0)
       return {};
     
     for (unsigned j = 0; j < dim; j++) {
-      if (i == j || augmented(j, i) == 0)
+      if (i == j || modified(j, i) == 0)
         continue;
-      a = augmented(j, i);
+      a = modified(j, i);
       // Rj -> Rj - (a/b)Ri
       // Otherwise set element (j, i) to zero
       // by subtracting the ith row,
       // appropriately scaled.
-      augmented.addToRow(i, j, -a / b);
+      modified.addToRow(i, j, -a / b);
+      inverse.addToRow(i, j, -a / b);
     }
   }
 
   // Now only diagonal elements are nonzero, but they are
   // not necessarily 1. We normalise them.
   for (unsigned i = 0; i < dim; i++) {
-    a = augmented(i, i);
-    for (unsigned j = dim; j < dim + dim; j++)
-      augmented(i, j) = augmented(i, j) / a;
-  }
-
-  // Copy the right half of the augmented matrix.
-  FracMatrix inverse(dim, dim);
-  for (unsigned i = 0; i < dim; i++)
+    a = modified(i, i);
     for (unsigned j = 0; j < dim; j++)
-      inverse(i, j) = augmented(i, j + dim);
+      inverse(i, j) = inverse(i, j) / a;
+  }
 
   return inverse;
 }
