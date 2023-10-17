@@ -4292,6 +4292,11 @@ public:
   llvm::Value *EmitSVEStructStore(const SVETypeFlags &TypeFlags,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned IntID);
+  /// FormSVEBuiltinResult - Returns the struct of scalable vectors as a wider
+  /// vector. It extracts the scalable vector from the struct and inserts into
+  /// the wider vector. This avoids the error when allocating space in llvm
+  /// for struct of scalable vectors if a function returns struct.
+  llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
