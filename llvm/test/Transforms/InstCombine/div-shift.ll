@@ -1280,3 +1280,17 @@ entry:
   %div = sdiv i32 %lhs, %rhs
   ret i32 %div
 }
+
+@a = external global i32
+define i32 @pr69291() {
+; CHECK-LABEL: @pr69291(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %conv = load i32, ptr @a, align 1
+  %add = shl nuw nsw i32 %conv, 1
+  %add2 = shl nuw nsw i32 %conv, 1
+  %div = sdiv i32 %add, %add2
+  ret i32 %div
+}
