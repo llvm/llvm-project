@@ -42,6 +42,7 @@ def _executeScriptInternal(test, litConfig, commands):
     TODO: This really should be easier to access from Lit itself
     """
     parsedCommands = parseScript(test, preamble=commands)
+    litConfig.note(f"Running command {parsedCommands}")
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
