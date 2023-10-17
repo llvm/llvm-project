@@ -77,7 +77,7 @@ void BinarySizeContextTracker::addInstructionForContext(
   ContextTrieNode *CurNode = &RootContext;
   bool IsLeaf = true;
   for (const auto &Callsite : reverse(Context)) {
-    StringRef CallerName = Callsite.FuncName;
+    FunctionId CallerName = Callsite.Func;
     LineLocation CallsiteLoc = IsLeaf ? LineLocation(0, 0) : Callsite.Location;
     CurNode = CurNode->getOrCreateChildContext(CallsiteLoc, CallerName);
     IsLeaf = false;
@@ -145,7 +145,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
       StringRef CallerName = ProbeFrame.first;
       LineLocation CallsiteLoc(ProbeFrame.second, 0);
       SizeContext =
-          SizeContext->getOrCreateChildContext(CallsiteLoc, CallerName);
+          SizeContext->getOrCreateChildContext(CallsiteLoc,
+                                               FunctionId(CallerName));
     }
     // Add 0 size to make known.
     SizeContext->addFunctionSize(0);
@@ -838,6 +839,14 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
   if (BinaryFunctions.empty())
     WithColor::warning() << "Loading of DWARF info completed, but no binary "
                             "functions have been retrieved.\n";
+
+
+  // Populate the hash binary function map for MD5 function name lookup. This
+  // is done after BinaryFunctions are finalized.
+  for (auto &BinaryFunction : BinaryFunctions) {
+    HashBinaryFunctions[MD5Hash(StringRef(BinaryFunction.first))] =
+        &BinaryFunction.second;
+  }
 }
 
 void ProfiledBinary::populateSymbolListFromDWARF(
@@ -889,7 +898,7 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 
     LineLocation Line(LineOffset, Discriminator);
     auto It = NameStrings.insert(FunctionName.str());
-    CallStack.emplace_back(*It.first, Line);
+    CallStack.emplace_back(FunctionId(StringRef(*It.first)), Line);
   }
 
   return CallStack;
