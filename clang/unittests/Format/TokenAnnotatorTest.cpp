@@ -1795,6 +1795,116 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
+  // '__attribute__' has special handling.
+  auto Tokens = annotate("__attribute__(X) void Foo(void);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw___attribute, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+
+  // Generic macro has no special handling in this location.
+  Tokens = annotate("A(X) void Foo(void);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_Unknown);
+
+  // Add a custom AttributeMacro. Test that it has the same behavior.
+  FormatStyle Style = getLLVMStyle();
+  Style.AttributeMacros.push_back("A");
+
+  // An "AttributeMacro" gets annotated like '__attribute__'.
+  Tokens = annotate("A(X) void Foo(void);", Style);
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCDecl) {
+  // '__attribute__' has special handling.
+  auto Tokens = annotate("__attribute__(X) @interface Foo");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw___attribute, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+
+  // Generic macro has no special handling in this location.
+  Tokens = annotate("A(X) @interface Foo");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  // Note: Don't check token-type as a random token in this position is hard to
+  // reason about.
+  EXPECT_TOKEN_KIND(Tokens[0], tok::identifier);
+  EXPECT_TOKEN_KIND(Tokens[1], tok::l_paren);
+
+  // Add a custom AttributeMacro. Test that it has the same behavior.
+  FormatStyle Style = getLLVMStyle();
+  Style.AttributeMacros.push_back("A");
+
+  // An "AttributeMacro" gets annotated like '__attribute__'.
+  Tokens = annotate("A(X) @interface Foo", Style);
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCMethodDecl) {
+  // '__attribute__' has special handling.
+  auto Tokens = annotate("- (id)init __attribute__(X);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw___attribute, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_AttributeRParen);
+
+  // Generic macro has no special handling in this location.
+  Tokens = annotate("- (id)init A(X);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  // Note: Don't check token-type as a random token in this position is hard to
+  // reason about.
+  EXPECT_TOKEN_KIND(Tokens[5], tok::identifier);
+  EXPECT_TOKEN_KIND(Tokens[6], tok::l_paren);
+
+  // Add a custom AttributeMacro. Test that it has the same behavior.
+  FormatStyle Style = getLLVMStyle();
+  Style.AttributeMacros.push_back("A");
+
+  // An "AttributeMacro" gets annotated like '__attribute__'.
+  Tokens = annotate("- (id)init A(X);", Style);
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_AttributeRParen);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCProperty) {
+  // '__attribute__' has special handling.
+  auto Tokens = annotate("@property(weak) id delegate __attribute__(X);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::kw___attribute, TT_Unknown);
+  EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_AttributeRParen);
+
+  // Generic macro has no special handling in this location.
+  Tokens = annotate("@property(weak) id delegate A(X);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  // Note: Don't check token-type as a random token in this position is hard to
+  // reason about.
+  EXPECT_TOKEN_KIND(Tokens[7], tok::identifier);
+  EXPECT_TOKEN_KIND(Tokens[8], tok::l_paren);
+
+  // Add a custom AttributeMacro. Test that it has the same behavior.
+  FormatStyle Style = getLLVMStyle();
+  Style.AttributeMacros.push_back("A");
+
+  // An "AttributeMacro" gets annotated like '__attribute__'.
+  Tokens = annotate("@property(weak) id delegate A(X);", Style);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_AttributeRParen);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   auto Annotate = [this](llvm::StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
