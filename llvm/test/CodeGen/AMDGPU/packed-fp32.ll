@@ -87,7 +87,7 @@ define amdgpu_kernel void @fadd_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GCN-LABEL: {{^}}fadd_v2_v_lit_splat:
 ; GFX900-COUNT-2: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 ; PACKED-SDAG:    v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 1.0 op_sel_hi:[1,0]{{$}}
-; PACKED-GISEL:   v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], {{[sv]}}[{{[0-9:]+}}]{{$}}
+; PACKED-GISEL:   v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fadd_v2_v_lit_splat(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
@@ -308,7 +308,7 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
 ; GCN-LABEL: {{^}}fmul_v2_v_lit_splat:
 ; GFX900-COUNT-2: v_mul_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; PACKED-SDAG:    v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 4.0 op_sel_hi:[1,0]{{$}}
-; PACKED-GISEL:   v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], {{[sv]}}[{{[0-9:]+}}]{{$}}
+; PACKED-GISEL:   v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
