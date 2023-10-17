@@ -504,13 +504,21 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Only logical ops can be done on v4i8 directly, others must be done
   // elementwise.
   setOperationAction(
-      {ISD::ADD,       ISD::MUL,        ISD::ABS,        ISD::SMIN,
-       ISD::SMAX,      ISD::UMIN,       ISD::UMAX,       ISD::CTPOP,
-       ISD::CTLZ,      ISD::ADD,        ISD::SUB,        ISD::MUL,
-       ISD::SHL,       ISD::SREM,       ISD::UREM,       ISD::SDIV,
-       ISD::UDIV,      ISD::SRA,        ISD::SRL,        ISD::MULHS,
-       ISD::MULHU,     ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
-       ISD::UINT_TO_FP},
+      {ISD::ABS,         ISD::ADD,        ISD::ADDC,        ISD::ADDE,
+       ISD::BITREVERSE,  ISD::CTLZ,       ISD::CTPOP,       ISD::CTTZ,
+       ISD::FP_TO_SINT,  ISD::FP_TO_UINT, ISD::FSHL,        ISD::FSHR,
+       ISD::MUL,         ISD::MULHS,      ISD::MULHU,       ISD::PARITY,
+       ISD::ROTL,        ISD::ROTR,       ISD::SADDO,       ISD::SADDO_CARRY,
+       ISD::SADDSAT,     ISD::SDIV,       ISD::SDIVREM,     ISD::SELECT_CC,
+       ISD::SETCC,       ISD::SHL,        ISD::SINT_TO_FP,  ISD::SMAX,
+       ISD::SMIN,        ISD::SMULO,      ISD::SMUL_LOHI,   ISD::SRA,
+       ISD::SREM,        ISD::SRL,        ISD::SSHLSAT,     ISD::SSUBO,
+       ISD::SSUBO_CARRY, ISD::SSUBSAT,    ISD::SUB,         ISD::SUBC,
+       ISD::SUBE,        ISD::UADDO,      ISD::UADDO_CARRY, ISD::UADDSAT,
+       ISD::UDIV,        ISD::UDIVREM,    ISD::UINT_TO_FP,  ISD::UMAX,
+       ISD::UMIN,        ISD::UMULO,      ISD::UMUL_LOHI,   ISD::UREM,
+       ISD::USHLSAT,     ISD::USUBO,      ISD::USUBO_CARRY, ISD::VSELECT,
+       ISD::USUBSAT},
       MVT::v4i8, Expand);
 
   // Operations not directly supported by NVPTX.
