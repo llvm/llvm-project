@@ -3749,7 +3749,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // The motivation for this call into value tracking is to take advantage of
   // the assumption cache, so make sure that is populated.
   if (!CondVal->getType()->isVectorTy() && !AC.assumptions().empty()) {
-    KnownBits Known = computeKnownBits(CondVal, 0, &SI);
+    KnownBits Known(1);
+    computeKnownBits(CondVal, Known, 0, &SI);
     if (Known.One.isOne())
       return replaceInstUsesWith(SI, TrueVal);
     if (Known.Zero.isOne())

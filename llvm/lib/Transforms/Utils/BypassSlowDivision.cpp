@@ -234,7 +234,9 @@ ValueRange FastDivInsertionTask::getValueRange(Value *V,
   unsigned HiBits = LongLen - ShortLen;
 
   const DataLayout &DL = SlowDivOrRem->getModule()->getDataLayout();
-  KnownBits Known = computeKnownBits(V, DL);
+  KnownBits Known(LongLen);
+
+  computeKnownBits(V, Known, DL);
 
   if (Known.countMinLeadingZeros() >= HiBits)
     return VALRNG_KNOWN_SHORT;

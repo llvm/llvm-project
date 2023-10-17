@@ -4099,6 +4099,20 @@ TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
   ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
+TEST(TransferTest, LoopWithShortCircuitedConditionConverges) {
+  std::string Code = R"cc(
+    bool foo();
+
+    void target() {
+      bool c = false;
+      while (foo() || foo()) {
+        c = true;
+      }
+    }
+  )cc";
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
+}
+
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
   std::string Code = R"(
     union Union {

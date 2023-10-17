@@ -452,7 +452,7 @@ LogicalResult acc::PrivateRecipeOp::verifyRegions() {
 LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
   if (failed(verifyInitLikeSingleArgRegion(*this, getInitRegion(),
                                            "privatization", "init", getType(),
-                                           /*verifyYield=*/true)))
+                                           /*verifyYield=*/false)))
     return failure();
 
   if (getCopyRegion().empty())
