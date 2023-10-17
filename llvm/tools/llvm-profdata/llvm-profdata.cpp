@@ -199,6 +199,14 @@ public:
     StringRef New = RemappingTable.lookup(Name);
     return New.empty() ? Name : New;
   }
+
+  FunctionId operator()(FunctionId Name) {
+    // MD5 name cannot be remapped.
+    if (!Name.isStringRef())
+      return Name;
+    StringRef New = RemappingTable.lookup(Name.stringRef());
+    return New.empty() ? Name : FunctionId(New);
+  }
 };
 }
 
@@ -709,14 +717,15 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   //
   // Note that goo's count will remain in bar.cc:bar() as it does not have an
   // entry in InstrProfile.
-  DenseMap<StringRef, std::pair<uint64_t, uint64_t>> FlattenSampleMap;
+  llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
   auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
                             &InstrProfileMap](const FunctionSamples &FS,
                                               const StringRef &RootName) {
     auto BuildMaxSampleMapImpl = [&](const FunctionSamples &FS,
                                      const StringRef &RootName,
                                      auto &BuildImpl) -> void {
-      const StringRef &Name = FS.getName();
+      std::string NameStr = FS.getFunction().str();
+      const StringRef Name = NameStr;
       const StringRef *NewRootName = &RootName;
       uint64_t EntrySample = FS.getHeadSamplesEstimate();
       uint64_t MaxBodySample = FS.getMaxCountInside(/* SkipCallSite*/ true);
@@ -770,7 +779,8 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   for (auto &PD : Reader->getProfiles()) {
     sampleprof::FunctionSamples &FS = PD.second;
-    BuildMaxSampleMap(FS, FS.getName());
+    std::string Name = FS.getFunction().str();
+    BuildMaxSampleMap(FS, Name);
   }
 
   ProfileSummary InstrPS = *IPBuilder.getSummary();
@@ -806,7 +816,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     uint64_t SampleMaxCount = std::max(E.second.first, E.second.second);
     if (SampleMaxCount < ColdSampleThreshold)
       continue;
-    const StringRef &Name = E.first;
+    StringRef Name = E.first();
     auto It = InstrProfileMap.find(Name);
     if (It == InstrProfileMap.end()) {
       auto NewName = StaticFuncMap.find(Name);
@@ -885,7 +895,7 @@ static sampleprof::FunctionSamples
 remapSamples(const sampleprof::FunctionSamples &Samples,
              SymbolRemapper &Remapper, sampleprof_error &Error) {
   sampleprof::FunctionSamples Result;
-  Result.setName(Remapper(Samples.getName()));
+  Result.setFunction(Remapper(Samples.getFunction()));
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
   for (const auto &BodySample : Samples.getBodySamples()) {
@@ -896,7 +906,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
                                     MaskedDiscriminator,
-                                    Remapper(Target.first()), Target.second);
+                                    Remapper(Target.first), Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -905,8 +915,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Callsite : CallsiteSamples.second) {
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
-      MergeResult(Error,
-                  Target[std::string(Remapped.getName())].merge(Remapped));
+      MergeResult(Error, Target[Remapped.getFunction()].merge(Remapped));
     }
   }
   return Result;
