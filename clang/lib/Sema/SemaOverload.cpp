@@ -7688,7 +7688,7 @@ bool Sema::CheckNonDependentConversions(
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
       unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? 0
+                             ? Args.size() - 1 - (ThisConversions + I)
                              : (ThisConversions + I);
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
