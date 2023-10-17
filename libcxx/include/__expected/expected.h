@@ -881,9 +881,9 @@ private:
     template <class _Union>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(bool __has_val, _Union&& __other) {
       if (__has_val)
-        std::construct_at(this, std::in_place, std::forward<_Union>(__other).__val_);
+        std::construct_at(std::addressof(__val_), std::forward<_Union>(__other).__val_);
       else
-        std::construct_at(this, std::unexpect, std::forward<_Union>(__other).__unex_);
+        std::construct_at(std::addressof(__unex_), std::forward<_Union>(__other).__unex_);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
@@ -929,9 +929,9 @@ private:
     template <class _Union>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(bool __has_val, _Union&& __other) {
       if (__has_val)
-        std::construct_at(this, std::in_place, std::forward<_Union>(__other).__val_);
+        std::construct_at(std::addressof(__val_), std::forward<_Union>(__other).__val_);
       else
-        std::construct_at(this, std::unexpect, std::forward<_Union>(__other).__unex_);
+        std::construct_at(std::addressof(__unex_), std::forward<_Union>(__other).__unex_);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
@@ -1488,9 +1488,9 @@ private:
     template <class _Union>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(bool __has_val, _Union&& __other) {
       if (__has_val)
-        std::construct_at(this);
+        std::construct_at(std::addressof(__empty_));
       else
-        std::construct_at(this, std::unexpect, std::forward<_Union>(__other).__unex_);
+        std::construct_at(std::addressof(__unex_), std::forward<_Union>(__other).__unex_);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
@@ -1527,9 +1527,9 @@ private:
     template <class _Union>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(bool __has_val, _Union&& __other) {
       if (__has_val)
-        std::construct_at(this);
+        std::construct_at(std::addressof(__empty_));
       else
-        std::construct_at(this, std::unexpect, std::forward<_Union>(__other).__unex_);
+        std::construct_at(std::addressof(__unex_), std::forward<_Union>(__other).__unex_);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr ~__union_t()
