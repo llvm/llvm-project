@@ -7,6 +7,11 @@
 
 # ERR: error: {{.*}}.o has an STT_TLS symbol but doesn't have an SHF_TLS section
 
+## TODO As a corner case, when /DISCARD/ is present, demoteLocalSymbolsInDiscardedSections
+## demotes tls and the error is not triggered.
+# RUN: echo 'SECTIONS { /DISCARD/ : {} }' > %t.lds
+# RUN: ld.lld %t.o --gc-sections -T %t.lds -o /dev/null
+
 ## If we happen to have a PT_TLS, we will resolve the relocation to
 ## an arbitrary value (current implementation uses a negative value).
 # RUN: echo '.section .tbss,"awT"; .globl root; root: .long 0' | \
@@ -16,6 +21,9 @@
 
 # CHECK:      Hex dump of section '.noalloc':
 # CHECK-NEXT: 0x00000000 {{[0-9a-f]+}} ffffffff
+
+.globl _start
+_start:
 
 .section .tbss,"awT",@nobits
 tls:
