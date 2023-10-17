@@ -9653,11 +9653,6 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   return Store;
 }
 
-Value *CodeGenFunction::EmitTileslice(Value *Offset, Value *Base) {
-  llvm::Value *CastOffset = Builder.CreateIntCast(Offset, Int32Ty, false);
-  return Builder.CreateAdd(Base, CastOffset, "tileslice");
-}
-
 Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
@@ -9724,8 +9719,7 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
     llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
 
     Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] =
-        EmitTileslice(Ops[0], Builder.CreateIntCast(VecNum, Int32Ty, true));
+    Ops[0] = Builder.CreateAdd(Builder.CreateIntCast(VecNum, Int32Ty, true), Builder.CreateIntCast(Ops[0], Int32Ty, false), "tileslice");
     Ops.erase(&Ops[2]);
   }
   Function *F = CGM.getIntrinsic(IntID, {});
