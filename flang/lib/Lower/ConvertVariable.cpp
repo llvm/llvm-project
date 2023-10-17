@@ -714,7 +714,10 @@ needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
     return true;
   // Intent(out) dummies must be finalized at runtime if their type has a
   // finalization.
-  return hasFinalization(sym);
+  // Allocatable components of INTENT(OUT) dummies must be deallocated (9.7.3.2
+  // p6). Calling finalization runtime for this works even if the components
+  // have no final procedures.
+  return hasFinalization(sym) || hasAllocatableDirectComponent(sym);
 }
 
 /// Call default initialization runtime routine to initialize \p var.
@@ -747,6 +750,9 @@ static void finalizeAtRuntime(Fortran::lower::AbstractConverter &converter,
 // is deallocated; any allocated allocatable object that is a subobject of an
 // actual argument corresponding to an INTENT(OUT) dummy argument is
 // deallocated.
+// Note that allocatable components of non-ALLOCATABLE INTENT(OUT) dummy
+// arguments are dealt with needDummyIntentoutFinalization (finalization runtime
+// is called to reach the intended component deallocation effect).
 static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
                                 const Fortran::lower::pft::Variable &var,
                                 Fortran::lower::SymMap &symMap) {

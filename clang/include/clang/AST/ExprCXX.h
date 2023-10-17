@@ -3191,7 +3191,8 @@ class UnresolvedLookupExpr final
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
                        bool Overloaded,
                        const TemplateArgumentListInfo *TemplateArgs,
-                       UnresolvedSetIterator Begin, UnresolvedSetIterator End);
+                       UnresolvedSetIterator Begin, UnresolvedSetIterator End,
+                       bool KnownDependent);
 
   UnresolvedLookupExpr(EmptyShell Empty, unsigned NumResults,
                        bool HasTemplateKWAndArgsInfo);
@@ -3211,12 +3212,15 @@ public:
          const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End);
 
+  // After canonicalization, there may be dependent template arguments in
+  // CanonicalConverted But none of Args is dependent. When any of
+  // CanonicalConverted dependent, KnownDependent is true.
   static UnresolvedLookupExpr *
   Create(const ASTContext &Context, CXXRecordDecl *NamingClass,
          NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-         UnresolvedSetIterator End);
+         UnresolvedSetIterator End, bool KnownDependent);
 
   static UnresolvedLookupExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumResults,

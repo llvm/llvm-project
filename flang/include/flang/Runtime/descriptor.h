@@ -393,13 +393,18 @@ public:
     bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      stridesAreContiguous &= bytes == dim.ByteStride();
+      stridesAreContiguous &=
+          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
       bytes *= dim.Extent();
     }
     // One and zero element arrays are contiguous even if the descriptor
     // byte strides are not perfect multiples.
-    return stridesAreContiguous || bytes == 0 ||
-        bytes == static_cast<SubscriptValue>(ElementBytes());
+    // Arrays with more than 2 elements may also be contiguous even if a
+    // byte stride in one dimension is not a perfect multiple, as long as
+    // this is the last dimension, or if the dimension has one extent and
+    // the following dimension have either one extents or contiguous byte
+    // strides.
+    return stridesAreContiguous || bytes == 0;
   }
 
   // Establishes a pointer to a section or element.
