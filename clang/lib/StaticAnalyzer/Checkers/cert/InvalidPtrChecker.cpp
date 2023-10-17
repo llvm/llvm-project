@@ -123,33 +123,37 @@ const NoteTag *InvalidPtrChecker::createEnvInvalidationNote(
   return C.getNoteTag([this, MainRegion, GetenvRegions,
                        FunctionName = std::string{FunctionName}](
                           PathSensitiveBugReport &BR, llvm::raw_ostream &Out) {
-    auto IsInterestingForInvalidation = [this, &BR](const MemRegion *R) {
-      return R && &BR.getBugType() == &InvalidPtrBugType && BR.isInteresting(R);
-    };
-
-    // Craft the note tag message.
-    llvm::SmallVector<std::string, 2> InvalidLocationNames;
-    if (IsInterestingForInvalidation(MainRegion)) {
-      InvalidLocationNames.push_back("the environment parameter of 'main'");
-    }
-    if (llvm::any_of(GetenvRegions, IsInterestingForInvalidation))
-      InvalidLocationNames.push_back("the environment returned by 'getenv'");
-
-    if (InvalidLocationNames.size() >= 1)
-      Out << '\'' << FunctionName << "' call may invalidate "
-          << InvalidLocationNames[0];
-    if (InvalidLocationNames.size() == 2)
-      Out << ", and " << InvalidLocationNames[1];
+    // Only handle the BugType of this checker.
+    if (&BR.getBugType() != &InvalidPtrBugType)
+      return;
 
     // Mark all regions that were interesting before as NOT interesting now
     // to avoid extra notes coming from invalidation points higher up the
     // bugpath. This ensures, that only the last invalidation point is marked
     // with a note tag.
-    if (IsInterestingForInvalidation(MainRegion))
+    llvm::SmallVector<std::string, 2> InvalidLocationNames;
+    if (BR.isInteresting(MainRegion)) {
       BR.markNotInteresting(MainRegion);
-    for (const MemRegion *GetenvRegion : GetenvRegions)
-      if (IsInterestingForInvalidation(GetenvRegion))
-        BR.markNotInteresting(GetenvRegion);
+      InvalidLocationNames.push_back("the environment parameter of 'main'");
+    }
+    bool InterestingGetenvFound = false;
+    for (const MemRegion *MR : GetenvRegions) {
+      if (BR.isInteresting(MR)) {
+        BR.markNotInteresting(MR);
+        if (!InterestingGetenvFound) {
+          InterestingGetenvFound = true;
+          InvalidLocationNames.push_back(
+              "the environment returned by 'getenv'");
+        }
+      }
+    }
+
+    // Emit note tag message.
+    if (InvalidLocationNames.size() >= 1)
+      Out << '\'' << FunctionName << "' call may invalidate "
+          << InvalidLocationNames[0];
+    if (InvalidLocationNames.size() == 2)
+      Out << ", and " << InvalidLocationNames[1];
   });
 }
 
