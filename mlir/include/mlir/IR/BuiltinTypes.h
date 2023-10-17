@@ -192,6 +192,60 @@ public:
 namespace mlir {
 
 //===----------------------------------------------------------------------===//
+// CopyOnWriteArrayRef<T>
+//===----------------------------------------------------------------------===//
+
+// A wrapper around an ArrayRef<T> that copies to a SmallVector<T> on
+// modification. This is for use in the mlir::<Type>::Builders.
+template <typename T>
+class CopyOnWriteArrayRef {
+public:
+  CopyOnWriteArrayRef(ArrayRef<T> array) : nonOwning(array){};
+
+  CopyOnWriteArrayRef &operator=(ArrayRef<T> array) {
+    nonOwning = array;
+    owningStorage = {};
+    return *this;
+  }
+
+  void insert(size_t index, T value) {
+    SmallVector<T> &vector = ensureCopy();
+    vector.insert(vector.begin() + index, value);
+  }
+
+  void erase(size_t index) {
+    SmallVector<T> &vector = ensureCopy();
+    vector.erase(vector.begin() + index);
+  }
+
+  void set(size_t index, T value) { ensureCopy()[index] = value; }
+
+  size_t size() const { return ArrayRef<T>(*this).size(); }
+
+  bool empty() const { return ArrayRef<T>(*this).empty(); }
+
+  operator ArrayRef<T>() const {
+    return nonOwning.empty() ? ArrayRef<T>(owningStorage) : nonOwning;
+  }
+
+private:
+  SmallVector<T> &ensureCopy() {
+    // Empty non-owning storage signals the array has been copied to the owning
+    // storage (or both are empty). Note: `nonOwning` should never reference
+    // `owningStorage`. This can lead to dangling references if the
+    // CopyOnWriteArrayRef<T> is copied.
+    if (!nonOwning.empty()) {
+      owningStorage = SmallVector<T>(nonOwning);
+      nonOwning = {};
+    }
+    return owningStorage;
+  }
+
+  ArrayRef<T> nonOwning;
+  SmallVector<T> owningStorage;
+};
+
+//===----------------------------------------------------------------------===//
 // MemRefType
 //===----------------------------------------------------------------------===//
 
@@ -273,37 +327,24 @@ public:
 
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    assert(pos < storage.size() && "overflow");
-    storage.erase(storage.begin() + pos);
-    shape = {};
+    assert(pos < shape.size() && "overflow");
+    shape.erase(pos);
     return *this;
   }
 
   /// Insert a val into shape @pos.
   Builder &insertDim(int64_t val, unsigned pos) {
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    assert(pos <= storage.size() && "overflow");
-    storage.insert(storage.begin() + pos, val);
-    shape = {};
+    assert(pos <= shape.size() && "overflow");
+    shape.insert(pos, val);
     return *this;
   }
 
-  /// Returns the current shape.
-  ArrayRef<int64_t> getShape() {
-    return shape.empty() ? ArrayRef(storage) : shape;
-  }
-
   operator RankedTensorType() {
-    return RankedTensorType::get(getShape(), elementType, encoding);
+    return RankedTensorType::get(shape, elementType, encoding);
   }
 
 private:
-  ArrayRef<int64_t> shape;
-  // Owning shape data for copy-on-write operations.
-  SmallVector<int64_t> storage;
+  CopyOnWriteArrayRef<int64_t> shape;
   Type elementType;
   Attribute encoding;
 };
@@ -318,18 +359,18 @@ class VectorType::Builder {
 public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
-      : shape(other.getShape()), elementType(other.getElementType()),
+      : elementType(other.getElementType()), shape(other.getShape()),
         scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
           ArrayRef<bool> scalableDims = {})
-      : shape(shape), elementType(elementType), scalableDims(scalableDims) {}
+      : elementType(elementType), shape(shape), scalableDims(scalableDims) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape,
                     ArrayRef<bool> newIsScalableDim = {}) {
-    scalableDims = newIsScalableDim;
     shape = newShape;
+    scalableDims = newIsScalableDim;
     return *this;
   }
 
@@ -340,50 +381,28 @@ public:
 
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    assert(pos < storage.size() && "overflow");
-    if (storageScalableDims.empty())
-      storageScalableDims.append(scalableDims.begin(), scalableDims.end());
-    storage.erase(storage.begin() + pos);
-    storageScalableDims.erase(storageScalableDims.begin() + pos);
-    shape = {};
-    scalableDims = {};
+    assert(pos < shape.size() && "overflow");
+    shape.erase(pos);
+    if (!scalableDims.empty())
+      scalableDims.erase(pos);
     return *this;
   }
 
   /// Set a dim in shape @pos to val.
   Builder &setDim(unsigned pos, int64_t val) {
-    if (storage.empty())
-      storage.append(shape.begin(), shape.end());
-    assert(pos < storage.size() && "overflow");
-    storage[pos] = val;
-    shape = {};
+    assert(pos < shape.size() && "overflow");
+    shape.set(pos, val);
     return *this;
   }
 
-  /// Returns the current shape.
-  ArrayRef<int64_t> getShape() {
-    return shape.empty() ? ArrayRef(storage) : shape;
-  }
-
-  /// Returns the current scalable dims.
-  ArrayRef<bool> getScalableDims() {
-    return scalableDims.empty() ? ArrayRef(storageScalableDims) : scalableDims;
-  }
-
   operator VectorType() {
-    return VectorType::get(getShape(), elementType, getScalableDims());
+    return VectorType::get(shape, elementType, scalableDims);
   }
 
 private:
-  ArrayRef<int64_t> shape;
-  // Owning shape data for copy-on-write operations.
-  SmallVector<int64_t> storage;
   Type elementType;
-  ArrayRef<bool> scalableDims;
-  // Owning scalableDims data for copy-on-write operations.
-  SmallVector<bool> storageScalableDims;
+  CopyOnWriteArrayRef<int64_t> shape;
+  CopyOnWriteArrayRef<bool> scalableDims;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of
