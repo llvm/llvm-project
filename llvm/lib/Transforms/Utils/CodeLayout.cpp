@@ -1025,7 +1025,6 @@ public:
     // Merge pairs of chains while improving the objective.
     mergeChainPairs();
 
-
     // Collect nodes from all the chains.
     return concatChains();
   }
