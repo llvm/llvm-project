@@ -154,7 +154,7 @@ class GoogleTest(TestFormat):
         if not litConfig.disableGTestSharding:
             testPath, testName = os.path.split(test.getSourcePath())
             while not os.path.exists(testPath):
-                # Handle GTest parametrized and typed tests, whose name includes
+                # Handle GTest parameterized and typed tests, whose name includes
                 # some '/'s.
                 testPath, namePrefix = os.path.split(testPath)
                 testName = namePrefix + "/" + testName
