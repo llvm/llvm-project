@@ -153,20 +153,20 @@ bool Scalar::IsZero() const {
   return false;
 }
 
-void Scalar::GetValue(Stream *s, bool show_type) const {
+void Scalar::GetValue(Stream &s, bool show_type) const {
   if (show_type)
-    s->Printf("(%s) ", GetTypeAsCString());
+    s.Printf("(%s) ", GetTypeAsCString());
 
   switch (m_type) {
   case e_void:
     break;
   case e_int:
-    s->PutCString(llvm::toString(m_integer, 10));
+    s.PutCString(llvm::toString(m_integer, 10));
     break;
   case e_float:
     llvm::SmallString<24> string;
     m_float.toString(string);
-    s->PutCString(string);
+    s.PutCString(string);
     break;
   }
 }
@@ -894,6 +894,6 @@ bool Scalar::SetBit(uint32_t bit) {
 
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os, const Scalar &scalar) {
   StreamString s;
-  scalar.GetValue(&s, /*show_type*/ true);
+  scalar.GetValue(s, /*show_type*/ true);
   return os << s.GetString();
 }
