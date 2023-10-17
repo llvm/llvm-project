@@ -18,7 +18,7 @@
 
 # Introduction
 
-The `lldb-dap` tool (formerly `lldb-vscode) creates a command line tool that
+The `lldb-dap` tool (formerly `lldb-vscode`) creates a command line tool that
 implements the [Debug Adapter
 Protocol](https://microsoft.github.io/debug-adapter-protocol/). It can be
 installed as an extension for Visual Studio Code and other IDEs supporting DAP.
@@ -76,7 +76,7 @@ cd ~/llvm-org.lldb-dap-0.1.0/bin
 ln -s /path/to/a/built/lldb-dap
 ```
 
-This is handy if you want to debug and develope the `lldb-dap` executable
+This is handy if you want to debug and develop the `lldb-dap` executable
 when adding features or fixing bugs.
 
 # Configurations
@@ -222,7 +222,7 @@ locally on port `2345`.
 ```javascript
 {
   "name": "Local Debug Server",
-  "type": "lldb-vscode",
+  "type": "lldb-dap",
   "request": "attach",
   "program": "/tmp/a.out",
   "attachCommands": ["gdb-remote 2345"],
@@ -238,7 +238,7 @@ port `5678` of that other machine.
 ```javascript
 {
   "name": "Remote Debug Server",
-  "type": "lldb-vscode",
+  "type": "lldb-dap",
   "request": "attach",
   "program": "/tmp/a.out",
   "attachCommands": ["gdb-remote hostname:5678"],
