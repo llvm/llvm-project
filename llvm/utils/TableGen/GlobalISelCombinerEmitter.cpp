@@ -3310,6 +3310,10 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   // combine rule used to disable/enable it.
   std::vector<std::pair<unsigned, std::string>> AllCombineRules;
 
+  // Keep track of all rules we've seen so far to ensure we don't process
+  // the same rule twice.
+  StringSet<> RulesSeen;
+
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules);
 
   void emitRuleConfigImpl(raw_ostream &OS);
@@ -3627,27 +3631,35 @@ void GICombinerEmitter::gatherRules(
     std::vector<RuleMatcher> &ActiveRules,
     const std::vector<Record *> &&RulesAndGroups) {
   for (Record *Rec : RulesAndGroups) {
-    if (Rec->isValueUnset("Rules")) {
-      AllCombineRules.emplace_back(NextRuleID, Rec->getName().str());
-      CombineRuleBuilder CRB(Target, SubtargetFeatures, *Rec, NextRuleID++,
-                             ActiveRules);
-
-      if (!CRB.parseAll()) {
-        assert(ErrorsPrinted && "Parsing failed without errors!");
-        continue;
-      }
-
-      if (StopAfterParse) {
-        CRB.print(outs());
-        continue;
-      }
-
-      if (!CRB.emitRuleMatchers()) {
-        assert(ErrorsPrinted && "Emission failed without errors!");
-        continue;
-      }
-    } else
+    if (!Rec->isValueUnset("Rules")) {
       gatherRules(ActiveRules, Rec->getValueAsListOfDefs("Rules"));
+      continue;
+    }
+
+    StringRef RuleName = Rec->getName();
+    if(!RulesSeen.insert(RuleName).second) {
+      PrintWarning(Rec->getLoc(), "skipping rule '" + Rec->getName() + "' because it has already been processed");
+      continue;
+    }
+
+    AllCombineRules.emplace_back(NextRuleID, Rec->getName().str());
+    CombineRuleBuilder CRB(Target, SubtargetFeatures, *Rec, NextRuleID++,
+                            ActiveRules);
+
+    if (!CRB.parseAll()) {
+      assert(ErrorsPrinted && "Parsing failed without errors!");
+      continue;
+    }
+
+    if (StopAfterParse) {
+      CRB.print(outs());
+      continue;
+    }
+
+    if (!CRB.emitRuleMatchers()) {
+      assert(ErrorsPrinted && "Emission failed without errors!");
+      continue;
+    }
   }
 }
 
