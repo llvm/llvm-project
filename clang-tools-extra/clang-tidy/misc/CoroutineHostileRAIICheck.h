@@ -10,15 +10,16 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Basic/DiagnosticIDs.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang::tidy::misc {
 
-/// This check detects hostile-RAII objects which should not persist across a
-/// suspension point in a coroutine.
+/// Detects when objects of certain hostile RAII types persists across
+/// suspension points in a coroutine. Such hostile types include scoped-lockable
+/// types and types belonging to a configurable denylist.
 ///
 ///  For the user-facing documentation see:
 ///  http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
@@ -34,6 +35,9 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_AsIs;
+  }
 private:
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.

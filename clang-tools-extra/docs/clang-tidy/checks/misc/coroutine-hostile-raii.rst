@@ -3,8 +3,8 @@
 misc-coroutine-hostile-raii
 ====================
 
-This check detects hostile-RAII objects which should not persist across a 
-suspension point in a coroutine.
+Detects when objects of certain hostile RAII types persists across suspension points in a coroutine.
+Such hostile types include scoped-lockable types and types belonging to a configurable denylist.
 
 Some objects require that they be destroyed on the same thread that created them. 
 Traditionally this requirement was often phrased as "must be a local variable",
@@ -16,7 +16,7 @@ The lifetime of an object that requires being destroyed on the same thread must
 not encompass a ``co_await`` or ``co_yield`` point. If you create/destroy an object,
 you must do so without allowing the coroutine to suspend in the meantime.
 
-The check considers the following type as hostile:
+Following types are considered as hostile:
 
  - Scoped-lockable types: A scoped-lockable object persisting across a suspension
  point is problematic as the lock held by this object could be unlocked by a 

@@ -21,21 +21,7 @@
 
 using namespace clang::ast_matchers;
 namespace clang::tidy::misc {
-using ::clang::ast_matchers::internal::ASTMatchFinder;
 using clang::ast_matchers::internal::BoundNodesTreeBuilder;
-
-// In case of a match, add the bindings as a separate match. Also don't clear
-// the bindings if a match is not found (unlike Matcher::matches).
-template <class Matcher, class Node>
-bool match(Matcher M, Node &N, ASTMatchFinder *Finder,
-           BoundNodesTreeBuilder *Builder) {
-  BoundNodesTreeBuilder LocalBuilder;
-  if (M.matches(N, Finder, &LocalBuilder)) {
-    Builder->addMatch(LocalBuilder);
-    return true;
-  }
-  return false;
-}
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -43,27 +29,8 @@ CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
       RAIITypesList(utils::options::parseStringList(
           Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))) {}
 
-AST_MATCHER_P(VarDecl, isHostileRAII, std::vector<StringRef>, RAIITypesList) {
-  return match(varDecl(hasType(hasCanonicalType(hasDeclaration(
-                           hasAttr(attr::Kind::ScopedLockable)))))
-                   .bind("scoped-lockable"),
-               Node, Finder, Builder) ||
-         match(varDecl(hasType(hasCanonicalType(hasDeclaration(
-                           namedDecl(hasAnyName(RAIITypesList))))))
-                   .bind("raii"),
-               Node, Finder, Builder);
-}
-
-AST_MATCHER_P(DeclStmt, hasHostileRAII, std::vector<StringRef>, RAIITypesList) {
-  bool IsHostile = false;
-  for (Decl *D : Node.decls())
-    IsHostile |=
-        match(varDecl(isHostileRAII(RAIITypesList)), *D, Finder, Builder);
-  return IsHostile;
-}
-
-AST_MATCHER_P(Expr, isHostileSuspension, std::vector<StringRef>,
-              RAIITypesList) {
+AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
+              InnerMatcher) {
   DynTypedNode P;
   bool IsHostile = false;
   for (const Stmt *Child = &Node; Child; Child = P.get<Stmt>()) {
@@ -79,8 +46,13 @@ AST_MATCHER_P(Expr, isHostileSuspension, std::vector<StringRef>,
       // this suspension.
       if (Sibling == Child)
         break;
-      IsHostile |= match(declStmt(hasHostileRAII(RAIITypesList)), *Sibling,
-                         Finder, Builder);
+      // In case of a match, add the bindings as a separate match. Also don't
+      // clear the bindings if a match is not found (unlike Matcher::matches).
+      BoundNodesTreeBuilder SiblingBuilder;
+      if (InnerMatcher.matches(*Sibling, Finder, &SiblingBuilder)) {
+        Builder->addMatch(SiblingBuilder);
+        IsHostile = true;
+      }
     }
   }
   return IsHostile;
@@ -88,10 +60,17 @@ AST_MATCHER_P(Expr, isHostileSuspension, std::vector<StringRef>,
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.
-  Finder->addMatcher(
-      coawaitExpr(isHostileSuspension(RAIITypesList)).bind("suspension"), this);
-  Finder->addMatcher(
-      coyieldExpr(isHostileSuspension(RAIITypesList)).bind("suspension"), this);
+  auto ScopedLockable = varDecl(hasType(hasCanonicalType(hasDeclaration(
+                                    hasAttr(attr::Kind::ScopedLockable)))))
+                            .bind("scoped-lockable");
+  auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
+                               namedDecl(hasAnyName(RAIITypesList))))))
+                       .bind("raii");
+  Finder->addMatcher(expr(anyOf(coawaitExpr(), coyieldExpr()),
+                          forEachPrevStmt(declStmt(forEach(
+                              varDecl(anyOf(ScopedLockable, OtherRAII))))))
+                         .bind("suspension"),
+                     this);
 }
 
 void CoroutineHostileRAIICheck::check(const MatchFinder::MatchResult &Result) {
