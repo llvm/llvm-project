@@ -518,12 +518,8 @@ std::optional<FracMatrix> FracMatrix::inverse() {
 
   // We treat the augmented matrix [M | I]
   // as two separate matrices, M and I.
-  FracMatrix modified(dim, dim);
+  FracMatrix modified = *this;
   FracMatrix inverse = FracMatrix::identity(dim);
-  for (unsigned i = 0; i < dim; i++) {
-    for (unsigned j = 0; j < dim; j++)
-      modified(i, j) = at(i, j);
-  }
 
   Fraction a, b;
   // For each row in the matrix,
