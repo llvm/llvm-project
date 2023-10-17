@@ -10130,27 +10130,36 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
   return It;
 }
 
-void X86InstrInfo::buildClearRegister(Register Reg,
-                                      MachineBasicBlock &MBB,
+void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator Iter,
-                                      DebugLoc &DL) const {
+                                      DebugLoc &DL,
+                                      bool AllowSideEffects) const {
   const MachineFunction &MF = *MBB.getParent();
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
   if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
-    // FIXME: Ignore MMX registers?
+    // FIXME: Should we ignore MMX registers?
     return;
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
-    BuildMI(MBB, Iter, DL, get(X86::XOR32rr), Reg)
-      .addReg(Reg, RegState::Undef)
-      .addReg(Reg, RegState::Undef);
+    // Convert register to the 32-bit version. Both 'movl' and 'xorl' clear the
+    // upper bits of a 64-bit register automagically.
+    Reg = getX86SubSuperRegister(Reg, 32);
+
+    if (!AllowSideEffects)
+      // XOR affects flags, so use a MOV instead.
+      BuildMI(MBB, Iter, DL, get(X86::MOV32ri), Reg).addImm(0);
+    else
+      BuildMI(MBB, Iter, DL, get(X86::XOR32rr), Reg)
+          .addReg(Reg, RegState::Undef)
+          .addReg(Reg, RegState::Undef);
   } else if (X86::VR128RegClass.contains(Reg)) {
     // XMM#
     if (!ST.hasSSE1())
       return;
 
+    // PXOR is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::PXORrr), Reg)
       .addReg(Reg, RegState::Undef)
       .addReg(Reg, RegState::Undef);
@@ -10159,6 +10168,7 @@ void X86InstrInfo::buildClearRegister(Register Reg,
     if (!ST.hasAVX())
       return;
 
+    // VPXOR is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::VPXORrr), Reg)
       .addReg(Reg, RegState::Undef)
       .addReg(Reg, RegState::Undef);
@@ -10167,6 +10177,7 @@ void X86InstrInfo::buildClearRegister(Register Reg,
     if (!ST.hasAVX512())
       return;
 
+    // VPXORY is safe to use because it doesn't affect flags.
     BuildMI(MBB, Iter, DL, get(X86::VPXORYrr), Reg)
       .addReg(Reg, RegState::Undef)
       .addReg(Reg, RegState::Undef);
@@ -10178,9 +10189,11 @@ void X86InstrInfo::buildClearRegister(Register Reg,
     if (!ST.hasVLX())
       return;
 
-    BuildMI(MBB, Iter, DL, get(ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr), Reg)
-      .addReg(Reg, RegState::Undef)
-      .addReg(Reg, RegState::Undef);
+    // KXOR is safe to use because it doesn't affect flags.
+    unsigned Op = ST.hasBWI() ? X86::KXORQrr : X86::KXORWrr;
+    BuildMI(MBB, Iter, DL, get(Op), Reg)
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
   }
 }
 
