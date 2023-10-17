@@ -725,17 +725,19 @@ define void @store_i8_stride7_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-SLOW-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
 ; AVX512BW-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512BW-SLOW-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm3[0],ymm0[2],ymm3[2]
-; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} zmm1 = zmm0[0,2,1,3,4,6,5,7]
+; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[0,2,1,3]
+; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512BW-SLOW-NEXT:    vpshufb {{.*#+}} zmm1 = zero,zero,zero,zero,zmm1[0,8],zero,zero,zero,zero,zero,zmm1[1,9],zero,zero,zero,zero,zero,zero,zero,zmm1[18],zero,zero,zero,zero,zero,zero,zmm1[19],zero,zero,zero,zero,zmm1[36,44],zero,zero,zero,zero,zero,zmm1[37,45],zero,zero,zero,zero,zero,zmm1[38,46,54],zero,zero,zero,zero,zero,zero,zmm1[55],zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[1,3,0,2,5,7,4,6]
+; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,3,0,2]
+; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; AVX512BW-SLOW-NEXT:    vpshufb {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zmm0[0],zero,zero,zero,zero,zero,zero,zmm0[1],zero,zero,zero,zero,zmm0[18,26],zero,zero,zero,zero,zero,zmm0[19,27],zero,zero,zero,zero,zero,zero,zero,zmm0[36],zero,zero,zero,zero,zero,zero,zmm0[37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[55,63],zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-SLOW-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm1
-; AVX512BW-SLOW-NEXT:    vpshufb {{.*#+}} zmm2 = zmm1[0,8],zero,zero,zero,zero,zero,zmm1[1,9],zero,zero,zero,zero,zero,zmm1[2,10,18,26],zero,zero,zero,zero,zero,zmm1[19,27],zero,zero,zero,zero,zero,zmm1[20,28],zero,zero,zero,zmm1[37,45],zero,zero,zero,zero,zero,zmm1[38,46],zero,zero,zero,zero,zero,zero,zero,zmm1[55,63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} zmm1 = zmm1[2,3,0,1,6,7,4,5]
-; AVX512BW-SLOW-NEXT:    vpshufb {{.*#+}} zmm1 = zero,zero,zmm1[0,8],zero,zero,zero,zero,zero,zmm1[1,9],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm1[19,27],zero,zero,zero,zero,zero,zmm1[20,28],zero,zero,zero,zero,zero,zero,zero,zmm1[37,45],zero,zero,zero,zero,zero,zmm1[38,46],zero,zero,zero,zmm1[55,63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-SLOW-NEXT:    vporq %zmm2, %zmm1, %zmm1
+; AVX512BW-SLOW-NEXT:    vpshufb {{.*#+}} zmm1 = zmm1[0,8],zero,zero,zero,zero,zero,zmm1[1,9],zero,zero,zero,zero,zero,zmm1[2,10,18,26],zero,zero,zero,zero,zero,zmm1[19,27],zero,zero,zero,zero,zero,zmm1[20,28],zero,zero,zero,zmm1[37,45],zero,zero,zero,zero,zero,zmm1[38,46],zero,zero,zero,zero,zero,zero,zero,zmm1[55,63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[2,3,0,1]
+; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm2, %zmm2, %zmm2
+; AVX512BW-SLOW-NEXT:    vpshufb {{.*#+}} zmm2 = zero,zero,zmm2[0,8],zero,zero,zero,zero,zero,zmm2[1,9],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm2[19,27],zero,zero,zero,zero,zero,zmm2[20,28],zero,zero,zero,zero,zero,zero,zero,zmm2[37,45],zero,zero,zero,zero,zero,zmm2[38,46],zero,zero,zero,zmm2[55,63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512BW-SLOW-NEXT:    vporq %zmm1, %zmm2, %zmm1
 ; AVX512BW-SLOW-NEXT:    movabsq $63546854584629360, %rcx # imm = 0xE1C3870E1C3870
 ; AVX512BW-SLOW-NEXT:    kmovq %rcx, %k1
 ; AVX512BW-SLOW-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k1}

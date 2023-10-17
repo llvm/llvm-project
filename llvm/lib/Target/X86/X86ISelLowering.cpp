@@ -52207,9 +52207,13 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
   if (Add.getOpcode() != ISD::ADD)
     return SDValue();
 
+  SDValue AddOp0 = Add.getOperand(0);
+  SDValue AddOp1 = Add.getOperand(1);
   bool Sext = Ext->getOpcode() == ISD::SIGN_EXTEND;
   bool NSW = Add->getFlags().hasNoSignedWrap();
   bool NUW = Add->getFlags().hasNoUnsignedWrap();
+  NSW = NSW || (Sext && DAG.willNotOverflowAdd(true, AddOp0, AddOp1));
+  NUW = NUW || (!Sext && DAG.willNotOverflowAdd(false, AddOp0, AddOp1));
 
   // We need an 'add nsw' feeding into the 'sext' or 'add nuw' feeding
   // into the 'zext'
@@ -52219,8 +52223,8 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
   // Having a constant operand to the 'add' ensures that we are not increasing
   // the instruction count because the constant is extended for free below.
   // A constant operand can also become the displacement field of an LEA.
-  auto *AddOp1 = dyn_cast<ConstantSDNode>(Add.getOperand(1));
-  if (!AddOp1)
+  auto *AddOp1C = dyn_cast<ConstantSDNode>(AddOp1);
+  if (!AddOp1C)
     return SDValue();
 
   // Don't make the 'add' bigger if there's no hope of combining it with some
@@ -52239,10 +52243,9 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
     return SDValue();
 
   // Everything looks good, so pull the '{s|z}ext' ahead of the 'add'.
-  int64_t AddConstant = Sext ? AddOp1->getSExtValue() : AddOp1->getZExtValue();
-  SDValue AddOp0 = Add.getOperand(0);
+  int64_t AddC = Sext ? AddOp1C->getSExtValue() : AddOp1C->getZExtValue();
   SDValue NewExt = DAG.getNode(Ext->getOpcode(), SDLoc(Ext), VT, AddOp0);
-  SDValue NewConstant = DAG.getConstant(AddConstant, SDLoc(Add), VT);
+  SDValue NewConstant = DAG.getConstant(AddC, SDLoc(Add), VT);
 
   // The wider add is guaranteed to not wrap because both operands are
   // sign-extended.
@@ -54448,7 +54451,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
   // TODO - combineX86ShufflesRecursively should handle shuffle concatenation
   // but it currently struggles with different vector widths.
   if (llvm::all_of(Ops, [Op0](SDValue Op) {
-        return Op.getOpcode() == Op0.getOpcode();
+        return Op.getOpcode() == Op0.getOpcode() && Op.hasOneUse();
       })) {
     auto ConcatSubOperand = [&](EVT VT, ArrayRef<SDValue> SubOps, unsigned I) {
       SmallVector<SDValue> Subs;

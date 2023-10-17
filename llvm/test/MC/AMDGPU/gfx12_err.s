@@ -32,9 +32,6 @@ v_cubesc_f32_e64_dpp v5, v1, v2, 12345678 row_shr:4 row_mask:0xf bank_mask:0xf
 v_add3_u32_e64_dpp v5, v1, v2, 49812340 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
 v_cvt_f32_i32_e64_dpp v5, s1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 

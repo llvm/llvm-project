@@ -733,3 +733,238 @@ entry:
   %0 = load i32, ptr inttoptr (i64 2147481600 to ptr)
   ret i32 %0
 }
+
+%struct.S = type { i64, i64 }
+
+define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
+; RV32I-LABEL: fold_addi_from_different_bb:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi sp, sp, -48
+; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a4
+; RV32I-NEXT:    mv s1, a3
+; RV32I-NEXT:    mv s2, a2
+; RV32I-NEXT:    beqz a3, .LBB20_3
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    slti a1, s1, 0
+; RV32I-NEXT:    beqz a1, .LBB20_4
+; RV32I-NEXT:  .LBB20_2:
+; RV32I-NEXT:    li s3, 0
+; RV32I-NEXT:    li s4, 0
+; RV32I-NEXT:    j .LBB20_6
+; RV32I-NEXT:  .LBB20_3:
+; RV32I-NEXT:    seqz a1, s2
+; RV32I-NEXT:    bnez a1, .LBB20_2
+; RV32I-NEXT:  .LBB20_4: # %for.body.lr.ph
+; RV32I-NEXT:    li s5, 0
+; RV32I-NEXT:    li s6, 0
+; RV32I-NEXT:    li s3, 0
+; RV32I-NEXT:    li s4, 0
+; RV32I-NEXT:    slli a0, a0, 4
+; RV32I-NEXT:    add a0, s0, a0
+; RV32I-NEXT:    addi s7, a0, 8
+; RV32I-NEXT:  .LBB20_5: # %for.body
+; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    call f@plt
+; RV32I-NEXT:    lw a0, 4(s7)
+; RV32I-NEXT:    lw a1, 0(s7)
+; RV32I-NEXT:    add a0, a0, s4
+; RV32I-NEXT:    add s3, a1, s3
+; RV32I-NEXT:    sltu s4, s3, a1
+; RV32I-NEXT:    addi s5, s5, 1
+; RV32I-NEXT:    seqz a1, s5
+; RV32I-NEXT:    add s6, s6, a1
+; RV32I-NEXT:    xor a1, s5, s2
+; RV32I-NEXT:    xor a2, s6, s1
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    add s4, a0, s4
+; RV32I-NEXT:    bnez a1, .LBB20_5
+; RV32I-NEXT:  .LBB20_6: # %for.cond.cleanup
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s4
+; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 48
+; RV32I-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: fold_addi_from_different_bb:
+; RV32I-MEDIUM:       # %bb.0: # %entry
+; RV32I-MEDIUM-NEXT:    addi sp, sp, -48
+; RV32I-MEDIUM-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s2, 32(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s3, 28(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
+; RV32I-MEDIUM-NEXT:    mv s0, a4
+; RV32I-MEDIUM-NEXT:    mv s1, a3
+; RV32I-MEDIUM-NEXT:    mv s2, a2
+; RV32I-MEDIUM-NEXT:    beqz a3, .LBB20_3
+; RV32I-MEDIUM-NEXT:  # %bb.1: # %entry
+; RV32I-MEDIUM-NEXT:    slti a1, s1, 0
+; RV32I-MEDIUM-NEXT:    beqz a1, .LBB20_4
+; RV32I-MEDIUM-NEXT:  .LBB20_2:
+; RV32I-MEDIUM-NEXT:    li s3, 0
+; RV32I-MEDIUM-NEXT:    li s4, 0
+; RV32I-MEDIUM-NEXT:    j .LBB20_6
+; RV32I-MEDIUM-NEXT:  .LBB20_3:
+; RV32I-MEDIUM-NEXT:    seqz a1, s2
+; RV32I-MEDIUM-NEXT:    bnez a1, .LBB20_2
+; RV32I-MEDIUM-NEXT:  .LBB20_4: # %for.body.lr.ph
+; RV32I-MEDIUM-NEXT:    li s5, 0
+; RV32I-MEDIUM-NEXT:    li s6, 0
+; RV32I-MEDIUM-NEXT:    li s3, 0
+; RV32I-MEDIUM-NEXT:    li s4, 0
+; RV32I-MEDIUM-NEXT:    slli a0, a0, 4
+; RV32I-MEDIUM-NEXT:    add a0, s0, a0
+; RV32I-MEDIUM-NEXT:    addi s7, a0, 8
+; RV32I-MEDIUM-NEXT:  .LBB20_5: # %for.body
+; RV32I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32I-MEDIUM-NEXT:    mv a0, s0
+; RV32I-MEDIUM-NEXT:    call f@plt
+; RV32I-MEDIUM-NEXT:    lw a0, 4(s7)
+; RV32I-MEDIUM-NEXT:    lw a1, 0(s7)
+; RV32I-MEDIUM-NEXT:    add a0, a0, s4
+; RV32I-MEDIUM-NEXT:    add s3, a1, s3
+; RV32I-MEDIUM-NEXT:    sltu s4, s3, a1
+; RV32I-MEDIUM-NEXT:    addi s5, s5, 1
+; RV32I-MEDIUM-NEXT:    seqz a1, s5
+; RV32I-MEDIUM-NEXT:    add s6, s6, a1
+; RV32I-MEDIUM-NEXT:    xor a1, s5, s2
+; RV32I-MEDIUM-NEXT:    xor a2, s6, s1
+; RV32I-MEDIUM-NEXT:    or a1, a1, a2
+; RV32I-MEDIUM-NEXT:    add s4, a0, s4
+; RV32I-MEDIUM-NEXT:    bnez a1, .LBB20_5
+; RV32I-MEDIUM-NEXT:  .LBB20_6: # %for.cond.cleanup
+; RV32I-MEDIUM-NEXT:    mv a0, s3
+; RV32I-MEDIUM-NEXT:    mv a1, s4
+; RV32I-MEDIUM-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s2, 32(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s3, 28(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s5, 20(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s6, 16(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    lw s7, 12(sp) # 4-byte Folded Reload
+; RV32I-MEDIUM-NEXT:    addi sp, sp, 48
+; RV32I-MEDIUM-NEXT:    ret
+;
+; RV64I-LABEL: fold_addi_from_different_bb:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi sp, sp, -48
+; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    blez a1, .LBB20_3
+; RV64I-NEXT:  # %bb.1: # %for.body.lr.ph
+; RV64I-NEXT:    mv s0, a2
+; RV64I-NEXT:    mv s1, a1
+; RV64I-NEXT:    li s2, 0
+; RV64I-NEXT:    slli a0, a0, 4
+; RV64I-NEXT:    add a0, a2, a0
+; RV64I-NEXT:    addi s3, a0, 8
+; RV64I-NEXT:  .LBB20_2: # %for.body
+; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    call f@plt
+; RV64I-NEXT:    ld a0, 0(s3)
+; RV64I-NEXT:    addi s1, s1, -1
+; RV64I-NEXT:    add s2, a0, s2
+; RV64I-NEXT:    bnez s1, .LBB20_2
+; RV64I-NEXT:    j .LBB20_4
+; RV64I-NEXT:  .LBB20_3:
+; RV64I-NEXT:    li s2, 0
+; RV64I-NEXT:  .LBB20_4: # %for.cond.cleanup
+; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: fold_addi_from_different_bb:
+; RV64I-MEDIUM:       # %bb.0: # %entry
+; RV64I-MEDIUM-NEXT:    addi sp, sp, -48
+; RV64I-MEDIUM-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    blez a1, .LBB20_3
+; RV64I-MEDIUM-NEXT:  # %bb.1: # %for.body.lr.ph
+; RV64I-MEDIUM-NEXT:    mv s0, a2
+; RV64I-MEDIUM-NEXT:    mv s1, a1
+; RV64I-MEDIUM-NEXT:    li s2, 0
+; RV64I-MEDIUM-NEXT:    slli a0, a0, 4
+; RV64I-MEDIUM-NEXT:    add a0, a2, a0
+; RV64I-MEDIUM-NEXT:    addi s3, a0, 8
+; RV64I-MEDIUM-NEXT:  .LBB20_2: # %for.body
+; RV64I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-MEDIUM-NEXT:    mv a0, s0
+; RV64I-MEDIUM-NEXT:    call f@plt
+; RV64I-MEDIUM-NEXT:    ld a0, 0(s3)
+; RV64I-MEDIUM-NEXT:    addi s1, s1, -1
+; RV64I-MEDIUM-NEXT:    add s2, a0, s2
+; RV64I-MEDIUM-NEXT:    bnez s1, .LBB20_2
+; RV64I-MEDIUM-NEXT:    j .LBB20_4
+; RV64I-MEDIUM-NEXT:  .LBB20_3:
+; RV64I-MEDIUM-NEXT:    li s2, 0
+; RV64I-MEDIUM-NEXT:  .LBB20_4: # %for.cond.cleanup
+; RV64I-MEDIUM-NEXT:    mv a0, s2
+; RV64I-MEDIUM-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    addi sp, sp, 48
+; RV64I-MEDIUM-NEXT:    ret
+entry:
+  %cmp4 = icmp sgt i64 %n, 0
+  br i1 %cmp4, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:                                   ; preds = %entry
+  ; TODO: when this GEP is expanded, the resulting `addi` should be folded
+  ; into the load in the loop body.
+  %y = getelementptr inbounds %struct.S, ptr %a, i64 %k, i32 1
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %s.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+  ret i64 %s.0.lcssa
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %i.06 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %s.05 = phi i64 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
+  call void @f(ptr %a)
+  %0 = load i64, ptr %y, align 8
+  %add = add nsw i64 %0, %s.05
+  %inc = add nuw nsw i64 %i.06, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+declare void @f(ptr)

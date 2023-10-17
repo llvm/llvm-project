@@ -91,6 +91,11 @@ C++20 Feature Support
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P0847R7: Deducing this <https://wg21.link/P0847R7>`_. Some related core issues were also
+  implemented (`CWG2553 <https://wg21.link/CWG2553>`_, `CWG2554 <https://wg21.link/CWG2554>`_,
+  `CWG2653 <https://wg21.link/CWG2653>`_, `CWG2687 <https://wg21.link/CWG2687>`_). Because the
+  support for this feature is still experimental, the feature test macro ``__cpp_explicit_this_parameter``
+  was not set in this version.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -127,6 +132,11 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
+- Clang now supports the C-only attribute ``counted_by``. When applied to a
+  struct's flexible array member, it points to the struct field that holds the
+  number of elements in the flexible array member. This information can improve
+  the results of the array bound sanitizer and the
+  ``__builtin_dynamic_object_size`` builtin.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -135,12 +145,20 @@ C23 Feature Support
   previous placeholder value. Clang continues to accept ``-std=c2x`` and
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 - Clang now supports `requires c23` for module maps.
+- Clang now supports ``N3007 Type inference for object definitions``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 New Compiler Flags
 ------------------
+* ``-fverify-intermediate-code`` and its complement ``-fno-verify-intermediate-code``.
+  Enables or disables verification of the generated LLVM IR.
+  Users can pass this to turn on extra verification to catch certain types of
+  compiler bugs at the cost of extra compile time.
+  Since enabling the verifier adds a non-trivial cost of a few percent impact on
+  build times, it's disabled by default, unless your LLVM distribution itself is
+  compiled with runtime checks enabled.
 
 Deprecated Compiler Flags
 -------------------------
@@ -208,6 +226,50 @@ Improvements to Clang's diagnostics
   (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 - Clang now prints its 'note' diagnostic in cyan instead of black, to be more compatible
   with terminals with dark background colors. This is also more consistent with GCC.
+- The fix-it emitted by ``-Wformat`` for scoped enumerations now take the
+  enumeration's underlying type into account instead of suggesting a type just
+  based on the format string specifier being used.
+- Clang now displays an improved diagnostic and a note when a defaulted special
+  member is marked ``constexpr`` in a class with a virtual base class
+  (`#64843: <https://github.com/llvm/llvm-project/issues/64843>`_).
+- ``-Wfixed-enum-extension`` and ``-Wmicrosoft-fixed-enum`` diagnostics are no longer
+  emitted when building as C23, since C23 standardizes support for enums with a
+  fixed underlying type.
+- When describing the failure of static assertion of `==` expression, clang prints the integer
+  representation of the value as well as its character representation when
+  the user-provided expression is of character type. If the character is
+  non-printable, clang now shows the escpaed character.
+  Clang also prints multi-byte characters if the user-provided expression
+  is of multi-byte character type.
+
+  *Example Code*:
+
+  .. code-block:: c++
+
+     static_assert("A\n"[1] == U'🌍');
+
+  *BEFORE*:
+
+  .. code-block:: text
+
+    source:1:15: error: static assertion failed due to requirement '"A\n"[1] == U'\U0001f30d''
+    1 | static_assert("A\n"[1] == U'🌍');
+      |               ^~~~~~~~~~~~~~~~~
+    source:1:24: note: expression evaluates to ''
+    ' == 127757'
+    1 | static_assert("A\n"[1] == U'🌍');
+      |               ~~~~~~~~~^~~~~~~~
+
+  *AFTER*:
+
+  .. code-block:: text
+
+    source:1:15: error: static assertion failed due to requirement '"A\n"[1] == U'\U0001f30d''
+    1 | static_assert("A\n"[1] == U'🌍');
+      |               ^~~~~~~~~~~~~~~~~
+    source:1:24: note: expression evaluates to ''\n' (0x0A, 10) == U'🌍' (0x1F30D, 127757)'
+    1 | static_assert("A\n"[1] == U'🌍');
+      |               ~~~~~~~~~^~~~~~~~
 
 Bug Fixes in This Version
 -------------------------
@@ -264,11 +326,25 @@ Bug Fixes in This Version
   (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Fix crash in implicit conversions from initialize list to arrays of unknown
+  bound for C++20. Fixes
+  (`#62945 <https://github.com/llvm/llvm-project/issues/62945>`_)
 - Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
   (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 - Fixes crash when trying to obtain the common sugared type of
   `decltype(instantiation-dependent-expr)`.
   Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
+- Fixes a crash caused by a multidimensional array being captured by a lambda
+  (`#67722 <https://github.com/llvm/llvm-project/issues/67722>`_).
+- Fixes a crash when instantiating a lambda with requires clause.
+  (`#64462 <https://github.com/llvm/llvm-project/issues/64462>`_)
+- Fixes a regression where the ``UserDefinedLiteral`` was not properly preserved
+  while evaluating consteval functions. (`#63898 <https://github.com/llvm/llvm-project/issues/63898>`_).
+- Fix a crash when evaluating value-dependent structured binding
+  variables at compile time.
+  Fixes (`#67690 <https://github.com/llvm/llvm-project/issues/67690>`_)
+- Fixes a ``clang-17`` regression where ``LLVM_UNREACHABLE_OPTIMIZE=OFF``
+  cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -361,6 +437,9 @@ Bug Fixes to C++ Support
 - Fix crash caused by a spaceship operator returning a comparision category by
   reference. Fixes:
   (`#64162 <https://github.com/llvm/llvm-project/issues/64162>`_)
+- Fix a crash when calling a consteval function in an expression used as
+  the size of an array.
+  (`#65520 <https://github.com/llvm/llvm-project/issues/65520>`_)
 
 - Clang no longer tries to capture non-odr-used variables that appear
   in the enclosing expression of a lambda expression with a noexcept specifier.
@@ -369,6 +448,18 @@ Bug Fixes to C++ Support
 - Fix crash when fold expression was used in the initialization of default
   argument. Fixes:
   (`#67395 <https://github.com/llvm/llvm-project/issues/67395>`_)
+
+- Fixed a bug causing destructors of constant-evaluated structured bindings
+  initialized by array elements to be called in the wrong evaluation context.
+
+- Fix crash where ill-formed code was being treated as a deduction guide and
+  we now produce a diagnostic. Fixes:
+  (`#65522 <https://github.com/llvm/llvm-project/issues/65522>`_)
+
+- Fixed a bug where clang incorrectly considered implicitly generated deduction
+  guides from a non-templated constructor and a templated constructor as ambiguous,
+  rather than prefer the non-templated constructor as specified in
+  [standard.group]p3.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -390,6 +481,8 @@ Miscellaneous Clang Crashes Fixed
   `Issue 64065 <https://github.com/llvm/llvm-project/issues/64065>`_
 - Fixed a crash when check array access on zero-length element.
   `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
+- Fixed a crash when an ObjC ivar has an invalid type. See
+  (`#68001 <https://github.com/llvm/llvm-project/pull/68001>`_)
 
 Target Specific Changes
 -----------------------
@@ -524,6 +617,14 @@ Static Analyzer
   This removal empirically reduces the number of false positive reports.
   Read the PR for the details.
   (`#66086 <https://github.com/llvm/llvm-project/pull/66086>`_)
+
+- A few crashes have been found and fixed using randomized testing related
+  to the use of ``_BitInt()`` in tidy checks and in clang analysis. See
+  `#67212 <https://github.com/llvm/llvm-project/pull/67212>`_,
+  `#66782 <https://github.com/llvm/llvm-project/pull/66782>`_,
+  `#65889 <https://github.com/llvm/llvm-project/pull/65889>`_,
+  `#65888 <https://github.com/llvm/llvm-project/pull/65888>`_, and
+  `#65887 <https://github.com/llvm/llvm-project/pull/65887>`_
 
 .. _release-notes-sanitizers:
 

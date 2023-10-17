@@ -221,6 +221,15 @@ ExprResult Parser::ParseConstantExpression() {
   return ParseConstantExpressionInExprEvalContext(NotTypeCast);
 }
 
+ExprResult Parser::ParseArrayBoundExpression() {
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+  // If we parse the bound of a VLA... we parse a non-constant
+  // constant-expression!
+  Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
+  return ParseConstantExpressionInExprEvalContext(NotTypeCast);
+}
+
 ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
@@ -1564,6 +1573,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw_typename:
   case tok::kw_typeof:
   case tok::kw___vector:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
   {

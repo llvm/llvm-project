@@ -84,7 +84,6 @@ libcxx/include/__algorithm/swap_ranges.h
 libcxx/include/__algorithm/transform.h
 libcxx/include/__algorithm/uniform_random_bit_generator_adaptor.h
 libcxx/include/__algorithm/unwrap_iter.h
-libcxx/include/__algorithm/unwrap_range.h
 libcxx/include/any
 libcxx/include/array
 libcxx/include/__atomic/atomic_base.h
@@ -524,7 +523,6 @@ libcxx/src/include/ryu/ryu.h
 libcxx/src/include/sso_allocator.h
 libcxx/src/ios.cpp
 libcxx/src/iostream.cpp
-libcxx/src/legacy_debug_handler.cpp
 libcxx/src/locale.cpp
 libcxx/src/memory.cpp
 libcxx/src/mutex.cpp
@@ -5616,9 +5614,6 @@ libcxx/test/std/thread/futures/futures.errors/equivalent_int_error_condition.pas
 libcxx/test/std/thread/futures/futures.errors/future_category.pass.cpp
 libcxx/test/std/thread/futures/futures.errors/make_error_code.pass.cpp
 libcxx/test/std/thread/futures/futures.errors/make_error_condition.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/code.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/types.pass.cpp
-libcxx/test/std/thread/futures/futures.future_error/what.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/future_errc.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/future_status.pass.cpp
 libcxx/test/std/thread/futures/futures.overview/is_error_code_enum_future_errc.pass.cpp

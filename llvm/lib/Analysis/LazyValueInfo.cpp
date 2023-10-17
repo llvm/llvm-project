@@ -1976,22 +1976,22 @@ void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 
 void LazyValueInfo::forgetValue(Value *V) {
   if (auto *Impl = getImpl())
-    getImpl()->forgetValue(V);
+    Impl->forgetValue(V);
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {
   if (auto *Impl = getImpl())
-    getImpl()->eraseBlock(BB);
+    Impl->eraseBlock(BB);
 }
 
 void LazyValueInfo::clear() {
   if (auto *Impl = getImpl())
-    getImpl()->clear();
+    Impl->clear();
 }
 
 void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
   if (auto *Impl = getImpl())
-    getImpl()->printLVI(F, DTree, OS);
+    Impl->printLVI(F, DTree, OS);
 }
 
 // Print the LVI for the function arguments at the start of each basic block.

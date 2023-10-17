@@ -247,6 +247,7 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
+    llvm::TimeTraceScope timeScope("File: ", path);
     auto [mb, ec] = future->get();
     if (ec) {
       // Retry reading the file (synchronously) now that we may have added
@@ -332,6 +333,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
+      llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
       ctx.driver.addArchiveBuffer(mb, toCOFFString(ctx, sym), parentName,
                                   offsetInArchive);
     });
@@ -348,6 +350,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     auto mbOrErr = future->get();
     if (mbOrErr.second)
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
+    llvm::TimeTraceScope timeScope("Archive: ",
+                                   mbOrErr.first->getBufferIdentifier());
     // Pass empty string as archive name so that the original filename is
     // used as the buffer identifier.
     ctx.driver.addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
@@ -645,23 +649,19 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
 
   SmallString<128> libDir(rootDir);
   sys::path::append(libDir, "lib");
-  // We need to prepend the paths here in order to make sure that we always
-  // try to link the clang versions of the builtins over the ones supplied by
-  // MSVC.
-  searchPaths.insert(searchPaths.begin(), saver().save(libDir.str()));
 
   // Add the resource dir library path
   SmallString<128> runtimeLibDir(rootDir);
   sys::path::append(runtimeLibDir, "lib", "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
-  searchPaths.insert(searchPaths.begin(), saver().save(runtimeLibDir.str()));
-
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
   sys::path::append(runtimeLibDirWithOS, "windows");
-  searchPaths.insert(searchPaths.begin(),
-                     saver().save(runtimeLibDirWithOS.str()));
+
+  searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
+  searchPaths.push_back(saver().save(runtimeLibDir.str()));
+  searchPaths.push_back(saver().save(libDir.str()));
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {
@@ -978,6 +978,7 @@ std::string LinkerDriver::getImportName(bool asLib) {
 }
 
 void LinkerDriver::createImportLibrary(bool asLib) {
+  llvm::TimeTraceScope timeScope("Create import library");
   std::vector<COFFShortExport> exports;
   for (Export &e1 : ctx.config.exports) {
     COFFShortExport e2;
@@ -1035,6 +1036,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
 }
 
 void LinkerDriver::parseModuleDefs(StringRef path) {
+  llvm::TimeTraceScope timeScope("Parse def file");
   std::unique_ptr<MemoryBuffer> mb =
       CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
                                   /*RequiresNullTerminator=*/false,
@@ -1099,6 +1101,7 @@ void LinkerDriver::enqueueTask(std::function<void()> task) {
 }
 
 bool LinkerDriver::run() {
+  llvm::TimeTraceScope timeScope("Read input files");
   ScopedTimer t(ctx.inputFileTimer);
 
   bool didWork = !taskQueue.empty();
@@ -1237,6 +1240,8 @@ static void markAddrsig(Symbol *s) {
 }
 
 static void findKeepUniqueSections(COFFLinkerContext &ctx) {
+  llvm::TimeTraceScope timeScope("Find keep unique sections");
+
   // Exported symbols could be address-significant in other executables or DSOs,
   // so we conservatively mark them as address-significant.
   for (Export &r : ctx.config.exports)
@@ -1329,6 +1334,7 @@ void LinkerDriver::parsePDBAltPath() {
 /// trees into one resource tree.
 /// Call after ObjFile::Instances is complete.
 void LinkerDriver::convertResources() {
+  llvm::TimeTraceScope timeScope("Convert resources");
   std::vector<ObjFile *> resourceObjFiles;
 
   for (ObjFile *f : ctx.objFileInstances) {
@@ -1482,6 +1488,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ArgParser parser(ctx);
   opt::InputArgList args = parser.parse(argsArr);
 
+  // Initialize time trace profiler.
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace_eq);
+  config->timeTraceGranularity =
+      args::getInteger(args, OPT_time_trace_granularity_eq, 500);
+
+  if (config->timeTraceEnabled)
+    timeTraceProfilerInitialize(config->timeTraceGranularity, argsArr[0]);
+
+  llvm::TimeTraceScope timeScope("COFF link");
+
   // Parse and evaluate -mllvm options.
   std::vector<const char *> v;
   v.push_back("lld-link (LLVM option parsing)");
@@ -1489,8 +1505,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     v.push_back(arg->getValue());
     config->mllvmOpts.emplace_back(arg->getValue());
   }
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(v.size(), v.data());
+  {
+    llvm::TimeTraceScope timeScope2("Parse cl::opt");
+    cl::ResetAllOptionOccurrences();
+    cl::ParseCommandLineOptions(v.size(), v.data());
+  }
 
   // Handle /errorlimit early, because error() depends on it.
   if (auto *arg = args.getLastArg(OPT_errorlimit)) {
@@ -1543,15 +1562,18 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
                                   " (use --error-limit=0 to see all errors)";
 
   // Handle /linkrepro and /reproduce.
-  if (std::optional<std::string> path = getReproduceFile(args)) {
-    Expected<std::unique_ptr<TarWriter>> errOrWriter =
-        TarWriter::create(*path, sys::path::stem(*path));
+  {
+    llvm::TimeTraceScope timeScope2("Reproducer");
+    if (std::optional<std::string> path = getReproduceFile(args)) {
+      Expected<std::unique_ptr<TarWriter>> errOrWriter =
+          TarWriter::create(*path, sys::path::stem(*path));
 
-    if (errOrWriter) {
-      tar = std::move(*errOrWriter);
-    } else {
-      error("/linkrepro: failed to open " + *path + ": " +
-            toString(errOrWriter.takeError()));
+      if (errOrWriter) {
+        tar = std::move(*errOrWriter);
+      } else {
+        error("/linkrepro: failed to open " + *path + ": " +
+              toString(errOrWriter.takeError()));
+      }
     }
   }
 
@@ -1563,13 +1585,17 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Construct search path list.
-  searchPaths.emplace_back("");
-  for (auto *arg : args.filtered(OPT_libpath))
-    searchPaths.push_back(arg->getValue());
-  detectWinSysRoot(args);
-  if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
-    addLibSearchPaths();
-  addClangLibSearchPaths(argsArr[0]);
+  {
+    llvm::TimeTraceScope timeScope2("Search paths");
+    searchPaths.emplace_back("");
+    // Prefer the Clang provided builtins over the ones bundled with MSVC.
+    addClangLibSearchPaths(argsArr[0]);
+    for (auto *arg : args.filtered(OPT_libpath))
+      searchPaths.push_back(arg->getValue());
+    detectWinSysRoot(args);
+    if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+      addLibSearchPaths();
+  }
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
@@ -1704,16 +1730,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_appcontainer, OPT_appcontainer_no, false);
 
   // Handle /machine
-  if (auto *arg = args.getLastArg(OPT_machine)) {
-    config->machine = getMachineType(arg->getValue());
-    if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
-      fatal(Twine("unknown /machine argument: ") + arg->getValue());
-    addWinSysRootLibSearchPaths();
+  {
+    llvm::TimeTraceScope timeScope2("Machine arg");
+    if (auto *arg = args.getLastArg(OPT_machine)) {
+      config->machine = getMachineType(arg->getValue());
+      if (config->machine == IMAGE_FILE_MACHINE_UNKNOWN)
+        fatal(Twine("unknown /machine argument: ") + arg->getValue());
+      addWinSysRootLibSearchPaths();
+    }
   }
 
   // Handle /nodefaultlib:<filename>
-  for (auto *arg : args.filtered(OPT_nodefaultlib))
-    config->noDefaultLibs.insert(findLib(arg->getValue()).lower());
+  {
+    llvm::TimeTraceScope timeScope2("Nodefaultlib");
+    for (auto *arg : args.filtered(OPT_nodefaultlib))
+      config->noDefaultLibs.insert(findLib(arg->getValue()).lower());
+  }
 
   // Handle /nodefaultlib
   if (args.hasArg(OPT_nodefaultlib_all))
@@ -1854,6 +1886,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /lldsavetemps
   if (args.hasArg(OPT_lldsavetemps))
     config->saveTemps = true;
+
+  // Handle /lldemit
+  if (auto *arg = args.getLastArg(OPT_lldemit)) {
+    StringRef s = arg->getValue();
+    if (s == "obj")
+      config->emit = EmitKind::Obj;
+    else if (s == "llvm")
+      config->emit = EmitKind::LLVM;
+    else if (s == "asm")
+      config->emit = EmitKind::ASM;
+    else
+      error("/lldemit: unknown option: " + s);
+  }
 
   // Handle /kill-at
   if (args.hasArg(OPT_kill_at))
@@ -2038,30 +2083,33 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Create a list of input files. These can be given as OPT_INPUT options
   // and OPT_wholearchive_file options, and we also need to track OPT_start_lib
   // and OPT_end_lib.
-  bool inLib = false;
-  for (auto *arg : args) {
-    switch (arg->getOption().getID()) {
-    case OPT_end_lib:
-      if (!inLib)
-        error("stray " + arg->getSpelling());
-      inLib = false;
-      break;
-    case OPT_start_lib:
-      if (inLib)
-        error("nested " + arg->getSpelling());
-      inLib = true;
-      break;
-    case OPT_wholearchive_file:
-      if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-        enqueuePath(*path, true, inLib);
-      break;
-    case OPT_INPUT:
-      if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-        enqueuePath(*path, isWholeArchive(*path), inLib);
-      break;
-    default:
-      // Ignore other options.
-      break;
+  {
+    llvm::TimeTraceScope timeScope2("Parse & queue inputs");
+    bool inLib = false;
+    for (auto *arg : args) {
+      switch (arg->getOption().getID()) {
+      case OPT_end_lib:
+        if (!inLib)
+          error("stray " + arg->getSpelling());
+        inLib = false;
+        break;
+      case OPT_start_lib:
+        if (inLib)
+          error("nested " + arg->getSpelling());
+        inLib = true;
+        break;
+      case OPT_wholearchive_file:
+        if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
+          enqueuePath(*path, true, inLib);
+        break;
+      case OPT_INPUT:
+        if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
+          enqueuePath(*path, isWholeArchive(*path), inLib);
+        break;
+      default:
+        // Ignore other options.
+        break;
+      }
     }
   }
 
@@ -2084,8 +2132,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     raw_svector_ostream stream(buffer);
     stream << "Library search paths:\n";
 
-    for (StringRef path : searchPaths)
+    for (StringRef path : searchPaths) {
+      if (path == "")
+        path = "(cwd)";
       stream << "  " << path << "\n";
+    }
 
     message(buffer);
   }
@@ -2114,6 +2165,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     parseFunctionPadMin(arg);
 
   if (tar) {
+    llvm::TimeTraceScope timeScope("Reproducer: response file");
     tar->append("response.txt",
                 createResponseFile(args, filePaths,
                                    ArrayRef<StringRef>(searchPaths).slice(1)));
@@ -2134,15 +2186,18 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
           machineToStr(config->machine));
 
   // Handle /export
-  for (auto *arg : args.filtered(OPT_export)) {
-    Export e = parseExport(arg->getValue());
-    if (config->machine == I386) {
-      if (!isDecorated(e.name))
-        e.name = saver().save("_" + e.name);
-      if (!e.extName.empty() && !isDecorated(e.extName))
-        e.extName = saver().save("_" + e.extName);
+  {
+    llvm::TimeTraceScope timeScope("Parse /export");
+    for (auto *arg : args.filtered(OPT_export)) {
+      Export e = parseExport(arg->getValue());
+      if (config->machine == I386) {
+        if (!isDecorated(e.name))
+          e.name = saver().save("_" + e.name);
+        if (!e.extName.empty() && !isDecorated(e.extName))
+          e.extName = saver().save("_" + e.extName);
+      }
+      config->exports.push_back(e);
     }
-    config->exports.push_back(e);
   }
 
   // Handle /def
@@ -2163,40 +2218,47 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // that from entry point name.  Must happen before /entry handling,
   // and after the early return when just writing an import library.
   if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN) {
+    llvm::TimeTraceScope timeScope("Infer subsystem");
     config->subsystem = inferSubsystem();
     if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN)
       fatal("subsystem must be defined");
   }
 
   // Handle /entry and /dll
-  if (auto *arg = args.getLastArg(OPT_entry)) {
-    config->entry = addUndefined(mangle(arg->getValue()));
-  } else if (!config->entry && !config->noEntry) {
-    if (args.hasArg(OPT_dll)) {
-      StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
-                                              : "_DllMainCRTStartup";
-      config->entry = addUndefined(s);
-    } else if (config->driverWdm) {
-      // /driver:wdm implies /entry:_NtProcessStartup
-      config->entry = addUndefined(mangle("_NtProcessStartup"));
-    } else {
-      // Windows specific -- If entry point name is not given, we need to
-      // infer that from user-defined entry name.
-      StringRef s = findDefaultEntry();
-      if (s.empty())
-        fatal("entry point must be defined");
-      config->entry = addUndefined(s);
-      log("Entry name inferred: " + s);
+  {
+    llvm::TimeTraceScope timeScope("Entry point");
+    if (auto *arg = args.getLastArg(OPT_entry)) {
+      config->entry = addUndefined(mangle(arg->getValue()));
+    } else if (!config->entry && !config->noEntry) {
+      if (args.hasArg(OPT_dll)) {
+        StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
+                                                : "_DllMainCRTStartup";
+        config->entry = addUndefined(s);
+      } else if (config->driverWdm) {
+        // /driver:wdm implies /entry:_NtProcessStartup
+        config->entry = addUndefined(mangle("_NtProcessStartup"));
+      } else {
+        // Windows specific -- If entry point name is not given, we need to
+        // infer that from user-defined entry name.
+        StringRef s = findDefaultEntry();
+        if (s.empty())
+          fatal("entry point must be defined");
+        config->entry = addUndefined(s);
+        log("Entry name inferred: " + s);
+      }
     }
   }
 
   // Handle /delayload
-  for (auto *arg : args.filtered(OPT_delayload)) {
-    config->delayLoads.insert(StringRef(arg->getValue()).lower());
-    if (config->machine == I386) {
-      config->delayLoadHelper = addUndefined("___delayLoadHelper2@8");
-    } else {
-      config->delayLoadHelper = addUndefined("__delayLoadHelper2");
+  {
+    llvm::TimeTraceScope timeScope("Delay load");
+    for (auto *arg : args.filtered(OPT_delayload)) {
+      config->delayLoads.insert(StringRef(arg->getValue()).lower());
+      if (config->machine == I386) {
+        config->delayLoadHelper = addUndefined("___delayLoadHelper2@8");
+      } else {
+        config->delayLoadHelper = addUndefined("__delayLoadHelper2");
+      }
     }
   }
 
@@ -2290,54 +2352,57 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
   // converge.
-  do {
-    // Windows specific -- if entry point is not found,
-    // search for its mangled names.
-    if (config->entry)
-      mangleMaybe(config->entry);
+  {
+    llvm::TimeTraceScope timeScope("Add unresolved symbols");
+    do {
+      // Windows specific -- if entry point is not found,
+      // search for its mangled names.
+      if (config->entry)
+        mangleMaybe(config->entry);
 
-    // Windows specific -- Make sure we resolve all dllexported symbols.
-    for (Export &e : config->exports) {
-      if (!e.forwardTo.empty())
-        continue;
-      e.sym = addUndefined(e.name);
-      if (e.source != ExportSource::Directives)
-        e.symbolName = mangleMaybe(e.sym);
-    }
+      // Windows specific -- Make sure we resolve all dllexported symbols.
+      for (Export &e : config->exports) {
+        if (!e.forwardTo.empty())
+          continue;
+        e.sym = addUndefined(e.name);
+        if (e.source != ExportSource::Directives)
+          e.symbolName = mangleMaybe(e.sym);
+      }
 
-    // Add weak aliases. Weak aliases is a mechanism to give remaining
-    // undefined symbols final chance to be resolved successfully.
-    for (auto pair : config->alternateNames) {
-      StringRef from = pair.first;
-      StringRef to = pair.second;
-      Symbol *sym = ctx.symtab.find(from);
-      if (!sym)
-        continue;
-      if (auto *u = dyn_cast<Undefined>(sym))
-        if (!u->weakAlias)
-          u->weakAlias = ctx.symtab.addUndefined(to);
-    }
+      // Add weak aliases. Weak aliases is a mechanism to give remaining
+      // undefined symbols final chance to be resolved successfully.
+      for (auto pair : config->alternateNames) {
+        StringRef from = pair.first;
+        StringRef to = pair.second;
+        Symbol *sym = ctx.symtab.find(from);
+        if (!sym)
+          continue;
+        if (auto *u = dyn_cast<Undefined>(sym))
+          if (!u->weakAlias)
+            u->weakAlias = ctx.symtab.addUndefined(to);
+      }
 
-    // If any inputs are bitcode files, the LTO code generator may create
-    // references to library functions that are not explicit in the bitcode
-    // file's symbol table. If any of those library functions are defined in a
-    // bitcode file in an archive member, we need to arrange to use LTO to
-    // compile those archive members by adding them to the link beforehand.
-    if (!ctx.bitcodeFileInstances.empty())
-      for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
-        ctx.symtab.addLibcall(s);
+      // If any inputs are bitcode files, the LTO code generator may create
+      // references to library functions that are not explicit in the bitcode
+      // file's symbol table. If any of those library functions are defined in a
+      // bitcode file in an archive member, we need to arrange to use LTO to
+      // compile those archive members by adding them to the link beforehand.
+      if (!ctx.bitcodeFileInstances.empty())
+        for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+          ctx.symtab.addLibcall(s);
 
-    // Windows specific -- if __load_config_used can be resolved, resolve it.
-    if (ctx.symtab.findUnderscore("_load_config_used"))
-      addUndefined(mangle("_load_config_used"));
+      // Windows specific -- if __load_config_used can be resolved, resolve it.
+      if (ctx.symtab.findUnderscore("_load_config_used"))
+        addUndefined(mangle("_load_config_used"));
 
-    if (args.hasArg(OPT_include_optional)) {
-      // Handle /includeoptional
-      for (auto *arg : args.filtered(OPT_include_optional))
-        if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-          addUndefined(arg->getValue());
-    }
-  } while (run());
+      if (args.hasArg(OPT_include_optional)) {
+        // Handle /includeoptional
+        for (auto *arg : args.filtered(OPT_include_optional))
+          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
+            addUndefined(arg->getValue());
+      }
+    } while (run());
+  }
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
@@ -2395,7 +2460,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
   // in addCombinedLTOObject, so we are done if that's the case.
-  if (config->thinLTOIndexOnly)
+  // Likewise, don't emit object files for other /lldemit options.
+  if (config->emit != EmitKind::Obj || config->thinLTOIndexOnly)
     return;
 
   // If we generated native object files from bitcode files, this resolves
@@ -2433,6 +2499,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // need to create a .lib file. In MinGW mode, we only do that when the
   // -implib option is given explicitly, for compatibility with GNU ld.
   if (!config->exports.empty() || config->dll) {
+    llvm::TimeTraceScope timeScope("Create .lib exports");
     fixupExports();
     if (!config->noimplib && (!config->mingw || !config->implib.empty()))
       createImportLibrary(/*asLib=*/false);
@@ -2486,6 +2553,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /call-graph-ordering-file and /call-graph-profile-sort (default on).
   if (config->callGraphProfileSort) {
+    llvm::TimeTraceScope timeScope("Call graph");
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       parseCallGraphFile(arg->getValue());
     }
@@ -2534,6 +2602,15 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   rootTimer.stop();
   if (config->showTiming)
     ctx.rootTimer.print();
+
+  if (config->timeTraceEnabled) {
+    // Manually stop the topmost "COFF link" scope, since we're shutting down.
+    timeTraceProfilerEnd();
+
+    checkError(timeTraceProfilerWrite(
+        args.getLastArgValue(OPT_time_trace_eq).str(), config->outputFile));
+    timeTraceProfilerCleanup();
+  }
 }
 
 } // namespace lld::coff

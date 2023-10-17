@@ -190,6 +190,7 @@ Frontend
 | EvaluateAsInitializer (slow_value)
 | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
 | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
+| EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
 | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
 | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations
