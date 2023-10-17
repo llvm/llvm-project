@@ -9719,7 +9719,9 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
     llvm::Value *MulVL = Builder.CreateMul(CntsbCall, VecNum, "mulvl");
 
     Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
-    Ops[0] = Builder.CreateAdd(Builder.CreateIntCast(VecNum, Int32Ty, true), Builder.CreateIntCast(Ops[0], Int32Ty, false), "tileslice");
+    Ops[0] = Builder.CreateAdd(Builder.CreateIntCast(VecNum, Int32Ty, true),
+                               Builder.CreateIntCast(Ops[0], Int32Ty, false),
+                               "tileslice");
     Ops.erase(&Ops[2]);
   }
   Function *F = CGM.getIntrinsic(IntID, {});
