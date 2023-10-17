@@ -35,8 +35,8 @@ std::unique_ptr<Pass> createTosaToLinalgNamed();
 void addTosaToLinalgPasses(
     OpPassManager &pm, const TosaToLinalgOptions &options,
     // Note: Default to 'none' level unless otherwise specified.
-    tosa::ValidationOptions const &validationOptions =
-        tosa::ValidationOptions().setLevel(tosa::TosaLevelEnum::None));
+    tosa::TosaValidationOptions const &validationOptions = {
+        tosa::TosaProfileEnum::Undefined, false, tosa::TosaLevelEnum::None});
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
 void populateTosaToLinalgConversionPatterns(RewritePatternSet *patterns);

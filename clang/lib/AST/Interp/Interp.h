@@ -1488,11 +1488,14 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
   using OneT = Integral<8, false>;
 
+  const Pointer &P = Ptr.deref<Pointer>();
+  if (!CheckNull(S, OpPC, P, CSK_ArrayIndex))
+    return false;
+
   // Get the current value on the stack.
-  S.Stk.push<Pointer>(Ptr.deref<Pointer>());
+  S.Stk.push<Pointer>(P);
 
   // Now the current Ptr again and a constant 1.
-  Pointer P = Ptr.deref<Pointer>();
   OneT One = OneT::from(1);
   if (!OffsetHelper<OneT, Op>(S, OpPC, One, P))
     return false;
