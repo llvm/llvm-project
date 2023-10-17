@@ -1502,6 +1502,8 @@ canAdjustSEWLMULRatio(const MachineInstr &MI, const MachineInstr &NextMI,
   unsigned SEW = MIInfo.getSEW() * 8;
   // Fixed point value with 3 fractional bits.
   unsigned NewRatio = SEW / NextMIInfo.getSEWLMULRatio();
+  if (NewRatio < 1 || NewRatio > 64)
+    return std::nullopt;
   bool Fractional = NewRatio < 8;
   RISCVII::VLMUL NewVLMul = RISCVVType::encodeLMUL(
       Fractional ? 8 / NewRatio : NewRatio / 8, Fractional);
