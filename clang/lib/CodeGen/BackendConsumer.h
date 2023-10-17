@@ -113,7 +113,7 @@ public:
 
 
  // Links each entry in LinkModules into our module.  Returns true on error.
-  bool LinkInModules(llvm::Module *M);
+  bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.

@@ -49,6 +49,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 #include <optional>
 using namespace clang;
@@ -229,9 +230,16 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 }
 
 // Links each entry in LinkModules into our module.  Returns true on error.
-bool BackendConsumer::LinkInModules(llvm::Module *M) {
+bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
+
   for (auto &LM : LinkModules) {
     assert(LM.Module && "LinkModule does not actually have a module");
+
+    // If ShouldLinkFiles is not set, skip files added via the
+    // -mlink-bitcode-files, only linking -mlink-builtin-bitcode
+    if (!LM.Internalize && !ShouldLinkFiles)
+      continue;
+
     if (LM.PropagateAttrs)
       for (Function &F : *LM.Module) {
         // Skip intrinsics. Keep consistent with how intrinsics are created
@@ -244,24 +252,33 @@ bool BackendConsumer::LinkInModules(llvm::Module *M) {
 
     CurLinkModule = LM.Module.get();
 
+    // TODO: If CloneModule() is updated to support cloning of unmaterialized
+    // modules, we can remove this
     bool Err;
+    if (Error E = CurLinkModule->materializeAll())
+      return false;
+
+    // Create a Clone to move to the linker, which preserves the original
+    // linking modules, allowing them to be linked again in the future
+    // TODO: Add a ShouldCleanup option to make Cloning optional. When
+    // set, we can pass the original modules to the linker for cleanup
+    std::unique_ptr<llvm::Module> Clone = llvm::CloneModule(*LM.Module);
+
     if (LM.Internalize) {
       Err = Linker::linkModules(
-        *M, std::move(LM.Module), LM.LinkFlags,
-        [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-        internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-                          return !GV.hasName() ||
-                          (GVS.count(GV.getName()) == 0);
-                          });
-        });
-    } else {
-      Err = Linker::linkModules(*M, std::move(LM.Module), LM.LinkFlags);
-    }
+          *M, std::move(Clone), LM.LinkFlags,
+          [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+            internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+            });
+          });
+    } else
+      Err = Linker::linkModules(*M, std::move(Clone), LM.LinkFlags);
 
     if (Err)
       return true;
   }
-  LinkModules.clear();
+
   return false; // success
 }
 
@@ -350,9 +367,9 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-  EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
-                    LangOpts, C.getTargetInfo().getDataLayoutString(),
-                    getModule(), Action, FS, std::move(AsmOutStream));
+  EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
+                    C.getTargetInfo().getDataLayoutString(), getModule(),
+                    Action, FS, std::move(AsmOutStream), this);
 
   Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
