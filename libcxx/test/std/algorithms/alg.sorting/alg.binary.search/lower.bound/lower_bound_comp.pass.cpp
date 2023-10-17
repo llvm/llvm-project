@@ -17,6 +17,7 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
+#include <cmath>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -38,11 +39,28 @@ template <class Iter, class T>
 void
 test(Iter first, Iter last, const T& value)
 {
-    Iter i = std::lower_bound(first, last, value, std::greater<int>());
-    for (Iter j = first; j != i; ++j)
-        assert(std::greater<int>()(*j, value));
-    for (Iter j = i; j != last; ++j)
-        assert(!std::greater<int>()(*j, value));
+  std::size_t strides{};
+  std::size_t displacement{};
+  stride_counting_iterator f(first, &strides, &displacement);
+  stride_counting_iterator l(last, &strides, &displacement);
+
+  std::size_t comparisons{};
+  auto cmp = [&comparisons](int rhs, int lhs) {
+    ++comparisons;
+    return std::greater<int>()(rhs, lhs);
+  };
+
+  auto i = std::lower_bound(f, l, value, cmp);
+
+  for (auto j = f; j != i; ++j)
+    assert(std::greater<int>()(*j, value));
+  for (auto j = i; j != l; ++j)
+    assert(!std::greater<int>()(*j, value));
+
+  auto len = std::distance(first, last);
+  assert(strides <= 2.5 * len + 1);
+  assert(displacement <= 2.5 * len + 1);
+  assert(comparisons <= 2 * ceil(log(len + 1) + 2));
 }
 
 template <class Iter>

@@ -39,11 +39,20 @@ template <class Iter, class T>
 void
 test(Iter first, Iter last, const T& value)
 {
-    Iter i = std::lower_bound(first, last, value);
-    for (Iter j = first; j != i; ++j)
-        assert(*j < value);
-    for (Iter j = i; j != last; ++j)
-        assert(!(*j < value));
+  std::size_t strides{};
+  std::size_t displacement{};
+  stride_counting_iterator f(first, &strides, &displacement);
+  stride_counting_iterator l(last, &strides, &displacement);
+
+  auto i = std::lower_bound(f, l, value);
+  for (auto j = f; j != i; ++j)
+    assert(*j < value);
+  for (auto j = i; j != l; ++j)
+    assert(!(*j < value));
+
+  auto len = std::distance(first, last);
+  assert(strides <= 2.5 * len + 1);
+  assert(displacement <= 2.5 * len + 1);
 }
 
 template <class Iter>
