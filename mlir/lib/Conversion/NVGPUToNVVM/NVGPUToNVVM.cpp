@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "nvgpu-to-nvvm"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
@@ -830,9 +831,10 @@ struct NVGPUMBarrierInitLowering
     Value count = truncToI32(b, adaptor.getCount());
     if (isMbarrierShared(mbarrierType)) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierInitSharedOp>(op, barrier,
-                                                              count);
+                                                              count, Value());
     } else {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count);
+      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
+                                                        Value());
     }
     return success();
   }
@@ -927,12 +929,12 @@ struct NVGPUMBarrierArriveExpectTxLowering
 
     if (isMbarrierShared(op.getBarriers().getType())) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
-          op, barrier, txcount);
+          op, barrier, txcount, Value());
       return success();
     }
 
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(op, barrier,
-                                                                txcount);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
+        op, barrier, txcount, Value());
     return success();
   }
 };
@@ -983,7 +985,7 @@ struct NVGPUTmaAsyncLoadOpLowering
     }
 
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
-        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords);
+        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords, Value());
     return success();
   }
 };
