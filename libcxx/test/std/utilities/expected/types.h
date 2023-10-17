@@ -104,10 +104,12 @@ struct TrackedMove {
   }
 };
 
-// This type has one byte of tail padding where `std::expected` will put its
+// This type has one byte of tail padding where `std::expected` may put its
 // "has value" flag. The constructor will clobber all bytes including the
-// tail padding. With this type we can check that `std::expected` will set
-// its "has value" flag _after_ the value/error object is constructed.
+// tail padding. With this type we can check that `std::expected` handles
+// the case where the "has value" flag is an overlapping subobject correctly.
+//
+// See https://github.com/llvm/llvm-project/issues/68552 for details.
 template <int c>
 struct TailClobberer {
   constexpr TailClobberer() {
