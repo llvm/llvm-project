@@ -3,7 +3,7 @@ Test lldb-dap setBreakpoints request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -29,7 +29,7 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
         self.continue_to_breakpoints(breakpoint_ids)
-        threads = self.dap.get_threads()
+        threads = self.dap_server.get_threads()
         for thread in threads:
             if "reason" in thread:
                 reason = thread["reason"]

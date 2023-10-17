@@ -4,7 +4,7 @@ Test lldb-dap completions request
 
 
 import lldbdap_testcase
-import dap
+import dap_server
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -36,7 +36,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # shouldn't see variables inside main
         self.verify_completions(
-            self.dap.get_completions("var"),
+            self.dap_server.get_completions("var"),
             [
                 {
                     "text": "var",
@@ -54,7 +54,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # should see global keywords but not variables inside main
         self.verify_completions(
-            self.dap.get_completions("str"),
+            self.dap_server.get_completions("str"),
             [{"text": "struct", "label": "struct"}],
             [{"text": "str1", "label": "str1 -- std::string &"}],
         )
@@ -63,7 +63,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # should see variables from main but not from the other function
         self.verify_completions(
-            self.dap.get_completions("var"),
+            self.dap_server.get_completions("var"),
             [
                 {"text": "var1", "label": "var1 -- int &"},
                 {"text": "var2", "label": "var2 -- int &"},
@@ -77,7 +77,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.verify_completions(
-            self.dap.get_completions("str"),
+            self.dap_server.get_completions("str"),
             [
                 {"text": "struct", "label": "struct"},
                 {"text": "str1", "label": "str1 -- string &"},
@@ -86,19 +86,19 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # should complete arbitrary commands including word starts
         self.verify_completions(
-            self.dap.get_completions("`log enable  "),
+            self.dap_server.get_completions("`log enable  "),
             [{"text": "gdb-remote", "label": "gdb-remote"}],
         )
 
         # should complete expressions with quotes inside
         self.verify_completions(
-            self.dap.get_completions('`expr " "; typed'),
+            self.dap_server.get_completions('`expr " "; typed'),
             [{"text": "typedef", "label": "typedef"}],
         )
 
         # should complete an incomplete quoted token
         self.verify_completions(
-            self.dap.get_completions('`setting "se'),
+            self.dap_server.get_completions('`setting "se'),
             [
                 {
                     "text": "set",
@@ -107,7 +107,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             ],
         )
         self.verify_completions(
-            self.dap.get_completions("`'comm"),
+            self.dap_server.get_completions("`'comm"),
             [
                 {
                     "text": "command",
@@ -117,34 +117,34 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.verify_completions(
-            self.dap.get_completions("foo1.v"),
+            self.dap_server.get_completions("foo1.v"),
             [{"text": "var1", "label": "foo1.var1 -- int"}],
         )
 
         self.verify_completions(
-            self.dap.get_completions("foo1.my_bar_object.v"),
+            self.dap_server.get_completions("foo1.my_bar_object.v"),
             [{"text": "var1", "label": "foo1.my_bar_object.var1 -- int"}],
         )
 
         self.verify_completions(
-            self.dap.get_completions("foo1.var1 + foo1.v"),
+            self.dap_server.get_completions("foo1.var1 + foo1.v"),
             [{"text": "var1", "label": "foo1.var1 -- int"}],
         )
 
         self.verify_completions(
-            self.dap.get_completions("foo1.var1 + v"),
+            self.dap_server.get_completions("foo1.var1 + v"),
             [{"text": "var1", "label": "var1 -- int &"}],
         )
 
         # should correctly handle spaces between objects and member operators
         self.verify_completions(
-            self.dap.get_completions("foo1 .v"),
+            self.dap_server.get_completions("foo1 .v"),
             [{"text": "var1", "label": ".var1 -- int"}],
             [{"text": "var2", "label": ".var2 -- int"}],
         )
 
         self.verify_completions(
-            self.dap.get_completions("foo1 . v"),
+            self.dap_server.get_completions("foo1 . v"),
             [{"text": "var1", "label": "var1 -- int"}],
             [{"text": "var2", "label": "var2 -- int"}],
         )

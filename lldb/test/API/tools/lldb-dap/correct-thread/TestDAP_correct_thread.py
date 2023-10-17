@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -33,8 +33,8 @@ class TestDAP_correct_thread(lldbdap_testcase.DAPTestCaseBase):
         # We're now stopped at the breakpoint in the first thread, thread #2.
         # Continue to join the first thread and hit the breakpoint in the
         # second thread, thread #3.
-        self.dap.request_continue()
-        stopped_event = self.dap.wait_for_stopped()
+        self.dap_server.request_continue()
+        stopped_event = self.dap_server.wait_for_stopped()
         # Verify that the description is the relevant breakpoint,
         # preserveFocusHint is False and threadCausedFocus is True
         self.assertTrue(

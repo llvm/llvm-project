@@ -3,7 +3,7 @@ Test lldb-dap disconnect request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -17,7 +17,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     source = "main.cpp"
 
     def disconnect_and_assert_no_output_printed(self):
-        self.dap.request_disconnect()
+        self.dap_server.request_disconnect()
         # verify we didn't get any input after disconnect
         time.sleep(2)
         output = self.get_stdout()
@@ -40,7 +40,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_next_stop()
 
-        self.dap.request_disconnect()
+        self.dap_server.request_disconnect()
         # verify we didn't produce the side effect file
         time.sleep(1)
         self.assertFalse(os.path.exists(program + ".side_effect"))
@@ -69,13 +69,13 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         lldbutil.wait_for_file_on_target(self, sync_file_path)
 
         self.attach(pid=self.process.pid, disconnectAutomatically=False)
-        response = self.dap.request_evaluate("wait_for_attach = false;")
+        response = self.dap_server.request_evaluate("wait_for_attach = false;")
         self.assertTrue(response["success"])
 
         # verify we haven't produced the side effect file yet
         self.assertFalse(os.path.exists(program + ".side_effect"))
 
-        self.dap.request_disconnect()
+        self.dap_server.request_disconnect()
         time.sleep(2)
         # verify we produced the side effect file, as the program continued after disconnecting
         self.assertTrue(os.path.exists(program + ".side_effect"))

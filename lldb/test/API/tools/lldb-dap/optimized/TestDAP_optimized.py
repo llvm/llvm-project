@@ -2,7 +2,7 @@
 Test lldb-dap variables/stackTrace request for optimized code
 """
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -24,9 +24,9 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
         self.continue_to_breakpoints(breakpoint_ids)
-        leaf_frame = self.dap.get_stackFrame(frameIndex=0)
+        leaf_frame = self.dap_server.get_stackFrame(frameIndex=0)
         self.assertTrue(leaf_frame["name"].endswith(" [opt]"))
-        parent_frame = self.dap.get_stackFrame(frameIndex=1)
+        parent_frame = self.dap_server.get_stackFrame(frameIndex=1)
         self.assertTrue(parent_frame["name"].endswith(" [opt]"))
 
     @skipIfWindows
@@ -44,6 +44,6 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
         self.continue_to_breakpoints(breakpoint_ids)
-        optimized_variable = self.dap.get_local_variable("argc")
+        optimized_variable = self.dap_server.get_local_variable("argc")
 
         self.assertTrue(optimized_variable["value"].startswith("<error:"))

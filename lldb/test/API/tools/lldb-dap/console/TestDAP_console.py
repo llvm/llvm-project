@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -11,7 +11,9 @@ import lldbdap_testcase
 
 class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def check_lldb_command(self, lldb_command, contains_string, assert_msg):
-        response = self.dap.request_evaluate("`%s" % (lldb_command), context="repl")
+        response = self.dap_server.request_evaluate(
+            "`%s" % (lldb_command), context="repl"
+        )
         output = response["body"]["result"]
         self.assertIn(
             contains_string,
@@ -52,7 +54,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         # Cause a "scopes" to be sent for frame zero which should update the
         # selected thread and frame to frame 0.
-        self.dap.get_local_variables(frameIndex=0)
+        self.dap_server.get_local_variables(frameIndex=0)
         # Verify frame #0 is selected in the command interpreter by running
         # the "frame select" command with no frame index which will print the
         # currently selected frame.
@@ -60,7 +62,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
         # Cause a "scopes" to be sent for frame one which should update the
         # selected thread and frame to frame 1.
-        self.dap.get_local_variables(frameIndex=1)
+        self.dap_server.get_local_variables(frameIndex=1)
         # Verify frame #1 is selected in the command interpreter by running
         # the "frame select" command with no frame index which will print the
         # currently selected frame.

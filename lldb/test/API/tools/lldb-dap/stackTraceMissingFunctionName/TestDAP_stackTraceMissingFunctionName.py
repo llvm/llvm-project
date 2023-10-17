@@ -3,7 +3,7 @@ Test lldb-dap stack trace response
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 import os
 

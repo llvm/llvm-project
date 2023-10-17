@@ -3,7 +3,7 @@ Test lldb-dap setBreakpoints request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -38,17 +38,17 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         self.create_debug_adaptor()
         # The underlying lldb-dap process must be alive
-        self.assertEqual(self.dap.process.poll(), None)
+        self.assertEqual(self.dap_server.process.poll(), None)
 
         # The lldb-dap process should finish even though
         # we didn't close the communication socket explicitly
-        self.dap.request_disconnect()
+        self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap.process.wait(timeout=10)
+        self.dap_server.process.wait(timeout=10)
 
         # Check the return code
-        self.assertEqual(self.dap.process.poll(), 0)
+        self.assertEqual(self.dap_server.process.poll(), 0)
 
     @skipIfWindows
     @skipIfRemote
@@ -440,6 +440,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.get_console()
         # Once it's disconnected the console should contain the
         # "terminateCommands"
-        self.dap.request_disconnect(terminateDebuggee=True)
+        self.dap_server.request_disconnect(terminateDebuggee=True)
         output = self.collect_console(duration=1.0)
         self.verify_commands("terminateCommands", output, terminateCommands)

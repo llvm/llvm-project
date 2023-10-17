@@ -2,7 +2,7 @@
 Test lldb-dap terminated event
 """
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -44,7 +44,7 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         self.continue_to_exit()
 
-        statistics = self.dap.wait_for_terminated()["statistics"]
+        statistics = self.dap_server.wait_for_terminated()["statistics"]
         self.assertTrue(statistics["totalDebugInfoByteSize"] > 0)
         self.assertTrue(statistics["totalDebugInfoEnabled"] > 0)
         self.assertTrue(statistics["totalModuleCountHasDebugInfo"] > 0)

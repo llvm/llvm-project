@@ -3,7 +3,7 @@ Test lldb-dap coreFile attaching
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -53,7 +53,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         self.assertEquals(self.get_stackFrames(), expected_frames)
 
-        self.dap.request_next(threadId=32259)
+        self.dap_server.request_next(threadId=32259)
         self.assertEquals(self.get_stackFrames(), expected_frames)
 
     @skipIfWindows

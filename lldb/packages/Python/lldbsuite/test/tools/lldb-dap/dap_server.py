@@ -1013,7 +1013,7 @@ class DebugCommunication(object):
         # self.recv.close()
 
 
-class DebugAdaptor(DebugCommunication):
+class DebugAdaptorServer(DebugCommunication):
     def __init__(
         self, executable=None, port=None, init_commands=[], log_file=None, env=None
     ):
@@ -1048,7 +1048,7 @@ class DebugAdaptor(DebugCommunication):
         return -1
 
     def terminate(self):
-        super(DebugAdaptor, self).terminate()
+        super(DebugAdaptorServer, self).terminate()
         if self.process is not None:
             self.process.terminate()
             self.process.wait()
@@ -1364,7 +1364,7 @@ def main():
             "using the --port option"
         )
         return
-    dbg = DebugAdaptor(executable=options.vscode_path, port=options.port)
+    dbg = DebugAdaptorServer(executable=options.vscode_path, port=options.port)
     if options.debug:
         raw_input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
     if options.replay:

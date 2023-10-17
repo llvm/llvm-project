@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -19,7 +19,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
-        active_modules = self.dap.get_modules()
+        active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
         self.assertIn(
             program_basename,
@@ -36,13 +36,13 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             "Make sure a.out.stripped has no debug info",
         )
         symbols_path = self.getBuildArtifact(symbol_basename)
-        self.dap.request_evaluate(
+        self.dap_server.request_evaluate(
             "`%s" % ('target symbols add -s "%s" "%s"' % (program, symbols_path)),
             context="repl",
         )
 
         def checkSymbolsLoadedWithSize():
-            active_modules = self.dap.get_modules()
+            active_modules = self.dap_server.get_modules()
             program_module = active_modules[program_basename]
             self.assertIn("symbolFilePath", program_module)
             self.assertIn(symbols_path, program_module["symbolFilePath"])
@@ -51,7 +51,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
 
         if expect_debug_info_size:
             self.waitUntil(checkSymbolsLoadedWithSize)
-        active_modules = self.dap.get_modules()
+        active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module["name"])
         self.assertEqual(program, program_module["path"])
@@ -95,8 +95,8 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         lines = [breakpoint1_line]
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.continue_to_breakpoints(breakpoint_ids)
-        moduleId = self.dap.get_modules()["a.out"]["id"]
-        response = self.dap.request_compileUnits(moduleId)
+        moduleId = self.dap_server.get_modules()["a.out"]["id"]
+        response = self.dap_server.request_compileUnits(moduleId)
         self.assertTrue(response["body"])
         cu_paths = [cu["compileUnitPath"] for cu in response["body"]["compileUnits"]]
         self.assertIn(main_source_path, cu_paths, "Real path to main.cpp matches")

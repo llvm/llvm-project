@@ -1,7 +1,7 @@
 import os
 import time
 
-import dap
+import dap_server
 from lldbsuite.test.lldbtest import *
 
 
@@ -14,7 +14,7 @@ class DAPTestCaseBase(TestBase):
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap = dap.DebugAdaptor(
+        self.dap_server = dap_server.DebugAdaptorServer(
             executable=self.lldbDAPExec,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
@@ -32,7 +32,7 @@ class DAPTestCaseBase(TestBase):
         Each object in data is 1:1 mapping with the entry in lines.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        response = self.dap.request_setBreakpoints(source_path, lines, data)
+        response = self.dap_server.request_setBreakpoints(source_path, lines, data)
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
@@ -46,7 +46,7 @@ class DAPTestCaseBase(TestBase):
         and returns an array of strings containing the breakpoint IDs
         ("1", "2") for each breakpoint that was set.
         """
-        response = self.dap.request_setFunctionBreakpoints(
+        response = self.dap_server.request_setFunctionBreakpoints(
             functions, condition=condition, hitCondition=hitCondition
         )
         if response is None:
@@ -70,7 +70,7 @@ class DAPTestCaseBase(TestBase):
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
-        stopped_events = self.dap.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -100,7 +100,7 @@ class DAPTestCaseBase(TestBase):
         reason is 'exception' and that the description matches
         'expected_description'
         """
-        stopped_events = self.dap.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -150,7 +150,7 @@ class DAPTestCaseBase(TestBase):
     def get_stackFrames_and_totalFramesCount(
         self, threadId=None, startFrame=None, levels=None, dump=False
     ):
-        response = self.dap.request_stackTrace(
+        response = self.dap_server.request_stackTrace(
             threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
         )
         if response:
@@ -185,16 +185,16 @@ class DAPTestCaseBase(TestBase):
         return ("", 0)
 
     def get_stdout(self, timeout=0.0):
-        return self.dap.get_output("stdout", timeout=timeout)
+        return self.dap_server.get_output("stdout", timeout=timeout)
 
     def get_console(self, timeout=0.0):
-        return self.dap.get_output("console", timeout=timeout)
+        return self.dap_server.get_output("console", timeout=timeout)
 
     def collect_console(self, duration):
-        return self.dap.collect_output("console", duration=duration)
+        return self.dap_server.collect_output("console", duration=duration)
 
     def get_local_as_int(self, name, threadId=None):
-        value = self.dap.get_local_variable_value(name, threadId=threadId)
+        value = self.dap_server.get_local_variable_value(name, threadId=threadId)
         if value.startswith("0x"):
             return int(value, 16)
         elif value.startswith("0"):
@@ -204,48 +204,48 @@ class DAPTestCaseBase(TestBase):
 
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.dap.request_setVariable(1, name, str(value), id=id)
+        return self.dap_server.request_setVariable(1, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.dap.request_setVariable(2, name, str(value), id=id)
+        return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
     def stepIn(self, threadId=None, waitForStop=True):
-        self.dap.request_stepIn(threadId=threadId)
+        self.dap_server.request_stepIn(threadId=threadId)
         if waitForStop:
-            return self.dap.wait_for_stopped()
+            return self.dap_server.wait_for_stopped()
         return None
 
     def stepOver(self, threadId=None, waitForStop=True):
-        self.dap.request_next(threadId=threadId)
+        self.dap_server.request_next(threadId=threadId)
         if waitForStop:
-            return self.dap.wait_for_stopped()
+            return self.dap_server.wait_for_stopped()
         return None
 
     def stepOut(self, threadId=None, waitForStop=True):
-        self.dap.request_stepOut(threadId=threadId)
+        self.dap_server.request_stepOut(threadId=threadId)
         if waitForStop:
-            return self.dap.wait_for_stopped()
+            return self.dap_server.wait_for_stopped()
         return None
 
     def continue_to_next_stop(self):
-        self.dap.request_continue()
-        return self.dap.wait_for_stopped()
+        self.dap_server.request_continue()
+        return self.dap_server.wait_for_stopped()
 
     def continue_to_breakpoints(self, breakpoint_ids):
-        self.dap.request_continue()
+        self.dap_server.request_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 
     def continue_to_exception_breakpoint(self, filter_label):
-        self.dap.request_continue()
+        self.dap_server.request_continue()
         self.assertTrue(
             self.verify_stop_exception_info(filter_label),
             'verify we got "%s"' % (filter_label),
         )
 
     def continue_to_exit(self, exitCode=0):
-        self.dap.request_continue()
-        stopped_events = self.dap.wait_for_stopped()
+        self.dap_server.request_continue()
+        stopped_events = self.dap_server.wait_for_stopped()
         self.assertEquals(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
         )
@@ -266,10 +266,10 @@ class DAPTestCaseBase(TestBase):
         memoryReference = stackFrames[0]["instructionPointerReference"]
         self.assertIsNotNone(memoryReference)
 
-        if memoryReference not in self.dap.disassembled_instructions:
-            self.dap.request_disassemble(memoryReference=memoryReference)
+        if memoryReference not in self.dap_server.disassembled_instructions:
+            self.dap_server.request_disassemble(memoryReference=memoryReference)
 
-        return self.dap.disassembled_instructions[memoryReference]
+        return self.dap_server.disassembled_instructions[memoryReference]
 
     def attach(
         self,
@@ -297,14 +297,14 @@ class DAPTestCaseBase(TestBase):
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
-                self.dap.request_disconnect(terminateDebuggee=True)
-            self.dap.terminate()
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+            self.dap_server.terminate()
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
-        self.dap.request_initialize(sourceInitFile)
-        response = self.dap.request_attach(
+        self.dap_server.request_initialize(sourceInitFile)
+        response = self.dap_server.request_attach(
             program=program,
             pid=pid,
             waitFor=waitFor,
@@ -358,15 +358,15 @@ class DAPTestCaseBase(TestBase):
         # if we throw an exception during the test case
         def cleanup():
             if disconnectAutomatically:
-                self.dap.request_disconnect(terminateDebuggee=True)
-            self.dap.terminate()
+                self.dap_server.request_disconnect(terminateDebuggee=True)
+            self.dap_server.terminate()
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.dap.request_initialize(sourceInitFile)
-        response = self.dap.request_launch(
+        self.dap_server.request_initialize(sourceInitFile)
+        response = self.dap_server.request_launch(
             program,
             args=args,
             cwd=cwd,

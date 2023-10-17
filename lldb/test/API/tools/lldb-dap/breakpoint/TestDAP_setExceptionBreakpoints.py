@@ -3,7 +3,7 @@ Test lldb-dap setBreakpoints request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -34,7 +34,7 @@ class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
 
         filters = ["cpp_throw", "cpp_catch"]
-        response = self.dap.request_setExceptionBreakpoints(filters)
+        response = self.dap_server.request_setExceptionBreakpoints(filters)
         if response:
             self.assertTrue(response["success"])
 

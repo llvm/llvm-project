@@ -3,7 +3,7 @@ Test lldb-dap startDebugging reverse request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -24,16 +24,18 @@ class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
 
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
-        self.dap.request_evaluate(
+        self.dap_server.request_evaluate(
             "`lldb-dap startDebugging attach '{\"pid\":321}'", context="repl"
         )
 
         self.continue_to_exit()
 
         self.assertEqual(
-            len(self.dap.reverse_requests), 1, "make sure we got a reverse request"
+            len(self.dap_server.reverse_requests),
+            1,
+            "make sure we got a reverse request",
         )
 
-        request = self.dap.reverse_requests[0]
+        request = self.dap_server.reverse_requests[0]
         self.assertEqual(request["arguments"]["configuration"]["pid"], 321)
         self.assertEqual(request["arguments"]["request"], "attach")

@@ -19,5 +19,5 @@ class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
         print("test_stopped_description called", flush=True)
         self.build_and_launch(program)
 
-        self.dap.request_continue()
+        self.dap_server.request_continue()
         self.assertTrue(self.verify_stop_exception_info("signal SIGABRT"))

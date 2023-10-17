@@ -3,7 +3,7 @@ Test lldb-dap logpoints feature.
 """
 
 
-import dap
+import dap_server
 import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -36,7 +36,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint before loop line
         self.verify_breakpoint_hit(before_loop_breakpoint_ids)
@@ -56,7 +56,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Continue to trigger the breakpoint with log messages
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint after loop line
         self.verify_breakpoint_hit([post_loop_breakpoint_id])
@@ -94,7 +94,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint before loop line
         self.verify_breakpoint_hit(before_loop_breakpoint_ids)
@@ -117,7 +117,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Continue to trigger the breakpoint with log messages
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint after loop line
         self.verify_breakpoint_hit([post_loop_breakpoint_id])
@@ -157,7 +157,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint before loop line
         self.verify_breakpoint_hit(before_loop_breakpoint_ids)
@@ -179,7 +179,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Continue to trigger the breakpoint with log messages
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint after loop line
         self.verify_breakpoint_hit([post_loop_breakpoint_id])
@@ -222,7 +222,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertEquals(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
 
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint before loop line
         self.verify_breakpoint_hit(before_loop_breakpoint_ids)
@@ -244,7 +244,7 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Continue to trigger the breakpoint with log messages
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit logpoint breakpoint if it's format has error.
         self.verify_breakpoint_hit([loop_breakpoint_id])

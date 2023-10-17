@@ -3,7 +3,7 @@ Test lldb-dap setBreakpoints request
 """
 
 
-import dap
+import dap_server
 import shutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -58,7 +58,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.launch(program, sourceMap=source_map)
 
         # breakpoint in main.cpp
-        response = self.dap.request_setBreakpoints(new_main_path, [main_line])
+        response = self.dap_server.request_setBreakpoints(new_main_path, [main_line])
         breakpoints = response["body"]["breakpoints"]
         self.assertEquals(len(breakpoints), 1)
         breakpoint = breakpoints[0]
@@ -68,7 +68,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(new_main_path, breakpoint["source"]["path"])
 
         # 2nd breakpoint, which is from a dynamically loaded library
-        response = self.dap.request_setBreakpoints(new_other_path, [other_line])
+        response = self.dap_server.request_setBreakpoints(new_other_path, [other_line])
         breakpoints = response["body"]["breakpoints"]
         breakpoint = breakpoints[0]
         self.assertEqual(breakpoint["line"], other_line)
@@ -77,11 +77,11 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(new_other_path, breakpoint["source"]["path"])
         other_breakpoint_id = breakpoint["id"]
 
-        self.dap.request_continue()
+        self.dap_server.request_continue()
         self.verify_breakpoint_hit([other_breakpoint_id])
 
         # 2nd breakpoint again, which should be valid at this point
-        response = self.dap.request_setBreakpoints(new_other_path, [other_line])
+        response = self.dap_server.request_setBreakpoints(new_other_path, [other_line])
         breakpoints = response["body"]["breakpoints"]
         breakpoint = breakpoints[0]
         self.assertEqual(breakpoint["line"], other_line)
@@ -90,7 +90,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(new_other_path, breakpoint["source"]["path"])
 
         # now we check the stack trace making sure that we got mapped source paths
-        frames = self.dap.request_stackTrace()["body"]["stackFrames"]
+        frames = self.dap_server.request_stackTrace()["body"]["stackFrames"]
 
         self.assertEqual(frames[0]["source"]["name"], other_basename)
         self.assertEqual(frames[0]["source"]["path"], new_other_path)
@@ -125,7 +125,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
 
         # Set 3 breakpoints and verify that they got set correctly
-        response = self.dap.request_setBreakpoints(self.main_path, lines)
+        response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         line_to_id = {}
         if response:
             breakpoints = response["body"]["breakpoints"]
@@ -152,7 +152,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         lines.remove(second_line)
         # Set 2 breakpoints and verify that the previous breakpoints that were
         # set above are still set.
-        response = self.dap.request_setBreakpoints(self.main_path, lines)
+        response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         if response:
             breakpoints = response["body"]["breakpoints"]
             self.assertEquals(
@@ -179,7 +179,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # we have only 2 breakpoints set. The response above could have told
         # us about 2 breakpoints, but we want to make sure we don't have the
         # third one still set in the target
-        response = self.dap.request_testGetTargetBreakpoints()
+        response = self.dap_server.request_testGetTargetBreakpoints()
         if response:
             breakpoints = response["body"]["breakpoints"]
             self.assertEquals(
@@ -204,7 +204,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Now clear all breakpoints for the source file by passing down an
         # empty lines array
         lines = []
-        response = self.dap.request_setBreakpoints(self.main_path, lines)
+        response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         if response:
             breakpoints = response["body"]["breakpoints"]
             self.assertEquals(
@@ -214,7 +214,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
             )
 
         # Verify with the target that all breakpoints have been cleared
-        response = self.dap.request_testGetTargetBreakpoints()
+        response = self.dap_server.request_testGetTargetBreakpoints()
         if response:
             breakpoints = response["body"]["breakpoints"]
             self.assertEquals(
@@ -226,7 +226,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Now set a breakpoint again in the same source file and verify it
         # was added.
         lines = [second_line]
-        response = self.dap.request_setBreakpoints(self.main_path, lines)
+        response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         if response:
             breakpoints = response["body"]["breakpoints"]
             self.assertEquals(
@@ -245,7 +245,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # we have only 2 breakpoints set. The response above could have told
         # us about 2 breakpoints, but we want to make sure we don't have the
         # third one still set in the target
-        response = self.dap.request_testGetTargetBreakpoints()
+        response = self.dap_server.request_testGetTargetBreakpoints()
         if response:
             breakpoints = response["body"]["breakpoints"]
             self.assertEquals(
@@ -278,7 +278,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
 
         # Set one breakpoint and verify that it got set correctly.
-        response = self.dap.request_setBreakpoints(self.main_path, lines)
+        response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         line_to_id = {}
         breakpoints = response["body"]["breakpoints"]
         self.assertEquals(
@@ -295,12 +295,12 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Now clear all breakpoints for the source file by not setting the
         # lines array.
         lines = None
-        response = self.dap.request_setBreakpoints(self.main_path, lines)
+        response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         breakpoints = response["body"]["breakpoints"]
         self.assertEquals(len(breakpoints), 0, "expect no source breakpoints")
 
         # Verify with the target that all breakpoints have been cleared.
-        response = self.dap.request_testGetTargetBreakpoints()
+        response = self.dap_server.request_testGetTargetBreakpoints()
         breakpoints = response["body"]["breakpoints"]
         self.assertEquals(len(breakpoints), 0, "expect no source breakpoints")
 
@@ -317,13 +317,13 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # hitCondition
         breakpoint_ids = self.set_source_breakpoints(self.main_path, [loop_line])
         self.assertEquals(len(breakpoint_ids), 1, "expect one breakpoint")
-        self.dap.request_continue()
+        self.dap_server.request_continue()
 
         # Verify we hit the breakpoint we just set
         self.verify_breakpoint_hit(breakpoint_ids)
 
         # Make sure i is zero at first breakpoint
-        i = int(self.dap.get_local_variable_value("i"))
+        i = int(self.dap_server.get_local_variable_value("i"))
         self.assertEquals(i, 0, "i != 0 after hitting breakpoint")
 
         # Update the condition on our breakpoint
@@ -337,7 +337,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.continue_to_breakpoints(breakpoint_ids)
-        i = int(self.dap.get_local_variable_value("i"))
+        i = int(self.dap_server.get_local_variable_value("i"))
         self.assertEquals(i, 4, "i != 4 showing conditional works")
 
         new_breakpoint_ids = self.set_source_breakpoints(
@@ -352,11 +352,11 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
 
         # Continue with a hitCondition of 2 and expect it to skip 1 value
         self.continue_to_breakpoints(breakpoint_ids)
-        i = int(self.dap.get_local_variable_value("i"))
+        i = int(self.dap_server.get_local_variable_value("i"))
         self.assertEquals(i, 6, "i != 6 showing hitCondition works")
 
         # continue after hitting our hitCondition and make sure it only goes
         # up by 1
         self.continue_to_breakpoints(breakpoint_ids)
-        i = int(self.dap.get_local_variable_value("i"))
+        i = int(self.dap_server.get_local_variable_value("i"))
         self.assertEquals(i, 7, "i != 7 showing post hitCondition hits every time")

@@ -3,7 +3,7 @@ Test lldb-dap runInTerminal reverse request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -60,10 +60,12 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.assertEqual(
-            len(self.dap.reverse_requests), 1, "make sure we got a reverse request"
+            len(self.dap_server.reverse_requests),
+            1,
+            "make sure we got a reverse request",
         )
 
-        request = self.dap.reverse_requests[0]
+        request = self.dap_server.reverse_requests[0]
         self.assertIn(self.lldbDAPExec, request["arguments"]["args"])
         self.assertIn(program, request["arguments"]["args"])
         self.assertIn("foobar", request["arguments"]["args"])
@@ -75,18 +77,18 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
 
         # We verify we actually stopped inside the loop
-        counter = int(self.dap.get_local_variable_value("counter"))
+        counter = int(self.dap_server.get_local_variable_value("counter"))
         self.assertTrue(counter > 0)
 
         # We verify we were able to set the launch arguments
-        argc = int(self.dap.get_local_variable_value("argc"))
+        argc = int(self.dap_server.get_local_variable_value("argc"))
         self.assertEqual(argc, 2)
 
-        argv1 = self.dap.request_evaluate("argv[1]")["body"]["result"]
+        argv1 = self.dap_server.request_evaluate("argv[1]")["body"]["result"]
         self.assertIn("foobar", argv1)
 
         # We verify we were able to set the environment
-        env = self.dap.request_evaluate("foo")["body"]["result"]
+        env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
 
     @skipIfWindows

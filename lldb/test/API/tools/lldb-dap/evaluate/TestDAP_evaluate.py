@@ -4,7 +4,7 @@ Test lldb-dap completions request
 
 
 import lldbdap_testcase
-import dap
+import dap_server
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,7 +13,7 @@ from lldbsuite.test.lldbtest import *
 class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluate(self, expression, regex):
         self.assertRegexpMatches(
-            self.dap.request_evaluate(expression, context=self.context)["body"][
+            self.dap_server.request_evaluate(expression, context=self.context)["body"][
                 "result"
             ],
             regex,
@@ -22,7 +22,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluateFailure(self, expression):
         self.assertNotIn(
             "result",
-            self.dap.request_evaluate(expression, context=self.context)["body"],
+            self.dap_server.request_evaluate(expression, context=self.context)["body"],
         )
 
     def isExpressionParsedExpected(self):

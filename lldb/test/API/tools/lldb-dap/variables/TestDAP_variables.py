@@ -5,7 +5,7 @@ Test lldb-dap setBreakpoints request
 import os
 
 import lldbdap_testcase
-import dap
+import dap_server
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -79,7 +79,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 ("children verify values specified for " "variable without children"),
             )
 
-            response = self.dap.request_variables(varRef)
+            response = self.dap_server.request_variables(varRef)
             self.verify_variables(
                 verify_dict["children"], response["body"]["variables"], varref_dict
             )
@@ -111,7 +111,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
 
-        locals = self.dap.get_local_variables()
+        locals = self.dap_server.get_local_variables()
 
         verify_locals = {
             "<error>": {
@@ -147,8 +147,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
         self.continue_to_breakpoints(breakpoint_ids)
-        locals = self.dap.get_local_variables()
-        globals = self.dap.get_global_variables()
+        locals = self.dap_server.get_local_variables()
+        globals = self.dap_server.get_global_variables()
         buffer_children = make_buffer_verify_dict(0, 32)
         verify_locals = {
             "argc": {"equals": {"type": "int", "value": "1"}},
@@ -181,28 +181,28 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # has optional parameters like "start" and "count" to limit the number
         # of variables that are fetched
         varRef = varref_dict["pt.buffer"]
-        response = self.dap.request_variables(varRef)
+        response = self.dap_server.request_variables(varRef)
         self.verify_variables(buffer_children, response["body"]["variables"])
         # Verify setting start=0 in the arguments still gets all children
-        response = self.dap.request_variables(varRef, start=0)
+        response = self.dap_server.request_variables(varRef, start=0)
         self.verify_variables(buffer_children, response["body"]["variables"])
         # Verify setting count=0 in the arguments still gets all children.
         # If count is zero, it means to get all children.
-        response = self.dap.request_variables(varRef, count=0)
+        response = self.dap_server.request_variables(varRef, count=0)
         self.verify_variables(buffer_children, response["body"]["variables"])
         # Verify setting count to a value that is too large in the arguments
         # still gets all children, and no more
-        response = self.dap.request_variables(varRef, count=1000)
+        response = self.dap_server.request_variables(varRef, count=1000)
         self.verify_variables(buffer_children, response["body"]["variables"])
         # Verify setting the start index and count gets only the children we
         # want
-        response = self.dap.request_variables(varRef, start=5, count=5)
+        response = self.dap_server.request_variables(varRef, start=5, count=5)
         self.verify_variables(
             make_buffer_verify_dict(5, 5), response["body"]["variables"]
         )
         # Verify setting the start index to a value that is out of range
         # results in an empty list
-        response = self.dap.request_variables(varRef, start=32, count=1)
+        response = self.dap_server.request_variables(varRef, start=32, count=1)
         self.assertEqual(
             len(response["body"]["variables"]),
             0,
@@ -253,7 +253,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             },
         }
         for expression in expressions:
-            response = self.dap.request_evaluate(expression)
+            response = self.dap_server.request_evaluate(expression)
             self.verify_values(expressions[expression], response["body"])
 
         # Test setting variables
@@ -269,8 +269,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
-        self.dap.request_setVariable(varRef, "[0]", 100)
-        response = self.dap.request_variables(varRef, start=0, count=1)
+        self.dap_server.request_setVariable(varRef, "[0]", 100)
+        response = self.dap_server.request_variables(varRef, start=0, count=1)
         self.verify_variables(
             make_buffer_verify_dict(0, 1, 100), response["body"]["variables"]
         )
@@ -278,8 +278,8 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.dap.request_setVariable(varRef, "x", 111)
-        response = self.dap.request_variables(varRef, start=0, count=1)
+        self.dap_server.request_setVariable(varRef, "x", 111)
+        response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
             value, "111", "verify pt.x got set to 111 (111 != %s)" % (value)
@@ -301,40 +301,42 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         verify_locals["x @ main.cpp:19"] = {"equals": {"type": "int", "value": "42"}}
         verify_locals["x @ main.cpp:21"] = {"equals": {"type": "int", "value": "72"}}
 
-        self.verify_variables(verify_locals, self.dap.get_local_variables())
+        self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.dap.request_setVariable(1, "x2", 9)["success"])
+        self.assertFalse(self.dap_server.request_setVariable(1, "x2", 9)["success"])
         self.assertFalse(
-            self.dap.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
+            self.dap_server.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
         )
 
         self.assertTrue(
-            self.dap.request_setVariable(1, "x @ main.cpp:17", 17)["success"]
+            self.dap_server.request_setVariable(1, "x @ main.cpp:17", 17)["success"]
         )
         self.assertTrue(
-            self.dap.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
+            self.dap_server.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
         )
         self.assertTrue(
-            self.dap.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
+            self.dap_server.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
         )
 
         # The following should have no effect
         self.assertFalse(
-            self.dap.request_setVariable(1, "x @ main.cpp:21", "invalid")["success"]
+            self.dap_server.request_setVariable(1, "x @ main.cpp:21", "invalid")[
+                "success"
+            ]
         )
 
         verify_locals["x @ main.cpp:17"]["equals"]["value"] = "17"
         verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
         verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
 
-        self.verify_variables(verify_locals, self.dap.get_local_variables())
+        self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.dap.request_setVariable(1, "x", 22)["success"])
+        self.assertTrue(self.dap_server.request_setVariable(1, "x", 22)["success"])
         verify_locals["x @ main.cpp:21"]["equals"]["value"] = "22"
 
-        self.verify_variables(verify_locals, self.dap.get_local_variables())
+        self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # In breakpoint 3, there should be no shadowed variables
         breakpoint3_line = line_number(source, "// breakpoint 3")
@@ -345,7 +347,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_breakpoints(breakpoint_ids)
 
-        locals = self.dap.get_local_variables()
+        locals = self.dap_server.get_local_variables()
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
         verify_locals["x"] = {"equals": {"type": "int", "value": "17"}}
@@ -389,7 +391,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Verify locals
-        locals = self.dap.get_local_variables()
+        locals = self.dap_server.get_local_variables()
         buffer_children = make_buffer_verify_dict(0, 32)
         verify_locals = {
             "argc": {
@@ -451,7 +453,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Evaluate from permanent UI.
         permanent_expr_varref_dict = {}
-        response = self.dap.request_evaluate(
+        response = self.dap_server.request_evaluate(
             expandable_expression["name"], frameIndex=0, threadId=None, context="repl"
         )
         self.verify_values(
@@ -463,7 +465,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Evaluate from temporary UI.
         temporary_expr_varref_dict = {}
-        response = self.dap.request_evaluate(expandable_expression["name"])
+        response = self.dap_server.request_evaluate(expandable_expression["name"])
         self.verify_values(
             expandable_expression["response"],
             response["body"],
@@ -472,13 +474,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Evaluate locals again.
-        locals = self.dap.get_local_variables()
+        locals = self.dap_server.get_local_variables()
         self.verify_variables(verify_locals, locals)
 
         # Verify the evaluated expressions before second locals evaluation
         # can be expanded.
         var_ref = temporary_expr_varref_dict[expandable_expression["name"]]
-        response = self.dap.request_variables(var_ref)
+        response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
         )
@@ -494,14 +496,14 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         var_ref = permanent_expr_varref_dict[expandable_expression["name"]]
-        response = self.dap.request_variables(var_ref)
+        response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
         )
 
         # Test that frame scopes have corresponding presentation hints.
-        frame_id = self.dap.get_stackFrame()["id"]
-        scopes = self.dap.request_scopes(frame_id)["body"]["scopes"]
+        frame_id = self.dap_server.get_stackFrame()["id"]
+        scopes = self.dap_server.request_scopes(frame_id)["body"]["scopes"]
 
         scope_names = [scope["name"] for scope in scopes]
         self.assertIn("Locals", scope_names)
@@ -544,7 +546,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Verify locals
-        locals = self.dap.get_local_variables()
+        locals = self.dap_server.get_local_variables()
         # The vector variables might have one additional entry from the fake
         # "[raw]" child.
         raw_child_count = 1 if enableSyntheticChildDebugging else 0
@@ -569,9 +571,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         if enableSyntheticChildDebugging:
             verify_children["[raw]"] = ({"contains": {"type": ["vector"]}},)
 
-        children = self.dap.request_variables(locals[2]["variablesReference"])["body"][
-            "variables"
-        ]
+        children = self.dap_server.request_variables(locals[2]["variablesReference"])[
+            "body"
+        ]["variables"]
         self.verify_variables(verify_children, children)
 
     @skipIfWindows
@@ -620,11 +622,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         if pc_name is None:
             return
         # Verify locals
-        reg_sets = self.dap.get_registers()
+        reg_sets = self.dap_server.get_registers()
         for reg_set in reg_sets:
             if reg_set["name"] == "General Purpose Registers":
                 varRef = reg_set["variablesReference"]
-                regs = self.dap.request_variables(varRef)["body"]["variables"]
+                regs = self.dap_server.request_variables(varRef)["body"]["variables"]
                 for reg in regs:
                     if reg["name"] == pc_name:
                         value = reg["value"]

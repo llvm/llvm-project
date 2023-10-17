@@ -3,7 +3,7 @@ Test lldb-dap setBreakpoints request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -190,10 +190,10 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after we stop.
-        self.dap.request_continue()
+        self.dap_server.request_continue()
         time.sleep(0.5)
-        self.dap.request_pause()
-        self.dap.wait_for_stopped()
+        self.dap_server.request_pause()
+        self.dap_server.wait_for_stopped()
         output = self.get_console(timeout=1.0)
         self.verify_commands("stopCommands", output, stopCommands)
 
@@ -236,6 +236,6 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.get_console()
         # Once it's disconnected the console should contain the
         # "terminateCommands"
-        self.dap.request_disconnect(terminateDebuggee=True)
+        self.dap_server.request_disconnect(terminateDebuggee=True)
         output = self.collect_console(duration=1.0)
         self.verify_commands("terminateCommands", output, terminateCommands)

@@ -1,4 +1,4 @@
-import dap
+import dap_server
 import json
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -29,4 +29,6 @@ class TestDAP_redirection_to_console(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(len(breakpoint_ids), 1, "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
 
-        self.assertIn("argc", json.dumps(self.dap.get_local_variables(frameIndex=1)))
+        self.assertIn(
+            "argc", json.dumps(self.dap_server.get_local_variables(frameIndex=1))
+        )

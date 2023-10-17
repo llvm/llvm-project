@@ -3,7 +3,7 @@ Test lldb-dap setBreakpoints request
 """
 
 
-import dap
+import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -60,7 +60,9 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         foo_bp_id = 0
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
-        response = self.dap.request_setBreakpoints(main_source_path, [main_bp_line])
+        response = self.dap_server.request_setBreakpoints(
+            main_source_path, [main_bp_line]
+        )
         if response:
             breakpoints = response["body"]["breakpoints"]
             for breakpoint in breakpoints:
@@ -71,7 +73,9 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
                     breakpoint["verified"], "expect main breakpoint to be verified"
                 )
 
-        response = self.dap.request_setBreakpoints(foo_source_path, [foo_bp1_line])
+        response = self.dap_server.request_setBreakpoints(
+            foo_source_path, [foo_bp1_line]
+        )
         if response:
             breakpoints = response["body"]["breakpoints"]
             for breakpoint in breakpoints:
@@ -88,7 +92,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # libraries are not loaded yet (at least on macOS they aren't) and any
         # breakpoints set in foo.cpp should not be resolved.
         self.assertEqual(
-            len(self.dap.breakpoint_events),
+            len(self.dap_server.breakpoint_events),
             0,
             "no breakpoint events when stopped at entry point",
         )
@@ -97,12 +101,14 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(dap_breakpoint_ids)
 
         # Make sure we only get an event for the breakpoint we set via a call
-        # to self.dap.request_setBreakpoints(...), not the breakpoint
+        # to self.dap_server.request_setBreakpoints(...), not the breakpoint
         # we set with with a LLDB command in preRunCommands.
         self.assertEqual(
-            len(self.dap.breakpoint_events), 1, "make sure we got a breakpoint event"
+            len(self.dap_server.breakpoint_events),
+            1,
+            "make sure we got a breakpoint event",
         )
-        event = self.dap.breakpoint_events[0]
+        event = self.dap_server.breakpoint_events[0]
         # Verify the details of the breakpoint changed notification.
         body = event["body"]
         self.assertEqual(
