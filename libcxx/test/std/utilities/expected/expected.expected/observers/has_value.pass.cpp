@@ -57,6 +57,7 @@ constexpr bool test() {
   //
   // See https://github.com/llvm/llvm-project/issues/68552 and the linked PR.
   {
+#if !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1600
     static constexpr auto f1 = [] -> std::expected<std::optional<int>, long> { return 0; };
 
     static constexpr auto f2 = [] -> std::expected<std::optional<int>, int> {
@@ -65,10 +66,14 @@ constexpr bool test() {
 
     auto e = f2();
     assert(e.has_value());
+#endif
   }
   {
     const std::expected<TailClobberer<0>, bool> e = {};
+    // clang-cl does not support [[no_unique_address]] yet.
+#if !(defined(TEST_COMPILER_CLANG) && defined(_MSC_VER))
     static_assert(sizeof(TailClobberer<0>) == sizeof(e));
+#endif
     assert(e.has_value());
   }
 

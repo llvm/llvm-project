@@ -47,7 +47,10 @@ constexpr bool test() {
   // See comments of the corresponding test in "expected.expected".
   {
     const std::expected<void, TailClobberer<1>> e(std::unexpect);
+    // clang-cl does not support [[no_unique_address]] yet.
+#if !(defined(TEST_COMPILER_CLANG) && defined(_MSC_VER))
     static_assert(sizeof(TailClobberer<1>) == sizeof(e));
+#endif
     assert(!e.has_value());
   }
 
