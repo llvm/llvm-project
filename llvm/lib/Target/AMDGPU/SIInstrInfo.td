@@ -1045,6 +1045,7 @@ class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
 
 class NamedBitOperand<string Id, string Name = NAME>
     : CustomOperand<i1, 1, Name> {
+  let PredicateMethod = "isImmTy<AMDGPUOperand::"#ImmTy#">";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
@@ -1056,6 +1057,7 @@ class NamedBitOperand<string Id, string Name = NAME>
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
     CustomOperandProps<1, Op.ParserMatchClass.Name> {
+  let PredicateMethod = Op.ParserMatchClass.PredicateMethod;
   let ParserMethod = Op.ParserMatchClass.ParserMethod;
   let PrintMethod = Op.PrintMethod;
 }
