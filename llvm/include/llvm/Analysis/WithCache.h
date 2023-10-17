@@ -52,7 +52,6 @@ public:
   WithCache(PointerType Pointer, const KnownBits &Known)
       : Pointer(Pointer, true), Known(Known) {}
 
-  [[nodiscard]] PointerType getValue() { return Pointer.getPointer(); }
   [[nodiscard]] PointerType getValue() const { return Pointer.getPointer(); }
 
   [[nodiscard]] const KnownBits &getKnownBits(const SimplifyQuery &Q) const {
@@ -62,10 +61,6 @@ public:
   }
 
   [[nodiscard]] bool hasKnownBits() const { return Pointer.getInt(); }
-
-  operator PointerType() { return Pointer.getPointer(); }
-  PointerType operator->() { return Pointer.getPointer(); }
-  ReferenceType operator*() { return *Pointer.getPointer(); }
 
   operator PointerType() const { return Pointer.getPointer(); }
   PointerType operator->() const { return Pointer.getPointer(); }
