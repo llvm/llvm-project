@@ -977,21 +977,34 @@ void CodeGenModule::Release() {
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
   if (getTriple().isOSzOS()) {
-    int32_t ProductVersion, ProductRelease, ProductPatch;
-    ProductVersion = LLVM_VERSION_MAJOR, ProductRelease = LLVM_VERSION_MINOR,
-    ProductPatch = LLVM_VERSION_PATCH;
     getModule().addModuleFlag(llvm::Module::Warning, "Product Major Version",
-                              ProductVersion);
+                              uint32_t(CLANG_VERSION_MAJOR));
     getModule().addModuleFlag(llvm::Module::Warning, "Product Minor Version",
-                              ProductRelease);
+                              uint32_t(CLANG_VERSION_MINOR));
     getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel",
-                              ProductPatch);
+                              uint32_t(CLANG_VERSION_PATCHLEVEL));
 
     // Record the language because we need it for the PPA2.
     const char *lang_str = languageToString(
         LangStandard::getLangStandardForKind(LangOpts.LangStd).Language);
     getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
                               llvm::MDString::get(VMContext, lang_str));
+
+    std::string ProductId;
+#ifdef CLANG_VENDOR
+    ProductId = #CLANG_VENDOR;
+#else
+    ProductId = "clang";
+#endif
+
+    getModule().addModuleFlag(llvm::Module::Error, "Product Id",
+                              llvm::MDString::get(VMContext, ProductId));
+
+    getModule().addModuleFlag(
+        llvm::Module::Error, "zos_le_char_mode",
+        llvm::MDString::get(VMContext, Context.getLangOpts().ASCIICharMode
+                                           ? "ascii"
+                                           : "ebcdic"));
   }
 
   llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
