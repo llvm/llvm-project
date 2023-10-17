@@ -162,9 +162,8 @@ private:
     Value cst0 = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
                                                   builder.getIndexAttr(0));
     return builder.create<LLVM::GEPOp>(
-        loc, LLVM::LLVMPointerType::get(builder.getContext()),
-        IntegerType::get(builder.getContext(), 8), globalPtr,
-        ArrayRef<Value>({cst0, cst0}));
+        loc, LLVM::LLVMPointerType::get(builder.getContext()), global.getType(),
+        globalPtr, ArrayRef<Value>({cst0, cst0}));
   }
 };
 } // namespace

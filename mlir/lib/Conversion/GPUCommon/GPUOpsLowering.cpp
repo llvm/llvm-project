@@ -473,7 +473,8 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   // Get a pointer to the format string's first element
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
   Value stringStart = rewriter.create<LLVM::GEPOp>(
-      loc, ptrType, ptrType, globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+      loc, getTypeConverter()->getPointerType(globalType), globalType,
+      globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
   SmallVector<Type> types;
   SmallVector<Value> args;
   // Promote and pack the arguments into a stack allocation.
@@ -496,9 +497,9 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
       rewriter.create<LLVM::AllocaOp>(loc, ptrType, structType, one,
                                       /*alignment=*/0);
   for (auto [index, arg] : llvm::enumerate(args)) {
-    Value ptr =
-        rewriter.create<LLVM::GEPOp>(loc, ptrType, arg.getType(), tempAlloc,
-                                     ArrayRef<LLVM::GEPArg>{0, index});
+    Value ptr = rewriter.create<LLVM::GEPOp>(
+        loc, getTypeConverter()->getPointerType(structType), structType,
+        tempAlloc, ArrayRef<LLVM::GEPArg>{0, index});
     rewriter.create<LLVM::StoreOp>(loc, arg, ptr);
   }
   std::array<Value, 2> printfArgs = {stringStart, tempAlloc};
