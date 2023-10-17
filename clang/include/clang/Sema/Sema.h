@@ -8606,7 +8606,7 @@ public:
 
   // A struct to represent the 'new' declaration, which is either itself just
   // the named decl, or the important information we need about it in order to
-  // do constraint comparisions.
+  // do constraint comparisons.
   class TemplateCompareNewDeclInfo {
     const NamedDecl *ND = nullptr;
     const DeclContext *DC = nullptr;

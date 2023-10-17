@@ -351,10 +351,8 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     CurDecl = Response::UseNextDecl(ND).NextDecl;
   }
 
-  if (!ND) {
-    assert(DC);
+  if (!ND)
     CurDecl = Decl::castFromDeclContext(DC);
-  }
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;
