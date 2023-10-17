@@ -21,13 +21,8 @@
 
 using namespace clang::ast_matchers;
 namespace clang::tidy::misc {
+namespace {
 using clang::ast_matchers::internal::BoundNodesTreeBuilder;
-
-CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
-                                                     ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      RAIITypesList(utils::options::parseStringList(
-          Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))) {}
 
 AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
               InnerMatcher) {
@@ -57,6 +52,13 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
   }
   return IsHostile;
 }
+} // namespace
+
+CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      RAIITypesList(utils::options::parseStringList(
+          Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))) {}
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.

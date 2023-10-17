@@ -3,8 +3,9 @@
 misc-coroutine-hostile-raii
 ====================
 
-Detects when objects of certain hostile RAII types persists across suspension points in a coroutine.
-Such hostile types include scoped-lockable types and types belonging to a configurable denylist.
+Detects when objects of certain hostile RAII types persists across suspension
+points in a coroutine. Such hostile types include scoped-lockable types and
+types belonging to a configurable denylist.
 
 Some objects require that they be destroyed on the same thread that created them. 
 Traditionally this requirement was often phrased as "must be a local variable",
@@ -46,4 +47,4 @@ Options
     A semicolon-separated list of qualified types which should not be allowed to 
     persist across suspension points.
     Eg: ``my::lockable; a::b;::my::other::lockable;``
-    The default value of this option is ``"std::lock_guard;std::scoped_lock"``.
+    The default value of this option is `"std::lock_guard;std::scoped_lock"`.

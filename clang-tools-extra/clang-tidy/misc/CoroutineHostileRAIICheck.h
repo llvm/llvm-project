@@ -38,6 +38,7 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_AsIs;
   }
+
 private:
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
