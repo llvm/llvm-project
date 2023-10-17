@@ -149,10 +149,14 @@ void Dex::buildIndex() {
   InvertedIndex = std::move(Builder).build();
 
   // Build RevRefs
-  for (const auto &Pair : Refs)
-    for (const auto &R : Pair.second)
+  for (const auto &[ID, RefList] : Refs)
+    for (const auto &R : RefList)
       if ((R.Kind & RefKind::Call) != RefKind::Unknown)
-        RevRefs[R.Container].emplace_back(R, Pair.first);
+        RevRefs.emplace_back(R, ID);
+  // Sort by container ID so we can use binary search for lookup.
+  llvm::sort(RevRefs, [](const RevRef &A, const RevRef &B) {
+    return A.ref().Container < B.ref().Container;
+  });
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
@@ -320,13 +324,28 @@ bool Dex::refs(const RefsRequest &Req,
   return false; // We reported all refs.
 }
 
+llvm::iterator_range<std::vector<Dex::RevRef>::const_iterator>
+Dex::lookupRevRefs(const SymbolID &Container) const {
+  // equal_range() requires an element of the same type as the elements of the
+  // range, so construct a dummy RevRef with the container of interest.
+  Ref QueryRef;
+  QueryRef.Container = Container;
+  RevRef Query(QueryRef, SymbolID{});
+
+  auto ItPair = std::equal_range(RevRefs.cbegin(), RevRefs.cend(), Query,
+                                 [](const RevRef &A, const RevRef &B) {
+                                   return A.ref().Container < B.ref().Container;
+                                 });
+  return {ItPair.first, ItPair.second};
+}
+
 bool Dex::refersTo(
     const RefsRequest &Req,
     llvm::function_ref<void(const RefersToResult &)> Callback) const {
   trace::Span Tracer("Dex reversed refs");
   uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
   for (const auto &ID : Req.IDs)
-    for (const auto &Rev : RevRefs.lookup(ID)) {
+    for (const auto &Rev : lookupRevRefs(ID)) {
       if (!static_cast<int>(Req.Filter & Rev.ref().Kind))
         continue;
       if (Remaining == 0)
@@ -373,9 +392,7 @@ size_t Dex::estimateMemoryUsage() const {
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
   Bytes += Refs.getMemorySize();
-  Bytes += RevRefs.getMemorySize();
-  for (const auto &Entry : RevRefs)
-    Bytes += Entry.second.size() * sizeof(Entry.second.front());
+  Bytes += RevRefs.size() * sizeof(RevRef);
   Bytes += Relations.getMemorySize();
   return Bytes + BackingDataSize;
 }
