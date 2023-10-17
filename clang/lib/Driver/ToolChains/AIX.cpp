@@ -303,7 +303,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       // Support POSIX threads if "-pthreads" or "-pthread" is present.
-      if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
+      if (Args.hasArg(options::OPT_pthreads) ||
+          Args.hasFlag(options::OPT_pthread, options::OPT_no_pthread, false))
         CmdArgs.push_back("-lpthreads");
 
       if (D.CCCIsCXX())

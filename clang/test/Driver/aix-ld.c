@@ -109,6 +109,33 @@
 // CHECK-LD64-PTHREAD-NOT: "-lm"
 // CHECK-LD64-PTHREAD:     "-lc"
 
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. Disable POSIX thread support.
+// RUN: %clang %s -### 2>&1 \
+// RUN:        -resource-dir=%S/Inputs/resource_dir \
+// RUN:        -pthread -no-pthread\
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-NOPTHREAD %s
+// CHECK-LD32-NOPTHREAD-NOT: warning:
+// CHECK-LD32-NOPTHREAD:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-NOPTHREAD:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD32-NOPTHREAD:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-NOPTHREAD:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-NOPTHREAD-NOT: "-bnso"
+// CHECK-LD32-NOPTHREAD:     "-b32"
+// CHECK-LD32-NOPTHREAD:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-NOPTHREAD:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOPTHREAD:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-LD32-NOPTHREAD-NOT: "-lc++"
+// CHECK-LD32-NOPTHREAD-NOT: "-lc++abi"
+// CHECK-LD32-NOPTHREAD:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NOPTHREAD-NOT: "--as-needed"
+// CHECK-LD32-NOPTHREAD:     "-lunwind"
+// CHECK-LD32-NOPTHREAD-NOT: "--no-as-needed"
+// CHECK-LD32-NOPTHREAD-NOT: "-lm"
+// CHECK-LD32-NOPTHREAD:     "-lc"
+
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. Enable profiling.
 // RUN: %clang %s -### 2>&1 \
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
