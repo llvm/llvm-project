@@ -36,7 +36,9 @@ jobs:
       - name: Install python dependencies
         run: pip install -r llvm/docs/requirements.txt
       - name: Install system dependencies
-        run: apt-get update && apt-get install -y cmake ninja-build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
       - name: Build docs
         run: |
           mkdir build
