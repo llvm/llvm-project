@@ -2,6 +2,7 @@
 // RUN: %clangxx_hwasan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// REQUIRES: !android
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>

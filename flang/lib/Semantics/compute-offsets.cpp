@@ -116,6 +116,8 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
       DoSymbol(*symbol);
     }
   }
+  // Ensure that the size is a multiple of the alignment
+  offset_ = Align(offset_, alignment_);
   scope.set_size(offset_);
   scope.SetAlignment(alignment_);
   // Assign offsets in COMMON blocks, unless this scope is a BLOCK construct,

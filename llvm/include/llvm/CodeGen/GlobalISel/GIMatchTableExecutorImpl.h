@@ -933,6 +933,16 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_BuildConstant: {
+      int64_t TempRegID = MatchTable[CurrentIdx++];
+      int64_t Imm = MatchTable[CurrentIdx++];
+      Builder.buildConstant(State.TempRegisters[TempRegID], Imm);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_BuildConstant(TempReg["
+                             << TempRegID << "], Imm=" << Imm << ")\n");
+      break;
+    }
+
     case GIR_Copy: {
       int64_t NewInsnID = MatchTable[CurrentIdx++];
       int64_t OldInsnID = MatchTable[CurrentIdx++];
