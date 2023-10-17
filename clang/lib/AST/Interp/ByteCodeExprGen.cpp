@@ -138,6 +138,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
+    if (ToT == PT_IntAP)
+      return this->emitCastFloatingIntegralAP(Ctx.getBitWidth(CE->getType()),
+                                              CE);
+    if (ToT == PT_IntAPS)
+      return this->emitCastFloatingIntegralAPS(Ctx.getBitWidth(CE->getType()),
+                                               CE);
+
     return this->emitCastFloatingIntegral(*ToT, CE);
   }
 
@@ -182,6 +189,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       assert(ToT != PT_IntAP && ToT != PT_IntAPS);
       return true;
     }
+
+    if (ToT == PT_IntAP)
+      return this->emitCastAP(*FromT, Ctx.getBitWidth(CE->getType()), CE);
+    if (ToT == PT_IntAPS)
+      return this->emitCastAPS(*FromT, Ctx.getBitWidth(CE->getType()), CE);
 
     return this->emitCast(*FromT, *ToT, CE);
   }
@@ -342,8 +354,10 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     return Discard(this->emitDiv(*T, BO));
   case BO_Assign:
     if (DiscardResult)
-      return this->emitStorePop(*T, BO);
-    return this->emitStore(*T, BO);
+      return LHS->refersToBitField() ? this->emitStoreBitFieldPop(*T, BO)
+                                     : this->emitStorePop(*T, BO);
+    return LHS->refersToBitField() ? this->emitStoreBitField(*T, BO)
+                                   : this->emitStore(*T, BO);
   case BO_And:
     return Discard(this->emitBitAnd(*T, BO));
   case BO_Or:
@@ -479,8 +493,8 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
   QualType QT = E->getType();
 
-  if (classify(QT))
-    return this->visitZeroInitializer(QT, E);
+  if (std::optional<PrimType> T = classify(QT))
+    return this->visitZeroInitializer(*T, QT, E);
 
   if (QT->isRecordType())
     return false;
@@ -490,19 +504,13 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
     assert(AT);
     const auto *CAT = cast<ConstantArrayType>(AT);
     size_t NumElems = CAT->getSize().getZExtValue();
+    PrimType ElemT = classifyPrim(CAT->getElementType());
 
-    if (std::optional<PrimType> ElemT = classify(CAT->getElementType())) {
-      // TODO(perf): For int and bool types, we can probably just skip this
-      //   since we memset our Block*s to 0 and so we have the desired value
-      //   without this.
-      for (size_t I = 0; I != NumElems; ++I) {
-        if (!this->visitZeroInitializer(CAT->getElementType(), E))
-          return false;
-        if (!this->emitInitElem(*ElemT, I, E))
-          return false;
-      }
-    } else {
-      assert(false && "default initializer for non-primitive type");
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->visitZeroInitializer(ElemT, CAT->getElementType(), E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
     }
 
     return true;
@@ -547,8 +555,15 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       const Record::Field *FieldToInit = R->getField(InitIndex);
       if (!this->visit(Init))
         return false;
-      if (!this->emitInitField(*T, FieldToInit->Offset, E))
-        return false;
+
+      if (FieldToInit->isBitField()) {
+        if (!this->emitInitBitField(*T, FieldToInit, E))
+          return false;
+      } else {
+        if (!this->emitInitField(*T, FieldToInit->Offset, E))
+          return false;
+      }
+
       if (!this->emitPopPtr(E))
         return false;
       ++InitIndex;
@@ -599,7 +614,7 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   if (std::optional<PrimType> T = classify(E->getType())) {
     assert(!DiscardResult);
     if (E->getNumInits() == 0)
-      return this->visitZeroInitializer(E->getType(), E);
+      return this->visitZeroInitializer(*T, E->getType(), E);
     assert(E->getNumInits() == 1);
     return this->delegate(E->inits()[0]);
   }
@@ -1149,8 +1164,13 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   }
 
   // And store the result in LHS.
-  if (DiscardResult)
+  if (DiscardResult) {
+    if (LHS->refersToBitField())
+      return this->emitStoreBitFieldPop(*ResultT, E);
     return this->emitStorePop(*ResultT, E);
+  }
+  if (LHS->refersToBitField())
+    return this->emitStoreBitField(*ResultT, E);
   return this->emitStore(*ResultT, E);
 }
 
@@ -1531,6 +1551,13 @@ bool ByteCodeExprGen<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
   return this->emitOffsetOf(T, E, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
+    const CXXScalarValueInitExpr *E) {
+  return this->visitZeroInitializer(classifyPrim(E->getType()), E->getType(),
+                                    E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -1616,12 +1643,8 @@ bool ByteCodeExprGen<Emitter>::visitBool(const Expr *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitZeroInitializer(QualType QT,
+bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
                                                     const Expr *E) {
-  // FIXME: We need the QualType to get the float semantics, but that means we
-  //   classify it over and over again in array situations.
-  PrimType T = classifyPrim(QT);
-
   switch (T) {
   case PT_Bool:
     return this->emitZeroBool(E);
@@ -1667,7 +1690,7 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
     if (D->isPrimitive()) {
       QualType QT = D->getType();
       PrimType T = classifyPrim(D->getType());
-      if (!this->visitZeroInitializer(QT, E))
+      if (!this->visitZeroInitializer(T, QT, E))
         return false;
       if (!this->emitInitField(T, Field.Offset, E))
         return false;
@@ -1684,7 +1707,7 @@ bool ByteCodeExprGen<Emitter>::visitZeroRecordInitializer(const Record *R,
       QualType ET = D->getElemQualType();
       PrimType T = classifyPrim(ET);
       for (uint32_t I = 0, N = D->getNumElems(); I != N; ++I) {
-        if (!this->visitZeroInitializer(ET, E))
+        if (!this->visitZeroInitializer(T, ET, E))
           return false;
         if (!this->emitInitElem(T, I, E))
           return false;
@@ -2305,6 +2328,10 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
+
+  if (this->LambdaThisCapture > 0)
+    return this->emitGetThisFieldPtr(this->LambdaThisCapture, E);
+
   return this->emitThis(E);
 }
 
@@ -2536,12 +2563,16 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // This happens in C.
   if (!Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() && VD->getAnyInitializer()) {
+        VD && VD->hasGlobalStorage() && VD->getAnyInitializer() &&
+        VD->getType().isConstQualified()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.
       return this->VisitDeclRefExpr(E);
     }
+
+    if (std::optional<unsigned> I = P.getOrCreateDummy(D))
+      return this->emitGetPtrGlobal(*I, E);
   }
 
   return this->emitInvalidDeclRef(E, E);

@@ -1137,7 +1137,8 @@ private:
         __alloc_.~_Alloc();
         size_t __size = __unbounded_array_control_block::__bytes_for(__count_);
         _AlignedStorage* __storage = reinterpret_cast<_AlignedStorage*>(this);
-        allocator_traits<_StorageAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*__storage), __size);
+        allocator_traits<_StorageAlloc>::deallocate(
+            __tmp, _PointerTraits::pointer_to(*__storage), __size / sizeof(_AlignedStorage));
     }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
@@ -1220,7 +1221,7 @@ private:
 
         _ControlBlockAlloc __tmp(__alloc_);
         __alloc_.~_Alloc();
-        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), sizeof(*this));
+        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), 1);
     }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;

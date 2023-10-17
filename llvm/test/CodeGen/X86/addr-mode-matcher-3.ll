@@ -2,8 +2,53 @@
 ; RUN: llc < %s -mtriple=i686-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefix=X64
 
-define i32 @mask_offset_scale_i32_i64(ptr %base, i32 %i) {
-; X86-LABEL: mask_offset_scale_i32_i64:
+define i32 @mask_add_sext_i32_i64(ptr %base, i32 %i) {
+; X86-LABEL: mask_add_sext_i32_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 12(%ecx,%eax,4), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: mask_add_sext_i32_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    sarl $24, %esi
+; X64-NEXT:    movslq %esi, %rax
+; X64-NEXT:    movl 12(%rdi,%rax,4), %eax
+; X64-NEXT:    retq
+  %mask = ashr i32 %i, 24
+  %offset = add i32 %mask, 3
+  %sext = sext i32 %offset to i64
+  %gep = getelementptr i32, ptr %base, i64 %sext
+  %ret = load i32, ptr %gep
+  ret i32 %ret
+}
+
+define i32 @mask_add_zext_i32_i64(ptr %base, i32 %i) {
+; X86-LABEL: mask_add_zext_i32_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $15, %ecx
+; X86-NEXT:    movl 12(%eax,%ecx,4), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: mask_add_zext_i32_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    andl $15, %esi
+; X64-NEXT:    movl 12(%rdi,%rsi,4), %eax
+; X64-NEXT:    retq
+  %mask = and i32 %i, 15
+  %offset = add i32 %mask, 3
+  %zext = zext i32 %offset to i64
+  %gep = getelementptr i32, ptr %base, i64 %zext
+  %ret = load i32, ptr %gep
+  ret i32 %ret
+}
+
+define i32 @mask_offset_scale_zext_i32_i64(ptr %base, i32 %i) {
+; X86-LABEL: mask_offset_scale_zext_i32_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
@@ -11,7 +56,7 @@ define i32 @mask_offset_scale_i32_i64(ptr %base, i32 %i) {
 ; X86-NEXT:    movl 48(%eax,%ecx), %eax
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: mask_offset_scale_i32_i64:
+; X64-LABEL: mask_offset_scale_zext_i32_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    andl $65280, %esi # imm = 0xFF00

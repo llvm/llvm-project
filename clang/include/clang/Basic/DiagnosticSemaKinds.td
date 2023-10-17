@@ -240,6 +240,10 @@ def ext_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
 def ext_integer_complex : Extension<
   "complex integer types are a GNU extension">, InGroup<GNUComplexInteger>;
+def ext_c23_auto_non_plain_identifier : Extension<
+  "type inference of a declaration other than a plain identifier with optional "
+  "trailing attributes is a Clang extension">,
+  InGroup<DiagGroup<"auto-decl-extensions">>;
 
 def err_invalid_saturation_spec : Error<"'_Sat' specifier is only valid on "
   "'_Fract' or '_Accum', not '%0'">;
@@ -2388,7 +2392,8 @@ def err_auto_not_allowed : Error<
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
   "|in template parameter|in friend declaration|in function prototype that is "
-  "not a function declaration|in requires expression parameter}1">;
+  "not a function declaration|in requires expression parameter"
+  "|in array declaration}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -2461,7 +2466,8 @@ def err_implied_std_initializer_list_not_found : Error<
 def err_malformed_std_initializer_list : Error<
   "std::initializer_list must be a class template with a single type parameter">;
 def err_auto_init_list_from_c : Error<
-  "cannot use __auto_type with initializer list in C">;
+  "cannot use %select{'auto'|<ERROR>|'__auto_type'}0 with "
+  "%select{initializer list|array}1 in C">;
 def err_auto_bitfield : Error<
   "cannot pass bit-field as __auto_type initializer in C">;
 
@@ -5226,11 +5232,11 @@ def err_explicit_specialization_inconsistent_storage_class : Error<
   "'%select{none|extern|static|__private_extern__|auto|register}0'">;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
-  " friend function template specialization">;
+  " %select{member|friend}0 function template specialization">;
 def note_dependent_function_template_spec_discard_reason : Note<
-  "candidate ignored: %select{not a function template"
-  "|not a member of the enclosing namespace;"
-  " did you mean to explicitly qualify the specialization?}0">;
+  "candidate ignored: %select{not a function template|"
+  "not a member of the enclosing %select{class template|"
+  "namespace; did you mean to explicitly qualify the specialization?}1}0">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -6383,6 +6389,17 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   "field %0 can overwrite instance variable %1 with variable sized type %2"
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
+def err_counted_by_attr_not_on_flexible_array_member : Error<
+  "'counted_by' only applies to flexible array members">;
+def err_counted_by_attr_refers_to_flexible_array : Error<
+  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_must_be_in_structure : Error<
+  "field %0 in 'counted_by' not inside structure">;
+def err_flexible_array_counted_by_attr_field_not_integer : Error<
+  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def note_flexible_array_counted_by_attr_field : Note<
+  "field %0 declared here">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.
@@ -6649,8 +6666,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer }0type "
-            "%1 %select{|||||||which is not trivially copyable|}0">;
+            "|sizeless ||integer |}0type "
+            "%1 %select{|||||||which is not trivially copyable||in C23}0">;
 def warn_atomic_member_access : Warning<
   "accessing a member of an atomic structure or union is undefined behavior">,
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
@@ -8673,10 +8690,13 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 
 def err_overflow_builtin_must_be_int : Error<
-  "operand argument to overflow builtin must be an integer (%0 invalid)">;
+  "operand argument to %select{overflow builtin|checked integer operation}0 "
+  "must be an integer type %select{|other than plain 'char', 'bool', bit-precise, "
+  "or an enumeration }0(%1 invalid)">;
 def err_overflow_builtin_must_be_ptr_int : Error<
-  "result argument to overflow builtin must be a pointer "
-  "to a non-const integer (%0 invalid)">;
+  "result argument to %select{overflow builtin|checked integer operation}0 "
+  "must be a pointer to a non-const integer type %select{|other than plain 'char', "
+  "'bool', bit-precise, or an enumeration }0(%1 invalid)">;
 def err_overflow_builtin_bit_int_max_size : Error<
   "__builtin_mul_overflow does not support 'signed _BitInt' operands of more "
   "than %0 bits">;
@@ -9454,6 +9474,8 @@ def err_defaulted_copy_assign_not_ref : Error<
 def err_incorrect_defaulted_constexpr : Error<
   "defaulted definition of %sub{select_special_member_kind}0 "
   "is not constexpr">;
+def err_incorrect_defaulted_constexpr_with_vb: Error<
+  "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
 def err_incorrect_defaulted_consteval : Error<
   "defaulted declaration of %sub{select_special_member_kind}0 "
   "cannot be consteval because implicit definition is not constexpr">;

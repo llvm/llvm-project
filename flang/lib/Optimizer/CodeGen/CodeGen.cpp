@@ -1026,14 +1026,15 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   }
 };
 
-/// `fir.disptach_table` operation has no specific CodeGen. The operation is
-/// only used to carry information during FIR to FIR passes.
-struct DispatchTableOpConversion
-    : public FIROpConversion<fir::DispatchTableOp> {
+/// `fir.type_info` operation has no specific CodeGen. The operation is
+/// only used to carry information during FIR to FIR passes. It may be used
+/// in the future to generate the runtime type info data structures instead
+/// of generating them in lowering.
+struct TypeInfoOpConversion : public FIROpConversion<fir::TypeInfoOp> {
   using FIROpConversion::FIROpConversion;
 
   mlir::LogicalResult
-  matchAndRewrite(fir::DispatchTableOp op, OpAdaptor,
+  matchAndRewrite(fir::TypeInfoOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
     return mlir::success();
@@ -3085,7 +3086,10 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(
           loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),
           inputBoxStorage);
-      attachTBAATag(boxValue, boxTy, boxTy, nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        boxValue.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
           genAllocaWithType(loc, boxPtrTy, defaultAlign, rewriter);
       auto storeOp =
@@ -3096,7 +3100,10 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       mlir::Type loadTy = convertType(load.getType());
       auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(
           load.getLoc(), loadTy, adaptor.getOperands(), load->getAttrs());
-      attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+      if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
+        loadOp.setTBAATags(*optionalTag);
+      else
+        attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
       rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
@@ -3340,7 +3347,10 @@ struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
       newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
           loc, adaptor.getOperands()[0], adaptor.getOperands()[1]);
     }
-    attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
+    if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
+      newStoreOp.setTBAATags(*optionalTag);
+    else
+      attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
     rewriter.eraseOp(store);
     return mlir::success();
   }
@@ -3777,7 +3787,8 @@ public:
 
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule(),
-                                         options.applyTBAA || applyTBAA};
+                                         options.applyTBAA || applyTBAA,
+                                         options.forceUnifiedTBAATree};
     mlir::RewritePatternSet pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
@@ -3787,19 +3798,19 @@ public:
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
         BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
         ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-        DispatchTableOpConversion, DTEntryOpConversion, DivcOpConversion,
-        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-        ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-        FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, IsPresentOpConversion,
-        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
-        NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
-        SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,
-        ShapeOpConversion, ShapeShiftOpConversion, ShiftOpConversion,
-        SliceOpConversion, StoreOpConversion, StringLitOpConversion,
-        SubcOpConversion, TypeDescOpConversion, UnboxCharOpConversion,
-        UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+        DTEntryOpConversion, DivcOpConversion, EmboxOpConversion,
+        EmboxCharOpConversion, EmboxProcOpConversion, ExtractValueOpConversion,
+        FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
+        MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
+        TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion,
         UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
         XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
                                                                   options);

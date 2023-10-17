@@ -632,6 +632,13 @@ bool HasAllowedCUDADeviceStaticInitializer(Sema &S, VarDecl *VD,
 } // namespace
 
 void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
+  // Return early if VD is inside a non-instantiated template function since
+  // the implicit constructor is not defined yet.
+  if (const FunctionDecl *FD =
+          dyn_cast_or_null<FunctionDecl>(VD->getDeclContext()))
+    if (FD->isDependentContext())
+      return;
+
   // Do not check dependent variables since the ctor/dtor/initializer are not
   // determined. Do it after instantiation.
   if (VD->isInvalidDecl() || !VD->hasInit() || !VD->hasGlobalStorage() ||
@@ -812,7 +819,7 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   assert(Callee && "Callee may not be null.");
 
-  auto &ExprEvalCtx = ExprEvalContexts.back();
+  const auto &ExprEvalCtx = currentEvaluationContext();
   if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
     return true;
 

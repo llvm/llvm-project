@@ -3914,7 +3914,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
-    return make_string_error("Invalid fallback style \"" + FallbackStyleName);
+    return make_string_error("Invalid fallback style: " + FallbackStyleName);
 
   llvm::SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 1>
       ChildFormatTextToApply;

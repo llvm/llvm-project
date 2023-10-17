@@ -96,6 +96,17 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
+// Does this variable have an allocatable direct component?
+static bool
+hasAllocatableDirectComponent(const Fortran::semantics::Symbol &sym) {
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        return Fortran::semantics::HasAllocatableDirectComponent(
+            *derivedTypeSpec);
+  return false;
+}
 //===----------------------------------------------------------------===//
 // Global variables instantiation (not for alias and common)
 //===----------------------------------------------------------------===//
@@ -670,6 +681,15 @@ needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
       return VariableCleanUp::Deallocate;
     if (hasFinalization(sym))
       return VariableCleanUp::Finalize;
+    // hasFinalization() check above handled all cases that require
+    // finalization, but we also have to deallocate all allocatable
+    // components of local variables (since they are also local variables
+    // according to F18 5.4.3.2.2, p. 2, note 1).
+    // Here, the variable itself is not allocatable. If it has an allocatable
+    // component the Destroy runtime does the job. Use the Finalize clean-up,
+    // though there will be no finalization in runtime.
+    if (hasAllocatableDirectComponent(sym))
+      return VariableCleanUp::Finalize;
   }
   return std::nullopt;
 }
@@ -694,7 +714,10 @@ needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
     return true;
   // Intent(out) dummies must be finalized at runtime if their type has a
   // finalization.
-  return hasFinalization(sym);
+  // Allocatable components of INTENT(OUT) dummies must be deallocated (9.7.3.2
+  // p6). Calling finalization runtime for this works even if the components
+  // have no final procedures.
+  return hasFinalization(sym) || hasAllocatableDirectComponent(sym);
 }
 
 /// Call default initialization runtime routine to initialize \p var.
@@ -727,6 +750,9 @@ static void finalizeAtRuntime(Fortran::lower::AbstractConverter &converter,
 // is deallocated; any allocated allocatable object that is a subobject of an
 // actual argument corresponding to an INTENT(OUT) dummy argument is
 // deallocated.
+// Note that allocatable components of non-ALLOCATABLE INTENT(OUT) dummy
+// arguments are dealt with needDummyIntentoutFinalization (finalization runtime
+// is called to reach the intended component deallocation effect).
 static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
                                 const Fortran::lower::pft::Variable &var,
                                 Fortran::lower::SymMap &symMap) {
@@ -1927,13 +1953,15 @@ void Fortran::lower::mapSymbolAttributes(
   if (ba.isChar()) {
     if (arg) {
       assert(!preAlloc && "dummy cannot be pre-allocated");
-      if (arg.getType().isa<fir::BoxCharType>()) {
+      if (arg.getType().isa<fir::BoxCharType>())
         std::tie(addr, len) = charHelp.createUnboxChar(arg);
-        // Ensure proper type is given to array/scalar that transited via
-        // fir.boxchar arg.
-        mlir::Type castTy = builder.getRefType(converter.genType(var));
-        addr = builder.createConvert(loc, castTy, addr);
-      }
+      else if (!addr)
+        addr = arg;
+      // Ensure proper type is given to array/scalar that was transmitted as a
+      // fir.boxchar arg or is a statement function actual argument with
+      // a different length than the dummy.
+      mlir::Type castTy = builder.getRefType(converter.genType(var));
+      addr = builder.createConvert(loc, castTy, addr);
     }
     if (std::optional<int64_t> cstLen = ba.getCharLenConst()) {
       // Static length

@@ -17,7 +17,10 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -26,6 +29,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -2762,7 +2766,63 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);
   return true;
- }
+}
+
+// Emit a ABS32_LO / ABS32_HI relocation stub.
+void AMDGPULegalizerInfo::buildAbsGlobalAddress(
+    Register DstReg, LLT PtrTy, MachineIRBuilder &B, const GlobalValue *GV,
+    MachineRegisterInfo &MRI) const {
+  bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
+
+  LLT S32 = LLT::scalar(32);
+
+  // Use the destination directly, if and only if we store the lower address
+  // part only and we don't have a register class being set.
+  Register AddrLo = !RequiresHighHalf && !MRI.getRegClassOrNull(DstReg)
+                        ? DstReg
+                        : MRI.createGenericVirtualRegister(S32);
+
+  if (!MRI.getRegClassOrNull(AddrLo))
+    MRI.setRegClass(AddrLo, &AMDGPU::SReg_32RegClass);
+
+  // Write the lower half.
+  B.buildInstr(AMDGPU::S_MOV_B32)
+      .addDef(AddrLo)
+      .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_LO);
+
+  // If required, write the upper half as well.
+  if (RequiresHighHalf) {
+    assert(PtrTy.getSizeInBits() == 64 &&
+           "Must provide a 64-bit pointer type!");
+
+    Register AddrHi = MRI.createGenericVirtualRegister(S32);
+    MRI.setRegClass(AddrHi, &AMDGPU::SReg_32RegClass);
+
+    B.buildInstr(AMDGPU::S_MOV_B32)
+        .addDef(AddrHi)
+        .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_HI);
+
+    // Use the destination directly, if and only if we don't have a register
+    // class being set.
+    Register AddrDst = !MRI.getRegClassOrNull(DstReg)
+                           ? DstReg
+                           : MRI.createGenericVirtualRegister(LLT::scalar(64));
+
+    if (!MRI.getRegClassOrNull(AddrDst))
+      MRI.setRegClass(AddrDst, &AMDGPU::SReg_64RegClass);
+
+    B.buildMergeValues(AddrDst, {AddrLo, AddrHi});
+
+    // If we created a new register for the destination, cast the result into
+    // the final output.
+    if (AddrDst != DstReg)
+      B.buildCast(DstReg, AddrDst);
+  } else if (AddrLo != DstReg) {
+    // If we created a new register for the destination, cast the result into
+    // the final output.
+    B.buildCast(DstReg, AddrLo);
+  }
+}
 
 bool AMDGPULegalizerInfo::legalizeGlobalValue(
   MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -2824,6 +2884,12 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
     B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(),
                                                    *cast<GlobalVariable>(GV)));
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (ST.isAmdPalOS() || ST.isMesa3DOS()) {
+    buildAbsGlobalAddress(DstReg, Ty, B, GV, MRI);
     MI.eraseFromParent();
     return true;
   }
@@ -4575,8 +4641,8 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
   }
 
-  // For f16 require arcp only.
-  // For f32 require afn+arcp.
+  // For f16 require afn or arcp.
+  // For f32 require afn.
   if (!AllowInaccurateRcp && (ResTy != LLT::scalar(16) ||
                               !MI.getFlag(MachineInstr::FmArcp)))
     return false;
@@ -5813,31 +5879,23 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
       IID == Intrinsic::amdgcn_struct_buffer_atomic_cmpswap ||
       IID == Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap ||
       IID == Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap;
-  const bool HasReturn = MI.getNumExplicitDefs() != 0;
 
-  Register Dst;
-
-  int OpOffset = 0;
-  if (HasReturn) {
-    // A few FP atomics do not support return values.
-    Dst = MI.getOperand(0).getReg();
-  } else {
-    OpOffset = -1;
-  }
-
+  Register Dst = MI.getOperand(0).getReg();
   // Since we don't have 128-bit atomics, we don't need to handle the case of
   // p8 argmunents to the atomic itself
-  Register VData = MI.getOperand(2 + OpOffset).getReg();
+  Register VData = MI.getOperand(2).getReg();
+
   Register CmpVal;
+  int OpOffset = 0;
 
   if (IsCmpSwap) {
-    CmpVal = MI.getOperand(3 + OpOffset).getReg();
+    CmpVal = MI.getOperand(3).getReg();
     ++OpOffset;
   }
 
   castBufferRsrcArgToV4I32(MI, B, 3 + OpOffset);
   Register RSrc = MI.getOperand(3 + OpOffset).getReg();
-  const unsigned NumVIndexOps = (IsCmpSwap ? 8 : 7) + HasReturn;
+  const unsigned NumVIndexOps = IsCmpSwap ? 9 : 8;
 
   // The struct intrinsic variants add one additional operand over raw.
   const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
@@ -5858,12 +5916,9 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   unsigned ImmOffset;
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
-  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID));
-
-  if (HasReturn)
-    MIB.addDef(Dst);
-
-  MIB.addUse(VData); // vdata
+  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID))
+      .addDef(Dst)
+      .addUse(VData); // vdata
 
   if (IsCmpSwap)
     MIB.addReg(CmpVal);
@@ -6422,11 +6477,6 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
-
-  const Module *M = B.getMF().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return legalizeTrapHsaQueuePtr(MI, MRI, B);
 
   return ST.supportsGetDoorbellID() ?
          legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);

@@ -42,6 +42,10 @@ llvm::cl::opt<std::string>
     stripPrefix("strip-prefix",
                 llvm::cl::desc("Strip prefix of the fully qualified names"),
                 llvm::cl::init("::mlir::"), llvm::cl::cat(docCat));
+llvm::cl::opt<bool> allowHugoSpecificFeatures(
+    "allow-hugo-specific-features",
+    llvm::cl::desc("Allows using features specific to Hugo"),
+    llvm::cl::init(false), llvm::cl::cat(docCat));
 
 using namespace llvm;
 using namespace mlir;
@@ -50,8 +54,9 @@ using mlir::tblgen::Operator;
 
 void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
   if (!summary.empty()) {
-    char first = std::toupper(summary.front());
-    llvm::StringRef rest = summary.drop_front();
+    llvm::StringRef trimmed = summary.trim();
+    char first = std::toupper(trimmed.front());
+    llvm::StringRef rest = trimmed.drop_front();
     os << "\n_" << first << rest << "_\n\n";
   }
 }
@@ -213,7 +218,7 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
       os << "<td><code>" << it.name << "</code></td><td>" << storageType
          << "</td><td>";
       StringRef description = resolveAttrDescription(it.attr);
-      if (!description.empty()) {
+      if (allowHugoSpecificFeatures && !description.empty()) {
         // Expandable description.
         // This appears as just the summary, but when clicked shows the full
         // description.
@@ -227,7 +232,7 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
       }
       os << "</td></tr>\n";
     }
-    os << "<table>\n";
+    os << "</table>\n";
   }
 
   // Emit each of the operands.

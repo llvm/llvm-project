@@ -1062,20 +1062,6 @@ public:
     }
   };
 
-  /// Whether the AST is currently being rebuilt to correct immediate
-  /// invocations. Immediate invocation candidates and references to consteval
-  /// functions aren't tracked when this is set.
-  bool RebuildingImmediateInvocation = false;
-
-  /// Used to change context to isConstantEvaluated without pushing a heavy
-  /// ExpressionEvaluationContextRecord object.
-  bool isConstantEvaluatedOverride;
-
-  bool isConstantEvaluated() const {
-    return ExprEvalContexts.back().isConstantEvaluated() ||
-           isConstantEvaluatedOverride;
-  }
-
   /// RAII object to handle the state changes required to synthesize
   /// a function body.
   class SynthesizedFunctionScope {
@@ -1360,6 +1346,11 @@ public:
     bool InImmediateEscalatingFunctionContext;
 
     bool IsCurrentlyCheckingDefaultArgumentOrInitializer = false;
+
+    // We are in a constant context, but we also allow
+    // non constant expressions, for example for array bounds (which may be
+    // VLAs).
+    bool InConditionallyConstantEvaluateContext = false;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -4804,6 +4795,8 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
+  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
+
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5647,6 +5640,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
+                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
@@ -7383,7 +7377,8 @@ public:
   public:
     LambdaScopeForCallOperatorInstantiationRAII(
         Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
-        LocalInstantiationScope &Scope);
+        LocalInstantiationScope &Scope,
+        bool ShouldAddDeclsFromParentScope = true);
   };
 
   /// Check whether the given expression is a valid constraint expression.
@@ -7409,6 +7404,11 @@ private:
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;
 
+  /// Introduce the instantiated local variables into the local
+  /// instantiation scope.
+  void addInstantiatedLocalVarsToScope(FunctionDecl *Function,
+                                       const FunctionDecl *PatternDecl,
+                                       LocalInstantiationScope &Scope);
   /// Introduce the instantiated function parameters into the local
   /// instantiation scope, and set the parameter names to those used
   /// in the template.
@@ -8452,9 +8452,9 @@ public:
                                          SourceLocation PrevPtOfInstantiation,
                                          bool &SuppressNew);
 
-  bool CheckDependentFunctionTemplateSpecialization(FunctionDecl *FD,
-                    const TemplateArgumentListInfo &ExplicitTemplateArgs,
-                                                    LookupResult &Previous);
+  bool CheckDependentFunctionTemplateSpecialization(
+      FunctionDecl *FD, const TemplateArgumentListInfo *ExplicitTemplateArgs,
+      LookupResult &Previous);
 
   bool CheckFunctionTemplateSpecialization(
       FunctionDecl *FD, TemplateArgumentListInfo *ExplicitTemplateArgs,
@@ -9870,30 +9870,44 @@ public:
   /// diagnostics that will be suppressed.
   std::optional<sema::TemplateDeductionInfo *> isSFINAEContext() const;
 
+  /// Whether the AST is currently being rebuilt to correct immediate
+  /// invocations. Immediate invocation candidates and references to consteval
+  /// functions aren't tracked when this is set.
+  bool RebuildingImmediateInvocation = false;
+
+  /// Used to change context to isConstantEvaluated without pushing a heavy
+  /// ExpressionEvaluationContextRecord object.
+  bool isConstantEvaluatedOverride = false;
+
+  const ExpressionEvaluationContextRecord &currentEvaluationContext() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back();
+  };
+
+  bool isConstantEvaluatedContext() const {
+    return currentEvaluationContext().isConstantEvaluated() ||
+           isConstantEvaluatedOverride;
+  }
+
+  bool isAlwaysConstantEvaluatedContext() const {
+    const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
+    return (Ctx.isConstantEvaluated() || isConstantEvaluatedOverride) &&
+           !Ctx.InConditionallyConstantEvaluateContext;
+  }
+
   /// Determines whether we are currently in a context that
   /// is not evaluated as per C++ [expr] p5.
   bool isUnevaluatedContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().isUnevaluated();
-  }
-
-  bool isConstantEvaluatedContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().isConstantEvaluated();
+    return currentEvaluationContext().isUnevaluated();
   }
 
   bool isImmediateFunctionContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().isImmediateFunctionContext();
+    return currentEvaluationContext().isImmediateFunctionContext();
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    const ExpressionEvaluationContextRecord &Ctx = ExprEvalContexts.back();
+    const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
     return (Ctx.Context ==
             ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed) ||
            Ctx.IsCurrentlyCheckingDefaultArgumentOrInitializer;
@@ -12472,6 +12486,10 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc);
+
+  /// Called on a well-formed 'ompx_bare' clause.
+  OMPClause *ActOnOpenMPXBareClause(SourceLocation StartLoc,
+                                    SourceLocation EndLoc);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {

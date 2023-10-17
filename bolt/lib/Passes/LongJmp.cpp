@@ -138,10 +138,13 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
       Cand = LeftCand;
   }
   int BitsAvail = BC.MIB->getPCRelEncodingSize(Inst) - 1;
-  uint64_t Mask = ~((1ULL << BitsAvail) - 1);
+  assert(BitsAvail < 63 && "PCRelEncodingSize is too large to use int64_t to"
+                           "check for out-of-bounds.");
+  int64_t MaxVal = (1ULL << BitsAvail) - 1;
+  int64_t MinVal = -(1ULL << BitsAvail);
   uint64_t PCRelTgtAddress = Cand->first;
-  PCRelTgtAddress = DotAddress > PCRelTgtAddress ? DotAddress - PCRelTgtAddress
-                                                 : PCRelTgtAddress - DotAddress;
+  int64_t PCOffset = (int64_t)(PCRelTgtAddress - DotAddress);
+
   LLVM_DEBUG({
     if (Candidates.size() > 1)
       dbgs() << "Considering stub group with " << Candidates.size()
@@ -149,7 +152,7 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
              << ", chosen candidate address is "
              << Twine::utohexstr(Cand->first) << "\n";
   });
-  return PCRelTgtAddress & Mask ? nullptr : Cand->second;
+  return (PCOffset < MinVal || PCOffset > MaxVal) ? nullptr : Cand->second;
 }
 
 BinaryBasicBlock *
@@ -290,7 +293,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
-    DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
+    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxColdAlignmentBytes())
@@ -349,7 +352,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
         DotAddress = alignTo(DotAddress, opts::AlignText);
     }
 
-    DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
+    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxAlignmentBytes())
@@ -512,13 +515,15 @@ bool LongJmpPass::needsStub(const BinaryBasicBlock &BB, const MCInst &Inst,
   }
 
   int BitsAvail = BC.MIB->getPCRelEncodingSize(Inst) - 1;
-  uint64_t Mask = ~((1ULL << BitsAvail) - 1);
+  assert(BitsAvail < 63 && "PCRelEncodingSize is too large to use int64_t to"
+                           "check for out-of-bounds.");
+  int64_t MaxVal = (1ULL << BitsAvail) - 1;
+  int64_t MinVal = -(1ULL << BitsAvail);
 
   uint64_t PCRelTgtAddress = getSymbolAddress(BC, TgtSym, TgtBB);
-  PCRelTgtAddress = DotAddress > PCRelTgtAddress ? DotAddress - PCRelTgtAddress
-                                                 : PCRelTgtAddress - DotAddress;
+  int64_t PCOffset = (int64_t)(PCRelTgtAddress - DotAddress);
 
-  return PCRelTgtAddress & Mask;
+  return PCOffset < MinVal || PCOffset > MaxVal;
 }
 
 bool LongJmpPass::relax(BinaryFunction &Func) {

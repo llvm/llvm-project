@@ -269,14 +269,10 @@ STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 static int64_t getArgumentStackToRestore(MachineFunction &MF,
                                          MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  bool IsTailCallReturn = false;
-  if (MBB.end() != MBBI) {
-    unsigned RetOpcode = MBBI->getOpcode();
-    IsTailCallReturn = RetOpcode == AArch64::TCRETURNdi ||
-                       RetOpcode == AArch64::TCRETURNri ||
-                       RetOpcode == AArch64::TCRETURNriBTI;
-  }
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  bool IsTailCallReturn = (MBB.end() != MBBI)
+                              ? AArch64InstrInfo::isTailCallReturnInst(*MBBI)
+                              : false;
 
   int64_t ArgumentPopSize = 0;
   if (IsTailCallReturn) {
@@ -300,7 +296,6 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -334,6 +329,23 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   if (AFI->hasSwiftAsyncContext())
     return false;
+
+  // If there are an odd number of GPRs before LR and FP in the CSRs list,
+  // they will not be paired into one RegPairInfo, which is incompatible with
+  // the assumption made by the homogeneous prolog epilog pass.
+  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  unsigned NumGPRs = 0;
+  for (unsigned I = 0; CSRegs[I]; ++I) {
+    Register Reg = CSRegs[I];
+    if (Reg == AArch64::LR) {
+      assert(CSRegs[I + 1] == AArch64::FP);
+      if (NumGPRs % 2 != 0)
+        return false;
+      break;
+    }
+    if (AArch64::GPR64RegClass.contains(Reg))
+      ++NumGPRs;
+  }
 
   return true;
 }
@@ -617,7 +629,7 @@ void AArch64FrameLowering::resetCFIToInitialState(
   }
 
   // Shadow call stack uses X18, reset it.
-  if (needsShadowCallStackPrologueEpilogue(MF))
+  if (MFI.needsShadowCallStackPrologueEpilogue(MF))
     insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
                        TRI.getDwarfRegNum(AArch64::X18, true));
 
@@ -1290,19 +1302,6 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   }
 }
 
-static bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) {
-  if (!(llvm::any_of(
-            MF.getFrameInfo().getCalleeSavedInfo(),
-            [](const auto &Info) { return Info.getReg() == AArch64::LR; }) &&
-        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)))
-    return false;
-
-  if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
-    report_fatal_error("Must reserve x18 to use shadow call stack");
-
-  return true;
-}
-
 static void emitShadowCallStackPrologue(const TargetInstrInfo &TII,
                                         MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -1414,7 +1413,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
-  if (needsShadowCallStackPrologueEpilogue(MF))
+  if (MFnI.needsShadowCallStackPrologueEpilogue(MF))
     emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
                                 MFnI.needsDwarfUnwindInfo(MF));
 
@@ -1945,7 +1944,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       if (NeedsWinCFI)
         HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
     }
-    if (needsShadowCallStackPrologueEpilogue(MF))
+    if (AFI->needsShadowCallStackPrologueEpilogue(MF))
       emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
     if (EmitCFI)
       emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
@@ -2768,7 +2767,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       // Update register live in.
       if (!MRI.isReserved(RPI.Reg1))
         MBB.addLiveIn(RPI.Reg1);
-      if (!MRI.isReserved(RPI.Reg2))
+      if (RPI.isPaired() && !MRI.isReserved(RPI.Reg2))
         MBB.addLiveIn(RPI.Reg2);
     }
     return true;
@@ -3018,6 +3017,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                 : (unsigned)AArch64::NoRegister;
 
   unsigned ExtraCSSpill = 0;
+  bool HasUnpairedGPR64 = false;
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
@@ -3028,10 +3028,29 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     bool RegUsed = SavedRegs.test(Reg);
     unsigned PairedReg = AArch64::NoRegister;
-    if (AArch64::GPR64RegClass.contains(Reg) ||
-        AArch64::FPR64RegClass.contains(Reg) ||
-        AArch64::FPR128RegClass.contains(Reg))
-      PairedReg = CSRegs[i ^ 1];
+    const bool RegIsGPR64 = AArch64::GPR64RegClass.contains(Reg);
+    if (RegIsGPR64 || AArch64::FPR64RegClass.contains(Reg) ||
+        AArch64::FPR128RegClass.contains(Reg)) {
+      // Compensate for odd numbers of GP CSRs.
+      // For now, all the known cases of odd number of CSRs are of GPRs.
+      if (HasUnpairedGPR64)
+        PairedReg = CSRegs[i % 2 == 0 ? i - 1 : i + 1];
+      else
+        PairedReg = CSRegs[i ^ 1];
+    }
+
+    // If the function requires all the GP registers to save (SavedRegs),
+    // and there are an odd number of GP CSRs at the same time (CSRegs),
+    // PairedReg could be in a different register class from Reg, which would
+    // lead to a FPR (usually D8) accidentally being marked saved.
+    if (RegIsGPR64 && !AArch64::GPR64RegClass.contains(PairedReg)) {
+      PairedReg = AArch64::NoRegister;
+      HasUnpairedGPR64 = true;
+    }
+    assert(PairedReg == AArch64::NoRegister ||
+           AArch64::GPR64RegClass.contains(Reg, PairedReg) ||
+           AArch64::FPR64RegClass.contains(Reg, PairedReg) ||
+           AArch64::FPR128RegClass.contains(Reg, PairedReg));
 
     if (!RegUsed) {
       if (AArch64::GPR64RegClass.contains(Reg) &&
@@ -3130,12 +3149,21 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
                         << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
+      ExtraCSSpill = UnspilledCSGPR;
+
       // MachO's compact unwind format relies on all registers being stored in
       // pairs, so if we need to spill one extra for BigStack, then we need to
       // store the pair.
-      if (producePairRegisters(MF))
-        SavedRegs.set(UnspilledCSGPRPaired);
-      ExtraCSSpill = UnspilledCSGPR;
+      if (producePairRegisters(MF)) {
+        if (UnspilledCSGPRPaired == AArch64::NoRegister) {
+          // Failed to make a pair for compact unwind format, revert spilling.
+          if (produceCompactUnwindFrame(MF)) {
+            SavedRegs.reset(UnspilledCSGPR);
+            ExtraCSSpill = AArch64::NoRegister;
+          }
+        } else
+          SavedRegs.set(UnspilledCSGPRPaired);
+      }
     }
 
     // If we didn't find an extra callee-saved register to spill, create

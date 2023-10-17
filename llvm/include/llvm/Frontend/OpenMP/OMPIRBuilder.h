@@ -877,6 +877,30 @@ public:
       std::function<GlobalValue::LinkageTypes()> VariableLinkage,
       Type *LlvmPtrTy, Constant *Addr);
 
+  /// Get the offset of the OMP_MAP_MEMBER_OF field.
+  unsigned getFlagMemberOffset();
+
+  /// Get OMP_MAP_MEMBER_OF flag with extra bits reserved based on
+  /// the position given.
+  /// \param Position - A value indicating the position of the parent
+  /// of the member in the kernel argument structure, often retrieved
+  /// by the parents position in the combined information vectors used
+  /// to generate the structure itself. Multiple children (member's of)
+  /// with the same parent will use the same returned member flag.
+  omp::OpenMPOffloadMappingFlags getMemberOfFlag(unsigned Position);
+
+  /// Given an initial flag set, this function modifies it to contain
+  /// the passed in MemberOfFlag generated from the getMemberOfFlag
+  /// function. The results are dependent on the existing flag bits
+  /// set in the original flag set.
+  /// \param Flags - The original set of flags to be modified with the
+  /// passed in MemberOfFlag.
+  /// \param MemberOfFlag - A modified OMP_MAP_MEMBER_OF flag, adjusted
+  /// slightly based on the getMemberOfFlag which adjusts the flag bits
+  /// based on the members position in its parent.
+  void setCorrectMemberOfFlag(omp::OpenMPOffloadMappingFlags &Flags,
+                              omp::OpenMPOffloadMappingFlags MemberOfFlag);
+
 private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1893,8 +1917,17 @@ public:
   ///
   /// \param Loc The location where the teams construct was encountered.
   /// \param BodyGenCB Callback that will generate the region code.
+  /// \param NumTeamsLower Lower bound on number of teams. If this is nullptr,
+  ///        it is as if lower bound is specified as equal to upperbound. If
+  ///        this is non-null, then upperbound must also be non-null.
+  /// \param NumTeamsUpper Upper bound on the number of teams.
+  /// \param ThreadLimit on the number of threads that may participate in a
+  ///        contention group created by each team.
   InsertPointTy createTeams(const LocationDescription &Loc,
-                            BodyGenCallbackTy BodyGenCB);
+                            BodyGenCallbackTy BodyGenCB,
+                            Value *NumTeamsLower = nullptr,
+                            Value *NumTeamsUpper = nullptr,
+                            Value *ThreadLimit = nullptr);
 
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
@@ -2142,6 +2175,10 @@ public:
   using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
 
+  using TargetGenArgAccessorsCallbackTy = function_ref<InsertPointTy(
+      Argument &Arg, Value *Input, Value *&RetVal, InsertPointTy AllocaIP,
+      InsertPointTy CodeGenIP)>;
+
   /// Generator for '#omp target'
   ///
   /// \param Loc where the target data construct was encountered.
@@ -2153,6 +2190,8 @@ public:
   /// \param Inputs The input values to the region that will be passed.
   /// as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
+  /// \param ArgAccessorFuncCB Callback that will generate accessors
+  /// instructions for passed in target arguments where neccessary
   InsertPointTy createTarget(const LocationDescription &Loc,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
@@ -2160,7 +2199,8 @@ public:
                              int32_t NumThreads,
                              SmallVectorImpl<Value *> &Inputs,
                              GenMapInfoCallbackTy GenMapInfoCB,
-                             TargetBodyGenCallbackTy BodyGenCB);
+                             TargetBodyGenCallbackTy BodyGenCB,
+                             TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call

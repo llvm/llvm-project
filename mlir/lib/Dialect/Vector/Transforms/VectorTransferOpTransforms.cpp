@@ -142,7 +142,8 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
       // Don't need to consider disjoint accesses.
       if (vector::isDisjointTransferSet(
               cast<VectorTransferOpInterface>(write.getOperation()),
-              cast<VectorTransferOpInterface>(transferOp.getOperation())))
+              cast<VectorTransferOpInterface>(transferOp.getOperation()),
+              /*testDynamicValueUsingBounds=*/true))
         continue;
     }
     blockingAccesses.push_back(user);
@@ -217,7 +218,8 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
       // the write.
       if (vector::isDisjointTransferSet(
               cast<VectorTransferOpInterface>(write.getOperation()),
-              cast<VectorTransferOpInterface>(read.getOperation())))
+              cast<VectorTransferOpInterface>(read.getOperation()),
+              /*testDynamicValueUsingBounds=*/true))
         continue;
       if (write.getSource() == read.getSource() &&
           dominators.dominates(write, read) && checkSameValueRAW(write, read)) {

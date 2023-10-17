@@ -143,14 +143,12 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  // newSparseTensor no longer handles `kFromFile=1`, so we leave this
-  // number reserved to help catch any code that still needs updating.
+  kEmptyForward = 1,
   kFromCOO = 2,
-  kSparseToSparse = 3,
-  kEmptyCOO = 4,
+  kFromReader = 4,
   kToCOO = 5,
-  kToIterator = 6,
   kPack = 7,
+  kSortCOOInPlace = 8,
 };
 
 /// This enum defines all the sparse representations supportable by
@@ -215,29 +213,29 @@ constexpr const char *toMLIRString(DimLevelType dlt) {
   case DimLevelType::Compressed:
     return "compressed";
   case DimLevelType::CompressedNu:
-    return "compressed_nu";
+    return "compressed(nonunique)";
   case DimLevelType::CompressedNo:
-    return "compressed_no";
+    return "compressed(nonordered)";
   case DimLevelType::CompressedNuNo:
-    return "compressed_nu_no";
+    return "compressed(nonunique, nonordered)";
   case DimLevelType::Singleton:
     return "singleton";
   case DimLevelType::SingletonNu:
-    return "singleton_nu";
+    return "singleton(nonunique)";
   case DimLevelType::SingletonNo:
-    return "singleton_no";
+    return "singleton(nonordered)";
   case DimLevelType::SingletonNuNo:
-    return "singleton_nu_no";
+    return "singleton(nonunique, nonordered)";
   case DimLevelType::LooseCompressed:
     return "loose_compressed";
   case DimLevelType::LooseCompressedNu:
-    return "loose_compressed_nu";
+    return "loose_compressed(nonunique)";
   case DimLevelType::LooseCompressedNo:
-    return "loose_compressed_no";
+    return "loose_compressed(nonordered)";
   case DimLevelType::LooseCompressedNuNo:
-    return "loose_compressed_nu_no";
+    return "loose_compressed(nonunique, nonordered)";
   case DimLevelType::TwoOutOfFour:
-    return "compressed24";
+    return "block2_4";
   }
   return "";
 }

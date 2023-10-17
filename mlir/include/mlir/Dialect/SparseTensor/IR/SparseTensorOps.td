@@ -195,6 +195,13 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
     ```
 
   }];
+
+  let extraClassDeclaration = [{
+     // Whether the convert can be done by a single step (either a sort or a foreach),
+     // or it would require a tmp buffer (sort, then foreach).
+     bool directConvertable();
+  }];
+
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -759,10 +766,10 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Sorting Operations.
+// Sparse Tensor Sorting/Ordering Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
+def SparseTensor_SortOp : SparseTensor_Op<"sort">,
     Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
                Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
                AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
@@ -770,7 +777,7 @@ def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort_coo sort the `xs` values along with some `ys` values
+    Sparse_tensor.sort sort the `xs` values along with some `ys` values
     that are put in a single linear buffer `xy`.
     The affine map attribute `perm_map` specifies the permutation to be applied on
     the `xs` before comparison, the rank of the permutation map
@@ -787,20 +794,44 @@ def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
     Example:
 
     ```mlir
-    sparse_tensor.sort_coo insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
+    sparse_tensor.sort insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
       : memref<?xindex>
-    ```
-
-    ```mlir
-    sparse_tensor.sort hybrid_quick_sort %n, %xy jointly %y1
-      { nx = 2 : index, ny = 2 : index}
-      : memref<?xi64> jointly memref<?xf32>
     ```
   }];
 
   let assemblyFormat = "$algorithm $n"
                        "`,`$xy (`jointly` $ys^)? attr-dict"
                        "`:` type($xy) (`jointly` type($ys)^)?";
+  let hasVerifier = 1;
+}
+
+def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
+    Arguments<(ins AnyCOOSparseTensor: $input_coo,
+                   SparseTensorSortKindAttr:$algorithm)>,
+    Results<(outs AnyCOOSparseTensor: $result_coo)> {
+  let summary = "Reorder the input COO such that it has the the same order as "
+                "the output COO";
+  let description = [{
+    sparse_tensor.reorder_coo reorder input COO to the same order as specified by
+    the output format. E.g., reorder an unordered COO into an ordered one.
+
+    The input and result COO tensor must have the same element type, position type and
+    coordinate type. At the moment, the operation also only supports ordering
+    input and result COO with the same dim2lvl map.
+
+    Example:
+
+    ```mlir
+    %res = sparse_tensor.reorder_coo quick_sort %coo : tensor<?x?xf64 : #Unordered_COO> to
+                                                       tensor<?x?xf64 : #Ordered_COO>
+
+    ```
+  }];
+
+  let assemblyFormat = "$algorithm $input_coo attr-dict"
+                       "`:` type($input_coo) `to` type($result_coo)";
+
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 

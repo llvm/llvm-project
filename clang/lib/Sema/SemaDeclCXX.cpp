@@ -49,6 +49,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <map>
 #include <optional>
@@ -1298,8 +1299,9 @@ static bool checkTupleLikeDecomposition(Sema &S,
       //   in the associated namespaces.
       Expr *Get = UnresolvedLookupExpr::Create(
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
-          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/true, &Args,
-          UnresolvedSetIterator(), UnresolvedSetIterator());
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/ true, &Args,
+          UnresolvedSetIterator(), UnresolvedSetIterator(),
+          /*KnownDependent=*/false);
 
       Expr *Arg = E.get();
       E = S.BuildCallExpr(nullptr, Get, Loc, Arg, Loc);
@@ -7819,10 +7821,17 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
                                   : isa<CXXConstructorDecl>(MD))) &&
       MD->isConstexpr() && !Constexpr &&
       MD->getTemplatedKind() == FunctionDecl::TK_NonTemplate) {
-    Diag(MD->getBeginLoc(), MD->isConsteval()
-                                ? diag::err_incorrect_defaulted_consteval
-                                : diag::err_incorrect_defaulted_constexpr)
-        << CSM;
+        if (!MD->isConsteval() && RD->getNumVBases()) {
+          Diag(MD->getBeginLoc(), diag::err_incorrect_defaulted_constexpr_with_vb)
+              << CSM;
+          for (const auto &I : RD->vbases())
+            Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
+        } else {
+          Diag(MD->getBeginLoc(), MD->isConsteval()
+                                      ? diag::err_incorrect_defaulted_consteval
+                                      : diag::err_incorrect_defaulted_constexpr)
+              << CSM;
+        }
     // FIXME: Explain why the special member can't be constexpr.
     HadError = true;
   }
@@ -17019,10 +17028,74 @@ Decl *Sema::ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                       AssertMessageExpr, RParenLoc, false);
 }
 
+static void WriteCharTypePrefix(BuiltinType::Kind BTK, llvm::raw_ostream &OS) {
+  switch (BTK) {
+  case BuiltinType::Char_S:
+  case BuiltinType::Char_U:
+    break;
+  case BuiltinType::Char8:
+    OS << "u8";
+    break;
+  case BuiltinType::Char16:
+    OS << 'u';
+    break;
+  case BuiltinType::Char32:
+    OS << 'U';
+    break;
+  case BuiltinType::WChar_S:
+  case BuiltinType::WChar_U:
+    OS << 'L';
+    break;
+  default:
+    llvm_unreachable("Non-character type");
+  }
+}
+
+/// Convert character's value, interpreted as a code unit, to a string.
+/// The value needs to be zero-extended to 32-bits.
+/// FIXME: This assumes Unicode literal encodings
+static void WriteCharValueForDiagnostic(uint32_t Value, const BuiltinType *BTy,
+                                        unsigned TyWidth,
+                                        SmallVectorImpl<char> &Str) {
+  char Arr[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
+  char *Ptr = Arr;
+  BuiltinType::Kind K = BTy->getKind();
+  llvm::raw_svector_ostream OS(Str);
+
+  // This should catch Char_S, Char_U, Char8, and use of escaped characters in
+  // other types.
+  if (K == BuiltinType::Char_S || K == BuiltinType::Char_U ||
+      K == BuiltinType::Char8 || Value <= 0x7F) {
+    StringRef Escaped = escapeCStyle<EscapeChar::Single>(Value);
+    if (!Escaped.empty())
+      EscapeStringForDiagnostic(Escaped, Str);
+    else
+      OS << static_cast<char>(Value);
+    return;
+  }
+
+  switch (K) {
+  case BuiltinType::Char16:
+  case BuiltinType::Char32:
+  case BuiltinType::WChar_S:
+  case BuiltinType::WChar_U: {
+    if (llvm::ConvertCodePointToUTF8(Value, Ptr))
+      EscapeStringForDiagnostic(StringRef(Arr, Ptr - Arr), Str);
+    else
+      OS << "\\x"
+         << llvm::format_hex_no_prefix(Value, TyWidth / 4, /*Upper=*/true);
+    break;
+  }
+  default:
+    llvm_unreachable("Non-character type is passed");
+  }
+}
+
 /// Convert \V to a string we can present to the user in a diagnostic
 /// \T is the type of the expression that has been evaluated into \V
 static bool ConvertAPValueToString(const APValue &V, QualType T,
-                                   SmallVectorImpl<char> &Str) {
+                                   SmallVectorImpl<char> &Str,
+                                   ASTContext &Context) {
   if (!V.hasValue())
     return false;
 
@@ -17037,13 +17110,38 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
              "Bool type, but value is not 0 or 1");
       llvm::raw_svector_ostream OS(Str);
       OS << (BoolValue ? "true" : "false");
-    } else if (T->isCharType()) {
+    } else {
+      llvm::raw_svector_ostream OS(Str);
       // Same is true for chars.
-      Str.push_back('\'');
-      Str.push_back(V.getInt().getExtValue());
-      Str.push_back('\'');
-    } else
+      // We want to print the character representation for textual types
+      const auto *BTy = T->getAs<BuiltinType>();
+      if (BTy) {
+        switch (BTy->getKind()) {
+        case BuiltinType::Char_S:
+        case BuiltinType::Char_U:
+        case BuiltinType::Char8:
+        case BuiltinType::Char16:
+        case BuiltinType::Char32:
+        case BuiltinType::WChar_S:
+        case BuiltinType::WChar_U: {
+          unsigned TyWidth = Context.getIntWidth(T);
+          assert(8 <= TyWidth && TyWidth <= 32 && "Unexpected integer width");
+          uint32_t CodeUnit = static_cast<uint32_t>(V.getInt().getZExtValue());
+          WriteCharTypePrefix(BTy->getKind(), OS);
+          OS << '\'';
+          WriteCharValueForDiagnostic(CodeUnit, BTy, TyWidth, Str);
+          OS << "' (0x"
+             << llvm::format_hex_no_prefix(CodeUnit, /*Width=*/2,
+                                           /*Upper=*/true)
+             << ", " << V.getInt() << ')';
+          return true;
+        }
+        default:
+          break;
+        }
+      }
       V.getInt().toString(Str);
+    }
 
     break;
 
@@ -17140,8 +17238,9 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
 
       Side->EvaluateAsRValue(DiagSide[I].Result, Context, true);
 
-      DiagSide[I].Print = ConvertAPValueToString(
-          DiagSide[I].Result.Val, Side->getType(), DiagSide[I].ValueString);
+      DiagSide[I].Print =
+          ConvertAPValueToString(DiagSide[I].Result.Val, Side->getType(),
+                                 DiagSide[I].ValueString, Context);
     }
     if (DiagSide[0].Print && DiagSide[1].Print) {
       Diag(Op->getExprLoc(), diag::note_expr_evaluates_to)

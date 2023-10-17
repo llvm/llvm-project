@@ -148,15 +148,6 @@ public:
 
   ConstString GetQualifiedName();
 
-  void DumpValue(ExecutionContext *exe_ctx, Stream *s,
-                 const DataExtractor &data, uint32_t data_offset,
-                 bool show_type, bool show_summary, bool verbose,
-                 lldb::Format format = lldb::eFormatDefault);
-
-  bool DumpValueInMemory(ExecutionContext *exe_ctx, Stream *s,
-                         lldb::addr_t address, AddressType address_type,
-                         bool show_types, bool show_summary, bool verbose);
-
   bool ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t address,
                       AddressType address_type, DataExtractor &data);
 
@@ -312,6 +303,8 @@ public:
 
   bool GetDescription(lldb_private::Stream &strm,
                       lldb::DescriptionLevel description_level);
+
+  CompilerType FindDirectNestedType(llvm::StringRef name);
 
 private:
   bool CheckModule(lldb::ModuleSP &module_sp) const;
