@@ -3637,14 +3637,16 @@ void GICombinerEmitter::gatherRules(
     }
 
     StringRef RuleName = Rec->getName();
-    if(!RulesSeen.insert(RuleName).second) {
-      PrintWarning(Rec->getLoc(), "skipping rule '" + Rec->getName() + "' because it has already been processed");
+    if (!RulesSeen.insert(RuleName).second) {
+      PrintWarning(Rec->getLoc(),
+                   "skipping rule '" + Rec->getName() +
+                       "' because it has already been processed");
       continue;
     }
 
     AllCombineRules.emplace_back(NextRuleID, Rec->getName().str());
     CombineRuleBuilder CRB(Target, SubtargetFeatures, *Rec, NextRuleID++,
-                            ActiveRules);
+                           ActiveRules);
 
     if (!CRB.parseAll()) {
       assert(ErrorsPrinted && "Parsing failed without errors!");
