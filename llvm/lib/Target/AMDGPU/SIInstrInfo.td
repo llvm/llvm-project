@@ -158,36 +158,18 @@ def SIbuffer_store_format_d16 : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT_D16",
                             SDTBufferStore,
                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
-class SDBufferAtomic<string opcode> : SDNode <opcode,
-  SDTypeProfile<1, 8,
-       [SDTCisVT<2, v4i32>, // rsrc
-       SDTCisVT<3, i32>,   // vindex(VGPR)
-       SDTCisVT<4, i32>,   // voffset(VGPR)
-       SDTCisVT<5, i32>,   // soffset(SGPR)
-       SDTCisVT<6, i32>,   // offset(imm)
-       SDTCisVT<7, i32>,   // cachepolicy(imm)
-       SDTCisVT<8, i1>]>,  // idxen(imm)
-  [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
->;
-
-def SIbuffer_atomic_swap : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SWAP">;
-def SIbuffer_atomic_add : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_ADD">;
-def SIbuffer_atomic_sub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SUB">;
-def SIbuffer_atomic_smin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMIN">;
-def SIbuffer_atomic_umin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMIN">;
-def SIbuffer_atomic_smax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMAX">;
-def SIbuffer_atomic_umax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMAX">;
-def SIbuffer_atomic_and : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_AND">;
-def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
-def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
-def SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
-def SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
-def SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
-def SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
-def SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
-def SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
-
-multiclass SDBufferAtomicNoRet {
+multiclass SDBufferAtomic<string opcode> {
+  def "" : SDNode <opcode,
+    SDTypeProfile<1, 8,
+         [SDTCisVT<2, v4i32>, // rsrc
+         SDTCisVT<3, i32>,   // vindex(VGPR)
+         SDTCisVT<4, i32>,   // voffset(VGPR)
+         SDTCisVT<5, i32>,   // soffset(SGPR)
+         SDTCisVT<6, i32>,   // offset(imm)
+         SDTCisVT<7, i32>,   // cachepolicy(imm)
+         SDTCisVT<8, i1>]>,  // idxen(imm)
+    [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
+  >;
   def "_noret" : PatFrag<
     (ops node:$vdata_in, node:$rsrc, node:$vindex, node:$voffset, node:$soffset,
       node:$offset, node:$cachepolicy, node:$idxen),
@@ -198,22 +180,22 @@ multiclass SDBufferAtomicNoRet {
   }
 }
 
-defm SIbuffer_atomic_swap : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_add : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_sub : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_smin : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_umin : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_smax : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_umax : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_and : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_or : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_xor : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_inc : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_dec : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_csub : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_fadd : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_fmin : SDBufferAtomicNoRet;
-defm SIbuffer_atomic_fmax : SDBufferAtomicNoRet;
+defm SIbuffer_atomic_swap : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SWAP">;
+defm SIbuffer_atomic_add : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_ADD">;
+defm SIbuffer_atomic_sub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SUB">;
+defm SIbuffer_atomic_smin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMIN">;
+defm SIbuffer_atomic_umin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMIN">;
+defm SIbuffer_atomic_smax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SMAX">;
+defm SIbuffer_atomic_umax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMAX">;
+defm SIbuffer_atomic_and : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_AND">;
+defm SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
+defm SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
+defm SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
+defm SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
+defm SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
+defm SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
+defm SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
+defm SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
