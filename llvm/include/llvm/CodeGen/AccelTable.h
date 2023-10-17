@@ -252,20 +252,27 @@ class DWARF5AccelTableData : public AccelTableData {
 public:
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
-  DWARF5AccelTableData(const DIE &Die) : Die(Die) {}
+  DWARF5AccelTableData(const DIE &Die, const DwarfCompileUnit &CU);
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
 #endif
 
-  const DIE &getDie() const { return Die; }
-  uint64_t getDieOffset() const { return Die.getOffset(); }
-  unsigned getDieTag() const { return Die.getTag(); }
+  uint64_t getDieOffset() const {
+    if (const DIE *const *TDie = std::get_if<const DIE *>(&OffsetVal))
+      return (*TDie)->getOffset();
+    return std::get<uint64_t>(OffsetVal);
+  }
+  unsigned getDieTag() const { return Tag; }
+  unsigned getUnitID() const { return UnitID; }
+  void normalizeDIEToOffset() { OffsetVal = getDieOffset(); }
 
 protected:
-  const DIE &Die;
+  std::variant<const DIE *, uint64_t> OffsetVal;
+  dwarf::Tag Tag;
+  unsigned UnitID;
 
-  uint64_t order() const override { return Die.getOffset(); }
+  uint64_t order() const override { return getDieOffset(); }
 };
 
 class DWARF5AccelTableStaticData : public AccelTableData {
@@ -283,6 +290,8 @@ public:
   uint64_t getDieOffset() const { return DieOffset; }
   unsigned getDieTag() const { return DieTag; }
   unsigned getCUIndex() const { return CUIndex; }
+  void normalizeDIEToOffset() { /* Not needed since DIE is not used. */
+  }
 
 protected:
   uint64_t DieOffset;
