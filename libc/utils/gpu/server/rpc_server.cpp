@@ -186,6 +186,13 @@ private:
       });
       break;
     }
+    case RPC_UNGETC: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = ungetc(static_cast<int>(buffer->data[0]),
+                                 file::to_stream(buffer->data[1]));
+      });
+      break;
+    }
     case RPC_NOOP: {
       port->recv([](rpc::Buffer *) {});
       break;
