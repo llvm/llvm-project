@@ -214,8 +214,19 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
-    ExpressionResults expr_result =
-        target.EvaluateExpression(expr, exe_scope, valobj_sp, eval_options);
+    std::string fixed_expression;
+
+    ExpressionResults expr_result = target.EvaluateExpression(
+        expr, exe_scope, valobj_sp, eval_options, &fixed_expression);
+
+    // Only mention Fix-Its if the expression evaluator applied them.
+    // Compiler errors refer to the final expression after applying Fix-It(s).
+    if (!fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
+      Stream &error_stream = result.GetErrorStream();
+      error_stream << "  Evaluated this expression after applying Fix-It(s):\n";
+      error_stream << "    " << fixed_expression << "\n";
+    }
+
     if (expr_result == eExpressionCompleted) {
       if (verbosity != eDWIMPrintVerbosityNone) {
         StringRef flags;
