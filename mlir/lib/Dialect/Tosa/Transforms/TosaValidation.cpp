@@ -410,7 +410,7 @@ private:
 
   SmallVector<std::function<LogicalResult(Operation *)>> const_checkers;
   tosa_level_t tosa_level;
-  DenseMap<const mlir::StringAttr *, mlir::Type> variables_map;
+  DenseMap<StringAttr, mlir::Type> variables_map;
 };
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
@@ -448,7 +448,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
   if (isa<mlir::tosa::VariableOp>(op)) {
     auto name_attr = cast<mlir::StringAttr>(op->getAttr("name"));
 
-    if (variables_map.count(&name_attr)) {
+    if (variables_map.count(name_attr)) {
       op->emitOpError() << "name has already been declared";
       return false;
     }
@@ -456,7 +456,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
     auto type_attr = cast<mlir::TypeAttr>(op->getAttr("type"));
     mlir::Type type = type_attr.getValue();
 
-    variables_map[&name_attr] = type;
+    variables_map[name_attr] = type;
   }
 
   return true;
@@ -467,12 +467,12 @@ bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
       isa<mlir::tosa::VariableWriteOp>(op)) {
     auto name_attr = cast<mlir::StringAttr>(op->getAttr("name"));
 
-    if (!variables_map.count(&name_attr)) {
+    if (!variables_map.count(name_attr)) {
       op->emitOpError() << "name has not been declared";
       return false;
     }
 
-    auto var_type = variables_map[&name_attr];
+    auto var_type = variables_map[name_attr];
 
     for (auto v : op->getOperands()) {
       auto type = v.getType();

@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "nvgpu-to-nvvm"
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
@@ -830,9 +831,10 @@ struct NVGPUMBarrierInitLowering
     Value count = truncToI32(b, adaptor.getCount());
     if (isMbarrierShared(mbarrierType)) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierInitSharedOp>(op, barrier,
-                                                              count);
+                                                              count, Value());
     } else {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count);
+      rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
+                                                        Value());
     }
     return success();
   }
@@ -927,12 +929,12 @@ struct NVGPUMBarrierArriveExpectTxLowering
 
     if (isMbarrierShared(op.getBarriers().getType())) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
-          op, barrier, txcount);
+          op, barrier, txcount, Value());
       return success();
     }
 
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(op, barrier,
-                                                                txcount);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
+        op, barrier, txcount, Value());
     return success();
   }
 };
@@ -983,7 +985,7 @@ struct NVGPUTmaAsyncLoadOpLowering
     }
 
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
-        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords);
+        op, dest, adaptor.getTensorMapDescriptor(), barrier, coords, Value());
     return success();
   }
 };
@@ -1576,27 +1578,46 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
   matchAndRewrite(nvgpu::WarpgroupMmaInitAccumulatorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-    LLVM::LLVMStructType structType =
+    LLVM::LLVMStructType packStructType =
         getTypeConverter()
             ->convertType(op.getMatrixC().getType())
             .cast<LLVM::LLVMStructType>();
-    Type elemType = structType.getBody()
+    Type elemType = packStructType.getBody()
                         .front()
                         .cast<LLVM::LLVMStructType>()
                         .getBody()
                         .front();
     Value zero = b.create<LLVM::ConstantOp>(elemType, b.getZeroAttr(elemType));
-    Value structValue = b.create<LLVM::UndefOp>(structType);
-    for (auto [idx, s] : llvm::enumerate(structType.getBody())) {
-      auto innerStructType = s.cast<LLVM::LLVMStructType>();
-      int ii = idx;
-      Value innerStructValue = b.create<LLVM::ExtractValueOp>(structValue, ii);
-      for (unsigned i = 0; i < innerStructType.getBody().size(); ++i) {
-        innerStructValue = b.create<LLVM::InsertValueOp>(
-            innerStructType, innerStructValue, zero, ArrayRef<int64_t>({i}));
+    Value packStruct = b.create<LLVM::UndefOp>(packStructType);
+    SmallVector<Value> innerStructs;
+    // Unpack the structs and set all values to zero
+    for (auto [idx, s] : llvm::enumerate(packStructType.getBody())) {
+      auto structType = s.cast<LLVM::LLVMStructType>();
+      Value structValue = b.create<LLVM::ExtractValueOp>(packStruct, idx);
+      for (unsigned i = 0; i < structType.getBody().size(); ++i) {
+        structValue = b.create<LLVM::InsertValueOp>(
+            structType, structValue, zero, ArrayRef<int64_t>({i}));
       }
+      innerStructs.push_back(structValue);
     }
-    rewriter.replaceOp(op, structValue);
+    // Pack the inner structs into a single struct
+    for (auto [idx, matrix] : llvm::enumerate(innerStructs)) {
+      packStruct = b.create<LLVM::InsertValueOp>(packStruct.getType(),
+                                                 packStruct, matrix, idx);
+    }
+    rewriter.replaceOp(op, packStruct);
+    return success();
+  }
+};
+
+struct NVGPUTmaPrefetchOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::TmaPrefetchOp> {
+  using ConvertOpToLLVMPattern<nvgpu::TmaPrefetchOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(nvgpu::TmaPrefetchOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<NVVM::PrefetchTensorMapOp>(
+        op, adaptor.getTensorMapDescriptor(), adaptor.getPredicate());
     return success();
   }
 };
@@ -1614,6 +1635,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUMBarrierTryWaitParityLowering,    // nvgpu.mbarrier.try_wait_parity
       NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
+      NVGPUTmaPrefetchOpLowering,            // nvgpu.tma.prefetch.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
