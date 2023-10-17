@@ -854,12 +854,8 @@ public:
   }
 
 private:
-  struct __empty_t {};
-
   template <class _ValueType, class _ErrorType>
   union __union_t {
-    _LIBCPP_HIDE_FROM_ABI constexpr __union_t() {}
-
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __union_t(std::in_place_t, _Args&&... __args)
         : __val_(std::forward<_Args>(__args)...) {}
@@ -904,7 +900,6 @@ private:
   template <class _ValueType, class _ErrorType>
     requires(is_trivially_move_constructible_v<_ValueType> && is_trivially_move_constructible_v<_ErrorType>)
   union __union_t<_ValueType, _ErrorType> {
-    _LIBCPP_HIDE_FROM_ABI constexpr __union_t() : __empty_() {}
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t(const __union_t&) = default;
     _LIBCPP_HIDE_FROM_ABI constexpr __union_t& operator=(const __union_t&) = default;
 
@@ -943,7 +938,6 @@ private:
       requires(!is_trivially_destructible_v<_ValueType> || !is_trivially_destructible_v<_ErrorType>)
     {}
 
-    _LIBCPP_NO_UNIQUE_ADDRESS __empty_t __empty_;
     _LIBCPP_NO_UNIQUE_ADDRESS _ValueType __val_;
     _LIBCPP_NO_UNIQUE_ADDRESS _ErrorType __unex_;
   };
