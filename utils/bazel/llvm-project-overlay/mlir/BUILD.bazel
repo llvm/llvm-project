@@ -8795,7 +8795,6 @@ cc_library(
     srcs = [
         "lib/ExecutionEngine/SparseTensor/File.cpp",
         "lib/ExecutionEngine/SparseTensor/MapRef.cpp",
-        "lib/ExecutionEngine/SparseTensor/NNZ.cpp",
         "lib/ExecutionEngine/SparseTensor/Storage.cpp",
     ],
     hdrs = [
