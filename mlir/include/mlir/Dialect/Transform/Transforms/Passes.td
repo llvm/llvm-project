@@ -53,7 +53,7 @@ def PreloadLibraryPass : Pass<"transform-preload-library"> {
     This is a temporary solution until a resource-based solution is available.
   }];
   // TODO: investigate using a resource blob if some ownership mode allows it.
-  let dependentDialects = ["transform::TransformDialect"];
+  let dependentDialects = ["::mlir::transform::TransformDialect"];
   let options = [
     ListOption<"transformLibraryPaths", "transform-library-paths", "std::string",
     "Optional paths to files with modules that should be merged into the "
@@ -68,7 +68,7 @@ def InterpreterPass : Pass<"transform-interpreter"> {
     sequence transformation specified by the provided name (defaults to
     `__transform_main`).
   }];
-  let dependentDialects = ["transform::TransformDialect"];
+  let dependentDialects = ["::mlir::transform::TransformDialect"];
   let options = [
     Option<"entryPoint", "entry-point", "std::string",
            /*default=*/[{"__transform_main"}],
