@@ -40,7 +40,7 @@ void test_svstr_za(uint32_t slice_base, void *ptr) {
 }
 
 // CHECK-C-LABEL: @test_svstr_vnum_za_var(
-// CHECK-CXX-LABEL: @_Z22test_svstr_vnum_za_varjPvm(
+// CHECK-CXX-LABEL: @_Z22test_svstr_vnum_za_varjPvl(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SVLB:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
 // CHECK-NEXT:    [[MULVL:%.*]] = mul i64 [[SVLB]], [[VNUM:%.*]]
@@ -50,6 +50,6 @@ void test_svstr_za(uint32_t slice_base, void *ptr) {
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[TILESLICE]], ptr [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-void test_svstr_vnum_za_var(uint32_t slice_base, void *ptr, uint64_t vnum) {
+void test_svstr_vnum_za_var(uint32_t slice_base, void *ptr, int64_t vnum) {
   svstr_vnum_za(slice_base, ptr, vnum);
 }
