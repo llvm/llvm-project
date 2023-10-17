@@ -20,9 +20,8 @@ define i1 @shr_to_shl_eq_i8_s2(i8 %x) {
 ; CHECK-LABEL: shr_to_shl_eq_i8_s2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $63, %al
-; CHECK-NEXT:    shrb $2, %dil
-; CHECK-NEXT:    cmpb %dil, %al
+; CHECK-NEXT:    rolb $2, %al
+; CHECK-NEXT:    cmpb %al, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i8 %x, 63
@@ -35,9 +34,9 @@ define i1 @shl_to_shr_ne_i8_s7(i8 %x) {
 ; CHECK-LABEL: shl_to_shr_ne_i8_s7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlb $7, %al
-; CHECK-NEXT:    andb $-128, %dil
-; CHECK-NEXT:    cmpb %dil, %al
+; CHECK-NEXT:    shrb $7, %al
+; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    cmpb %al, %dil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %shl = shl i8 %x, 7
@@ -63,9 +62,8 @@ define i1 @shr_to_shl_eq_i8_s1(i8 %x) {
 ; CHECK-LABEL: shr_to_shl_eq_i8_s1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $127, %al
-; CHECK-NEXT:    shrb %dil
-; CHECK-NEXT:    cmpb %dil, %al
+; CHECK-NEXT:    rolb %al
+; CHECK-NEXT:    cmpb %al, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i8 %x, 127
@@ -77,10 +75,10 @@ define i1 @shr_to_shl_eq_i8_s1(i8 %x) {
 define i1 @shr_to_shl_eq_i32_s3(i32 %x) {
 ; CHECK-LABEL: shr_to_shl_eq_i32_s3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $536870911, %eax # imm = 0x1FFFFFFF
-; CHECK-NEXT:    shrl $3, %edi
-; CHECK-NEXT:    cmpl %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (,%rdi,8), %eax
+; CHECK-NEXT:    andl $-8, %edi
+; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %x, 536870911
@@ -105,14 +103,20 @@ define i1 @shl_to_shr_eq_i32_s3_fail(i32 %x) {
 }
 
 define i1 @shl_to_shr_ne_i32_s16(i32 %x) {
-; CHECK-LABEL: shl_to_shr_ne_i32_s16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    andl $-65536, %edi # imm = 0xFFFF0000
-; CHECK-NEXT:    cmpl %edi, %eax
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    retq
+; CHECK-NOBMI-LABEL: shl_to_shr_ne_i32_s16:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    movzwl %di, %eax
+; CHECK-NOBMI-NEXT:    shrl $16, %edi
+; CHECK-NOBMI-NEXT:    cmpl %edi, %eax
+; CHECK-NOBMI-NEXT:    setne %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: shl_to_shr_ne_i32_s16:
+; CHECK-BMI2:       # %bb.0:
+; CHECK-BMI2-NEXT:    rorxl $16, %edi, %eax
+; CHECK-BMI2-NEXT:    cmpl %eax, %edi
+; CHECK-BMI2-NEXT:    setne %al
+; CHECK-BMI2-NEXT:    retq
   %shl = shl i32 %x, 16
   %and = and i32 %x, 4294901760
   %r = icmp ne i32 %shl, %and
@@ -137,9 +141,8 @@ define i1 @shl_to_shr_ne_i32_s16_fail(i32 %x) {
 define i1 @shr_to_shl_eq_i16_s1(i16 %x) {
 ; CHECK-LABEL: shr_to_shl_eq_i16_s1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    andl $32767, %edi # imm = 0x7FFF
-; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    rolw %ax
 ; CHECK-NEXT:    cmpw %ax, %di
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -167,9 +170,9 @@ define i1 @shr_to_shl_eq_i16_s1_fail(i16 %x) {
 define i1 @shl_to_shr_eq_i64_s44(i64 %x) {
 ; CHECK-LABEL: shl_to_shr_eq_i64_s44:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $-17592186044416, %rax # imm = 0xFFFFF00000000000
-; CHECK-NEXT:    andq %rdi, %rax
-; CHECK-NEXT:    shlq $44, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq $44, %rax
+; CHECK-NEXT:    andl $1048575, %edi # imm = 0xFFFFF
 ; CHECK-NEXT:    cmpq %rax, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -180,13 +183,20 @@ define i1 @shl_to_shr_eq_i64_s44(i64 %x) {
 }
 
 define i1 @shr_to_shl_ne_i64_s32(i64 %x) {
-; CHECK-LABEL: shr_to_shl_ne_i64_s32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrq $32, %rdi
-; CHECK-NEXT:    cmpq %rdi, %rax
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    retq
+; CHECK-NOBMI-LABEL: shr_to_shl_ne_i64_s32:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    shrq $32, %rdi
+; CHECK-NOBMI-NEXT:    cmpq %rdi, %rax
+; CHECK-NOBMI-NEXT:    setne %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: shr_to_shl_ne_i64_s32:
+; CHECK-BMI2:       # %bb.0:
+; CHECK-BMI2-NEXT:    rorxq $32, %rdi, %rax
+; CHECK-BMI2-NEXT:    cmpq %rax, %rdi
+; CHECK-BMI2-NEXT:    setne %al
+; CHECK-BMI2-NEXT:    retq
   %and = and i64 %x, 4294967295
   %shr = lshr i64 %x, 32
   %r = icmp ne i64 %and, %shr
@@ -230,9 +240,9 @@ define i1 @ashr_to_shl_ne_i64_s32_fail(i64 %x) {
 define i1 @shl_to_shr_eq_i64_s63(i64 %x) {
 ; CHECK-LABEL: shl_to_shr_eq_i64_s63:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    andq %rdi, %rax
-; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq $63, %rax
+; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    cmpq %rax, %rdi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -258,23 +268,14 @@ define i1 @shl_to_shr_eq_i64_s63_fail(i64 %x) {
 }
 
 define i1 @shr_to_shl_eq_i64_s7(i64 %x) {
-; CHECK-NOBMI-LABEL: shr_to_shl_eq_i64_s7:
-; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movabsq $144115188075855871, %rax # imm = 0x1FFFFFFFFFFFFFF
-; CHECK-NOBMI-NEXT:    andq %rdi, %rax
-; CHECK-NOBMI-NEXT:    shrq $7, %rdi
-; CHECK-NOBMI-NEXT:    cmpq %rdi, %rax
-; CHECK-NOBMI-NEXT:    sete %al
-; CHECK-NOBMI-NEXT:    retq
-;
-; CHECK-BMI2-LABEL: shr_to_shl_eq_i64_s7:
-; CHECK-BMI2:       # %bb.0:
-; CHECK-BMI2-NEXT:    movb $57, %al
-; CHECK-BMI2-NEXT:    bzhiq %rax, %rdi, %rax
-; CHECK-BMI2-NEXT:    shrq $7, %rdi
-; CHECK-BMI2-NEXT:    cmpq %rdi, %rax
-; CHECK-BMI2-NEXT:    sete %al
-; CHECK-BMI2-NEXT:    retq
+; CHECK-LABEL: shr_to_shl_eq_i64_s7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shlq $7, %rax
+; CHECK-NEXT:    andq $-128, %rdi
+; CHECK-NEXT:    cmpq %rax, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
   %and = and i64 %x, 144115188075855871
   %shr = lshr i64 %x, 7
   %r = icmp eq i64 %and, %shr
@@ -284,9 +285,8 @@ define i1 @shr_to_shl_eq_i64_s7(i64 %x) {
 define i1 @shl_to_shr_ne_i32_s24(i32 %x) {
 ; CHECK-LABEL: shl_to_shr_ne_i32_s24:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $24, %eax
-; CHECK-NEXT:    andl $-16777216, %edi # imm = 0xFF000000
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    shrl $24, %edi
 ; CHECK-NEXT:    cmpl %edi, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
@@ -312,14 +312,20 @@ define i1 @shr_to_shl_ne_i32_s24_fail(i32 %x) {
 }
 
 define i1 @shr_to_shl_ne_i32_s8(i32 %x) {
-; CHECK-LABEL: shr_to_shl_ne_i32_s8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
-; CHECK-NEXT:    shrl $8, %edi
-; CHECK-NEXT:    cmpl %edi, %eax
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    retq
+; CHECK-NOBMI-LABEL: shr_to_shl_ne_i32_s8:
+; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    roll $8, %eax
+; CHECK-NOBMI-NEXT:    cmpl %eax, %edi
+; CHECK-NOBMI-NEXT:    setne %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: shr_to_shl_ne_i32_s8:
+; CHECK-BMI2:       # %bb.0:
+; CHECK-BMI2-NEXT:    rorxl $24, %edi, %eax
+; CHECK-BMI2-NEXT:    cmpl %eax, %edi
+; CHECK-BMI2-NEXT:    setne %al
+; CHECK-BMI2-NEXT:    retq
   %and = and i32 %x, 16777215
   %shr = lshr i32 %x, 8
   %r = icmp ne i32 %and, %shr
@@ -359,9 +365,8 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4(<4 x i32> %x) {
 ;
 ; CHECK-AVX512-LABEL: shr_to_ror_eq_4xi32_s4:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpsrld $4, %xmm0, %xmm1
-; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vprold $4, %xmm0, %xmm1
+; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = lshr <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
@@ -402,9 +407,8 @@ define <4 x i1> @shl_to_ror_eq_4xi32_s8(<4 x i32> %x) {
 ;
 ; CHECK-AVX512-LABEL: shl_to_ror_eq_4xi32_s8:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpslld $8, %xmm0, %xmm1
-; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vprold $8, %xmm0, %xmm1
+; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = shl <4 x i32> %x, <i32 8, i32 8, i32 8, i32 8>
