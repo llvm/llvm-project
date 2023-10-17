@@ -386,11 +386,15 @@ Type Parser::parseTensorType() {
   // Parse an optional encoding attribute.
   Attribute encoding;
   if (consumeIf(Token::comma)) {
-    encoding = parseAttribute();
-    if (auto v = dyn_cast_or_null<VerifiableTensorEncoding>(encoding)) {
-      if (failed(v.verifyEncoding(dimensions, elementType,
-                                  [&] { return emitError(); })))
+    auto parseResult = parseOptionalAttribute(encoding);
+    if (parseResult.has_value()) {
+      if (failed(parseResult.value()))
         return nullptr;
+      if (auto v = dyn_cast_or_null<VerifiableTensorEncoding>(encoding)) {
+        if (failed(v.verifyEncoding(dimensions, elementType,
+                                    [&] { return emitError(); })))
+          return nullptr;
+      }
     }
   }
 

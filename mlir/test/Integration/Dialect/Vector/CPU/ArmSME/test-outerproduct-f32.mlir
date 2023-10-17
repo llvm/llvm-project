@@ -16,7 +16,7 @@
 
 llvm.func @printCString(!llvm.ptr<i8>)
 
-func.func @printTileBegin() {
+func.func @printTileBegin() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -25,7 +25,7 @@ func.func @printTileBegin() {
   return
 }
 
-func.func @printTileEnd() {
+func.func @printTileEnd() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -41,20 +41,8 @@ func.func @test_outerproduct_no_accumulator_4x4xf32() {
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
   %tile = vector.outerproduct %vector, %vector : vector<[4]xf32>, vector<[4]xf32>
 
-  // Calculate the size of a 32-bit tile, e.g. ZA{n}.s.
-  %vscale = vector.vscale
-  %min_elts_s = arith.constant 4 : index
-  %svl_s = arith.muli %min_elts_s, %vscale : index
-  %za_s_size = arith.muli %svl_s, %svl_s : index
-
-  // Allocate memory.
-  %mem = memref.alloca(%za_s_size) : memref<?xf32>
-
-  // Store the tile to memory.
-  vector.store %tile, %mem[%c0] : memref<?xf32>, vector<[4]x[4]xf32>
-
-  // Reload and print. The smallest SVL is 128-bits so the tile will be at
-  // least 4x4xf32.
+  // Print the tile. The smallest SVL is 128-bits so the tile will be at least
+  // 4x4xf32.
   //
   // WITHOUT-ACC:      TILE BEGIN
   // WITHOUT-ACC-NEXT: ( 0, 0, 0, 0
@@ -63,10 +51,7 @@ func.func @test_outerproduct_no_accumulator_4x4xf32() {
   // WITHOUT-ACC-NEXT: ( 0, 3, 6, 9
   // WITHOUT-ACC:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %za_s_size step %svl_s {
-    %tileslice = vector.load %mem[%i] : memref<?xf32>, vector<[4]xf32>
-    vector.print %tileslice : vector<[4]xf32>
-  }
+  vector.print %tile : vector<[4]x[4]xf32>
   func.call @printTileEnd() : () -> ()
 
   return
@@ -81,20 +66,8 @@ func.func @test_outerproduct_with_accumulator_4x4xf32() {
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
   %tile = vector.outerproduct %vector, %vector, %acc : vector<[4]xf32>, vector<[4]xf32>
 
-  // Calculate the size of a 32-bit tile, e.g. ZA{n}.s.
-  %vscale = vector.vscale
-  %min_elts_s = arith.constant 4 : index
-  %svl_s = arith.muli %min_elts_s, %vscale : index
-  %za_s_size = arith.muli %svl_s, %svl_s : index
-
-  // Allocate memory.
-  %mem = memref.alloca(%za_s_size) : memref<?xf32>
-
-  // Store the tile to memory.
-  vector.store %tile, %mem[%c0] : memref<?xf32>, vector<[4]x[4]xf32>
-
-  // Reload and print. The smallest SVL is 128-bits so the tile will be at
-  // least 4x4xf32.
+  // Print the tile. The smallest SVL is 128-bits so the tile will be at least
+  // 4x4xf32.
   //
   // WITH-ACC:      TILE BEGIN
   // WITH-ACC-NEXT: ( 10, 10, 10, 10
@@ -103,10 +76,7 @@ func.func @test_outerproduct_with_accumulator_4x4xf32() {
   // WITH-ACC-NEXT: ( 10, 13, 16, 19
   // WITH-ACC:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %za_s_size step %svl_s {
-    %tileslice = vector.load %mem[%i] : memref<?xf32>, vector<[4]xf32>
-    vector.print %tileslice : vector<[4]xf32>
-  }
+  vector.print %tile : vector<[4]x[4]xf32>
   func.call @printTileEnd() : () -> ()
 
   return

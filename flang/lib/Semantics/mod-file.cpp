@@ -1183,30 +1183,49 @@ Scope *ModFileReader::Read(const SourceName &name,
   }
   Scope &topScope{isIntrinsic.value_or(false) ? context_.intrinsicModulesScope()
                                               : context_.globalScope()};
-  if (!ancestor) {
+  Symbol *moduleSymbol{nullptr};
+  if (!ancestor) { // module, not submodule
     parentScope = &topScope;
+    auto pair{parentScope->try_emplace(name, UnknownDetails{})};
+    if (!pair.second) {
+      return nullptr;
+    }
+    moduleSymbol = &*pair.first->second;
+    moduleSymbol->set(Symbol::Flag::ModFile);
   } else if (std::optional<SourceName> parent{GetSubmoduleParent(parseTree)}) {
+    // submodule with submodule parent
     parentScope = Read(*parent, false /*not intrinsic*/, ancestor, silent);
   } else {
+    // submodule with module parent
     parentScope = ancestor;
   }
-  auto pair{parentScope->try_emplace(name, UnknownDetails{})};
-  if (!pair.second) {
-    return nullptr;
-  }
   // Process declarations from the module file
-  Symbol &modSymbol{*pair.first->second};
-  modSymbol.set(Symbol::Flag::ModFile);
   bool wasInModuleFile{context_.foldingContext().inModuleFile()};
   context_.foldingContext().set_inModuleFile(true);
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_inModuleFile(wasInModuleFile);
-  CHECK(modSymbol.has<ModuleDetails>());
-  CHECK(modSymbol.test(Symbol::Flag::ModFile));
-  if (isIntrinsic.value_or(false)) {
-    modSymbol.attrs().set(Attr::INTRINSIC);
+  if (!moduleSymbol) {
+    // Submodule symbols' storage are owned by their parents' scopes,
+    // but their names are not in their parents' dictionaries -- we
+    // don't want to report bogus errors about clashes between submodule
+    // names and other objects in the parent scopes.
+    if (Scope * submoduleScope{ancestor->FindSubmodule(name)}) {
+      moduleSymbol = submoduleScope->symbol();
+      if (moduleSymbol) {
+        moduleSymbol->set(Symbol::Flag::ModFile);
+      }
+    }
   }
-  return modSymbol.scope();
+  if (moduleSymbol) {
+    CHECK(moduleSymbol->has<ModuleDetails>());
+    CHECK(moduleSymbol->test(Symbol::Flag::ModFile));
+    if (isIntrinsic.value_or(false)) {
+      moduleSymbol->attrs().set(Attr::INTRINSIC);
+    }
+    return moduleSymbol->scope();
+  } else {
+    return nullptr;
+  }
 }
 
 parser::Message &ModFileReader::Say(const SourceName &name,

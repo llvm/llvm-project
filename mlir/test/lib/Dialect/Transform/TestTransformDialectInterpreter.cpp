@@ -161,7 +161,7 @@ public:
     if (failed(transform::detail::interpreterBaseRunOnOperationImpl(
             getOperation(), getArgument(), getSharedTransformModule(),
             getTransformLibraryModule(), extraMapping, options,
-            transformFileName, transformLibraryFileName, debugPayloadRootTag,
+            transformFileName, transformLibraryPaths, debugPayloadRootTag,
             debugTransformRootTag, getBinaryName())))
       return signalPassFailure();
   }
@@ -216,11 +216,11 @@ public:
           "the given value as container IR for top-level transform ops. This "
           "allows user control on what transformation to apply. If empty, "
           "select the container of the top-level transform op.")};
-  Option<std::string> transformLibraryFileName{
-      *this, "transform-library-file-name", llvm::cl::init(""),
-      llvm::cl::desc(
-          "Optional name of the file containing transform dialect symbol "
-          "definitions to be injected into the transform module.")};
+  ListOption<std::string> transformLibraryPaths{
+      *this, "transform-library-paths", llvm::cl::ZeroOrMore,
+      llvm::cl::desc("Optional paths to files with modules that should be "
+                     "merged into the transform module to provide the "
+                     "definitions of external named sequences.")};
 
   Option<bool> testModuleGeneration{
       *this, "test-module-generation", llvm::cl::init(false),

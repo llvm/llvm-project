@@ -10,10 +10,10 @@
 
 #include <cstdlib>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testutils {
 
 int rand() { return std::rand(); }
 
 } // namespace testutils
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

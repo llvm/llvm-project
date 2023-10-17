@@ -811,8 +811,7 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   rewriter.setInsertionPointAfter(hoistedPackedTensor.getDefiningOp());
 
   unsigned iterArgNumber = forOp.getResultForOpOperand(*pUse).getResultNumber();
-  auto yieldOp = cast<scf::YieldOp>(forOp.getBody(0)->getTerminator());
-  auto yieldingExtractSliceOp = yieldOp->getOperand(iterArgNumber)
+  auto yieldingExtractSliceOp = forOp.getYieldedValues()[iterArgNumber]
                                     .getDefiningOp<tensor::ExtractSliceOp>();
   if (!yieldingExtractSliceOp)
     return tensor::ExtractSliceOp();
@@ -826,7 +825,7 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
 
   SmallVector<Value> initArgs = forOp.getInitArgs();
   initArgs[iterArgNumber] = hoistedPackedTensor;
-  SmallVector<Value> yieldOperands = yieldOp.getOperands();
+  SmallVector<Value> yieldOperands = llvm::to_vector(forOp.getYieldedValues());
   yieldOperands[iterArgNumber] = yieldingExtractSliceOp.getSource();
 
   int64_t numOriginalForOpResults = initArgs.size();
@@ -842,8 +841,11 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
         outerSliceOp.getMixedStrides());
     rewriter.replaceAllUsesWith(forOp.getResult(iterArgNumber), extracted);
   }
-  scf::ForOp newForOp =
-      replaceLoopWithNewYields(rewriter, forOp, initArgs, yieldOperands);
+  scf::ForOp newForOp = cast<scf::ForOp>(*forOp.replaceWithAdditionalYields(
+      rewriter, initArgs, /*replaceInitOperandUsesInLoop=*/true,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+        return yieldOperands;
+      }));
 
   LLVM_DEBUG(DBGS() << "newForOp results: " << newForOp.getNumResults()
                     << "\n");

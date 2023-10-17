@@ -13,7 +13,7 @@
 
 llvm.func @printCString(!llvm.ptr<i8>)
 
-func.func @printTileBegin() {
+func.func @printTileBegin() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -22,7 +22,7 @@ func.func @printTileBegin() {
   return
 }
 
-func.func @printTileEnd() {
+func.func @printTileEnd() attributes { enable_arm_streaming_ignore } {
   %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
   %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.getelementptr %0[%1, %1]
@@ -44,7 +44,6 @@ func.func @entry() {
 
   // Allocate memory.
   %mem1 = memref.alloca(%za_s_size) : memref<?xi32>
-  %mem2 = memref.alloca(%za_s_size) : memref<?xi32>
 
   // Fill each "row" of "mem1" with row number.
   //
@@ -64,12 +63,7 @@ func.func @entry() {
   }
 
   // Load tile from "mem1" vertically.
-  %0 = arm_sme.tile_load %mem1[%c0, %c0], <vertical> : memref<?xi32>, vector<[4]x[4]xi32>
-
-  // Store tile back to "mem2" to print.
-  // TODO: Support vector.print for 2-D scalable vectors so don't have to spill
-  // to memory and reload to print.
-  vector.store %0, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+  %0 = arm_sme.tile_load %mem1[%c0, %c0] layout<vertical> : memref<?xi32>, vector<[4]x[4]xi32>
 
   // 1. ORIGINAL HORIZONTAL LAYOUT
   // Dump "mem1". The smallest SVL is 128-bits so the tile will be at least
@@ -99,10 +93,7 @@ func.func @entry() {
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK:      TILE END
   func.call @printTileBegin() : () -> ()
-  scf.for %i = %c0 to %za_s_size step %svl_s {
-    %tileslice = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
-    vector.print %tileslice : vector<[4]xi32>
-  }
+  vector.print %0 : vector<[4]x[4]xi32>
   func.call @printTileEnd() : () -> ()
 
   return

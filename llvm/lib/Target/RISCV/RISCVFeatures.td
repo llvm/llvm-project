@@ -159,7 +159,7 @@ def HasStdExtZhinxOrZhinxmin
                                    "'Zhinxmin' (Half Float in Integer Minimal)">;
 
 def FeatureStdExtZfa
-    : SubtargetFeature<"experimental-zfa", "HasStdExtZfa", "true",
+    : SubtargetFeature<"zfa", "HasStdExtZfa", "true",
                        "'Zfa' (Additional Floating-Point)",
                        [FeatureStdExtF]>;
 def HasStdExtZfa : Predicate<"Subtarget->hasStdExtZfa()">,
@@ -902,6 +902,9 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
+def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
+    "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+
 def TuneNoOptimizedZeroStrideLoad
    : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "false", "Hasn't optimized (perform fewer memory operations)"
@@ -950,12 +953,3 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-foreach align = [2, 4, 8, 16, 32, 64] in {
-  def TunePrefFunctionAlignment # align :
-      SubtargetFeature<"pref-func-align-" # align, "PrefFunctionAlignment",
-                       "Align(" # align # ")", "Set preferred function alignment to " # align # " bytes">;
-  def TunePrefLoopAlignment # align :
-      SubtargetFeature<"pref-loop-align-" # align, "PrefLoopAlignment",
-                       "Align(" # align # ")", "Set preferred loop alignment to " # align # " bytes">;
-}

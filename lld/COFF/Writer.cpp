@@ -31,6 +31,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cstdio>
@@ -320,7 +321,10 @@ private:
 };
 } // anonymous namespace
 
-void lld::coff::writeResult(COFFLinkerContext &ctx) { Writer(ctx).run(); }
+void lld::coff::writeResult(COFFLinkerContext &ctx) {
+  llvm::TimeTraceScope timeScope("Write output(s)");
+  Writer(ctx).run();
+}
 
 void OutputSection::addChunk(Chunk *c) {
   chunks.push_back(c);
@@ -563,16 +567,21 @@ void Writer::finalizeAddresses() {
   int pass = 0;
   int margin = 1024 * 100;
   while (true) {
+    llvm::TimeTraceScope timeScope2("Add thunks pass");
+
     // First check whether we need thunks at all, or if the previous pass of
     // adding them turned out ok.
     bool rangesOk = true;
     size_t numChunks = 0;
-    for (OutputSection *sec : ctx.outputSections) {
-      if (!verifyRanges(sec->chunks)) {
-        rangesOk = false;
-        break;
+    {
+      llvm::TimeTraceScope timeScope3("Verify ranges");
+      for (OutputSection *sec : ctx.outputSections) {
+        if (!verifyRanges(sec->chunks)) {
+          rangesOk = false;
+          break;
+        }
+        numChunks += sec->chunks.size();
       }
-      numChunks += sec->chunks.size();
     }
     if (rangesOk) {
       if (pass > 0)
@@ -596,8 +605,11 @@ void Writer::finalizeAddresses() {
     // Try adding thunks everywhere where it is needed, with a margin
     // to avoid things going out of range due to the added thunks.
     bool addressesChanged = false;
-    for (OutputSection *sec : ctx.outputSections)
-      addressesChanged |= createThunks(sec, margin);
+    {
+      llvm::TimeTraceScope timeScope3("Create thunks");
+      for (OutputSection *sec : ctx.outputSections)
+        addressesChanged |= createThunks(sec, margin);
+    }
     // If the verification above thought we needed thunks, we should have
     // added some.
     assert(addressesChanged);
@@ -615,6 +627,8 @@ void Writer::writePEChecksum() {
   if (!ctx.config.writeCheckSum) {
     return;
   }
+
+  llvm::TimeTraceScope timeScope("PE checksum");
 
   // https://docs.microsoft.com/en-us/windows/win32/debug/pe-format#checksum
   uint32_t *buf = (uint32_t *)buffer->getBufferStart();
@@ -650,42 +664,44 @@ void Writer::writePEChecksum() {
 
 // The main function of the writer.
 void Writer::run() {
-  ScopedTimer t1(ctx.codeLayoutTimer);
+  {
+    llvm::TimeTraceScope timeScope("Write PE");
+    ScopedTimer t1(ctx.codeLayoutTimer);
 
-  createImportTables();
-  createSections();
-  appendImportThunks();
-  // Import thunks must be added before the Control Flow Guard tables are added.
-  createMiscChunks();
-  createExportTable();
-  mergeSections();
-  removeUnusedSections();
-  finalizeAddresses();
-  removeEmptySections();
-  assignOutputSectionIndices();
-  setSectionPermissions();
-  createSymbolAndStringTable();
+    createImportTables();
+    createSections();
+    appendImportThunks();
+    // Import thunks must be added before the Control Flow Guard tables are
+    // added.
+    createMiscChunks();
+    createExportTable();
+    mergeSections();
+    removeUnusedSections();
+    finalizeAddresses();
+    removeEmptySections();
+    assignOutputSectionIndices();
+    setSectionPermissions();
+    createSymbolAndStringTable();
 
-  if (fileSize > UINT32_MAX)
-    fatal("image size (" + Twine(fileSize) + ") " +
-        "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
+    if (fileSize > UINT32_MAX)
+      fatal("image size (" + Twine(fileSize) + ") " +
+            "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
 
-  openFile(ctx.config.outputFile);
-  if (ctx.config.is64()) {
-    writeHeader<pe32plus_header>();
-  } else {
-    writeHeader<pe32_header>();
+    openFile(ctx.config.outputFile);
+    if (ctx.config.is64()) {
+      writeHeader<pe32plus_header>();
+    } else {
+      writeHeader<pe32_header>();
+    }
+    writeSections();
+    checkLoadConfig();
+    sortExceptionTable();
+
+    // Fix up the alignment in the TLS Directory's characteristic field,
+    // if a specific alignment value is needed
+    if (tlsAlignment)
+      fixTlsAlignment();
   }
-  writeSections();
-  checkLoadConfig();
-  sortExceptionTable();
-
-  // Fix up the alignment in the TLS Directory's characteristic field,
-  // if a specific alignment value is needed
-  if (tlsAlignment)
-    fixTlsAlignment();
-
-  t1.stop();
 
   if (!ctx.config.pdbPath.empty() && ctx.config.debug) {
     assert(buildId);
@@ -701,6 +717,7 @@ void Writer::run() {
   if (errorCount())
     return;
 
+  llvm::TimeTraceScope timeScope("Commit PE to disk");
   ScopedTimer t2(ctx.outputCommitTimer);
   if (auto e = buffer->commit())
     fatal("failed to write output '" + buffer->getPath() +
@@ -878,6 +895,7 @@ void Writer::sortSections() {
 
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
+  llvm::TimeTraceScope timeScope("Output sections");
   // First, create the builtin sections.
   const uint32_t data = IMAGE_SCN_CNT_INITIALIZED_DATA;
   const uint32_t bss = IMAGE_SCN_CNT_UNINITIALIZED_DATA;
@@ -1003,6 +1021,7 @@ void Writer::createSections() {
 }
 
 void Writer::createMiscChunks() {
+  llvm::TimeTraceScope timeScope("Misc chunks");
   Configuration *config = &ctx.config;
 
   for (MergeChunk *p : ctx.mergeChunkInstances) {
@@ -1068,6 +1087,7 @@ void Writer::createMiscChunks() {
 // IdataContents class abstracted away the details for us,
 // so we just let it create chunks and add them to the section.
 void Writer::createImportTables() {
+  llvm::TimeTraceScope timeScope("Import tables");
   // Initialize DLLOrder so that import entries are ordered in
   // the same order as in the command line. (That affects DLL
   // initialization order, and this ordering is MSVC-compatible.)
@@ -1097,6 +1117,7 @@ void Writer::appendImportThunks() {
   if (ctx.importFileInstances.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Import thunks");
   for (ImportFile *file : ctx.importFileInstances) {
     if (!file->live)
       continue;
@@ -1128,6 +1149,7 @@ void Writer::appendImportThunks() {
 }
 
 void Writer::createExportTable() {
+  llvm::TimeTraceScope timeScope("Export table");
   if (!edataSec->chunks.empty()) {
     // Allow using a custom built export table from input object files, instead
     // of having the linker synthesize the tables.
@@ -1148,6 +1170,7 @@ void Writer::createExportTable() {
 }
 
 void Writer::removeUnusedSections() {
+  llvm::TimeTraceScope timeScope("Remove unused sections");
   // Remove sections that we can be sure won't get content, to avoid
   // allocating space for their section headers.
   auto isUnused = [this](OutputSection *s) {
@@ -1163,11 +1186,13 @@ void Writer::removeUnusedSections() {
 // The Windows loader doesn't seem to like empty sections,
 // so we remove them if any.
 void Writer::removeEmptySections() {
+  llvm::TimeTraceScope timeScope("Remove empty sections");
   auto isEmpty = [](OutputSection *s) { return s->getVirtualSize() == 0; };
   llvm::erase_if(ctx.outputSections, isEmpty);
 }
 
 void Writer::assignOutputSectionIndices() {
+  llvm::TimeTraceScope timeScope("Output sections indices");
   // Assign final output section indices, and assign each chunk to its output
   // section.
   uint32_t idx = 1;
@@ -1258,6 +1283,7 @@ std::optional<coff_symbol16> Writer::createSymbol(Defined *def) {
 }
 
 void Writer::createSymbolAndStringTable() {
+  llvm::TimeTraceScope timeScope("Symbol and string table");
   // PE/COFF images are limited to 8 byte section names. Longer names can be
   // supported by writing a non-standard string table, but this string table is
   // not mapped at runtime and the long names will therefore be inaccessible.
@@ -1320,6 +1346,7 @@ void Writer::createSymbolAndStringTable() {
 }
 
 void Writer::mergeSections() {
+  llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
     firstPdata = pdataSec->chunks.front();
     lastPdata = pdataSec->chunks.back();
@@ -1353,6 +1380,7 @@ void Writer::mergeSections() {
 // Visits all sections to assign incremental, non-overlapping RVAs and
 // file offsets.
 void Writer::assignAddresses() {
+  llvm::TimeTraceScope timeScope("Assign addresses");
   Configuration *config = &ctx.config;
 
   sizeOfHeaders = dosStubSize + sizeof(PEMagic) + sizeof(coff_file_header) +
@@ -1367,6 +1395,7 @@ void Writer::assignAddresses() {
   uint64_t rva = alignTo(sizeOfHeaders, config->align);
 
   for (OutputSection *sec : ctx.outputSections) {
+    llvm::TimeTraceScope timeScope("Section: ", sec->name);
     if (sec == relocSec)
       addBaserels();
     uint64_t rawSize = 0, virtualSize = 0;
@@ -1374,11 +1403,7 @@ void Writer::assignAddresses() {
 
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
-    const bool isCodeSection =
-        (sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
-        (sec->header.Characteristics & IMAGE_SCN_MEM_READ) &&
-        (sec->header.Characteristics & IMAGE_SCN_MEM_EXECUTE);
-    uint32_t padding = isCodeSection ? config->functionPadMin : 0;
+    uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
 
     for (Chunk *c : sec->chunks) {
       if (padding && c->isHotPatchable())
@@ -1947,6 +1972,7 @@ void Writer::insertCtorDtorSymbols() {
 // Handles /section options to allow users to overwrite
 // section attributes.
 void Writer::setSectionPermissions() {
+  llvm::TimeTraceScope timeScope("Sections permissions");
   for (auto &p : ctx.config.section) {
     StringRef name = p.first;
     uint32_t perm = p.second;
@@ -1958,6 +1984,7 @@ void Writer::setSectionPermissions() {
 
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
+  llvm::TimeTraceScope timeScope("Write sections");
   uint8_t *buf = buffer->getBufferStart();
   for (OutputSection *sec : ctx.outputSections) {
     uint8_t *secBuf = buf + sec->getFileOff();
@@ -1974,6 +2001,8 @@ void Writer::writeSections() {
 }
 
 void Writer::writeBuildId() {
+  llvm::TimeTraceScope timeScope("Write build ID");
+
   // There are two important parts to the build ID.
   // 1) If building with debug info, the COFF debug directory contains a
   //    timestamp as well as a Guid and Age of the PDB.
@@ -2030,6 +2059,7 @@ void Writer::writeBuildId() {
 void Writer::sortExceptionTable() {
   if (!firstPdata)
     return;
+  llvm::TimeTraceScope timeScope("Sort exception table");
   // We assume .pdata contains function table entries only.
   auto bufAddr = [&](Chunk *c) {
     OutputSection *os = ctx.getOutputSection(c);
@@ -2123,6 +2153,7 @@ void Writer::addBaserels() {
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
       continue;
+    llvm::TimeTraceScope timeScope("Base relocations: ", sec->name);
     // Collect all locations for base relocations.
     for (Chunk *c : sec->chunks)
       c->getBaserels(&v);

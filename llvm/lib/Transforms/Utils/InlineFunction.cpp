@@ -1344,25 +1344,40 @@ static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
       ++BeginIt, End->getIterator(), InlinerAttributeWindow + 1);
 }
 
-static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
+// Only allow these white listed attributes to be propagated back to the
+// callee. This is because other attributes may only be valid on the call
+// itself, i.e. attributes such as signext and zeroext.
+
+// Attributes that are always okay to propagate as if they are violated its
+// immediate UB.
+static AttrBuilder IdentifyValidUBGeneratingAttributes(CallBase &CB) {
   AttrBuilder Valid(CB.getContext());
-  // Only allow these white listed attributes to be propagated back to the
-  // callee. This is because other attributes may only be valid on the call
-  // itself, i.e. attributes such as signext and zeroext.
   if (auto DerefBytes = CB.getRetDereferenceableBytes())
     Valid.addDereferenceableAttr(DerefBytes);
   if (auto DerefOrNullBytes = CB.getRetDereferenceableOrNullBytes())
     Valid.addDereferenceableOrNullAttr(DerefOrNullBytes);
   if (CB.hasRetAttr(Attribute::NoAlias))
     Valid.addAttribute(Attribute::NoAlias);
+  if (CB.hasRetAttr(Attribute::NoUndef))
+    Valid.addAttribute(Attribute::NoUndef);
+  return Valid;
+}
+
+// Attributes that need additional checks as propagating them may change
+// behavior or cause new UB.
+static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
+  AttrBuilder Valid(CB.getContext());
   if (CB.hasRetAttr(Attribute::NonNull))
     Valid.addAttribute(Attribute::NonNull);
+  if (CB.hasRetAttr(Attribute::Alignment))
+    Valid.addAlignmentAttr(CB.getRetAlign());
   return Valid;
 }
 
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
-  AttrBuilder Valid = IdentifyValidAttributes(CB);
-  if (!Valid.hasAttributes())
+  AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
+  AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
+  if (!ValidUB.hasAttributes() && !ValidPG.hasAttributes())
     return;
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
@@ -1406,7 +1421,62 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
     AttributeList AL = NewRetVal->getAttributes();
-    AttributeList NewAL = AL.addRetAttributes(Context, Valid);
+    if (ValidUB.getDereferenceableBytes() < AL.getRetDereferenceableBytes())
+      ValidUB.removeAttribute(Attribute::Dereferenceable);
+    if (ValidUB.getDereferenceableOrNullBytes() <
+        AL.getRetDereferenceableOrNullBytes())
+      ValidUB.removeAttribute(Attribute::DereferenceableOrNull);
+    AttributeList NewAL = AL.addRetAttributes(Context, ValidUB);
+    // Attributes that may generate poison returns are a bit tricky. If we
+    // propagate them, other uses of the callsite might have their behavior
+    // change or cause UB (if they have noundef) b.c of the new potential
+    // poison.
+    // Take the following three cases:
+    //
+    // 1)
+    // define nonnull ptr @foo() {
+    //   %p = call ptr @bar()
+    //   call void @use(ptr %p) willreturn nounwind
+    //   ret ptr %p
+    // }
+    //
+    // 2)
+    // define noundef nonnull ptr @foo() {
+    //   %p = call ptr @bar()
+    //   call void @use(ptr %p) willreturn nounwind
+    //   ret ptr %p
+    // }
+    //
+    // 3)
+    // define nonnull ptr @foo() {
+    //   %p = call noundef ptr @bar()
+    //   ret ptr %p
+    // }
+    //
+    // In case 1, we can't propagate nonnull because poison value in @use may
+    // change behavior or trigger UB.
+    // In case 2, we don't need to be concerned about propagating nonnull, as
+    // any new poison at @use will trigger UB anyways.
+    // In case 3, we can never propagate nonnull because it may create UB due to
+    // the noundef on @bar.
+    if (ValidPG.getAlignment().valueOrOne() < AL.getRetAlignment().valueOrOne())
+      ValidPG.removeAttribute(Attribute::Alignment);
+    if (ValidPG.hasAttributes()) {
+      // Three checks.
+      // If the callsite has `noundef`, then a poison due to violating the
+      // return attribute will create UB anyways so we can always propagate.
+      // Otherwise, if the return value (callee to be inlined) has `noundef`, we
+      // can't propagate as a new poison return will cause UB.
+      // Finally, check if the return value has no uses whose behavior may
+      // change/may cause UB if we potentially return poison. At the moment this
+      // is implemented overly conservatively with a single-use check.
+      // TODO: Update the single-use check to iterate through uses and only bail
+      // if we have a potentially dangerous use.
+
+      if (CB.hasRetAttr(Attribute::NoUndef) ||
+          (RetVal->hasOneUse() && !RetVal->hasRetAttr(Attribute::NoUndef)))
+        NewAL = NewAL.addRetAttributes(Context, ValidPG);
+    }
     NewRetVal->setAttributes(NewAL);
   }
 }
@@ -1760,12 +1830,12 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
       continue;
     auto *OrigBB = cast<BasicBlock>(Entry.first);
     auto *ClonedBB = cast<BasicBlock>(Entry.second);
-    uint64_t Freq = CalleeBFI->getBlockFreq(OrigBB).getFrequency();
+    BlockFrequency Freq = CalleeBFI->getBlockFreq(OrigBB);
     if (!ClonedBBs.insert(ClonedBB).second) {
       // Multiple blocks in the callee might get mapped to one cloned block in
       // the caller since we prune the callee as we clone it. When that happens,
       // we want to use the maximum among the original blocks' frequencies.
-      uint64_t NewFreq = CallerBFI->getBlockFreq(ClonedBB).getFrequency();
+      BlockFrequency NewFreq = CallerBFI->getBlockFreq(ClonedBB);
       if (NewFreq > Freq)
         Freq = NewFreq;
     }
@@ -1773,8 +1843,7 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
   }
   BasicBlock *EntryClone = cast<BasicBlock>(VMap.lookup(&CalleeEntryBlock));
   CallerBFI->setBlockFreqAndScale(
-      EntryClone, CallerBFI->getBlockFreq(CallSiteBlock).getFrequency(),
-      ClonedBBs);
+      EntryClone, CallerBFI->getBlockFreq(CallSiteBlock), ClonedBBs);
 }
 
 /// Update the branch metadata for cloned call instructions.
@@ -2741,8 +2810,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   if (IFI.CallerBFI) {
     // Copy original BB's block frequency to AfterCallBB
-    IFI.CallerBFI->setBlockFreq(
-        AfterCallBB, IFI.CallerBFI->getBlockFreq(OrigBB).getFrequency());
+    IFI.CallerBFI->setBlockFreq(AfterCallBB,
+                                IFI.CallerBFI->getBlockFreq(OrigBB));
   }
 
   // Change the branch that used to go to AfterCallBB to branch to the first

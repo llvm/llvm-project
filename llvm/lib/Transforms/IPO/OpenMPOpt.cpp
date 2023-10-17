@@ -2623,6 +2623,17 @@ struct AAICVTrackerCallSiteReturned : AAICVTracker {
   }
 };
 
+/// Determines if \p BB exits the function unconditionally itself or reaches a
+/// block that does through only unique successors.
+static bool hasFunctionEndAsUniqueSuccessor(const BasicBlock *BB) {
+  if (succ_empty(BB))
+    return true;
+  const BasicBlock *const Successor = BB->getUniqueSuccessor();
+  if (!Successor)
+    return false;
+  return hasFunctionEndAsUniqueSuccessor(Successor);
+}
+
 struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
@@ -2678,17 +2689,19 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!ED.EncounteredAssumes.empty() && !A.isModulePass())
         return;
 
-      // We can remove this barrier, if it is one, or all aligned barriers
-      // reaching the kernel end. In the latter case we can transitively work
-      // our way back until we find a barrier that guards a side-effect if we
-      // are dealing with the kernel end here.
+      // We can remove this barrier, if it is one, or aligned barriers reaching
+      // the kernel end (if CB is nullptr). Aligned barriers reaching the kernel
+      // end should only be removed if the kernel end is their unique successor;
+      // otherwise, they may have side-effects that aren't accounted for in the
+      // kernel end in their other successors. If those barriers have other
+      // barriers reaching them, those can be transitively removed as well as
+      // long as the kernel end is also their unique successor.
       if (CB) {
         DeletedBarriers.insert(CB);
         A.deleteAfterManifest(*CB);
         ++NumBarriersEliminated;
         Changed = ChangeStatus::CHANGED;
       } else if (!ED.AlignedBarriers.empty()) {
-        NumBarriersEliminated += ED.AlignedBarriers.size();
         Changed = ChangeStatus::CHANGED;
         SmallVector<CallBase *> Worklist(ED.AlignedBarriers.begin(),
                                          ED.AlignedBarriers.end());
@@ -2699,7 +2712,10 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
             continue;
           if (LastCB->getFunction() != getAnchorScope())
             continue;
+          if (!hasFunctionEndAsUniqueSuccessor(LastCB->getParent()))
+            continue;
           if (!DeletedBarriers.count(LastCB)) {
+            ++NumBarriersEliminated;
             A.deleteAfterManifest(*LastCB);
             continue;
           }
@@ -2980,7 +2996,7 @@ bool AAExecutionDomainFunction::handleCallees(Attributor &A,
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = true;
       EntryBBED.EncounteredNonLocalSideEffect = false;
-      ExitED.IsReachingAlignedBarrierOnly = true;
+      ExitED.IsReachingAlignedBarrierOnly = false;
     } else {
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = false;

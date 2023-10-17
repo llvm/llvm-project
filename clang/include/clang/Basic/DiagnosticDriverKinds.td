@@ -70,6 +70,16 @@ def err_drv_no_rocm_device_lib : Error<
 def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime; provide its path via '--rocm-path', or pass "
   "'-nogpuinc' to build without HIP runtime">;
+def err_drv_no_hipstdpar_lib : Error<
+  "cannot find HIP Standard Parallelism Acceleration library; provide it via "
+  "'--hipstdpar-path'">;
+def err_drv_no_hipstdpar_thrust_lib : Error<
+  "cannot find rocThrust, which is required by the HIP Standard Parallelism "
+  "Acceleration library; provide it via "
+  "'--hipstdpar-thrust-path'">;
+def err_drv_no_hipstdpar_prim_lib : Error<
+  "cannot find rocPrim, which is required by the HIP Standard Parallelism "
+  "Acceleration library; provide it via '--hipstdpar-prim-path'">;
 
 def err_drv_no_hipspv_device_lib : Error<
   "cannot find HIP device library%select{| for %1}0; provide its path via "
@@ -172,8 +182,8 @@ def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
-def err_drv_minws_unsupported_input_type : Error<
-  "'-fminimize-whitespace' invalid for input of type %0">;
+def err_drv_opt_unsupported_input_type : Error<
+  "'%0' invalid for input of type %1">;
 def err_drv_amdgpu_ieee_without_no_honor_nans : Error<
   "invalid argument '-mno-amdgpu-ieee' only allowed with relaxed NaN handling">;
 def err_drv_argument_not_allowed_with : Error<
@@ -433,7 +443,7 @@ def warn_drv_treating_input_as_cxx : Warning<
   InGroup<Deprecated>;
 def warn_drv_include_probe_gch : Warning<
   "'%0' probing .gch is deprecated. Use '-include-pch %1' or switch to .pch instead">,
-  InGroup<Deprecated>;
+  InGroup<DeprecatedIncludeGch>;
 def warn_drv_pch_not_first_include : Warning<
   "precompiled header '%0' was ignored because '%1' is not first '-include'">;
 def warn_missing_sysroot : Warning<"no such sysroot directory: '%0'">,
@@ -456,6 +466,9 @@ def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
+def warn_drv_large_data_threshold_invalid_code_model: Warning<
+  "'%0' only applies to medium code model">,
+  InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;

@@ -85,11 +85,10 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("elf_i386");
   }
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
-  } else {
-    assert(Output.isNothing() && "Invalid output.");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
@@ -116,8 +115,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
   }
 
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 

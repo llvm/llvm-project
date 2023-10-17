@@ -1739,9 +1739,11 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
 }
 
 void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
-  if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
+  if ((!attrs_ || !attrs_->test(Attr::BIND_C)) &&
+      !symbol.attrs().test(Attr::BIND_C)) {
     return;
   }
+
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
   // 18.9.2(2): discard leading and trailing blanks
@@ -1754,6 +1756,9 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
     }
     auto last{label->find_last_not_of(" ")};
     label = label->substr(first, last - first + 1);
+  } else if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
+    // BIND(C) does not give an implicit binding label to internal procedures.
+    return;
   } else {
     label = symbol.name().ToString();
   }
@@ -3225,7 +3230,11 @@ bool ModuleVisitor::BeginSubmodule(
 }
 
 void ModuleVisitor::BeginModule(const parser::Name &name, bool isSubmodule) {
-  auto &symbol{MakeSymbol(name, ModuleDetails{isSubmodule})};
+  // Submodule symbols are not visible in their parents' scopes.
+  Symbol &symbol{isSubmodule ? Resolve(name,
+                                   currScope().MakeSymbol(name.source, Attrs{},
+                                       ModuleDetails{true}))
+                             : MakeSymbol(name, ModuleDetails{false})};
   auto &details{symbol.get<ModuleDetails>()};
   PushScope(Scope::Kind::Module, &symbol);
   details.set_scope(&currScope());
@@ -4106,6 +4115,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
       if (GenericDetails *
           generic{DEREF(FindSymbol(name)).detailsIf<GenericDetails>()}) {
         generic->clear_specific();
+        name.symbol = nullptr;
       } else {
         EraseSymbol(name);
       }
@@ -4833,6 +4843,13 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
         symbol.set(Symbol::Flag::Function);
       } else if (interface->test(Symbol::Flag::Subroutine)) {
         symbol.set(Symbol::Flag::Subroutine);
+      }
+      if (IsBindCProcedure(*interface) && !IsPointer(symbol) &&
+          !IsDummy(symbol)) {
+        // Inherit BIND_C attribute from the interface, but not the NAME="..."
+        // if any. This is not clearly described in the standard, but matches
+        // the behavior of other compilers.
+        SetImplicitAttr(symbol, Attr::BIND_C);
       }
     } else if (auto *type{GetDeclTypeSpec()}) {
       SetType(name, *type);
@@ -6412,6 +6429,11 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
       Say(name, "Derived type '%s' not found"_err_en_US);
       return std::nullopt;
     }
+  } else if (&DEREF(symbol).owner() != &outer &&
+      !ultimate->has<GenericDetails>()) {
+    // Prevent a later declaration in this scope of a host-associated
+    // type name.
+    outer.add_importName(name.source);
   }
   if (CheckUseError(name)) {
     return std::nullopt;
@@ -8079,7 +8101,7 @@ void ResolveNamesVisitor::CheckImport(
     const Symbol &ultimate{symbol->GetUltimate()};
     if (&ultimate.owner() == &currScope()) {
       Say(location, "'%s' from host is not accessible"_err_en_US, name)
-          .Attach(symbol->name(), "'%s' is hidden by this entity"_en_US,
+          .Attach(symbol->name(), "'%s' is hidden by this entity"_because_en_US,
               symbol->name());
     }
   }

@@ -57,6 +57,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <memory>
 #include <optional>
 
@@ -187,9 +188,6 @@ class DebugSHandler {
   /// The object file whose .debug$S sections we're processing.
   ObjFile &file;
 
-  /// The result of merging type indices.
-  TpiSource *source;
-
   /// The DEBUG_S_STRINGTABLE subsection.  These strings are referred to by
   /// index from other records in the .debug$S section.  All of these strings
   /// need to be added to the global PDB string table, and all references to
@@ -230,11 +228,9 @@ class DebugSHandler {
   void addFrameDataSubsection(SectionChunk *debugChunk,
                               const DebugSubsectionRecord &ss);
 
-  void recordStringTableReferences(CVSymbol sym, uint32_t symOffset);
-
 public:
-  DebugSHandler(PDBLinker &linker, ObjFile &file, TpiSource *source)
-      : linker(linker), file(file), source(source) {}
+  DebugSHandler(PDBLinker &linker, ObjFile &file)
+      : linker(linker), file(file) {}
 
   void handleDebugS(SectionChunk *debugChunk);
 
@@ -660,7 +656,7 @@ Error PDBLinker::writeAllModuleSymbolRecords(ObjFile *file,
     auto contents =
         SectionChunk::consumeDebugMagic(sectionContents, ".debug$S");
     DebugSubsectionArray subsections;
-    BinaryStreamReader reader(contents, support::little);
+    BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
 
     uint32_t nextRelocIndex = 0;
@@ -762,7 +758,7 @@ void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
   ArrayRef<uint8_t> contents = debugChunk->getContents();
   contents = SectionChunk::consumeDebugMagic(contents, ".debug$S");
   DebugSubsectionArray subsections;
-  BinaryStreamReader reader(contents, support::little);
+  BinaryStreamReader reader(contents, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, contents.size()));
   debugChunk->sortRelocations();
@@ -872,7 +868,7 @@ Error UnrelocatedDebugSubsection::commit(BinaryStreamWriter &writer) const {
       debugChunk->file->debugTypesObj) {
     TpiSource *source = debugChunk->file->debugTypesObj;
     DebugInlineeLinesSubsectionRef inlineeLines;
-    BinaryStreamReader storageReader(relocatedBytes, support::little);
+    BinaryStreamReader storageReader(relocatedBytes, llvm::endianness::little);
     ExitOnError exitOnErr;
     exitOnErr(inlineeLines.initialize(storageReader));
     for (const InlineeSourceLine &line : inlineeLines) {
@@ -966,7 +962,7 @@ void DebugSHandler::finish() {
     // Copy each frame data record, add in rvaStart, translate string table
     // indices, and add the record to the PDB.
     DebugFrameDataSubsectionRef fds;
-    BinaryStreamReader reader(subsecData, support::little);
+    BinaryStreamReader reader(subsecData, llvm::endianness::little);
     exitOnErr(fds.initialize(reader));
     for (codeview::FrameData fd : fds) {
       fd.RvaStart += rvaStart;
@@ -1032,10 +1028,11 @@ void PDBLinker::addDebugSymbols(TpiSource *source) {
   if (!source->file)
     return;
 
+  llvm::TimeTraceScope timeScope("Merge symbols");
   ScopedTimer t(ctx.symbolMergingTimer);
   ExitOnError exitOnErr;
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
-  DebugSHandler dsh(*this, *source->file, source);
+  DebugSHandler dsh(*this, *source->file);
   // Now do all live .debug$S and .debug$F sections.
   for (SectionChunk *debugChunk : source->file->getDebugChunks()) {
     if (!debugChunk->live || debugChunk->getSize() == 0)
@@ -1053,7 +1050,8 @@ void PDBLinker::addDebugSymbols(TpiSource *source) {
       ArrayRef<uint8_t> relocatedDebugContents =
           relocateDebugChunk(*debugChunk);
       FixedStreamArray<object::FpoData> fpoRecords;
-      BinaryStreamReader reader(relocatedDebugContents, support::little);
+      BinaryStreamReader reader(relocatedDebugContents,
+                                llvm::endianness::little);
       uint32_t count = relocatedDebugContents.size() / sizeof(object::FpoData);
       exitOnErr(reader.readArray(fpoRecords, count));
 
@@ -1106,6 +1104,7 @@ void PDBLinker::addDebug(TpiSource *source) {
   // indices to PDB type and item indices.  If we are using ghashes, types have
   // already been merged.
   if (!ctx.config.debugGHashes) {
+    llvm::TimeTraceScope timeScope("Merge types (Non-GHASH)");
     ScopedTimer t(ctx.typeMergingTimer);
     if (Error e = source->mergeDebugT(&tMerger)) {
       // If type merging failed, ignore the symbols.
@@ -1150,39 +1149,49 @@ static pdb::BulkPublic createPublic(COFFLinkerContext &ctx, Defined *def) {
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
-  ScopedTimer t1(ctx.addObjectsTimer);
+  {
+    llvm::TimeTraceScope timeScope("Add objects to PDB");
+    ScopedTimer t1(ctx.addObjectsTimer);
 
-  // Create module descriptors
-  for (ObjFile *obj : ctx.objFileInstances)
-    createModuleDBI(obj);
+    // Create module descriptors
+    for (ObjFile *obj : ctx.objFileInstances)
+      createModuleDBI(obj);
 
-  // Reorder dependency type sources to come first.
-  tMerger.sortDependencies();
+    // Reorder dependency type sources to come first.
+    tMerger.sortDependencies();
 
-  // Merge type information from input files using global type hashing.
-  if (ctx.config.debugGHashes)
-    tMerger.mergeTypesWithGHash();
+    // Merge type information from input files using global type hashing.
+    if (ctx.config.debugGHashes)
+      tMerger.mergeTypesWithGHash();
 
-  // Merge dependencies and then regular objects.
-  for (TpiSource *source : tMerger.dependencySources)
-    addDebug(source);
-  for (TpiSource *source : tMerger.objectSources)
-    addDebug(source);
+    // Merge dependencies and then regular objects.
+    {
+      llvm::TimeTraceScope timeScope("Merge debug info (dependencies)");
+      for (TpiSource *source : tMerger.dependencySources)
+        addDebug(source);
+    }
+    {
+      llvm::TimeTraceScope timeScope("Merge debug info (objects)");
+      for (TpiSource *source : tMerger.objectSources)
+        addDebug(source);
+    }
 
-  builder.getStringTableBuilder().setStrings(pdbStrTab);
-  t1.stop();
+    builder.getStringTableBuilder().setStrings(pdbStrTab);
+  }
 
   // Construct TPI and IPI stream contents.
-  ScopedTimer t2(ctx.tpiStreamLayoutTimer);
+  {
+    llvm::TimeTraceScope timeScope("TPI/IPI stream layout");
+    ScopedTimer t2(ctx.tpiStreamLayoutTimer);
 
-  // Collect all the merged types.
-  if (ctx.config.debugGHashes) {
-    addGHashTypeInfo(ctx, builder);
-  } else {
-    addTypeInfo(builder.getTpiBuilder(), tMerger.getTypeTable());
-    addTypeInfo(builder.getIpiBuilder(), tMerger.getIDTable());
+    // Collect all the merged types.
+    if (ctx.config.debugGHashes) {
+      addGHashTypeInfo(ctx, builder);
+    } else {
+      addTypeInfo(builder.getTpiBuilder(), tMerger.getTypeTable());
+      addTypeInfo(builder.getIpiBuilder(), tMerger.getIDTable());
+    }
   }
-  t2.stop();
 
   if (ctx.config.showSummary) {
     for (TpiSource *source : ctx.tpiSourceList) {
@@ -1193,6 +1202,7 @@ void PDBLinker::addObjectsToPDB() {
 }
 
 void PDBLinker::addPublicsToPDB() {
+  llvm::TimeTraceScope timeScope("Publics layout");
   ScopedTimer t3(ctx.publicsLayoutTimer);
   // Compute the public symbols.
   auto &gsiBuilder = builder.getGsiBuilder();
@@ -1311,6 +1321,7 @@ void PDBLinker::printStats() {
 }
 
 void PDBLinker::addNatvisFiles() {
+  llvm::TimeTraceScope timeScope("Natvis files");
   for (StringRef file : ctx.config.natvisFiles) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> dataOrErr =
         MemoryBuffer::getFile(file);
@@ -1330,6 +1341,7 @@ void PDBLinker::addNatvisFiles() {
 }
 
 void PDBLinker::addNamedStreams() {
+  llvm::TimeTraceScope timeScope("Named streams");
   ExitOnError exitOnErr;
   for (const auto &streamFile : ctx.config.namedStreams) {
     const StringRef stream = streamFile.getKey(), file = streamFile.getValue();
@@ -1504,6 +1516,7 @@ void PDBLinker::addImportFilesToPDB() {
   if (ctx.importFileInstances.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Import files");
   ExitOnError exitOnErr;
   std::map<std::string, llvm::pdb::DbiModuleDescriptorBuilder *> dllToModuleDbi;
 
@@ -1593,25 +1606,37 @@ void PDBLinker::addImportFilesToPDB() {
 void lld::coff::createPDB(COFFLinkerContext &ctx,
                           ArrayRef<uint8_t> sectionTable,
                           llvm::codeview::DebugInfo *buildId) {
+  llvm::TimeTraceScope timeScope("PDB file");
   ScopedTimer t1(ctx.totalPdbLinkTimer);
-  PDBLinker pdb(ctx);
+  {
+    PDBLinker pdb(ctx);
 
-  pdb.initialize(buildId);
-  pdb.addObjectsToPDB();
-  pdb.addImportFilesToPDB();
-  pdb.addSections(sectionTable);
-  pdb.addNatvisFiles();
-  pdb.addNamedStreams();
-  pdb.addPublicsToPDB();
+    pdb.initialize(buildId);
+    pdb.addObjectsToPDB();
+    pdb.addImportFilesToPDB();
+    pdb.addSections(sectionTable);
+    pdb.addNatvisFiles();
+    pdb.addNamedStreams();
+    pdb.addPublicsToPDB();
 
-  ScopedTimer t2(ctx.diskCommitTimer);
-  codeview::GUID guid;
-  pdb.commit(&guid);
-  memcpy(&buildId->PDB70.Signature, &guid, 16);
+    {
+      llvm::TimeTraceScope timeScope("Commit PDB file to disk");
+      ScopedTimer t2(ctx.diskCommitTimer);
+      codeview::GUID guid;
+      pdb.commit(&guid);
+      memcpy(&buildId->PDB70.Signature, &guid, 16);
+    }
 
-  t2.stop();
-  t1.stop();
-  pdb.printStats();
+    t1.stop();
+    pdb.printStats();
+
+    // Manually start this profile point to measure ~PDBLinker().
+    if (getTimeTraceProfilerInstance() != nullptr)
+      timeTraceProfilerBegin("PDBLinker destructor", StringRef(""));
+  }
+  // Manually end this profile point to measure ~PDBLinker().
+  if (getTimeTraceProfilerInstance() != nullptr)
+    timeTraceProfilerEnd();
 }
 
 void PDBLinker::initialize(llvm::codeview::DebugInfo *buildId) {
@@ -1646,6 +1671,7 @@ void PDBLinker::initialize(llvm::codeview::DebugInfo *buildId) {
 }
 
 void PDBLinker::addSections(ArrayRef<uint8_t> sectionTable) {
+  llvm::TimeTraceScope timeScope("PDB output sections");
   ExitOnError exitOnErr;
   // It's not entirely clear what this is, but the * Linker * module uses it.
   pdb::DbiStreamBuilder &dbiBuilder = builder.getDbiBuilder();
@@ -1747,7 +1773,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
     ArrayRef<uint8_t> contents =
         SectionChunk::consumeDebugMagic(dbgC->getContents(), ".debug$S");
     DebugSubsectionArray subsections;
-    BinaryStreamReader reader(contents, support::little);
+    BinaryStreamReader reader(contents, llvm::endianness::little);
     exitOnErr(reader.readArray(subsections, contents.size()));
 
     for (const DebugSubsectionRecord &ss : subsections) {

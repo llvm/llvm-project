@@ -47,7 +47,6 @@ using namespace test;
 using namespace ast_matchers;
 using llvm::IsStringMapEntry;
 using ::testing::DescribeMatcher;
-using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::NotNull;
 using ::testing::Test;
@@ -108,7 +107,8 @@ TEST(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
   // `diagnoseFunction` provides no guarantees about the order in which elements
   // are visited, so we use `UnorderedElementsAre`.
   EXPECT_THAT_EXPECTED(Result, llvm::HasValue(UnorderedElementsAre(
-                                   "0\n", "int x = 0;\n", "x\n", "++x\n")));
+                                   "0\n", "int x = 0;\n", "x\n", "++x\n",
+                                   " (Lifetime ends)\n")));
 }
 
 struct NonConvergingLattice {
@@ -908,6 +908,29 @@ TEST_F(FlowConditionTest, WhileStmt) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         auto &FooVal = cast<BoolValue>(Env.getValue(*FooDecl))->formula();
+        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+      });
+}
+
+TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      // This test checks whether the analysis preserves the connection between
+      // the value of `Foo` and the assignment expression, despite widening.
+      // The equality operator generates a fresh boolean variable on each
+      // interpretation, which forces use of widening.
+      while ((Foo = (3 == 4))) {
+        (void)0;
+        /*[[p]]*/
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo").formula();
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       });
 }

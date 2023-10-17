@@ -249,7 +249,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
 /// the name matching the filter.
 static bool emitIntrinsics(const llvm::RecordKeeper &records,
                            llvm::raw_ostream &os) {
-  llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os);
+  llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os, records);
   os << "include \"mlir/Dialect/LLVMIR/LLVMOpBase.td\"\n";
   os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
 

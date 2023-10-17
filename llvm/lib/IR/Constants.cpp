@@ -2331,6 +2331,28 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   }
 }
 
+bool ConstantExpr::isDesirableCastOp(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::ZExt:
+  case Instruction::SExt:
+    return false;
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::BitCast:
+  case Instruction::AddrSpaceCast:
+    return true;
+  default:
+    llvm_unreachable("Argument must be cast opcode");
+  }
+}
+
 Constant *ConstantExpr::getSizeOf(Type* Ty) {
   // sizeof is implemented as: (i64) gep (Ty*)null, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
@@ -2345,7 +2367,7 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   // alignof is implemented as: (i64) gep ({i1,Ty}*)null, 0, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Type *AligningTy = StructType::get(Type::getInt1Ty(Ty->getContext()), Ty);
-  Constant *NullPtr = Constant::getNullValue(AligningTy->getPointerTo(0));
+  Constant *NullPtr = Constant::getNullValue(PointerType::getUnqual(AligningTy->getContext()));
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *Indices[2] = { Zero, One };

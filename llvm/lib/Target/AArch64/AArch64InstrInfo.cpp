@@ -14,6 +14,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
+#include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
@@ -1133,6 +1134,11 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                             const MachineFunction &MF) const {
   if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
+
+  // Do not move an instruction that can be recognized as a branch target.
+  if (hasBTISemantics(MI))
+    return true;
+
   switch (MI.getOpcode()) {
   case AArch64::HINT:
     // CSDB hints are scheduling barriers.
@@ -2485,6 +2491,20 @@ bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   }
 }
 
+bool AArch64InstrInfo::isTailCallReturnInst(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    assert((!MI.isCall() || !MI.isReturn()) &&
+           "Unexpected instruction - was a new tail call opcode introduced?");
+    return false;
+  case AArch64::TCRETURNdi:
+  case AArch64::TCRETURNri:
+  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNriALL:
+    return true;
+  }
+}
+
 unsigned AArch64InstrInfo::convertToFlagSettingOpc(unsigned Opc) {
   switch (Opc) {
   default:
@@ -2866,14 +2886,43 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
   }
 
   // Handle memory instructions with a [Reg, #Imm] addressing mode.
-  auto canFoldAddSubImmIntoAddrMode = [&](int64_t Offset) -> bool {
-    Offset += MemI.getOperand(2).getImm() * OffsetScale;
-    if (!isLegalAddressingMode(NumBytes, Offset, /* Scale */ 0))
+
+  // Check we are not breaking a potential conversion to an LDP.
+  auto validateOffsetForLDP = [](unsigned NumBytes, int64_t OldOffset,
+                                 int64_t NewOffset) -> bool {
+    int64_t MinOffset, MaxOffset;
+    switch (NumBytes) {
+    default:
+      return true;
+    case 4:
+      MinOffset = -256;
+      MaxOffset = 252;
+      break;
+    case 8:
+      MinOffset = -512;
+      MaxOffset = 504;
+      break;
+    case 16:
+      MinOffset = -1024;
+      MaxOffset = 1008;
+      break;
+    }
+    return OldOffset < MinOffset || OldOffset > MaxOffset ||
+           (NewOffset >= MinOffset && NewOffset <= MaxOffset);
+  };
+  auto canFoldAddSubImmIntoAddrMode = [&](int64_t Disp) -> bool {
+    int64_t OldOffset = MemI.getOperand(2).getImm() * OffsetScale;
+    int64_t NewOffset = OldOffset + Disp;
+    if (!isLegalAddressingMode(NumBytes, NewOffset, /* Scale */ 0))
+      return false;
+    // If the old offset would fit into an LDP, but the new offset wouldn't,
+    // bail out.
+    if (!validateOffsetForLDP(NumBytes, OldOffset, NewOffset))
       return false;
     AM.BaseReg = AddrI.getOperand(1).getReg();
     AM.ScaledReg = 0;
     AM.Scale = 0;
-    AM.Displacement = Offset;
+    AM.Displacement = NewOffset;
     AM.Form = ExtAddrMode::Formula::Basic;
     return true;
   };
@@ -2899,7 +2948,7 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
            Subtarget.isSTRQroSlow();
   };
 
-  int64_t Offset = 0;
+  int64_t Disp = 0;
   const bool OptSize = MemI.getMF()->getFunction().hasOptSize();
   switch (AddrI.getOpcode()) {
   default:
@@ -2910,16 +2959,16 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     // ldr Xd, [Xa, #M]
     // ->
     // ldr Xd, [Xn, #N'+M]
-    Offset = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
-    return canFoldAddSubImmIntoAddrMode(Offset);
+    Disp = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
+    return canFoldAddSubImmIntoAddrMode(Disp);
 
   case AArch64::SUBXri:
     // sub Xa, Xn, #N
     // ldr Xd, [Xa, #M]
     // ->
     // ldr Xd, [Xn, #N'+M]
-    Offset = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
-    return canFoldAddSubImmIntoAddrMode(-Offset);
+    Disp = AddrI.getOperand(2).getImm() << AddrI.getOperand(3).getImm();
+    return canFoldAddSubImmIntoAddrMode(-Disp);
 
   case AArch64::ADDXrs: {
     // add Xa, Xn, Xm, lsl #N
@@ -2929,7 +2978,10 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
 
     // Don't fold the add if the result would be slower, unless optimising for
     // size.
-    int64_t Shift = AddrI.getOperand(3).getImm();
+    unsigned Shift = static_cast<unsigned>(AddrI.getOperand(3).getImm());
+    if (AArch64_AM::getShiftType(Shift) != AArch64_AM::ShiftExtendType::LSL)
+      return false;
+    Shift = AArch64_AM::getShiftValue(Shift);
     if (!OptSize) {
       if ((Shift != 2 && Shift != 3) || !Subtarget.hasAddrLSLFast())
         return false;
@@ -4050,6 +4102,32 @@ bool AArch64InstrInfo::isQForm(const MachineInstr &MI) {
            TRC == &AArch64::FPR128_loRegClass;
   };
   return llvm::any_of(MI.operands(), IsQFPR);
+}
+
+bool AArch64InstrInfo::hasBTISemantics(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::BRK:
+  case AArch64::HLT:
+  case AArch64::PACIASP:
+  case AArch64::PACIBSP:
+    // Implicit BTI behavior.
+    return true;
+  case AArch64::PAUTH_PROLOGUE:
+    // PAUTH_PROLOGUE expands to PACI(A|B)SP.
+    return true;
+  case AArch64::HINT: {
+    unsigned Imm = MI.getOperand(0).getImm();
+    // Explicit BTI instruction.
+    if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38)
+      return true;
+    // PACI(A|B)SP instructions.
+    if (Imm == 25 || Imm == 27)
+      return true;
+    return false;
+  }
+  default:
+    return false;
+  }
 }
 
 bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
@@ -5432,42 +5510,14 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     //
     //   STRXui %xzr, %stack.0
     //
-    if (IsSpill && DstMO.isUndef() && SrcReg.isPhysical()) {
+    if (IsSpill && DstMO.isUndef() && SrcReg == AArch64::WZR &&
+        TRI.getRegSizeInBits(*getRegClass(DstReg)) == 64) {
       assert(SrcMO.getSubReg() == 0 &&
              "Unexpected subreg on physical register");
-      const TargetRegisterClass *SpillRC;
-      unsigned SpillSubreg;
-      switch (DstMO.getSubReg()) {
-      default:
-        SpillRC = nullptr;
-        break;
-      case AArch64::sub_32:
-      case AArch64::ssub:
-        if (AArch64::GPR32RegClass.contains(SrcReg)) {
-          SpillRC = &AArch64::GPR64RegClass;
-          SpillSubreg = AArch64::sub_32;
-        } else if (AArch64::FPR32RegClass.contains(SrcReg)) {
-          SpillRC = &AArch64::FPR64RegClass;
-          SpillSubreg = AArch64::ssub;
-        } else
-          SpillRC = nullptr;
-        break;
-      case AArch64::dsub:
-        if (AArch64::FPR64RegClass.contains(SrcReg)) {
-          SpillRC = &AArch64::FPR128RegClass;
-          SpillSubreg = AArch64::dsub;
-        } else
-          SpillRC = nullptr;
-        break;
-      }
-
-      if (SpillRC)
-        if (unsigned WidenedSrcReg =
-                TRI.getMatchingSuperReg(SrcReg, SpillSubreg, SpillRC)) {
-          storeRegToStackSlot(MBB, InsertPt, WidenedSrcReg, SrcMO.isKill(),
-                              FrameIndex, SpillRC, &TRI, Register());
-          return &*--InsertPt;
-        }
+      storeRegToStackSlot(MBB, InsertPt, AArch64::XZR, SrcMO.isKill(),
+                          FrameIndex, &AArch64::GPR64RegClass, &TRI,
+                          Register());
+      return &*--InsertPt;
     }
 
     // Handle cases like filling use of:
@@ -5534,6 +5584,14 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     break;
+  case AArch64::LD1Rv1d:
+  case AArch64::LD1Rv2s:
+  case AArch64::LD1Rv2d:
+  case AArch64::LD1Rv4h:
+  case AArch64::LD1Rv4s:
+  case AArch64::LD1Rv8b:
+  case AArch64::LD1Rv8h:
+  case AArch64::LD1Rv16b:
   case AArch64::LD1Twov2d:
   case AArch64::LD1Threev2d:
   case AArch64::LD1Fourv2d:
@@ -8157,11 +8215,23 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // necessary. However, at this point we don't know if the outlined function
   // will have a RET instruction so we assume the worst.
   const TargetRegisterInfo &TRI = getRegisterInfo();
+  // Performing a tail call may require extra checks when PAuth is enabled.
+  // If PAuth is disabled, set it to zero for uniformity.
+  unsigned NumBytesToCheckLRInTCEpilogue = 0;
   if (FirstCand.getMF()
           ->getInfo<AArch64FunctionInfo>()
           ->shouldSignReturnAddress(true)) {
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
+
+    // PAuth is enabled - set extra tail call cost, if any.
+    auto LRCheckMethod = Subtarget.getAuthenticatedLRCheckMethod();
+    NumBytesToCheckLRInTCEpilogue =
+        AArch64PAuth::getCheckerSizeInBytes(LRCheckMethod);
+    // Checking the authenticated LR value may significantly impact
+    // SequenceSize, so account for it for more precise results.
+    if (isTailCallReturnInst(*RepeatedSequenceLocs[0].back()))
+      SequenceSize += NumBytesToCheckLRInTCEpilogue;
 
     // We have to check if sp modifying instructions would get outlined.
     // If so we only allow outlining if sp is unchanged overall, so matching
@@ -8333,7 +8403,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = 0;
-    SetCandidateCallInfo(MachineOutlinerTailCall, 4);
+    unsigned NumBytesForCall = 4 + NumBytesToCheckLRInTCEpilogue;
+    SetCandidateCallInfo(MachineOutlinerTailCall, NumBytesForCall);
   }
 
   else if (LastInstrOpcode == AArch64::BL ||
@@ -8342,7 +8413,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
             !HasBTI)) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
     FrameID = MachineOutlinerThunk;
-    NumBytesToCreateFrame = 0;
+    NumBytesToCreateFrame = NumBytesToCheckLRInTCEpilogue;
     SetCandidateCallInfo(MachineOutlinerThunk, 4);
   }
 
@@ -8800,11 +8871,8 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
 
   // Don't outline BTI instructions, because that will prevent the outlining
   // site from being indirectly callable.
-  if (MI.getOpcode() == AArch64::HINT) {
-    int64_t Imm = MI.getOperand(0).getImm();
-    if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38)
-      return outliner::InstrType::Illegal;
-  }
+  if (hasBTISemantics(MI))
+    return outliner::InstrType::Illegal;
 
   return outliner::InstrType::Legal;
 }

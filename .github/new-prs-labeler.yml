@@ -40,15 +40,6 @@ lld:
 llvm-lit:
   - llvm/utils/lit/**/*
 
-mlir:afine:
-  - mlir/**/Affine/**/*
-
-mlir:python:
-  - mlir/python/**/*
-
-mlir:vectorops:
-  - mlir/**/Vector/**/*
-
 PGO:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
@@ -263,6 +254,15 @@ mlir:vector:
 mlir:execution-engine:
   - mlir/**/ExecutionEngine/**
 
+mlir:presburger:
+  - mlir/**/*Presburger*/**
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
+
 coroutines:
   - clang/docs/DebuggingCoroutines.rst
   - clang/lib/Sema/SemaCoroutine.cpp
@@ -308,10 +308,6 @@ tools:llvm-mca:
   - llvm/tools/llvm-mca/**
   - llvm/include/llvm/MCA/**
   - llvm/lib/MCA/**
-
-vectorizers:
-  - llvm/lib/Transforms/Vectorize/**
-  - llvm/include/llvm/Transforms/Vectorize/**
 
 clang:
   - any:
@@ -637,9 +633,6 @@ llvm:regalloc:
   - llvm/include/llvm/CodeGen/Spiller.h
   - llvm/**/*RegAlloc
 
-mlir:presburger:
-  - mlir/**/*Presburger
-
 lldb:
   - lldb/**
 
@@ -801,3 +794,35 @@ llvm:binary-utilities:
   - llvm/tools/llvm-size/**
   - llvm/tools/llvm-strings/**
   - llvm/tools/llvm-symbolizer/**
+
+clang:openmp:
+  - clang/include/clang/Basic/OpenMP*
+  - clang/include/clang/AST/OpenMPClause.h
+  - clang/include/clang/AST/DeclOpenMP.h
+  - clang/include/clang/AST/ExprOpenMP.h
+  - clang/include/clang/AST/StmtOpenMP.h
+  - clang/lib/AST/DeclOpenMP.cpp
+  - clang/lib/AST/OpenMPClause.cpp
+  - clang/lib/AST/StmtOpenMP.cpp
+  - clang/lib/Headers/openmp_wrappers/**
+  - clang/lib/Parse/ParseOpenMP.cpp
+  - clang/lib/Basic/OpenMPKinds.cpp
+  - clang/lib/Driver/ToolChains/AMDGPUOpenMP.cpp
+  - clang/lib/Driver/ToolChains/AMDGPUOpenMP.h
+  - clang/lib/CodeGen/CgStmtOpenMP.cpp
+  - clang/lib/CodeGen/CGOpenMP*
+  - clang/lib/Sema/SemaOpenMP.cpp
+  - clang/test/OpenMP/**
+  - clang/test/AST/ast-dump-openmp-*
+  - llvm/lib/Frontend/OpenMP/**
+  - llvm/lib/Transforms/IPO/OpenMPOpt.cpp
+  - llvm/include/llvm/Frontend/OpenMP/**
+  - llvm/include/llvm/Transforms/IPO/OpenMPOpt.h
+  - llvm/unittests/Frontend/OpenMP*
+  - llvm/test/Transforms/OpenMP/**
+
+openmp:libomp:
+  - any: ['openmp/**', '!openmp/libomptarget/**']
+
+openmp:libomptarget:
+  - any: ['openmp/**', '!openmp/runtime/**']

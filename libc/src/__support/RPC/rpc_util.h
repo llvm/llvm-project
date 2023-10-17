@@ -14,7 +14,7 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace rpc {
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
@@ -65,6 +65,6 @@ template <typename T, typename U> LIBC_INLINE T *advance(T *ptr, U bytes) {
 }
 
 } // namespace rpc
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif

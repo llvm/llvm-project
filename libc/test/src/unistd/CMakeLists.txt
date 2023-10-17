@@ -414,7 +414,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.include.fcntl
     libc.include.sys_syscall
-    libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.LIBC_NAMESPACE_syscall
     libc.test.errno_setter_matcher
 )
 

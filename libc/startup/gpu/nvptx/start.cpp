@@ -13,7 +13,7 @@
 
 extern "C" int main(int argc, char **argv, char **envp);
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 extern "C" {
 // Nvidia's 'nvlink' linker does not provide these symbols. We instead need
@@ -39,7 +39,7 @@ static void call_fini_array_callbacks() {
     reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
 _begin(int argc, char **argv, char **env) {
@@ -47,8 +47,8 @@ _begin(int argc, char **argv, char **env) {
   // callbacks are run. So, we register them before running the init
   // array callbacks as they can potentially register their own atexit
   // callbacks.
-  __llvm_libc::atexit(&__llvm_libc::call_fini_array_callbacks);
-  __llvm_libc::call_init_array_callbacks(argc, argv, env);
+  LIBC_NAMESPACE::atexit(&LIBC_NAMESPACE::call_fini_array_callbacks);
+  LIBC_NAMESPACE::call_init_array_callbacks(argc, argv, env);
 }
 
 extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
@@ -62,5 +62,5 @@ extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
 _end(int retval) {
   // To finis the execution we invoke all the callbacks registered via 'atexit'
   // and then exit with the appropriate return value.
-  __llvm_libc::exit(retval);
+  LIBC_NAMESPACE::exit(retval);
 }

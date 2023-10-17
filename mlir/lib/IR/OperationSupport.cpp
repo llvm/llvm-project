@@ -199,10 +199,10 @@ OperationState::~OperationState() {
 }
 
 LogicalResult OperationState::setProperties(
-    Operation *op, function_ref<InFlightDiagnostic &()> getDiag) const {
+    Operation *op, function_ref<InFlightDiagnostic()> emitError) const {
   if (LLVM_UNLIKELY(propertiesAttr)) {
     assert(!properties);
-    return op->setPropertiesFromAttribute(propertiesAttr, getDiag);
+    return op->setPropertiesFromAttribute(propertiesAttr, emitError);
   }
   if (properties)
     propertiesSetter(op->getPropertiesStorage(), properties);
@@ -436,6 +436,12 @@ MutableOperandRange::MutableOperandRange(
 }
 MutableOperandRange::MutableOperandRange(Operation *owner)
     : MutableOperandRange(owner, /*start=*/0, owner->getNumOperands()) {}
+
+/// Construct a new mutable range for the given OpOperand.
+MutableOperandRange::MutableOperandRange(OpOperand &opOperand)
+    : MutableOperandRange(opOperand.getOwner(),
+                          /*start=*/opOperand.getOperandNumber(),
+                          /*length=*/1) {}
 
 /// Slice this range into a sub range, with the additional operand segment.
 MutableOperandRange

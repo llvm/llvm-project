@@ -11,10 +11,10 @@
 
 #include "common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sinptr, double *cosptr)) {
   return internal::sincos(x, sinptr, cosptr);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

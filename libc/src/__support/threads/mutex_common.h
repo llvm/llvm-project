@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_COMMON_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_COMMON_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 enum class MutexError : int {
   NONE,
@@ -19,6 +19,6 @@ enum class MutexError : int {
   BAD_LOCK_STATE,
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_COMMON_H

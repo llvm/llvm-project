@@ -1098,6 +1098,8 @@ static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "hfsort");
   if (s == "hfsort")
     return CGProfileSortKind::Hfsort;
+  if (s == "cdsort")
+    return CGProfileSortKind::Cdsort;
   if (s != "none")
     error("unknown --call-graph-profile-sort= value: " + s);
   return CGProfileSortKind::None;
@@ -3027,8 +3029,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // partition.
   copySectionsIntoPartitions();
 
-  if (config->emachine == EM_AARCH64 &&
-      config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+  if (canHaveMemtagGlobals()) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx.objectFiles);
   }

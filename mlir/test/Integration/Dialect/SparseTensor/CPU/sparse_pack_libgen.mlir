@@ -24,7 +24,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 // TODO: This is considered to be a short-living tests and should be merged with sparse_pack.mlir
-// after sparse_tensor.unpack is supported on libgen path.
+// after sparse_tensor.disassemble is supported on libgen path.
 
 #SortedCOO = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
@@ -42,7 +42,7 @@
   crdWidth = 32
 }>
 
-// TODO: "compressed_hi" is not supported by libgen path.
+// TODO: "loose_compressed" is not supported by libgen path.
 // #BCOO = #sparse_tensor.encoding<{
 //   map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique, high), d2 : singleton)
 //}>
@@ -82,9 +82,9 @@ module {
         [  7,  8]]
     > : tensor<3x2xi32>
 
-    %s4 = sparse_tensor.pack %data, %pos, %index : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>
+    %s4 = sparse_tensor.assemble %data, %pos, %index : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>
                                           to tensor<10x10xf64, #SortedCOO>
-    %s5= sparse_tensor.pack %data, %pos32, %index32 : tensor<3xf64>, tensor<2xi32>, tensor<3x2xi32>
+    %s5= sparse_tensor.assemble %data, %pos32, %index32 : tensor<3xf64>, tensor<2xi32>, tensor<3x2xi32>
                                            to tensor<10x10xf64, #SortedCOOI32>
 
     %csr_data = arith.constant dense<
@@ -98,7 +98,7 @@ module {
     %csr_index32 = arith.constant dense<
        [1, 0, 1]
     > : tensor<3xi32>
-    %csr= sparse_tensor.pack %csr_data, %csr_pos32, %csr_index32 : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>
+    %csr= sparse_tensor.assemble %csr_data, %csr_pos32, %csr_index32 : tensor<4xf64>, tensor<3xi32>, tensor<3xi32>
                                            to tensor<2x2xf64, #CSR>
 
     // CHECK:1

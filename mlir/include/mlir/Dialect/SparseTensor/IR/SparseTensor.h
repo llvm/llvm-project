@@ -11,6 +11,7 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -114,10 +115,10 @@ SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 /// Convenience method to query whether a given DLT needs both position and
 /// coordinates array or only coordinates array.
 constexpr inline bool isDLTWithPos(DimLevelType dlt) {
-  return isCompressedWithHiDLT(dlt) || isCompressedDLT(dlt);
+  return isLooseCompressedDLT(dlt) || isCompressedDLT(dlt);
 }
 constexpr inline bool isDLTWithCrd(DimLevelType dlt) {
-  return isSingletonDLT(dlt) || isCompressedWithHiDLT(dlt) ||
+  return isSingletonDLT(dlt) || isLooseCompressedDLT(dlt) ||
          isCompressedDLT(dlt);
 }
 

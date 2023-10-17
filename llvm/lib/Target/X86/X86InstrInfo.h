@@ -550,6 +550,15 @@ public:
                                   Register &FoldAsLoadDefReg,
                                   MachineInstr *&DefMI) const override;
 
+  bool FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI, Register Reg,
+                         int64_t ImmVal, MachineRegisterInfo *MRI,
+                         bool MakeChange) const;
+
+  /// Reg is known to be defined by a move immediate instruction, try to fold
+  /// the immediate into the use instruction.
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+                     MachineRegisterInfo *MRI) const override;
+
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;
 

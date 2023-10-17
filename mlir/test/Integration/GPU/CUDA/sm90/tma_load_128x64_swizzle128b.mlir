@@ -1,28 +1,10 @@
-// RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
-// RUN:         -convert-linalg-to-loops \
-// RUN:         -gpu-kernel-outlining \
-// RUN:         -convert-vector-to-scf  \
-// RUN:         -lower-affine \
-// RUN:         -convert-scf-to-cf \
-// RUN:         -convert-nvvm-to-llvm \
-// RUN:         -convert-nvgpu-to-nvvm \
-// RUN:         -convert-scf-to-cf  \
-// RUN:         -convert-vector-to-llvm \
-// RUN:         -convert-math-to-llvm \
-// RUN:         -convert-index-to-llvm=index-bitwidth=32 \
-// RUN:         -convert-arith-to-llvm \
-// RUN:         -finalize-memref-to-llvm='use-opaque-pointers=1' \
-// RUN:         -convert-func-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
-// RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
-// RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary=format=%gpu_compilation_format -canonicalize -cse -reconcile-unrealized-casts \
+// RUN: mlir-opt %s \
+// RUN:  -test-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN:  | FileCheck %s
-
 
 // Test swizzling with TMA load
 // 128B Swizzle Each numbered cell is 16 byte 
@@ -39,7 +21,7 @@
 // |-------------------------------|
 
 
-!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!barrierType = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 !tokenType = !nvgpu.mbarrier.token
 
 !lhs = memref<128x64xf16>
@@ -97,21 +79,21 @@ module @mymod {
     
       // Step 6. Initialize the mbarrier
       %9 = nvgpu.mbarrier.create -> !barrierType
-      nvgpu.mbarrier.init %9, %5 : !barrierType
+      nvgpu.mbarrier.init %9[%c0], %5 : !barrierType
       %10 = arith.cmpi eq, %6, %c0 : index
       
       
       // Step 7. First thread does TMA load
       scf.if %10 {
         gpu.printf "[GPU] TMA SIZE %d\0A" %c8192 : index
-        nvgpu.tma.async.load %3[%c0, %c0], %9 to %7 : !lhsTensorMap, !barrierType -> !shmemlhs
-        nvgpu.mbarrier.arrive.expect_tx %9, %c8192 : !barrierType
+        nvgpu.tma.async.load %3[%c0, %c0], %9[%c0] to %7 : !lhsTensorMap, !barrierType -> !shmemlhs
+        nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c8192 : !barrierType
       } else {
-        nvgpu.mbarrier.arrive.expect_tx %9, %c0 : !barrierType
+        nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c0 : !barrierType
       }
 
       // Step 8. Wait until TMA is done
-      nvgpu.mbarrier.try_wait.parity %9, %c0, %c10000000 : !barrierType
+      nvgpu.mbarrier.try_wait.parity %9[%c0], %c0, %c10000000 : !barrierType
 
       // Step 9. Print loaded data in 128b swizzled
       scf.if %10 {        

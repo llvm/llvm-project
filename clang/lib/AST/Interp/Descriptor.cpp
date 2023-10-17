@@ -10,6 +10,7 @@
 #include "Boolean.h"
 #include "Floating.h"
 #include "FunctionPointer.h"
+#include "IntegralAP.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -182,6 +183,10 @@ static BlockCtorFn getCtorPrim(PrimType Type) {
   // constructor called.
   if (Type == PT_Float)
     return ctorTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return ctorTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return ctorTy<PrimConv<PT_IntAPS>::T>;
 
   COMPOSITE_TYPE_SWITCH(Type, return ctorTy<T>, return nullptr);
 }
@@ -191,6 +196,10 @@ static BlockDtorFn getDtorPrim(PrimType Type) {
   // destructor called, since they might allocate memory.
   if (Type == PT_Float)
     return dtorTy<PrimConv<PT_Float>::T>;
+  if (Type == PT_IntAP)
+    return dtorTy<PrimConv<PT_IntAP>::T>;
+  if (Type == PT_IntAPS)
+    return dtorTy<PrimConv<PT_IntAPS>::T>;
 
   COMPOSITE_TYPE_SWITCH(Type, return dtorTy<T>, return nullptr);
 }
@@ -212,6 +221,7 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
   COMPOSITE_TYPE_SWITCH(Type, return moveArrayTy<T>, return nullptr);
 }
 
+/// Primitives.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
@@ -222,6 +232,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+/// Primitive arrays.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        size_t NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
@@ -234,6 +245,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+/// Primitive unknown-size arrays.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark), MDSize(0),
@@ -243,6 +255,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
   assert(Source && "Missing source");
 }
 
+/// Arrays of composite elements.
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
@@ -255,6 +268,7 @@ Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
   assert(Source && "Missing source");
 }
 
+/// Unknown-size arrays of composite elements.
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
@@ -265,6 +279,7 @@ Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
   assert(Source && "Missing source");
 }
 
+/// Composite records.
 Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),

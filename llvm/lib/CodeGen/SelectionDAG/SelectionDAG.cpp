@@ -161,8 +161,13 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
   unsigned SplatBitSize;
   bool HasUndefs;
   unsigned EltSize = N->getValueType(0).getVectorElementType().getSizeInBits();
+  // Endianness does not matter here. We are checking for a splat given the
+  // element size of the vector, and if we find such a splat for little endian
+  // layout, then that should be valid also for big endian (as the full vector
+  // size is known to be a multiple of the element size).
+  const bool IsBigEndian = false;
   return BV->isConstantSplat(SplatVal, SplatUndef, SplatBitSize, HasUndefs,
-                             EltSize) &&
+                             EltSize, IsBigEndian) &&
          EltSize == SplatBitSize;
 }
 
@@ -1620,7 +1625,11 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   if (VT.isVector() && TLI->getTypeAction(*getContext(), EltVT) ==
                            TargetLowering::TypePromoteInteger) {
     EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
-    APInt NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
+    APInt NewVal;
+    if (TLI->isSExtCheaperThanZExt(VT.getScalarType(), EltVT))
+      NewVal = Elt->getValue().sextOrTrunc(EltVT.getSizeInBits());
+    else
+      NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
     Elt = ConstantInt::get(*getContext(), NewVal);
   }
   // In other cases the element type is illegal and needs to be expanded, for
@@ -4091,8 +4100,11 @@ SelectionDAG::computeOverflowForSignedSub(SDValue N0, SDValue N1) const {
   if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
     return OFK_Never;
 
-  // TODO: Add ConstantRange::signedSubMayOverflow handling.
-  return OFK_Sometime;
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, true);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, true);
+  return mapOverflowResult(N0Range.signedSubMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
@@ -4101,8 +4113,11 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  // TODO: Add ConstantRange::unsignedSubMayOverflow handling.
-  return OFK_Sometime;
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
@@ -6221,7 +6236,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
   // Handle binops special cases.
   if (NumOps == 2) {
-    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops[0], Ops[1]))
+    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops))
       return CFP;
 
     if (auto *C1 = dyn_cast<ConstantSDNode>(Ops[0])) {
@@ -6414,11 +6429,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 }
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
-                                         EVT VT, SDValue N1, SDValue N2) {
+                                         EVT VT, ArrayRef<SDValue> Ops) {
+  // TODO: Add support for unary/ternary fp opcodes.
+  if (Ops.size() != 2)
+    return SDValue();
+
   // TODO: We don't do any constant folding for strict FP opcodes here, but we
   //       should. That will require dealing with a potentially non-default
   //       rounding mode, checking the "opStatus" return value from the APFloat
   //       math calculations, and possibly other variations.
+  SDValue N1 = Ops[0];
+  SDValue N2 = Ops[1];
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /*AllowUndefs*/ false);
   ConstantFPSDNode *N2CFP = isConstOrConstSplatFP(N2, /*AllowUndefs*/ false);
   if (N1CFP && N2CFP) {
@@ -10768,7 +10789,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
     switch (N.getOpcode()) {
     default:
       break;
-    case ISD::ADD:
+    case ISD::ADD: {
       SDValue N0 = N.getOperand(0);
       SDValue N1 = N.getOperand(1);
       if (!isa<ConstantSDNode>(N0) && isa<ConstantSDNode>(N1)) {
@@ -10809,6 +10830,41 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
                    N0.getNode()->dumprFull(this);
                    dbgs() << " into " << *DIExpr << '\n');
       }
+      break;
+    }
+    case ISD::TRUNCATE: {
+      SDValue N0 = N.getOperand(0);
+      TypeSize FromSize = N0.getValueSizeInBits();
+      TypeSize ToSize = N.getValueSizeInBits(0);
+
+      DIExpression *DbgExpression = DV->getExpression();
+      auto ExtOps = DIExpression::getExtOps(FromSize, ToSize, false);
+      auto NewLocOps = DV->copyLocationOps();
+      bool Changed = false;
+      for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+            NewLocOps[i].getSDNode() != &N)
+          continue;
+
+        NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+        DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
+        Changed = true;
+      }
+      assert(Changed && "Salvage target doesn't use N");
+      (void)Changed;
+
+      SDDbgValue *Clone =
+          getDbgValueList(DV->getVariable(), DbgExpression, NewLocOps,
+                          DV->getAdditionalDependencies(), DV->isIndirect(),
+                          DV->getDebugLoc(), DV->getOrder(), DV->isVariadic());
+
+      ClonedDVs.push_back(Clone);
+      DV->setIsInvalidated();
+      DV->setIsEmitted();
+      LLVM_DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+                 dbgs() << " into " << *DbgExpression << '\n');
+      break;
+    }
     }
   }
 
@@ -12312,6 +12368,10 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
   // FIXME: This does not work for vectors with elements less than 8 bits.
   while (VecWidth > 8) {
+    // If we can't split in half, stop here.
+    if (VecWidth & 1)
+      break;
+
     unsigned HalfSize = VecWidth / 2;
     APInt HighValue = SplatValue.extractBits(HalfSize, HalfSize);
     APInt LowValue = SplatValue.extractBits(HalfSize, 0);
@@ -12328,6 +12388,12 @@ bool BuildVectorSDNode::isConstantSplat(APInt &SplatValue, APInt &SplatUndef,
 
     VecWidth = HalfSize;
   }
+
+  // FIXME: The loop above only tries to split in halves. But if the input
+  // vector for example is <3 x i16> it wouldn't be able to detect a
+  // SplatBitSize of 16. No idea if that is a design flaw currently limiting
+  // optimizations. I guess that back in the days when this helper was created
+  // vectors normally was power-of-2 sized.
 
   SplatBitSize = VecWidth;
   return true;

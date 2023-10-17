@@ -267,6 +267,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 #include <__fwd/sstream.h>
 #include <__utility/swap.h>
@@ -399,12 +400,12 @@ public:
     _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const & { return str(__str_.get_allocator()); }
 
     _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && {
-        string_type __result;
         const basic_string_view<_CharT, _Traits> __view = view();
-        if (!__view.empty()) {
-            auto __pos = __view.data() - __str_.data();
-            __result.assign(std::move(__str_), __pos, __view.size());
-        }
+        typename string_type::size_type __pos = __view.empty() ? 0 : __view.data() - __str_.data();
+        // In C++23, this is just string_type(std::move(__str_), __pos, __view.size(), __str_.get_allocator());
+        // But we need something that works in C++20 also.
+        string_type __result(__str_.get_allocator());
+        __result.__move_assign(std::move(__str_), __pos, __view.size());
         __str_.clear();
         __init_buf_ptrs();
         return __result;
@@ -1192,7 +1193,7 @@ swap(basic_stringstream<_CharT, _Traits, _Allocator>& __x,
     __x.swap(__y);
 }
 
-#if defined(_LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1)
+#ifndef _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_stringbuf<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_stringstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostringstream<char>;

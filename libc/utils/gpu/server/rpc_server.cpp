@@ -19,7 +19,7 @@
 #include <variant>
 #include <vector>
 
-using namespace __llvm_libc;
+using namespace LIBC_NAMESPACE;
 
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");
@@ -36,11 +36,12 @@ struct Server {
 
   rpc_status_t handle_server(
       const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-      const std::unordered_map<rpc_opcode_t, void *> &callback_data) {
+      const std::unordered_map<rpc_opcode_t, void *> &callback_data,
+      uint32_t &index) {
     rpc_status_t ret = RPC_STATUS_SUCCESS;
     std::visit(
         [&](auto &server) {
-          ret = handle_server(*server, callbacks, callback_data);
+          ret = handle_server(*server, callbacks, callback_data, index);
         },
         server);
     return ret;
@@ -51,8 +52,9 @@ private:
   rpc_status_t handle_server(
       rpc::Server<lane_size> &server,
       const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-      const std::unordered_map<rpc_opcode_t, void *> &callback_data) {
-    auto port = server.try_open();
+      const std::unordered_map<rpc_opcode_t, void *> &callback_data,
+      uint32_t &index) {
+    auto port = server.try_open(index);
     if (!port)
       return RPC_STATUS_SUCCESS;
 
@@ -164,6 +166,33 @@ private:
       });
       break;
     }
+    case RPC_FSEEK: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = fseek(file::to_stream(buffer->data[0]),
+                                static_cast<long>(buffer->data[1]),
+                                static_cast<int>(buffer->data[2]));
+      });
+      break;
+    }
+    case RPC_FTELL: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = ftell(file::to_stream(buffer->data[0]));
+      });
+      break;
+    }
+    case RPC_FFLUSH: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = fflush(file::to_stream(buffer->data[0]));
+      });
+      break;
+    }
+    case RPC_UNGETC: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = ungetc(static_cast<int>(buffer->data[0]),
+                                 file::to_stream(buffer->data[1]));
+      });
+      break;
+    }
     case RPC_NOOP: {
       port->recv([](rpc::Buffer *) {});
       break;
@@ -183,6 +212,9 @@ private:
       (handler->second)(port_ref, data);
     }
     }
+
+    // Increment the index so we start the scan after this port.
+    index = port->get_index() + 1;
     port->close();
     return RPC_STATUS_CONTINUE;
   }
@@ -313,10 +345,11 @@ rpc_status_t rpc_handle_server(uint32_t device_id) {
   if (!state->devices[device_id])
     return RPC_STATUS_ERROR;
 
+  uint32_t index = 0;
   for (;;) {
     auto &device = *state->devices[device_id];
-    rpc_status_t status =
-        device.server.handle_server(device.callbacks, device.callback_data);
+    rpc_status_t status = device.server.handle_server(
+        device.callbacks, device.callback_data, index);
     if (status != RPC_STATUS_CONTINUE)
       return status;
   }

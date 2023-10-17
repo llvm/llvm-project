@@ -270,7 +270,8 @@ func.func @loop_alloc(
 //       CHECK: [[V0:%.+]]:2 = scf.for {{.*}} iter_args([[ARG6:%.+]] = [[ARG3]], [[ARG7:%.+]] = %false
 //       CHECK:   [[ALLOC1:%.+]] = memref.alloc()
 //       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG6]]
-//       CHECK:   bufferization.dealloc ([[BASE]] :{{.*}}) if ([[ARG7]]) retain ([[ALLOC1]] :
+//       CHECK:   bufferization.dealloc ([[BASE]] :{{.*}}) if ([[ARG7]])
+//   CHECK-NOT:       retain
 //       CHECK:   scf.yield [[ALLOC1]], %true
 //       CHECK: test.copy
 //       CHECK: [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
@@ -563,8 +564,8 @@ func.func @while_two_arg(%arg0: index) {
 //       CHECK: ^bb0([[ARG1:%.+]]: memref<?xf32>, [[ARG2:%.+]]: memref<?xf32>, [[ARG3:%.+]]: i1, [[ARG4:%.+]]: i1):
 //       CHECK:   [[ALLOC1:%.+]] = memref.alloc(
 //       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG2]]
-//       CHECK:   [[OWN:%.+]]:2 = bufferization.dealloc ([[BASE]] :{{.*}}) if ([[ARG4]]) retain ([[ARG1]], [[ALLOC1]] :
-//       CHECK:   [[OWN_AGG:%.+]] = arith.ori [[OWN]]#0, [[ARG3]]
+//       CHECK:   [[OWN:%.+]] = bufferization.dealloc ([[BASE]] :{{.*}}) if ([[ARG4]]) retain ([[ARG1]] :
+//       CHECK:   [[OWN_AGG:%.+]] = arith.ori [[OWN]], [[ARG3]]
 //       CHECK:   scf.yield [[ARG1]], [[ALLOC1]], [[OWN_AGG]], %true
 //       CHECK: [[BASE0:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
 //       CHECK: [[BASE1:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#1
@@ -594,10 +595,10 @@ func.func @while_three_arg(%arg0: index) {
 //       CHECK:   [[ALLOC1:%.+]] = memref.alloc(
 //       CHECK:   [[ALLOC2:%.+]] = memref.alloc(
 //       CHECK:   [[BASE0:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG1]]
-//       CHECK:   [[BASE1:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG2]]
 //       CHECK:   [[BASE2:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG3]]
-//       CHECK:   [[OWN:%.+]]:3 = bufferization.dealloc ([[BASE0]], [[BASE1]], [[BASE2]], [[ALLOC1]] :{{.*}}) if ([[ARG4]], [[ARG5]], [[ARG6]], %true{{[0-9_]*}}) retain ([[ALLOC2]], [[ALLOC1]], [[ARG2]] :
-//       CHECK:   scf.yield [[ALLOC2]], [[ALLOC1]], [[ARG2]], %true{{[0-9_]*}}, %true{{[0-9_]*}}, [[OWN]]#2 :
+//       CHECK:   [[OWN:%.+]] = bufferization.dealloc ([[BASE0]], [[BASE2]] :{{.*}}) if ([[ARG4]], [[ARG6]]) retain ([[ARG2]] :
+//       CHECK:   [[OWN_AGG:%.+]] = arith.ori [[OWN]], [[ARG5]]
+//       CHECK:   scf.yield [[ALLOC2]], [[ALLOC1]], [[ARG2]], %true{{[0-9_]*}}, %true{{[0-9_]*}}, [[OWN_AGG]] :
 //       CHECK: }
 //       CHECK: [[BASE0:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
 //       CHECK: [[BASE1:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#1

@@ -28,17 +28,60 @@
 
 namespace llvm {
 
-// The cluster information for a machine basic block.
-struct BBClusterInfo {
-  // Unique ID for this basic block.
+// This structure represents a unique ID for every block specified in the
+// input profile.
+struct ProfileBBID {
+  // Basic block id associated with `MachineBasicBlock::BBID`.
   unsigned BBID;
+  // The clone id associated with the block. This is zero for the original
+  // block. For the cloned ones, it is equal to 1 + index of the associated
+  // path in `FunctionPathAndClusterInfo::ClonePaths`.
+  unsigned CloneID;
+};
+
+// This struct represents the cluster information for a machine basic block,
+// which is specifed by a unique ID. This templated struct is used for both the
+// raw input profile (as `BBClusterInfo<ProfileBBID>`) and the processed profile
+// after applying the clonings (as `BBClusterInfo<unsigned>`).
+template <typename BBIDType> struct BBClusterInfo {
+  // Basic block ID.
+  BBIDType BasicBlockID;
   // Cluster ID this basic block belongs to.
   unsigned ClusterID;
   // Position of basic block within the cluster.
   unsigned PositionInCluster;
 };
 
-using ProgramBBClusterInfoMapTy = StringMap<SmallVector<BBClusterInfo>>;
+// This represents the raw input profile for one function.
+struct FunctionPathAndClusterInfo {
+  // BB Cluster information specified by `ProfileBBID`s (before cloning).
+  SmallVector<BBClusterInfo<ProfileBBID>> ClusterInfo;
+  // Paths to clone. A path a -> b -> c -> d implies cloning b, c, and d along
+  // the edge a -> b (a is not cloned). The index of the path in this vector
+  // determines the `ProfileBBID::CloneID` of the cloned blocks in that path.
+  SmallVector<SmallVector<unsigned>> ClonePaths;
+};
+
+// Provides DenseMapInfo for ProfileBBID.
+template <> struct DenseMapInfo<ProfileBBID> {
+  static inline ProfileBBID getEmptyKey() {
+    unsigned EmptyKey = DenseMapInfo<unsigned>::getEmptyKey();
+    return ProfileBBID{EmptyKey, EmptyKey};
+  }
+  static inline ProfileBBID getTombstoneKey() {
+    unsigned TombstoneKey = DenseMapInfo<unsigned>::getTombstoneKey();
+    return ProfileBBID{TombstoneKey, TombstoneKey};
+  }
+  static unsigned getHashValue(const ProfileBBID &Val) {
+    std::pair<unsigned, unsigned> PairVal =
+        std::make_pair(Val.BBID, Val.CloneID);
+    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
+  }
+  static bool isEqual(const ProfileBBID &LHS, const ProfileBBID &RHS) {
+    return DenseMapInfo<unsigned>::isEqual(LHS.BBID, RHS.BBID) &&
+           DenseMapInfo<unsigned>::isEqual(LHS.CloneID, RHS.CloneID);
+  }
+};
 
 class BasicBlockSectionsProfileReader : public ImmutablePass {
 public:
@@ -70,11 +113,11 @@ public:
   // function. If the first element is true and the second element is empty, it
   // means unique basic block sections are desired for all basic blocks of the
   // function.
-  std::pair<bool, SmallVector<BBClusterInfo>>
-  getBBClusterInfoForFunction(StringRef FuncName) const;
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getPathAndClusterInfoForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
-  // then reads the profile for matching functions.
+  // then reads the profile for the matching functions.
   bool doInitialization(Module &M) override;
 
 private:
@@ -90,6 +133,12 @@ private:
               Twine(LineIt.line_number()) + ": " + Message),
         inconvertibleErrorCode());
   }
+
+  // Parses a `ProfileBBID` from `S`. `S` must be in the form "<bbid>"
+  // (representing an original block) or "<bbid>.<cloneid>" (representing a
+  // cloned block) where bbid is a non-negative integer and cloneid is a
+  // positive integer.
+  Expected<ProfileBBID> parseProfileBBID(StringRef S) const;
 
   // Reads the basic block sections profile for functions in this module.
   Error ReadProfile();
@@ -111,16 +160,16 @@ private:
   // empty string if no debug info is available.
   StringMap<SmallString<128>> FunctionNameToDIFilename;
 
-  // This encapsulates the BB cluster information for the whole program.
+  // This contains the BB cluster information for the whole program.
   //
-  // For every function name, it contains the cluster information for (all or
-  // some of) its basic blocks. The cluster information for every basic block
-  // includes its cluster ID along with the position of the basic block in that
-  // cluster.
-  ProgramBBClusterInfoMapTy ProgramBBClusterInfo;
+  // For every function name, it contains the cloning and cluster information
+  // for (all or some of) its basic blocks. The cluster information for every
+  // basic block includes its cluster ID along with the position of the basic
+  // block in that cluster.
+  StringMap<FunctionPathAndClusterInfo> ProgramPathAndClusterInfo;
 
   // Some functions have alias names. We use this map to find the main alias
-  // name for which we have mapping in ProgramBBClusterInfo.
+  // name which appears in ProgramPathAndClusterInfo as a key.
   StringMap<StringRef> FuncAliasMap;
 };
 

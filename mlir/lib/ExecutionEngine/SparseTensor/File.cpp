@@ -1,4 +1,4 @@
-//===- File.cpp - Parsing sparse tensors from files -----------------------===//
+//===- File.cpp - Reading/writing sparse tensors from/to files ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements parsing and printing of files in one of the
-// following external formats:
-//
-// (1) Matrix Market Exchange (MME): *.mtx
-//     https://math.nist.gov/MatrixMarket/formats.html
-//
-// (2) Formidable Repository of Open Sparse Tensors and Tools (FROSTT): *.tns
-//     http://frostt.io/tensors/file-formats.html
-//
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
+// This file implements reading and writing sparse tensor files.
 //
 //===----------------------------------------------------------------------===//
 

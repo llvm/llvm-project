@@ -42,19 +42,12 @@ namespace AMDGPU {
 
 struct IsaVersion;
 
-enum {
-  AMDHSA_COV3 = 3,
-  AMDHSA_COV4 = 4,
-  AMDHSA_COV5 = 5
-};
+enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5 };
 
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI);
 /// \returns HSA OS ABI Version identification.
 std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);
-/// \returns True if HSA OS ABI Version identification is 3,
-/// false otherwise.
-bool isHsaAbiVersion3(const MCSubtargetInfo *STI);
 /// \returns True if HSA OS ABI Version identification is 4,
 /// false otherwise.
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI);
@@ -1169,6 +1162,7 @@ bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
+bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 
@@ -1288,6 +1282,9 @@ bool isInlinableIntLiteralV216(int32_t Literal);
 
 LLVM_READNONE
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
+
+LLVM_READNONE
+bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 

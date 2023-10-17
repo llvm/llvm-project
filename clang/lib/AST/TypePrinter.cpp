@@ -1044,6 +1044,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
+    case CC_M68kRTD:
+      OS << " __attribute__((m68k_rtd))";
+      break;
     }
   }
 
@@ -1879,6 +1882,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveAll:
     OS << "preserve_all";
     break;
+  case attr::M68kRTD:
+    OS << "m68k_rtd";
+    break;
   case attr::NoDeref:
     OS << "noderef";
     break;
@@ -2218,10 +2224,6 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (Policy.UseClassForTemplateArgument &&
-          Argument.getKind() == TemplateArgument::Type)
-        OS << "class ";
-
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
                     TemplateParameterList::shouldIncludeTypeForArgument(

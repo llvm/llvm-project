@@ -174,7 +174,7 @@ def NVGPU_TensorMapDescriptor : NVGPU_Type<"TensorMapDescriptor", "tensormap.des
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "wgmma.descriptor", []> {
+def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "warpgroup.descriptor", []> {
   let summary = "Warpgroup matrix descriptor type";
   let description = [{
   The descriptor specifies the properties of the matrix in shared memory that 
@@ -239,7 +239,7 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
     ```
   }];
 
-  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$srcMemref,
+  let arguments = (ins Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$srcMemref,
                            Variadic<Index>:$indices, BoolAttr:$transpose,
                            I32Attr:$numTiles);
   let results = (outs AnyVector:$res);
@@ -423,9 +423,9 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
     ```
   }];
   let results = (outs NVGPU_DeviceAsyncToken:$asyncToken);
-  let arguments = (ins Arg<AnyMemRef, "", [MemWrite]>:$dst,
+  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
                        Variadic<Index>:$dstIndices,
-                       Arg<AnyMemRef, "", [MemRead]>:$src,
+                       Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src,
                        Variadic<Index>:$srcIndices,
                        IndexAttr:$dstElements,
                        Optional<Index>:$srcElements,
@@ -619,6 +619,18 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
   let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";  
 }
 
+def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
+  let summary = "Prefetch given `nvgpu.tensormap.descriptor` ";
+  let description = [{
+    The Op brings the cache line containing the given `$tmaDescriptor` for 
+    subsequent use by the `tma.async.load` instruction.
+  }];
+  let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor, Optional<I1>:$predicate);
+  let assemblyFormat = [{
+    $tensorMapDescriptor (`,` $predicate^)? attr-dict `:` type($tensorMapDescriptor)
+  }];
+}
+
 def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
   let summary = "TMA asynchronous load";
   let description = [{
@@ -630,7 +642,7 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
 
     The Op uses `$barrier` mbarrier based completion mechanism. 
   }];  
-  let arguments = (ins Arg<AnyMemRef, "", [MemWrite]>:$dst,
+  let arguments = (ins Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
                        NVGPU_MBarrierGroup:$barriers,
                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
                        Variadic<Index>:$coordinates, 
@@ -667,11 +679,12 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   let hasVerifier = 1;
 }
 
-def NVGPU_GenerateGmmaDescriptorOp : NVGPU_Op<"wgmma.generate.descriptor", []> {
-  let summary = "Generate a wgmma matrix descriptor";
+def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
+  let summary = "Generate a warpgroup matrix descriptor";
   let description = [{
-  This Op builds a `nvgpu.wgmma.descriptor` that is used by warpgroup-level 
-  matrix multiply and accumulate.
+  This Op builds a `nvgpu.warpgroup.descriptor` that is used by 
+  `nvgpu.warpgroup.mma` to perform warpgroup-level matrix multiply and 
+  accumulate.
 
   The descriptor specifies the properties of the matrix in shared memory that 
   is a multiplicand in the matrix multiply and accumulate operation. 
@@ -702,9 +715,9 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 
     Example:
     ```mlir
-      %r1,%r2 = nvgpu.warpgroup.mma %wgmmaDescA, %wgmmaDescB, %acc1, %acc2: 
-                 !nvgpu.wgmma.descriptor<tensor = memref<128x64xf16, 3>>, 
-                 !nvgpu.wgmma.descriptor<tensor = memref<64x128xf16, 3>>, 
+      %r1,%r2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2: 
+                 !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>, 
+                 !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>, 
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
                  -> 
@@ -718,12 +731,44 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
                        DefaultValuedOptionalAttr<I32Attr, "1">:$waitGroup,
                        OptionalAttr<UnitAttr>:$transposeA,
                        OptionalAttr<UnitAttr>:$transposeB,
-                       Variadic<NVGPU_WarpgroupAccumulator>:$matrixC);
-  let results = (outs Variadic<NVGPU_WarpgroupAccumulator>:$matrixD);
+                       NVGPU_WarpgroupAccumulator:$matrixC);
+  let results = (outs NVGPU_WarpgroupAccumulator:$matrixD);
   let assemblyFormat = [{    
     $descriptorA`,` $descriptorB`,` $matrixC attr-dict
     `:` type($descriptorA) `,` type($descriptorB) `,` type($matrixC) `->` type($matrixD)
   }];
+  let hasVerifier = 1;
+}
+
+def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
+  let description = [{
+    The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result 
+    in $matrixD to given memref. 
+
+    [See the details of register fragment layout for accumulator matrix D]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
+
+    Note that, the op must be run with warp group.
+  }];
+
+  let arguments = (ins NVGPU_WarpgroupAccumulator:$matrixD,
+                       Arg<AnyMemRef, "", [MemWrite]>:$dstMemref);
+  
+  let assemblyFormat = [{
+    $matrixD `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
+  }];
+  let hasVerifier = 1;
+}
+
+def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {  
+  let summary = "Initializes the accumulator matrix";
+
+  let description = [{
+    This Op generates and initializes the accumulator matrix for 
+    `nvgpu.warpgroup.mma` op to perform matrix-multiply-and-accumulate.
+  }];
+  let results = (outs NVGPU_WarpgroupAccumulator:$matrixC);
+  let assemblyFormat = "attr-dict `->` type($matrixC)";
   let hasVerifier = 1;
 }
 

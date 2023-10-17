@@ -223,19 +223,59 @@ Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
 }
 
 unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
-  switch (C.getKind()) {
-  case Counter::Zero:
-    return 0;
-  case Counter::CounterValueReference:
-    return C.getCounterID();
-  case Counter::Expression: {
-    if (C.getExpressionID() >= Expressions.size())
-      return 0;
-    const auto &E = Expressions[C.getExpressionID()];
-    return std::max(getMaxCounterID(E.LHS), getMaxCounterID(E.RHS));
+  struct StackElem {
+    Counter ICounter;
+    int64_t LHS = 0;
+    enum {
+      KNeverVisited = 0,
+      KVisitedOnce = 1,
+      KVisitedTwice = 2,
+    } VisitCount = KNeverVisited;
+  };
+
+  std::stack<StackElem> CounterStack;
+  CounterStack.push({C});
+
+  int64_t LastPoppedValue;
+
+  while (!CounterStack.empty()) {
+    StackElem &Current = CounterStack.top();
+
+    switch (Current.ICounter.getKind()) {
+    case Counter::Zero:
+      LastPoppedValue = 0;
+      CounterStack.pop();
+      break;
+    case Counter::CounterValueReference:
+      LastPoppedValue = Current.ICounter.getCounterID();
+      CounterStack.pop();
+      break;
+    case Counter::Expression: {
+      if (Current.ICounter.getExpressionID() >= Expressions.size()) {
+        LastPoppedValue = 0;
+        CounterStack.pop();
+      } else {
+        const auto &E = Expressions[Current.ICounter.getExpressionID()];
+        if (Current.VisitCount == StackElem::KNeverVisited) {
+          CounterStack.push(StackElem{E.LHS});
+          Current.VisitCount = StackElem::KVisitedOnce;
+        } else if (Current.VisitCount == StackElem::KVisitedOnce) {
+          Current.LHS = LastPoppedValue;
+          CounterStack.push(StackElem{E.RHS});
+          Current.VisitCount = StackElem::KVisitedTwice;
+        } else {
+          int64_t LHS = Current.LHS;
+          int64_t RHS = LastPoppedValue;
+          LastPoppedValue = std::max(LHS, RHS);
+          CounterStack.pop();
+        }
+      }
+      break;
+    }
+    }
   }
-  }
-  llvm_unreachable("Unhandled CounterKind");
+
+  return LastPoppedValue;
 }
 
 void FunctionRecordIterator::skipOtherFiles() {
@@ -390,12 +430,11 @@ Error CoverageMapping::loadFromFile(
   MemoryBufferRef CovMappingBufRef =
       CovMappingBufOrErr.get()->getMemBufferRef();
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
-  InstrProfSymtab &ProfSymTab = ProfileReader.getSymtab();
 
   SmallVector<object::BuildIDRef> BinaryIDs;
   auto CoverageReadersOrErr = BinaryCoverageReader::create(
-      CovMappingBufRef, Arch, Buffers, ProfSymTab,
-      CompilationDir, FoundBinaryIDs ? &BinaryIDs : nullptr);
+      CovMappingBufRef, Arch, Buffers, CompilationDir,
+      FoundBinaryIDs ? &BinaryIDs : nullptr);
   if (Error E = CoverageReadersOrErr.takeError()) {
     E = handleMaybeNoDataFoundError(std::move(E));
     if (E)

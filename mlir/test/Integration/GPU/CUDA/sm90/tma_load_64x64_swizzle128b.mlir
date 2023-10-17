@@ -1,32 +1,5 @@
-// RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
-// RUN:         -convert-linalg-to-loops \
-// RUN:         -canonicalize -cse \
-// RUN:         -gpu-kernel-outlining \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-vector-to-scf  \
-// RUN:         -canonicalize -cse \
-// RUN:         -lower-affine \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-scf-to-cf \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-nvvm-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-nvgpu-to-nvvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-scf-to-cf  \
-// RUN:         -convert-vector-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -convert-math-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -lower-affine \
-// RUN:         -convert-index-to-llvm=index-bitwidth=32 \
-// RUN:         -convert-arith-to-llvm \
-// RUN:         -finalize-memref-to-llvm='use-opaque-pointers=1' \
-// RUN:         -convert-func-to-llvm \
-// RUN:         -canonicalize -cse \
-// RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
-// RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
-// RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary -canonicalize -cse -reconcile-unrealized-casts \
+// RUN: mlir-opt %s \
+// RUN:  -test-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -53,7 +26,7 @@
 // |-------------------------------|
 
 
-!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!barrierType = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 !tokenType = !nvgpu.mbarrier.token
 
 !lhs = memref<128x64xf16>
@@ -109,28 +82,22 @@ module @mymod {
         memref.store %vL32, %lhs32[%j, %i] : memref<128x64xf32>
       }
     }
-
-    // Step 2. Print on the host
-    %lhs32_unranked = memref.cast %lhs32 : memref<128x64xf32> to memref<*xf32>
-    call @printMemrefF32(%lhs32_unranked) : (memref<*xf32>) -> ()
-    %rhs32_unranked = memref.cast %rhs32 : memref<64x128xf32> to memref<*xf32>
-    call @printMemrefF32(%rhs32_unranked) : (memref<*xf32>) -> ()
     
-    // Step 3. Copy host to device
+    // Step 2. Copy host to device
     %0 = gpu.wait async
     %d_glbmem_lhs, %asyncToken = gpu.alloc async [%0] () : !lhs
     %d_glbmem_rhs, %asyncToken_2 = gpu.alloc async [%0] () : !rhs
     %1 = gpu.memcpy async [%0] %d_glbmem_lhs, %lhs : !lhs, !lhs
     %2 = gpu.memcpy async [%0] %d_glbmem_rhs, %rhs : !rhs, !rhs
     
-    // Step 4. Create TMA tensor descriptor
+    // Step 3. Create TMA tensor descriptor
     %d_lhs_unranked = memref.cast %d_glbmem_lhs :!lhs  to memref<*xf16>
     %d_rhs_unranked = memref.cast %d_glbmem_rhs :!rhs  to memref<*xf16>
 
     %d_lhsTensorMap = nvgpu.tma.create.descriptor %d_lhs_unranked box[%c128, %c64] : memref<*xf16> -> !lhsTensorMap
     %d_rhsTensorMap = nvgpu.tma.create.descriptor %d_rhs_unranked box[%c64, %c64] : memref<*xf16> -> !rhsTensorMap
 
-    // Step 5. Launch a GPU kernel
+    // Step 4. Launch a GPU kernel
     gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) {
       %5 = gpu.block_dim  x
       %6 = gpu.thread_id  x
@@ -138,27 +105,27 @@ module @mymod {
       %rhsShmem = memref.get_global @bufferRhsGlobal : !shmemrhs
       %rhsShmem2 = memref.subview %rhsShmem[%c32, %c0][%c32, %c128][%c1, %c1] : !shmemrhs to memref<?x?xf16, strided<[?, ?], offset: ?>, 3>
     
-      // Step 6. Initialize the mbarrier
+      // Step 5. Initialize the mbarrier
       %9 = nvgpu.mbarrier.create -> !barrierType
-      nvgpu.mbarrier.init %9, %5 : !barrierType
+      nvgpu.mbarrier.init %9[%c0], %5 : !barrierType
       %10 = arith.cmpi eq, %6, %c0 : index
       
       
-      // Step 7. First thread does TMA load
+      // Step 6. First thread does TMA load
       scf.if %10 {
         gpu.printf "[GPU] TMA SIZE %d\0A" %c32768 : index
-        nvgpu.tma.async.load %d_lhsTensorMap[%c0, %c0], %9 to %lhsShmem : !lhsTensorMap, !barrierType -> !shmemlhs
-        nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9 to %rhsShmem : !rhsTensorMap, !barrierType -> !shmemrhs
-        nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9 to %rhsShmem2 : !rhsTensorMap, !barrierType -> memref<?x?xf16, strided<[?, ?], offset: ?>, 3>
-        nvgpu.mbarrier.arrive.expect_tx %9, %c32768 : !barrierType
+        nvgpu.tma.async.load %d_lhsTensorMap[%c0, %c0], %9[%c0] to %lhsShmem : !lhsTensorMap, !barrierType -> !shmemlhs
+        nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9[%c0] to %rhsShmem : !rhsTensorMap, !barrierType -> !shmemrhs
+        nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9[%c0] to %rhsShmem2 : !rhsTensorMap, !barrierType -> memref<?x?xf16, strided<[?, ?], offset: ?>, 3>
+        nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c32768 : !barrierType
       } else {
-        nvgpu.mbarrier.arrive.expect_tx %9, %c0 : !barrierType
+        nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c0 : !barrierType
       }
 
-      // Step 8. Wait until TMA is done
-      nvgpu.mbarrier.try_wait.parity %9, %c0, %c10000000 : !barrierType
+      // Step 7. Wait until TMA is done
+      nvgpu.mbarrier.try_wait.parity %9[%c0], %c0, %c10000000 : !barrierType
 
-      // Step 9. Print loaded data in 128b swizzled
+      // Step 8. Print loaded data in 128b swizzled
       scf.if %10 {        
         gpu.printf "===--- Matrix B ---=== %d \n" %c-1_i32 : i32
         scf.for %ii = %c0 to %c64 step %c1 {
@@ -171,6 +138,7 @@ module @mymod {
         }
         gpu.printf "===----------------=== %d \n" %c-1_i32 : i32
       }
+      gpu.barrier
       gpu.terminator
     }
     return

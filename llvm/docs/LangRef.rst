@@ -3394,17 +3394,82 @@ Floating-Point Environment
 The default LLVM floating-point environment assumes that traps are disabled and
 status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
-round-to-nearest rounding mode.
+round-to-nearest rounding mode, and subnormals are assumed to be preserved.
+
+Running LLVM code in an environment where these assumptions are not met can lead
+to undefined behavior. The ``strictfp`` and ``denormal-fp-math`` attributes as
+well as :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be used
+to weaken LLVM's assumptions and ensure defined behavior in non-default
+floating-point environments; see their respective documentation for details.
+
+.. _floatnan:
+
+Behavior of Floating-Point NaN values
+-------------------------------------
+
+A floating-point NaN value consists of a sign bit, a quiet/signaling bit, and a
+payload (which makes up the rest of the mantissa except for the quiet/signaling
+bit). LLVM assumes that the quiet/signaling bit being set to ``1`` indicates a
+quiet NaN (QNaN), and a value of ``0`` indicates a signaling NaN (SNaN). In the
+following we will hence just call it the "quiet bit".
+
+The representation bits of a floating-point value do not mutate arbitrarily; in
+particular, if there is no floating-point operation being performed, NaN signs,
+quiet bits, and payloads are preserved.
+
+For the purpose of this section, ``bitcast`` as well as the following operations
+are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
+``llvm.copysign``. These operations act directly on the underlying bit
+representation and never change anything except possibly for the sign bit.
+
+For floating-point math operations, unless specified otherwise, the following
+rules apply when a NaN value is returned: the result has a non-deterministic
+sign; the quiet bit and payload are non-deterministically chosen from the
+following set of options:
+
+- The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
+- The quiet bit is set and the payload is copied from any input operand that is
+  a NaN. ("Quieting NaN propagation" case)
+- The quiet bit and payload are copied from any input operand that is a NaN.
+  ("Unchanged NaN propagation" case)
+- The quiet bit is set and the payload is picked from a target-specific set of
+  "extra" possible NaN payloads. The set can depend on the input operand values.
+  This set is empty on x86 and ARM, but can be non-empty on other architectures.
+  (For instance, on wasm, if any input NaN does not have the preferred all-zero
+  payload or any input NaN is an SNaN, then this set contains all possible
+  payloads; otherwise, it is empty. On SPARC, this set consists of the all-one
+  payload.)
+
+In particular, if all input NaNs are quiet (or if there are no input NaNs), then
+the output NaN is definitely quiet. Signaling NaN outputs can only occur if they
+are provided as an input value. For example, "fmul SNaN, 1.0" may be simplified
+to SNaN rather than QNaN. Similarly, if all input NaNs are preferred (or if
+there are no input NaNs) and the target does not have any "extra" NaN payloads,
+then the output NaN is guaranteed to be preferred.
 
 Floating-point math operations are allowed to treat all NaNs as if they were
-quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0. This also
-means that SNaN may be passed through a math operation without quieting. For
-example, "fmul SNaN, 1.0" may be simplified to SNaN rather than QNaN. However,
-SNaN values are never created by math operations. They may only occur when
-provided as a program input value.
+quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0.
 
 Code that requires different behavior than this should use the
 :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+In particular, constrained intrinsics rule out the "Unchanged NaN propagation"
+case; they are guaranteed to return a QNaN.
+
+Unfortunately, due to hard-or-impossible-to-fix issues, LLVM violates its own
+specification on some architectures:
+
+- x86-32 without SSE2 enabled may convert floating-point values to x86_fp80 and
+  back when performing floating-point math operations; this can lead to results
+  with different precision than expected and it can alter NaN values. Since
+  optimizations can make contradicting assumptions, this can lead to arbitrary
+  miscompilations. See `issue #44218
+  <https://github.com/llvm/llvm-project/issues/44218>`_.
+- x86-32 (even with SSE2 enabled) may implicitly perform such a conversion on
+  values returned from a function for some calling conventions. See `issue
+  #66803 <https://github.com/llvm/llvm-project/issues/66803>`_.
+- Older MIPS versions use the opposite polarity for the quiet/signaling bit, and
+  LLVM does not correctly represent this. See `issue #60796
+  <https://github.com/llvm/llvm-project/issues/60796>`_.
 
 .. _fastmath:
 
@@ -3823,7 +3888,7 @@ integer to memory.
 
 A bitcast from a vector type to a scalar integer type will see the elements
 being packed together (without padding). The order in which elements are
-inserted in the integer depends on endianess. For little endian element zero
+inserted in the integer depends on endianness. For little endian element zero
 is put in the least significant bits of the integer, and for big endian
 element zero is put in the most significant bits.
 
@@ -5217,7 +5282,6 @@ X86:
 - ``O``: An immediate integer between 0 and 127.
 - ``e``: An immediate 32-bit signed integer.
 - ``Z``: An immediate 32-bit unsigned integer.
-- ``o``, ``v``: Treated the same as ``m``, at the moment.
 - ``q``: An 8, 16, 32, or 64-bit register which can be accessed as an 8-bit
   ``l`` integer register. On X86-32, this is the ``a``, ``b``, ``c``, and ``d``
   registers, and on X86-64, it is all of the integer registers.
@@ -5228,10 +5292,13 @@ X86:
   existed since i386, and can be accessed without the REX prefix.
 - ``f``: A 32, 64, or 80-bit '387 FPU stack pseudo-register.
 - ``y``: A 64-bit MMX register, if MMX is enabled.
-- ``x``: If SSE is enabled: a 32 or 64-bit scalar operand, or 128-bit vector
+- ``v``: If SSE is enabled: a 32 or 64-bit scalar operand, or 128-bit vector
   operand in a SSE register. If AVX is also enabled, can also be a 256-bit
   vector operand in an AVX register. If AVX-512 is also enabled, can also be a
-  512-bit vector operand in an AVX512 register, Otherwise, an error.
+  512-bit vector operand in an AVX512 register. Otherwise, an error.
+- ``x``: The same as ``v``, except that when AVX-512 is enabled, the ``x`` code
+  only allocates into the first 16 AVX-512 registers, while the ``v`` code
+  allocates into any of the 32 AVX-512 registers.
 - ``Y``: The same as ``x``, if *SSE2* is enabled, otherwise an error.
 - ``A``: Special case: allocates EAX first, then EDX, for a single operand (in
   32-bit mode, a 64-bit integer operand will get split into two registers). It
@@ -9085,6 +9152,9 @@ Semantics:
 """"""""""
 
 The value produced is a copy of the operand with its sign bit flipped.
+The value is otherwise completely identical; in particular, if the input is a
+NaN, then the quiet/signaling bit and payload are perfectly preserved.
+
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -11240,6 +11310,11 @@ The '``fptrunc``' instruction casts a ``value`` from a larger
 This instruction is assumed to execute in the default :ref:`floating-point
 environment <floatenv>`.
 
+NaN values follow the usual :ref:`NaN behaviors <floatnan>`, except that _if_ a
+NaN payload is propagated from the input ("Quieting NaN propagation" or
+"Unchanged NaN propagation" cases), then the low order bits of the NaN payload
+which cannot fit in the resulting type are discarded.
+
 Example:
 """"""""
 
@@ -11279,6 +11354,11 @@ The '``fpext``' instruction extends the ``value`` from a smaller
 <t_floating>` type. The ``fpext`` cannot be used to make a
 *no-op cast* because it always changes bits. Use ``bitcast`` to make a
 *no-op cast* for a floating-point cast.
+
+NaN values follow the usual :ref:`NaN behaviors <floatnan>`, except that _if_ a
+NaN payload is propagated from the input ("Quieting NaN propagation" or
+"Unchanged NaN propagation" cases), then it is copied to the high order bits of
+the resulting payload, and the remaining low order bits are zero.
 
 Example:
 """"""""
@@ -11599,7 +11679,7 @@ To convert pointers to other types, use the :ref:`inttoptr <i_inttoptr>`
 or :ref:`ptrtoint <i_ptrtoint>` instructions first.
 
 There is a caveat for bitcasts involving vector types in relation to
-endianess. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
+endianness. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
 of the vector in the least significant bits of the i16 for little-endian while
 element zero ends up in the most significant bits for big-endian.
 
@@ -11608,9 +11688,9 @@ Example:
 
 .. code-block:: text
 
-      %X = bitcast i8 255 to i8          ; yields i8 :-1
-      %Y = bitcast i32* %x to i16*       ; yields i16*:%x
-      %Z = bitcast <2 x i32> %V to i64;  ; yields i64: %V (depends on endianess)
+      %X = bitcast i8 255 to i8         ; yields i8 :-1
+      %Y = bitcast i32* %x to i16*      ; yields i16*:%x
+      %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
 
 .. _i_addrspacecast:
@@ -15092,6 +15172,9 @@ Semantics:
 
 This function returns the same values as the libm ``fabs`` functions
 would, and handles error conditions in the same way.
+The returned value is completely identical to the input except for the sign bit;
+in particular, if the input is a NaN, then the quiet/signaling bit and payload
+are perfectly preserved.
 
 .. _i_minnum:
 
@@ -15307,6 +15390,9 @@ Semantics:
 
 This function returns the same values as the libm ``copysign``
 functions would, and handles error conditions in the same way.
+The returned value is completely identical to the first operand except for the
+sign bit; in particular, if the input is a NaN, then the quiet/signaling bit and
+payload are perfectly preserved.
 
 .. _int_floor:
 
@@ -18273,8 +18359,8 @@ For example:
 
 .. code-block:: text
 
- llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, 1)  ==> <B, C, D, E> ; index
- llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, -3) ==> <B, C, D, E> ; trailing elements
+ llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
+ llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
 
 
 Arguments:
@@ -21433,8 +21519,8 @@ Examples:
 
 .. code-block:: text
 
- llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3)  ==> <B, E, F, poison> ; index
- llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2) ==> <B, C, poison, poison> ; trailing elements
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3);  ==> <B, E, F, poison> index
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2); ==> <B, C, poison, poison> trailing elements
 
 
 .. _int_vp_load:
@@ -26865,7 +26951,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a pointer. The second argument is an integer.
+The first argument is a pointer or vector of pointers. The second argument is
+an integer or vector of integers.
 
 Overview:
 """"""""""
@@ -26880,7 +26967,7 @@ Semantics:
 
 The result of ``ptrmask(ptr, mask)`` is equivalent to
 ``getelementptr ptr, (ptrtoint(ptr) & mask) - ptrtoint(ptr)``. Both the returned
-pointer and the first argument are based on the same underlying object (for more
+pointer(s) and the first argument are based on the same underlying object (for more
 information on the *based on* terminology see
 :ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
 mask argument does not match the pointer size of the target, the mask is

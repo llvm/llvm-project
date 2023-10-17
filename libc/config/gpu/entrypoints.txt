@@ -29,7 +29,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memmem
     libc.src.string.memmove
     libc.src.string.mempcpy
-    libc.src.string.memrchr
     libc.src.string.memset
     libc.src.string.stpcpy
     libc.src.string.stpncpy
@@ -88,6 +87,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.feof
     libc.src.stdio.ferror
+    libc.src.stdio.fseek
+    libc.src.stdio.fflush
+    libc.src.stdio.ftell
     libc.src.stdio.clearerr
     libc.src.stdio.puts
     libc.src.stdio.fopen
@@ -102,6 +104,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fgetc
     libc.src.stdio.getc
     libc.src.stdio.getchar
+    libc.src.stdio.ungetc
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr

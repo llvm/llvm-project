@@ -16,25 +16,25 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
 TEST(LlvmLibcCosfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::cosf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::cosf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::cosf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::cosf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::cosf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::cosf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::cosf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }

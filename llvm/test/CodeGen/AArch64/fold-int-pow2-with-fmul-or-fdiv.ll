@@ -52,7 +52,8 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEON-NEXT:    str d0, [sp] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    fmov w0, s1
 ; CHECK-NEON-NEXT:    bl ldexpf
@@ -600,4 +601,33 @@ define fastcc i1 @quantum_hadamard(i32 %0) {
   %6 = fptrunc double %5 to float
   %7 = fcmp olt float 0.000000e+00, %6
   ret i1 %7
+}
+
+define <vscale x 4 x float> @fdiv_pow2_nx4xfloat(<vscale x 4 x i32> %i) "target-features"="+sve" {
+; CHECK-LABEL: fdiv_pow2_nx4xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    lslr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmov z1.s, #9.00000000
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    fdivr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %p2 = shl <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), %i
+  %p2_f = uitofp <vscale x 4 x i32> %p2 to <vscale x 4 x float>
+  %r = fdiv <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 9.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), %p2_f
+  ret <vscale x 4 x float> %r
+}
+
+define <vscale x 2 x double> @scalable2(<vscale x 2 x i64> %0) "target-features"="+sve" {
+; CHECK-LABEL: scalable2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fmov z1.d, #1.00000000
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    fdivr z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %2 = uitofp <vscale x 2 x i64> %0 to <vscale x 2 x double>
+  %3 = fdiv <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), %2
+  ret <vscale x 2 x double> %3
 }
