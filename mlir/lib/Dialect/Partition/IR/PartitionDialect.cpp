@@ -23,3 +23,4 @@
 
  #define GET_OP_CLASSES
  #include "mlir/Dialect/Partition/IR/PartitionOps.cpp.inc"
+ #include "mlir/Dialect/Partition/IR/PartitionOpsDialect.cpp.inc"

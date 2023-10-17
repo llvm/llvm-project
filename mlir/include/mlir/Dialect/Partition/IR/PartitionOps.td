@@ -39,9 +39,15 @@
  class Partition_Op<string mnemonic, list<Trait> traits = []>
    : Op<Partition_Dialect, mnemonic, traits>; 
 
+ def Partition_EmptyFn : Partition_Op<"emptyfn">{
+	let summary = "hahaha";
+	let description = [{
+		
+		}];
+		}
  def Partition_FromPointerOp : Partition_Op<"fromPtr">,
      Arguments<(ins AnyType:$ptr)>,
-     Results<(outs AnyTensor:$result)> {
+     Results<(outs AnyType:$result)> {
    let summary = "Views an opaque partition pointer as a tensor";
   let description = [{
      Lacking a first class citizen type for partition, this operation
@@ -58,6 +64,23 @@
      ```
    }];
    let assemblyFormat = "$ptr attr-dict `:` type($ptr) `to` type($result)";
+ }
+def Partition_GetPartitionOp : Partition_Op<"get_partition">,
+     Arguments<(ins AnyTensor:$primary)>,
+     Results<(outs AnyTensor:$tuples)> {
+   let summary = "get all the partition indices";
+  let description = [{
+     This operation will take a tensor and give all the indices of a tensor in a hyper-rectangular form where 
+	 tuples will give the start and end indices of the the partition tensor from the tensor.
+     Example:
+     ```mlir
+      !Partition = type !llvm.ptr<i8>
+	  arg0 = tensor<?x?xf32, #sp, # part>
+
+      %0 = partition.get_partition %arg0 : <?x?xf32, #ar1, #ar2> -> tensor<?xindices>
+     ```
+   }];
+   let assemblyFormat = "$primary attr-dict `:` type($primary) `->` type($tuples)";
  }
 
 
