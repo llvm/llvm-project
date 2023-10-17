@@ -25,13 +25,10 @@ class InterpreterPass
 public:
   using Base::Base;
 
-  LogicalResult initialize(MLIRContext *context) override {
-    // TODO: investigate using a resource blob if some ownership mode allows it.
-    transformModule = transform::detail::getPreloadedTransformModule(context);
-    return success();
-  }
-
   void runOnOperation() override {
+    MLIRContext *context = &getContext();
+    ModuleOp transformModule =
+        transform::detail::getPreloadedTransformModule(context);
     if (failed(transform::applyTransformNamedSequence(
             getOperation(), transformModule,
             options.enableExpensiveChecks(true), entryPoint)))
@@ -41,11 +38,5 @@ public:
 private:
   /// Transform interpreter options.
   transform::TransformOptions options;
-
-  /// The separate transform module to be used for transformations, shared
-  /// across multiple instances of the pass if it is applied in parallel to
-  /// avoid potentially expensive cloning. MUST NOT be modified after the pass
-  /// has been initialized.
-  ModuleOp transformModule;
 };
 } // namespace
