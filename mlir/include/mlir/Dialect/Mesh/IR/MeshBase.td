@@ -58,8 +58,8 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
 
   let parameters = (ins
     AttrParameter<"::mlir::SymbolRefAttr", "cluster placed">:$cluster,
-    ArrayRefParameter<"::mlir::DenseI64ArrayAttr">:$split_axes,
-    OptionalArrayRefParameter<"int64_t">:$partial_axes,
+    ArrayRefParameter<"::mlir::DenseI32ArrayAttr">:$split_axes,
+    OptionalArrayRefParameter<"int32_t">:$partial_axes,
     OptionalParameter<"::mlir::mesh::Partial">:$partial_type
   );
 
