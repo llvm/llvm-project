@@ -262,3 +262,207 @@ T:
 F:
   br label %T
 }
+
+define i1 @phi_uge_non_zero_non_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_uge_non_zero_non_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YY:%.*]] = add nuw i8 [[Y:%.*]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X:%.*]], [[YY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %yy = add nuw i8 %y, 32
+  %cmp = icmp uge i8 %x, %yy
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
+define i1 @phi_uge_non_zero_non_const_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_uge_non_zero_non_const_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YY:%.*]] = add i8 [[Y:%.*]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X:%.*]], [[YY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %yy = add i8 %y, 32
+  %cmp = icmp uge i8 %x, %yy
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
+define i1 @phi_slt_non_zero_non_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_slt_non_zero_non_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 95
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %yy = and i8 %y, 95
+  %cmp = icmp slt i8 %yy, %x
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
+define i1 @phi_slt_non_zero_non_const_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_slt_non_zero_non_const_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YY:%.*]] = or i8 [[Y:%.*]], 32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %yy = or i8 %y, 32
+  %cmp = icmp slt i8 %yy, %x
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
+define i1 @phi_sle_non_zero_non_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_sle_non_zero_non_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YYY:%.*]] = and i8 [[Y:%.*]], 95
+; CHECK-NEXT:    [[YY:%.*]] = add nuw i8 [[YYY]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X:%.*]], [[YY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       F:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[T]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %yyy = and i8 %y, 95
+  %yy = add nuw i8 %yyy, 4
+  %cmp = icmp sle i8 %x, %yy
+  br i1 %cmp, label %T, label %F
+T:
+  br label %F
+F:
+  %v = phi i8 [ %x, %entry], [-1, %T]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @phi_sle_non_zero_non_const_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_sle_non_zero_non_const_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YYY:%.*]] = and i8 [[Y:%.*]], 95
+; CHECK-NEXT:    [[YY:%.*]] = add nuw i8 [[YYY]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       F:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[T]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %yyy = and i8 %y, 95
+  %yy = add nuw i8 %yyy, 4
+  %cmp = icmp sle i8 %yy, %x
+  br i1 %cmp, label %T, label %F
+T:
+  br label %F
+F:
+  %v = phi i8 [ %x, %entry], [-1, %T]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @phi_eq_non_zero_non_const(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_eq_non_zero_non_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YY:%.*]] = or i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[YY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %yy = or i8 %y, 1
+  %cmp = icmp eq i8 %x, %yy
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry], [-1, %F]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+F:
+  br label %T
+}
+
+define i1 @phi_eq_non_zero_non_const_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @phi_eq_non_zero_non_const_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[YY:%.*]] = or i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[YY]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       F:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[T]] ]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %yy = or i8 %y, 1
+  %cmp = icmp eq i8 %x, %yy
+  br i1 %cmp, label %T, label %F
+T:
+  br label %F
+F:
+  %v = phi i8 [ %x, %entry], [-1, %T]
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
