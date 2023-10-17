@@ -502,7 +502,7 @@ ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
   }
 
   using namespace support;
-  T Val = endian::readNext<T, little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little, unaligned>(Data);
   return Val;
 }
 
@@ -531,8 +531,8 @@ SampleProfileReaderBinary::readStringFromTable(size_t *RetIdx) {
   if (!SR.data()) {
     assert(MD5NameMemStart);
     using namespace support;
-    uint64_t FID = endian::read<uint64_t, little>(MD5NameMemStart +
-                                                  (*Idx) * sizeof(uint64_t));
+    uint64_t FID = endian::read<uint64_t, llvm::endianness::little>(
+        MD5NameMemStart + (*Idx) * sizeof(uint64_t));
     SR = MD5StringBuf.emplace_back(std::to_string(FID));
   }
   if (RetIdx)
