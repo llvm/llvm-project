@@ -36,7 +36,6 @@ namespace presburger {
 /// This class only works for the types MPInt and Fraction, since the method
 /// implementations are in the Matrix.cpp file. Only these two types have
 /// been explicitly instantiated there.
-/// Note that the determinant() functions (for both integers and fractions)
 /// assume that the matrix is square.
 template <typename T>
 class Matrix {
@@ -237,13 +236,16 @@ public:
   /// Returns the GCD of the columns of the specified row.
   MPInt normalizeRow(unsigned row);
 
-  // Return the integer inverse of the matrix, leaving the calling object
-  // unmodified.
-  std::optional<IntMatrix> integerInverse();
+  // Return the integer inverse of the matrix.
+  // For a matrix M, the integer inverse is the matrix M' such that
+  // M • M' = M' • M = det(M) • I.
+  // If M is singular or not square, std::nullopt is returned.
+  std::optional<IntMatrix> integerInverse() const;
 
   // Compute the determinant of the matrix by converting it to row echelon
   // form and then taking the product of the diagonal.
-  MPInt determinant();
+  // Assumes that the matrix is square.
+  MPInt determinant() const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -260,12 +262,13 @@ public:
   /// Return the identity matrix of the specified dimension.
   static FracMatrix identity(unsigned dimension);
 
-  // Return the inverse of the matrix, leaving the calling object unmodified.
-  std::optional<FracMatrix> inverse();
+  // Return the inverse of the matrix.
+  // If it is singular or not square, std::nullopt is returned.
+  std::optional<FracMatrix> inverse() const;
 
-  // Compute the determinant of the matrix by converting it to row echelon
-  // form and then taking the product of the diagonal.
-  Fraction determinant();
+  // Compute the determinant of the matrix (cubic time).
+  // Assumes that the matrix is square.
+  Fraction determinant() const;
 };
 
 } // namespace presburger
