@@ -300,6 +300,14 @@ DEFAULT_PARAMETERS = [
         actions=lambda enabled: [] if not enabled else [AddFeature("long_tests")],
     ),
     Parameter(
+        name="large_tests",
+        choices=[True, False],
+        type=bool,
+        default=True,
+        help="Whether to enable tests that use a lot of memory. This can be useful when running on a device with limited amounts of memory.",
+        actions=lambda enabled: [] if not enabled else [AddFeature("large_tests")],
+    ),
+    Parameter(
         name="enable_assertions",
         choices=[True, False],
         type=bool,
