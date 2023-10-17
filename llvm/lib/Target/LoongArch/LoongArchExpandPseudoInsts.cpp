@@ -585,7 +585,7 @@ bool LoongArchExpandPseudo::expandCopyCFR(
   // Expand:
   // MBB:
   //    fcmp.caf.s  $dst, $fa0, $fa0 # set $dst 0(false)
-  //    bceqz $src, SinkMBB
+  //    bceqz $src, SinkBB
   // FalseBB:
   //    fcmp.cueq.s $dst, $fa0, $fa0 # set $dst 1(true)
   // SinkBB:
