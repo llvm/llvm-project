@@ -151,6 +151,17 @@ public:
 
   unsigned getMaxInterleaveFactor(ElementCount VF);
 
+  // TODO: NEON should be able to support this after... 8.3 or so?
+  // Need to make sure that the input type is either i8 or i16, and that
+  // the extended type is at most the accumulator type of the dot product
+  // instructions so that we don't lose data.
+  bool isLegalDotProd(Type *DataType, Type *ExtType) const {
+    return ST->hasSVE() && ((DataType->isIntegerTy(8) &&
+                             ExtType->getPrimitiveSizeInBits() <= 32) ||
+                            (DataType->isIntegerTy(16) &&
+                             ExtType->getPrimitiveSizeInBits() <= 64));
+  }
+
   bool prefersVectorizedAddressing() const;
 
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,

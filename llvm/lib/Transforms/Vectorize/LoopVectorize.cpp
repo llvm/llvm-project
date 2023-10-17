@@ -80,6 +80,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1921,6 +1922,9 @@ public:
 
   /// All element types found in the loop.
   SmallPtrSet<Type *, 16> ElementTypesInLoop;
+
+  /// Extends used as part of a dot-product chain; these are 'free'.
+  SmallPtrSet<Value *, 2> DotExtends;
 };
 } // end namespace llvm
 
@@ -5580,6 +5584,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
 }
 
 void LoopVectorizationCostModel::collectElementTypesForWidening() {
+  using namespace llvm::PatternMatch;
   ElementTypesInLoop.clear();
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
@@ -5607,6 +5612,34 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
                                       RdxDesc.getRecurrenceType(),
                                       TargetTransformInfo::ReductionFlags()))
           continue;
+        // DOT Prod proto...
+        if (RdxDesc.getRecurrenceKind() == RecurKind::Add) {
+          Instruction *Sum = RdxDesc.getLoopExitInstr();
+          Value *Accum = Legal->getReductionVars().find(PN)->first;
+
+          if (!Accum->hasOneUse() || !Sum->hasNUses(2))
+            continue;
+
+          Value *Step = (Sum->getOperand(0) == Accum) ? Sum->getOperand(1)
+                                                      : Sum->getOperand(0);
+          Value *ValA = nullptr, *ValB = nullptr;
+
+          if (match(Step,
+                    m_OneUse(m_Mul(m_ZExtOrSExt(m_OneUse(m_Value(ValA))),
+                                   m_ZExtOrSExt(m_OneUse(m_Value(ValB)))))) &&
+              (ValA->getType() == ValB->getType()) &&
+              TTI.isLegalDotProd(ValA->getType(), Step->getType())) {
+            Instruction *I = cast<Instruction>(Step);
+
+            // Make sure the extends are only used by the multiply.
+            if (I->getOperand(0)->hasOneUser() &&
+                I->getOperand(1)->hasOneUser()) {
+              DotExtends.insert(I->getOperand(0));
+              DotExtends.insert(I->getOperand(1));
+              continue;
+            }
+          }
+        }
         T = RdxDesc.getRecurrenceType();
       }
 
@@ -7350,6 +7383,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       if (LoadInst *Load = dyn_cast<LoadInst>(I->getOperand(0)))
         CCH = ComputeCCH(Load);
     }
+
+    // Extensions used in dot product calculations are 'free', since the
+    // dot instruction performs that operation internally before multiplying
+    if (DotExtends.contains(I))
+      return 0;
 
     // We optimize the truncation of induction variables having constant
     // integer steps. The cost of these truncations is the same as the scalar
