@@ -776,7 +776,7 @@ protected:
   bool isColZero(unsigned pos) const;
 
   /// Checks for identical inequalities and eliminates redundant inequalities.
-  /// The return value indicates if anything has changed.
+  /// Returns whether the constraint system was modified.
   bool removeDuplicateConstraints();
 
   /// Returns false if the fields corresponding to various variable counts, or
