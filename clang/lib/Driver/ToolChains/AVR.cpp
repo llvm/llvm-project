@@ -556,7 +556,7 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Add avr-libc's linker script to lld by default, if it exists.
     if (!Args.hasArg(options::OPT_T) &&
-        Linker.find("lld") != std::string::npos) {
+        Linker.find("avr-ld") == std::string::npos) {
       std::string Path(*AVRLibcRoot + "/lib/ldscripts/");
       Path += *FamilyName;
       Path += ".x";
