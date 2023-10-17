@@ -1860,6 +1860,7 @@ cc_library(
         "//llvm:IRReader",
         "//llvm:InstCombine",
         "//llvm:Instrumentation",
+        "//llvm:HipStdPar",
         "//llvm:LTO",
         "//llvm:Linker",
         "//llvm:MC",
