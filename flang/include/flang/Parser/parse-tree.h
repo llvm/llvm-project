@@ -2259,15 +2259,18 @@ struct LoopControl {
 };
 
 // R1121 label-do-stmt -> [do-construct-name :] DO label [loop-control]
+// A label-do-stmt with a do-construct-name is parsed as a non-label-do-stmt.
 struct LabelDoStmt {
   TUPLE_CLASS_BOILERPLATE(LabelDoStmt);
-  std::tuple<std::optional<Name>, Label, std::optional<LoopControl>> t;
+  std::tuple<Label, std::optional<LoopControl>> t;
 };
 
 // R1122 nonlabel-do-stmt -> [do-construct-name :] DO [loop-control]
 struct NonLabelDoStmt {
   TUPLE_CLASS_BOILERPLATE(NonLabelDoStmt);
-  std::tuple<std::optional<Name>, std::optional<LoopControl>> t;
+  std::tuple<std::optional<Name>, std::optional<Label>,
+      std::optional<LoopControl>>
+      t;
 };
 
 // R1132 end-do-stmt -> END DO [do-construct-name]
