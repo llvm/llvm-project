@@ -1,14 +1,23 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo "SECTIONS { /DISCARD/ : { *(.aaa*) } }" > %t.script
-# RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
+## Test relocations referencing symbols defined relative to sections discarded by /DISCARD/.
 
-# CHECK-NOT: .aaa
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: echo "SECTIONS { /DISCARD/ : { *(.aaa*) } }" > %t.lds
+# RUN: ld.lld -T %t.lds %t.o -z undefs -o /dev/null 2>&1 | count 0
+# RUN: ld.lld -T %t.lds %t.o -o /dev/null 2>&1 | count 0
+# RUN: ld.lld -r -T %t.lds %t.o -o /dev/null 2>&1 | count 0
+
+.globl _start
+_start:
 
 .section .aaa,"a"
-aab:
+.globl global
+.weak weak
+global:
+weak:
   .quad 0
 
 .section .zzz,"a"
-  .quad aab
+  .quad .aaa
+  .quad global
+  .quad weak
