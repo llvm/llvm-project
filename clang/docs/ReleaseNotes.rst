@@ -176,6 +176,9 @@ C23 Feature Support
 - Clang now supports `requires c23` for module maps.
 - Clang now supports ``N3007 Type inference for object definitions``.
 
+- Clang now supports ``<stdckdint.h>`` which defines several macros for performing
+  checked integer arithmetic.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
