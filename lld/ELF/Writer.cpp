@@ -255,16 +255,19 @@ void elf::addReservedSymbols() {
 // DT_NEEDED. If that happens, replace ShardSymbol with Undefined to avoid
 // dangling references to an unneeded DSO. Use a weak binding to avoid
 // --no-allow-shlib-undefined diagnostics. Similarly, demote lazy symbols.
-static void demoteSymbols() {
+static void demoteSymbolsAndComputeIsPreemptible() {
   llvm::TimeTraceScope timeScope("Demote symbols");
   for (Symbol *sym : symtab.getSymbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
-      continue;
-    uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-    Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
-        .overwrite(*sym);
-    sym->versionId = VER_NDX_GLOBAL;
+    if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
+      uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
+      Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
+          .overwrite(*sym);
+      sym->versionId = VER_NDX_GLOBAL;
+    }
+
+    if (config->hasDynSymTab)
+      sym->isPreemptible = computeIsPreemptible(*sym);
   }
 }
 
@@ -1954,12 +1957,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
-  demoteSymbols();
-  if (config->hasDynSymTab) {
-    parallelForEach(symtab.getSymbols(), [](Symbol *sym) {
-      sym->isPreemptible = computeIsPreemptible(*sym);
-    });
-  }
+  demoteSymbolsAndComputeIsPreemptible();
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.
