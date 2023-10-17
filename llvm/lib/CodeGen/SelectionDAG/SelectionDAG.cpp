@@ -6236,7 +6236,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
   // Handle binops special cases.
   if (NumOps == 2) {
-    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops[0], Ops[1]))
+    if (SDValue CFP = foldConstantFPMath(Opcode, DL, VT, Ops))
       return CFP;
 
     if (auto *C1 = dyn_cast<ConstantSDNode>(Ops[0])) {
@@ -6429,11 +6429,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 }
 
 SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
-                                         EVT VT, SDValue N1, SDValue N2) {
+                                         EVT VT, ArrayRef<SDValue> Ops) {
+  // TODO: Add support for unary/ternary fp opcodes.
+  if (Ops.size() != 2)
+    return SDValue();
+
   // TODO: We don't do any constant folding for strict FP opcodes here, but we
   //       should. That will require dealing with a potentially non-default
   //       rounding mode, checking the "opStatus" return value from the APFloat
   //       math calculations, and possibly other variations.
+  SDValue N1 = Ops[0];
+  SDValue N2 = Ops[1];
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /*AllowUndefs*/ false);
   ConstantFPSDNode *N2CFP = isConstOrConstSplatFP(N2, /*AllowUndefs*/ false);
   if (N1CFP && N2CFP) {
