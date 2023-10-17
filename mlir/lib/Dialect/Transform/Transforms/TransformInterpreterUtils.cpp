@@ -176,8 +176,8 @@ LogicalResult transform::detail::assembleTransformLibraryFromPaths(
     for (OwningOpRef<ModuleOp> &parsedLibrary : parsedLibraries) {
       if (failed(transform::detail::mergeSymbolsInto(
               mergedParsedLibraries.get(), std::move(parsedLibrary))))
-        return mergedParsedLibraries->emitError()
-               << "failed to verify merged transform module";
+        return parsedLibrary->emitError()
+               << "failed to merge symbols into shared library module";
     }
   }
 
