@@ -129,14 +129,8 @@ extern "C" {
       assert(ptr && "Received nullptr for SparseTensorCOO object");            \
       auto &coo = *static_cast<SparseTensorCOO<V> *>(ptr);                     \
       return SparseTensorStorage<P, C, V>::newFromCOO(                         \
-          dimRank, dimSizes, lvlRank, lvlTypes, dim2lvl, lvl2dim, coo);        \
-    }                                                                          \
-    case Action::kSparseToSparse: {                                            \
-      assert(ptr && "Received nullptr for SparseTensorStorage object");        \
-      auto &tensor = *static_cast<SparseTensorStorageBase *>(ptr);             \
-      return SparseTensorStorage<P, C, V>::newFromSparseTensor(                \
           dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,    \
-          dimRank, tensor);                                                    \
+          coo);                                                                \
     }                                                                          \
     case Action::kFromReader: {                                                \
       assert(ptr && "Received nullptr for SparseTensorReader object");         \
@@ -147,7 +141,7 @@ extern "C" {
     case Action::kToCOO: {                                                     \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \
       auto &tensor = *static_cast<SparseTensorStorage<P, C, V> *>(ptr);        \
-      return tensor.toCOO(lvlRank, lvlSizes, dimRank, dim2lvl, lvl2dim);       \
+      return tensor.toCOO();                                                   \
     }                                                                          \
     case Action::kPack: {                                                      \
       assert(ptr && "Received nullptr for SparseTensorStorage object");        \

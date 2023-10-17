@@ -47,7 +47,6 @@ extern "C" {
 /// kEmpty          -               STS, empty
 /// kEmptyForward   -               STS, empty, with forwarding COO
 /// kFromCOO        COO             STS, copied from the COO source
-/// kSparseToSparse STS             STS, copied from the STS source
 /// kToCOO          STS             COO, copied from the STS source
 /// kPack           buffers         STS, from level buffers
 /// kSortCOOInPlace STS             STS, sorted in place

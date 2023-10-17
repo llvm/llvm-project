@@ -117,6 +117,8 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Fix a bug in conversion sequence of arguments to a function with reversed parameter order.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -175,6 +177,9 @@ C23 Feature Support
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 - Clang now supports `requires c23` for module maps.
 - Clang now supports ``N3007 Type inference for object definitions``.
+
+- Clang now supports ``<stdckdint.h>`` which defines several macros for performing
+  checked integer arithmetic.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -513,10 +518,9 @@ Bug Fixes to C++ Support
   rather than prefer the non-templated constructor as specified in
   [standard.group]p3.
 
-- Fix a bug where implicit deduction guides are not correctly generated for nested template
-  classes. Fixes:
-  (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
-  (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
+- Fixed a crash caused by incorrect handling of dependence on variable templates
+  with non-type template parameters of reference type. Fixes:
+  (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
