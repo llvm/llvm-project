@@ -613,6 +613,7 @@ void LinkerScript::processSectionCommands() {
         discard(*s);
       discardSynthetic(*osec);
       osec->commands.clear();
+      seenDiscard = true;
       return false;
     }
 
