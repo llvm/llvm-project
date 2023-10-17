@@ -44,7 +44,8 @@ constexpr bool test() {
     assert(!e.has_value());
   }
 
-  // See comments of the corresponding test in "expected.expected".
+  // See comments of the corresponding test in
+  // "expected.expected/observers/has_value.pass.cpp".
   {
     const std::expected<void, TailClobberer<1>> e(std::unexpect);
     // clang-cl does not support [[no_unique_address]] yet.
