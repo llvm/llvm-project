@@ -5917,7 +5917,7 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
   auto MIB = B.buildInstr(getBufferAtomicPseudo(IID))
-      .addDef(Dst);
+      .addDef(Dst)
       .addUse(VData); // vdata
 
   if (IsCmpSwap)
