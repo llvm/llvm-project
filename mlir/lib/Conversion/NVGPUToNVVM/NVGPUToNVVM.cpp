@@ -1578,27 +1578,34 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
   matchAndRewrite(nvgpu::WarpgroupMmaInitAccumulatorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-    LLVM::LLVMStructType structType =
+    LLVM::LLVMStructType packStructType =
         getTypeConverter()
             ->convertType(op.getMatrixC().getType())
             .cast<LLVM::LLVMStructType>();
-    Type elemType = structType.getBody()
+    Type elemType = packStructType.getBody()
                         .front()
                         .cast<LLVM::LLVMStructType>()
                         .getBody()
                         .front();
     Value zero = b.create<LLVM::ConstantOp>(elemType, b.getZeroAttr(elemType));
-    Value structValue = b.create<LLVM::UndefOp>(structType);
-    for (auto [idx, s] : llvm::enumerate(structType.getBody())) {
-      auto innerStructType = s.cast<LLVM::LLVMStructType>();
-      int ii = idx;
-      Value innerStructValue = b.create<LLVM::ExtractValueOp>(structValue, ii);
-      for (unsigned i = 0; i < innerStructType.getBody().size(); ++i) {
-        innerStructValue = b.create<LLVM::InsertValueOp>(
-            innerStructType, innerStructValue, zero, ArrayRef<int64_t>({i}));
+    Value packStruct = b.create<LLVM::UndefOp>(packStructType);
+    SmallVector<Value> innerStructs;
+    // Unpack the structs and set all values to zero
+    for (auto [idx, s] : llvm::enumerate(packStructType.getBody())) {
+      auto structType = s.cast<LLVM::LLVMStructType>();
+      Value structValue = b.create<LLVM::ExtractValueOp>(packStruct, idx);
+      for (unsigned i = 0; i < structType.getBody().size(); ++i) {
+        structValue = b.create<LLVM::InsertValueOp>(
+            structType, structValue, zero, ArrayRef<int64_t>({i}));
       }
+      innerStructs.push_back(structValue);
     }
-    rewriter.replaceOp(op, structValue);
+    // Pack the inner structs into a single struct
+    for (auto [idx, matrix] : llvm::enumerate(innerStructs)) {
+      packStruct = b.create<LLVM::InsertValueOp>(packStruct.getType(),
+                                                 packStruct, matrix, idx);
+    }
+    rewriter.replaceOp(op, packStruct);
     return success();
   }
 };
