@@ -2610,8 +2610,12 @@ private:
         scopeBlockIdMap.try_emplace(&scope, ++blockId);
         Fortran::lower::AggregateStoreMap storeMap;
         for (const Fortran::lower::pft::Variable &var :
-             Fortran::lower::pft::getScopeVariableList(scope))
-          instantiateVar(var, storeMap);
+             Fortran::lower::pft::getScopeVariableList(scope)) {
+          // Do no instantiate again variables from the block host
+          // that appears in specification of block variables.
+          if (!var.hasSymbol() || !lookupSymbol(var.getSymbol()))
+            instantiateVar(var, storeMap);
+        }
       } else if (e.getIf<Fortran::parser::EndBlockStmt>()) {
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
