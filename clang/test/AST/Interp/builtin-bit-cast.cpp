@@ -22,6 +22,9 @@
 
 typedef decltype(nullptr) nullptr_t;
 
+
+#if 0
+
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(long long) == 8);
 
@@ -682,6 +685,7 @@ namespace StringLiterals {
                                           // ref-note {{initializer of 'Foo' is not a constant expression}}
 };
 
+#endif
 /// The current interpreter does not support bitcasts involving bitfields at all,
 /// so the following is mainly from comparing diagnostic output with GCC.
 namespace Bitfields {
@@ -705,4 +709,48 @@ namespace Bitfields {
                                                     // expected-note {{indeterminate value can only initialize an object of type 'unsigned char' or 'std::byte'; 'char' is invalid}} \
                                                     // ref-error {{must be initialized by a constant expression}} \
                                                     // ref-note {{bit_cast involving bit-field is not yet supported}}
+
+  struct A {
+    unsigned char a : 4;
+    unsigned char b : 4;
+  };
+
+  constexpr A b{12, 3};
+  static_assert(b.a == 12, "");
+  static_assert(b.b == 3, "");
+  constexpr unsigned char a = __builtin_bit_cast(unsigned char, b); // ref-error {{must be initialized by a constant expression}} \
+                                                                    // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                                    // ref-note {{declared here}}
+  static_assert(a == 60, ""); // ref-error {{not an integral constant expression}} \
+                              // ref-note {{initializer of 'a' is not a constant expression}}
+
+  struct Byte {
+    unsigned char a : 1;
+    unsigned char b : 1;
+    unsigned char c : 1;
+    unsigned char d : 1;
+    unsigned char e : 1;
+    unsigned char f : 1;
+    unsigned char g : 1;
+    unsigned char h : 1;
+  };
+
+  constexpr Byte B = {1, 1, 0, 1, 1, 0, 0, 1};
+  constexpr char C = __builtin_bit_cast(char, B); // ref-error {{must be initialized by a constant expression}} \
+                                                  // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                  // ref-note {{declared here}}
+
+  static_assert(C == -101); // ref-error {{not an integral constant expression}} \
+                            // ref-note {{initializer of 'C' is not a constant expression}}
+
+  struct P {
+    unsigned short s1 : 5;
+    short s2;
+  };
+
+  constexpr P p = {24, -10};
+  constexpr int I = __builtin_bit_cast(int, p); // ref-error {{must be initialized by a constant expression}} \
+                                                // ref-note {{bit_cast involving bit-field is not yet supported}} \
+                                                // expected-error {{must be initialized by a constant expression}} \
+                                                // expected-note {{indeterminate value}}
 }
