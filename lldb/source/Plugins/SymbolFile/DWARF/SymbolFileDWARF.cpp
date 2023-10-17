@@ -100,6 +100,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -139,9 +140,8 @@ static PluginProperties &GetGlobalPluginProperties() {
 }
 
 static const llvm::DWARFDebugLine::LineTable *
-ParseLLVMLineTable(lldb_private::DWARFContext &context,
-                   llvm::DWARFDebugLine &line, dw_offset_t line_offset,
-                   dw_offset_t unit_offset) {
+ParseLLVMLineTable(DWARFContext &context, llvm::DWARFDebugLine &line,
+                   dw_offset_t line_offset, dw_offset_t unit_offset) {
   Log *log = GetLog(DWARFLog::DebugInfo);
 
   llvm::DWARFDataExtractor data = context.getOrLoadLineData().GetAsLLVMDWARF();
@@ -162,7 +162,7 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
-static bool ParseLLVMLineTablePrologue(lldb_private::DWARFContext &context,
+static bool ParseLLVMLineTablePrologue(DWARFContext &context,
                                        llvm::DWARFDebugLine::Prologue &prologue,
                                        dw_offset_t line_offset,
                                        dw_offset_t unit_offset) {
@@ -2454,7 +2454,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
     // ...But if we are only checking root decl contexts, confirm that the
     // 'die' is a top-level context.
     if (only_root_namespaces)
-      return die.GetParent().Tag() == dwarf::DW_TAG_compile_unit;
+      return die.GetParent().Tag() == llvm::dwarf::DW_TAG_compile_unit;
 
     return true;
   }
