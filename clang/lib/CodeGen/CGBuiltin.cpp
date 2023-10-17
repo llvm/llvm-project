@@ -2326,6 +2326,19 @@ static Value *tryUseTestFPKind(CodeGenFunction &CGF, unsigned BuiltinID,
   return nullptr;
 }
 
+static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
+                                              const FunctionDecl *FD) {
+  auto Name = FD->getNameAsString() + "__hipstdpar_unsupported";
+  auto FnTy = CGF->CGM.getTypes().GetFunctionType(FD);
+  auto UBF = CGF->CGM.getModule().getOrInsertFunction(Name, FnTy);
+
+  SmallVector<Value *, 16> Args;
+  for (auto &&FormalTy : FnTy->params())
+    Args.push_back(llvm::PoisonValue::get(FormalTy));
+
+  return RValue::get(CGF->Builder.CreateCall(UBF, Args));
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -5763,6 +5776,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
   }
 
+  if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
+    return EmitHipStdParUnsupportedBuiltin(this, FD);
+
   ErrorUnsupported(E, "builtin function");
 
   // Unknown builtin, for now just dump it out and return undef.
@@ -5773,6 +5789,16 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue,
                                         llvm::Triple::ArchType Arch) {
+  // When compiling in HipStdPar mode we have to be conservative in rejecting
+  // target specific features in the FE, and defer the possible error to the
+  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
+  // referenced by an accelerator executable function, we emit an error.
+  // Returning nullptr here leads to the builtin being handled in
+  // EmitStdParUnsupportedBuiltin.
+  if (CGF->getLangOpts().HIPStdPar && CGF->getLangOpts().CUDAIsDevice &&
+      Arch != CGF->getTarget().getTriple().getArch())
+    return nullptr;
+
   switch (Arch) {
   case llvm::Triple::arm:
   case llvm::Triple::armeb:

@@ -1234,7 +1234,7 @@ TypedefDecl *ASTContext::getUInt128Decl() const {
 }
 
 void ASTContext::InitBuiltinType(CanQualType &R, BuiltinType::Kind K) {
-  auto *Ty = new (*this, TypeAlignment) BuiltinType(K);
+  auto *Ty = new (*this, alignof(BuiltinType)) BuiltinType(K);
   R = CanQualType::CreateUnsafe(QualType(Ty, 0));
   Types.push_back(Ty);
 }
@@ -3066,7 +3066,7 @@ ASTContext::getExtQualType(const Type *baseType, Qualifiers quals) const {
     (void) ExtQualNodes.FindNodeOrInsertPos(ID, insertPos);
   }
 
-  auto *eq = new (*this, TypeAlignment) ExtQuals(baseType, canon, quals);
+  auto *eq = new (*this, alignof(ExtQuals)) ExtQuals(baseType, canon, quals);
   ExtQualNodes.InsertNode(eq, insertPos);
   return QualType(eq, fastQuals);
 }
@@ -3310,7 +3310,7 @@ QualType ASTContext::getComplexType(QualType T) const {
     ComplexType *NewIP = ComplexTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment) ComplexType(T, Canonical);
+  auto *New = new (*this, alignof(ComplexType)) ComplexType(T, Canonical);
   Types.push_back(New);
   ComplexTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -3338,7 +3338,7 @@ QualType ASTContext::getPointerType(QualType T) const {
     PointerType *NewIP = PointerTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment) PointerType(T, Canonical);
+  auto *New = new (*this, alignof(PointerType)) PointerType(T, Canonical);
   Types.push_back(New);
   PointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -3358,7 +3358,7 @@ QualType ASTContext::getAdjustedType(QualType Orig, QualType New) const {
   AT = AdjustedTypes.FindNodeOrInsertPos(ID, InsertPos);
   assert(!AT && "Shouldn't be in the map!");
 
-  AT = new (*this, TypeAlignment)
+  AT = new (*this, alignof(AdjustedType))
       AdjustedType(Type::Adjusted, Orig, New, Canonical);
   Types.push_back(AT);
   AdjustedTypes.InsertNode(AT, InsertPos);
@@ -3379,7 +3379,7 @@ QualType ASTContext::getDecayedType(QualType Orig, QualType Decayed) const {
   AT = AdjustedTypes.FindNodeOrInsertPos(ID, InsertPos);
   assert(!AT && "Shouldn't be in the map!");
 
-  AT = new (*this, TypeAlignment) DecayedType(Orig, Decayed, Canonical);
+  AT = new (*this, alignof(DecayedType)) DecayedType(Orig, Decayed, Canonical);
   Types.push_back(AT);
   AdjustedTypes.InsertNode(AT, InsertPos);
   return QualType(AT, 0);
@@ -3433,7 +3433,8 @@ QualType ASTContext::getBlockPointerType(QualType T) const {
       BlockPointerTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment) BlockPointerType(T, Canonical);
+  auto *New =
+      new (*this, alignof(BlockPointerType)) BlockPointerType(T, Canonical);
   Types.push_back(New);
   BlockPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -3472,8 +3473,8 @@ ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
-  auto *New = new (*this, TypeAlignment) LValueReferenceType(T, Canonical,
-                                                             SpelledAsLValue);
+  auto *New = new (*this, alignof(LValueReferenceType))
+      LValueReferenceType(T, Canonical, SpelledAsLValue);
   Types.push_back(New);
   LValueReferenceTypes.InsertNode(New, InsertPos);
 
@@ -3512,7 +3513,8 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
-  auto *New = new (*this, TypeAlignment) RValueReferenceType(T, Canonical);
+  auto *New = new (*this, alignof(RValueReferenceType))
+      RValueReferenceType(T, Canonical);
   Types.push_back(New);
   RValueReferenceTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -3542,7 +3544,8 @@ QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
       MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment) MemberPointerType(T, Cls, Canonical);
+  auto *New = new (*this, alignof(MemberPointerType))
+      MemberPointerType(T, Cls, Canonical);
   Types.push_back(New);
   MemberPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -3597,7 +3600,7 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
 
   void *Mem = Allocate(
       ConstantArrayType::totalSizeToAlloc<const Expr *>(SizeExpr ? 1 : 0),
-      TypeAlignment);
+      alignof(ConstantArrayType));
   auto *New = new (Mem)
     ConstantArrayType(EltTy, Canon, ArySize, SizeExpr, ASM, IndexTypeQuals);
   ConstantArrayTypes.InsertNode(New, InsertPos);
@@ -3766,8 +3769,8 @@ QualType ASTContext::getVariableArrayType(QualType EltTy,
     Canon = getQualifiedType(Canon, canonSplit.Quals);
   }
 
-  auto *New = new (*this, TypeAlignment)
-    VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals, Brackets);
+  auto *New = new (*this, alignof(VariableArrayType))
+      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals, Brackets);
 
   VariableArrayTypes.push_back(New);
   Types.push_back(New);
@@ -3791,8 +3794,9 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   // initializer.  We do no canonicalization here at all, which is okay
   // because they can't be used in most locations.
   if (!numElements) {
-    auto *newType = new (*this, TypeAlignment) DependentSizedArrayType(
-        elementType, QualType(), numElements, ASM, elementTypeQuals, brackets);
+    auto *newType = new (*this, alignof(DependentSizedArrayType))
+        DependentSizedArrayType(elementType, QualType(), numElements, ASM,
+                                elementTypeQuals, brackets);
     Types.push_back(newType);
     return QualType(newType, 0);
   }
@@ -3814,7 +3818,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 
   // If we don't have one, build one.
   if (!canonTy) {
-    canonTy = new (*this, TypeAlignment)
+    canonTy = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(QualType(canonElementType.Ty, 0), QualType(),
                                 numElements, ASM, elementTypeQuals, brackets);
     DependentSizedArrayTypes.InsertNode(canonTy, insertPos);
@@ -3833,8 +3837,9 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 
   // Otherwise, we need to build a type which follows the spelling
   // of the element type.
-  auto *sugaredType = new (*this, TypeAlignment) DependentSizedArrayType(
-      elementType, canon, numElements, ASM, elementTypeQuals, brackets);
+  auto *sugaredType = new (*this, alignof(DependentSizedArrayType))
+      DependentSizedArrayType(elementType, canon, numElements, ASM,
+                              elementTypeQuals, brackets);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
 }
@@ -3868,8 +3873,8 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
     assert(!existing && "Shouldn't be in the map!"); (void) existing;
   }
 
-  auto *newType = new (*this, TypeAlignment)
-    IncompleteArrayType(elementType, canon, ASM, elementTypeQuals);
+  auto *newType = new (*this, alignof(IncompleteArrayType))
+      IncompleteArrayType(elementType, canon, ASM, elementTypeQuals);
 
   IncompleteArrayTypes.InsertNode(newType, insertPos);
   Types.push_back(newType);
@@ -4089,8 +4094,8 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
     VectorType *NewIP = VectorTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment)
-    VectorType(vecType, NumElts, Canonical, VecKind);
+  auto *New = new (*this, alignof(VectorType))
+      VectorType(vecType, NumElts, Canonical, VecKind);
   VectorTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4109,12 +4114,12 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
   DependentVectorType *New;
 
   if (Canon) {
-    New = new (*this, TypeAlignment) DependentVectorType(
+    New = new (*this, alignof(DependentVectorType)) DependentVectorType(
         VecType, QualType(Canon, 0), SizeExpr, AttrLoc, VecKind);
   } else {
     QualType CanonVecTy = getCanonicalType(VecType);
     if (CanonVecTy == VecType) {
-      New = new (*this, TypeAlignment)
+      New = new (*this, alignof(DependentVectorType))
           DependentVectorType(VecType, QualType(), SizeExpr, AttrLoc, VecKind);
 
       DependentVectorType *CanonCheck =
@@ -4126,7 +4131,7 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
     } else {
       QualType CanonTy = getDependentVectorType(CanonVecTy, SizeExpr,
                                                 SourceLocation(), VecKind);
-      New = new (*this, TypeAlignment)
+      New = new (*this, alignof(DependentVectorType))
           DependentVectorType(VecType, CanonTy, SizeExpr, AttrLoc, VecKind);
     }
   }
@@ -4163,8 +4168,8 @@ QualType ASTContext::getExtVectorType(QualType vecType,
     VectorType *NewIP = VectorTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment)
-    ExtVectorType(vecType, NumElts, Canonical);
+  auto *New = new (*this, alignof(ExtVectorType))
+      ExtVectorType(vecType, NumElts, Canonical);
   VectorTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4185,12 +4190,13 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
   if (Canon) {
     // We already have a canonical version of this array type; use it as
     // the canonical type for a newly-built type.
-    New = new (*this, TypeAlignment) DependentSizedExtVectorType(
-        vecType, QualType(Canon, 0), SizeExpr, AttrLoc);
+    New = new (*this, alignof(DependentSizedExtVectorType))
+        DependentSizedExtVectorType(vecType, QualType(Canon, 0), SizeExpr,
+                                    AttrLoc);
   } else {
     QualType CanonVecTy = getCanonicalType(vecType);
     if (CanonVecTy == vecType) {
-      New = new (*this, TypeAlignment)
+      New = new (*this, alignof(DependentSizedExtVectorType))
           DependentSizedExtVectorType(vecType, QualType(), SizeExpr, AttrLoc);
 
       DependentSizedExtVectorType *CanonCheck
@@ -4201,7 +4207,7 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
     } else {
       QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
                                                            SourceLocation());
-      New = new (*this, TypeAlignment)
+      New = new (*this, alignof(DependentSizedExtVectorType))
           DependentSizedExtVectorType(vecType, CanonExtTy, SizeExpr, AttrLoc);
     }
   }
@@ -4235,7 +4241,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
     (void)NewIP;
   }
 
-  auto *New = new (*this, TypeAlignment)
+  auto *New = new (*this, alignof(ConstantMatrixType))
       ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical);
   MatrixTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
@@ -4256,8 +4262,9 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
       DependentSizedMatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!Canon) {
-    Canon = new (*this, TypeAlignment) DependentSizedMatrixType(
-        CanonElementTy, QualType(), RowExpr, ColumnExpr, AttrLoc);
+    Canon = new (*this, alignof(DependentSizedMatrixType))
+        DependentSizedMatrixType(CanonElementTy, QualType(), RowExpr,
+                                 ColumnExpr, AttrLoc);
 #ifndef NDEBUG
     DependentSizedMatrixType *CanonCheck =
         DependentSizedMatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -4275,7 +4282,7 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
     return QualType(Canon, 0);
 
   // Use Canon as the canonical type for newly-built type.
-  DependentSizedMatrixType *New = new (*this, TypeAlignment)
+  DependentSizedMatrixType *New = new (*this, alignof(DependentSizedMatrixType))
       DependentSizedMatrixType(ElementTy, QualType(Canon, 0), RowExpr,
                                ColumnExpr, AttrLoc);
   Types.push_back(New);
@@ -4298,8 +4305,9 @@ QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,
     DependentAddressSpaceTypes.FindNodeOrInsertPos(ID, insertPos);
 
   if (!canonTy) {
-    canonTy = new (*this, TypeAlignment) DependentAddressSpaceType(
-        canonPointeeType, QualType(), AddrSpaceExpr, AttrLoc);
+    canonTy = new (*this, alignof(DependentAddressSpaceType))
+        DependentAddressSpaceType(canonPointeeType, QualType(), AddrSpaceExpr,
+                                  AttrLoc);
     DependentAddressSpaceTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -4308,8 +4316,9 @@ QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,
       canonTy->getAddrSpaceExpr() == AddrSpaceExpr)
     return QualType(canonTy, 0);
 
-  auto *sugaredType = new (*this, TypeAlignment) DependentAddressSpaceType(
-      PointeeType, QualType(canonTy, 0), AddrSpaceExpr, AttrLoc);
+  auto *sugaredType = new (*this, alignof(DependentAddressSpaceType))
+      DependentAddressSpaceType(PointeeType, QualType(canonTy, 0),
+                                AddrSpaceExpr, AttrLoc);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
 }
@@ -4353,8 +4362,8 @@ ASTContext::getFunctionNoProtoType(QualType ResultTy,
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
-  auto *New = new (*this, TypeAlignment)
-    FunctionNoProtoType(ResultTy, Canonical, Info);
+  auto *New = new (*this, alignof(FunctionNoProtoType))
+      FunctionNoProtoType(ResultTy, Canonical, Info);
   Types.push_back(New);
   FunctionNoProtoTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -4540,7 +4549,7 @@ QualType ASTContext::getFunctionTypeInternal(
       EPI.ExtParameterInfos ? NumArgs : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
-  auto *FTP = (FunctionProtoType *)Allocate(Size, TypeAlignment);
+  auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
   new (FTP) FunctionProtoType(ResultTy, ArgArray, Canonical, newEPI);
   Types.push_back(FTP);
@@ -4568,7 +4577,7 @@ QualType ASTContext::getPipeType(QualType T, bool ReadOnly) const {
     assert(!NewIP && "Shouldn't be in the map!");
     (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment) PipeType(T, Canonical, ReadOnly);
+  auto *New = new (*this, alignof(PipeType)) PipeType(T, Canonical, ReadOnly);
   Types.push_back(New);
   PipeTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -4596,7 +4605,7 @@ QualType ASTContext::getBitIntType(bool IsUnsigned, unsigned NumBits) const {
   if (BitIntType *EIT = BitIntTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(EIT, 0);
 
-  auto *New = new (*this, TypeAlignment) BitIntType(IsUnsigned, NumBits);
+  auto *New = new (*this, alignof(BitIntType)) BitIntType(IsUnsigned, NumBits);
   BitIntTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4613,8 +4622,8 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
           DependentBitIntTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(Existing, 0);
 
-  auto *New =
-      new (*this, TypeAlignment) DependentBitIntType(IsUnsigned, NumBitsExpr);
+  auto *New = new (*this, alignof(DependentBitIntType))
+      DependentBitIntType(IsUnsigned, NumBitsExpr);
   DependentBitIntTypes.InsertNode(New, InsertPos);
 
   Types.push_back(New);
@@ -4646,8 +4655,8 @@ QualType ASTContext::getInjectedClassNameType(CXXRecordDecl *Decl,
     Decl->TypeForDecl = PrevDecl->TypeForDecl;
     assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
   } else {
-    Type *newType =
-      new (*this, TypeAlignment) InjectedClassNameType(Decl, TST);
+    Type *newType = new (*this, alignof(InjectedClassNameType))
+        InjectedClassNameType(Decl, TST);
     Decl->TypeForDecl = newType;
     Types.push_back(newType);
   }
@@ -4688,7 +4697,7 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
   if (!Decl->TypeForDecl) {
     if (Underlying.isNull())
       Underlying = Decl->getUnderlyingType();
-    auto *NewType = new (*this, TypeAlignment) TypedefType(
+    auto *NewType = new (*this, alignof(TypedefType)) TypedefType(
         Type::Typedef, Decl, QualType(), getCanonicalType(Underlying));
     Decl->TypeForDecl = NewType;
     Types.push_back(NewType);
@@ -4708,8 +4717,8 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
     return QualType(T, 0);
   }
 
-  void *Mem =
-      Allocate(TypedefType::totalSizeToAlloc<QualType>(true), TypeAlignment);
+  void *Mem = Allocate(TypedefType::totalSizeToAlloc<QualType>(true),
+                       alignof(TypedefType));
   auto *NewType = new (Mem) TypedefType(Type::Typedef, Decl, Underlying,
                                         getCanonicalType(Underlying));
   TypedefTypes.InsertNode(NewType, InsertPos);
@@ -4737,7 +4746,7 @@ QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
     Underlying = QualType();
   void *Mem =
       Allocate(UsingType::totalSizeToAlloc<QualType>(!Underlying.isNull()),
-               TypeAlignment);
+               alignof(UsingType));
   UsingType *NewType = new (Mem) UsingType(Found, Underlying, Canon);
   Types.push_back(NewType);
   UsingTypes.InsertNode(NewType, InsertPos);
@@ -4751,7 +4760,7 @@ QualType ASTContext::getRecordType(const RecordDecl *Decl) const {
     if (PrevDecl->TypeForDecl)
       return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
 
-  auto *newType = new (*this, TypeAlignment) RecordType(Decl);
+  auto *newType = new (*this, alignof(RecordType)) RecordType(Decl);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
   return QualType(newType, 0);
@@ -4764,7 +4773,7 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
     if (PrevDecl->TypeForDecl)
       return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
 
-  auto *newType = new (*this, TypeAlignment) EnumType(Decl);
+  auto *newType = new (*this, alignof(EnumType)) EnumType(Decl);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
   return QualType(newType, 0);
@@ -4780,7 +4789,8 @@ QualType ASTContext::getUnresolvedUsingType(
     if (CanonicalDecl->TypeForDecl)
       return QualType(Decl->TypeForDecl = CanonicalDecl->TypeForDecl, 0);
 
-  Type *newType = new (*this, TypeAlignment) UnresolvedUsingType(Decl);
+  Type *newType =
+      new (*this, alignof(UnresolvedUsingType)) UnresolvedUsingType(Decl);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
   return QualType(newType, 0);
@@ -4797,7 +4807,7 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
   if (type) return QualType(type, 0);
 
   QualType canon = getCanonicalType(equivalentType);
-  type = new (*this, TypeAlignment)
+  type = new (*this, alignof(AttributedType))
       AttributedType(canon, attrKind, modifiedType, equivalentType);
 
   Types.push_back(type);
@@ -4818,7 +4828,8 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
     return QualType(Ty, 0);
 
   QualType Canon = getCanonicalType(Wrapped);
-  Ty = new (*this, TypeAlignment) BTFTagAttributedType(Canon, Wrapped, BTFAttr);
+  Ty = new (*this, alignof(BTFTagAttributedType))
+      BTFTagAttributedType(Canon, Wrapped, BTFAttr);
 
   Types.push_back(Ty);
   BTFTagAttributedTypes.InsertNode(Ty, InsertPos);
@@ -4840,7 +4851,7 @@ QualType ASTContext::getSubstTemplateTypeParmType(
   if (!SubstParm) {
     void *Mem = Allocate(SubstTemplateTypeParmType::totalSizeToAlloc<QualType>(
                              !Replacement.isCanonical()),
-                         TypeAlignment);
+                         alignof(SubstTemplateTypeParmType));
     SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
                                                     Index, PackIndex);
     Types.push_back(SubstParm);
@@ -4881,8 +4892,9 @@ ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
     }
   }
 
-  auto *SubstParm = new (*this, TypeAlignment) SubstTemplateTypeParmPackType(
-      Canon, AssociatedDecl, Index, Final, ArgPack);
+  auto *SubstParm = new (*this, alignof(SubstTemplateTypeParmPackType))
+      SubstTemplateTypeParmPackType(Canon, AssociatedDecl, Index, Final,
+                                    ArgPack);
   Types.push_back(SubstParm);
   SubstTemplateTypeParmPackTypes.InsertNode(SubstParm, InsertPos);
   return QualType(SubstParm, 0);
@@ -4905,15 +4917,16 @@ QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
 
   if (TTPDecl) {
     QualType Canon = getTemplateTypeParmType(Depth, Index, ParameterPack);
-    TypeParm = new (*this, TypeAlignment) TemplateTypeParmType(TTPDecl, Canon);
+    TypeParm = new (*this, alignof(TemplateTypeParmType))
+        TemplateTypeParmType(TTPDecl, Canon);
 
     TemplateTypeParmType *TypeCheck
       = TemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!TypeCheck && "Template type parameter canonical type broken");
     (void)TypeCheck;
   } else
-    TypeParm = new (*this, TypeAlignment)
-      TemplateTypeParmType(Depth, Index, ParameterPack);
+    TypeParm = new (*this, alignof(TemplateTypeParmType))
+        TemplateTypeParmType(Depth, Index, ParameterPack);
 
   Types.push_back(TypeParm);
   TemplateTypeParmTypes.InsertNode(TypeParm, InsertPos);
@@ -4996,9 +5009,9 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
   // try to unique it: these types typically have location information that
   // we don't unique and don't want to lose.
   void *Mem = Allocate(sizeof(TemplateSpecializationType) +
-                       sizeof(TemplateArgument) * Args.size() +
-                       (IsTypeAlias? sizeof(QualType) : 0),
-                       TypeAlignment);
+                           sizeof(TemplateArgument) * Args.size() +
+                           (IsTypeAlias ? sizeof(QualType) : 0),
+                       alignof(TemplateSpecializationType));
   auto *Spec
     = new (Mem) TemplateSpecializationType(Template, Args, CanonType,
                                          IsTypeAlias ? Underlying : QualType());
@@ -5036,7 +5049,7 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
     // Allocate a new canonical template specialization type.
     void *Mem = Allocate((sizeof(TemplateSpecializationType) +
                           sizeof(TemplateArgument) * CanonArgs.size()),
-                         TypeAlignment);
+                         alignof(TemplateSpecializationType));
     Spec = new (Mem) TemplateSpecializationType(CanonTemplate,
                                                 CanonArgs,
                                                 QualType(), QualType());
@@ -5069,8 +5082,9 @@ QualType ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
     (void)CheckT;
   }
 
-  void *Mem = Allocate(ElaboratedType::totalSizeToAlloc<TagDecl *>(!!OwnedTagDecl),
-                       TypeAlignment);
+  void *Mem =
+      Allocate(ElaboratedType::totalSizeToAlloc<TagDecl *>(!!OwnedTagDecl),
+               alignof(ElaboratedType));
   T = new (Mem) ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
 
   Types.push_back(T);
@@ -5096,7 +5110,7 @@ ASTContext::getParenType(QualType InnerType) const {
     (void)CheckT;
   }
 
-  T = new (*this, TypeAlignment) ParenType(InnerType, Canon);
+  T = new (*this, alignof(ParenType)) ParenType(InnerType, Canon);
   Types.push_back(T);
   ParenTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
@@ -5109,7 +5123,7 @@ ASTContext::getMacroQualifiedType(QualType UnderlyingTy,
   if (!Canon.isCanonical())
     Canon = getCanonicalType(UnderlyingTy);
 
-  auto *newType = new (*this, TypeAlignment)
+  auto *newType = new (*this, alignof(MacroQualifiedType))
       MacroQualifiedType(UnderlyingTy, Canon, MacroII);
   Types.push_back(newType);
   return QualType(newType, 0);
@@ -5134,7 +5148,8 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
   if (T)
     return QualType(T, 0);
 
-  T = new (*this, TypeAlignment) DependentNameType(Keyword, NNS, Name, Canon);
+  T = new (*this, alignof(DependentNameType))
+      DependentNameType(Keyword, NNS, Name, Canon);
   Types.push_back(T);
   DependentNameTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
@@ -5192,7 +5207,7 @@ ASTContext::getDependentTemplateSpecializationType(
 
   void *Mem = Allocate((sizeof(DependentTemplateSpecializationType) +
                         sizeof(TemplateArgument) * Args.size()),
-                       TypeAlignment);
+                       alignof(DependentTemplateSpecializationType));
   T = new (Mem) DependentTemplateSpecializationType(Keyword, NNS,
                                                     Name, Args, Canon);
   Types.push_back(T);
@@ -5272,7 +5287,7 @@ QualType ASTContext::getPackExpansionType(QualType Pattern,
     PackExpansionTypes.FindNodeOrInsertPos(ID, InsertPos);
   }
 
-  T = new (*this, TypeAlignment)
+  T = new (*this, alignof(PackExpansionType))
       PackExpansionType(Pattern, Canon, NumExpansions);
   Types.push_back(T);
   PackExpansionTypes.InsertNode(T, InsertPos);
@@ -5388,7 +5403,7 @@ QualType ASTContext::getObjCObjectType(
   unsigned size = sizeof(ObjCObjectTypeImpl);
   size += typeArgs.size() * sizeof(QualType);
   size += protocols.size() * sizeof(ObjCProtocolDecl *);
-  void *mem = Allocate(size, TypeAlignment);
+  void *mem = Allocate(size, alignof(ObjCObjectTypeImpl));
   auto *T =
     new (mem) ObjCObjectTypeImpl(canonical, baseType, typeArgs, protocols,
                                  isKindOf);
@@ -5495,7 +5510,7 @@ ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
 
   unsigned size = sizeof(ObjCTypeParamType);
   size += protocols.size() * sizeof(ObjCProtocolDecl *);
-  void *mem = Allocate(size, TypeAlignment);
+  void *mem = Allocate(size, alignof(ObjCTypeParamType));
   auto *newType = new (mem) ObjCTypeParamType(Decl, Canonical, protocols);
 
   Types.push_back(newType);
@@ -5601,7 +5616,8 @@ QualType ASTContext::getObjCObjectPointerType(QualType ObjectT) const {
   }
 
   // No match.
-  void *Mem = Allocate(sizeof(ObjCObjectPointerType), TypeAlignment);
+  void *Mem =
+      Allocate(sizeof(ObjCObjectPointerType), alignof(ObjCObjectPointerType));
   auto *QType =
     new (Mem) ObjCObjectPointerType(Canonical, ObjectT);
 
@@ -5627,7 +5643,7 @@ QualType ASTContext::getObjCInterfaceType(const ObjCInterfaceDecl *Decl,
   if (const ObjCInterfaceDecl *Def = Decl->getDefinition())
     Decl = Def;
 
-  void *Mem = Allocate(sizeof(ObjCInterfaceType), TypeAlignment);
+  void *Mem = Allocate(sizeof(ObjCInterfaceType), alignof(ObjCInterfaceType));
   auto *T = new (Mem) ObjCInterfaceType(Decl);
   Decl->TypeForDecl = T;
   Types.push_back(T);
@@ -5652,17 +5668,19 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
     if (Canon) {
       // We already have a "canonical" version of an identical, dependent
       // typeof(expr) type. Use that as our canonical type.
-      toe = new (*this, TypeAlignment)
+      toe = new (*this, alignof(TypeOfExprType))
           TypeOfExprType(tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
     } else {
       // Build a new, canonical typeof(expr) type.
-      Canon = new (*this, TypeAlignment) DependentTypeOfExprType(tofExpr, Kind);
+      Canon = new (*this, alignof(DependentTypeOfExprType))
+          DependentTypeOfExprType(tofExpr, Kind);
       DependentTypeOfExprTypes.InsertNode(Canon, InsertPos);
       toe = Canon;
     }
   } else {
     QualType Canonical = getCanonicalType(tofExpr->getType());
-    toe = new (*this, TypeAlignment) TypeOfExprType(tofExpr, Kind, Canonical);
+    toe = new (*this, alignof(TypeOfExprType))
+        TypeOfExprType(tofExpr, Kind, Canonical);
   }
   Types.push_back(toe);
   return QualType(toe, 0);
@@ -5676,7 +5694,7 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
 QualType ASTContext::getTypeOfType(QualType tofType, TypeOfKind Kind) const {
   QualType Canonical = getCanonicalType(tofType);
   auto *tot =
-      new (*this, TypeAlignment) TypeOfType(tofType, Canonical, Kind);
+      new (*this, alignof(TypeOfType)) TypeOfType(tofType, Canonical, Kind);
   Types.push_back(tot);
   return QualType(tot, 0);
 }
@@ -5724,13 +5742,14 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
       = DependentDecltypeTypes.FindNodeOrInsertPos(ID, InsertPos);
     if (!Canon) {
       // Build a new, canonical decltype(expr) type.
-      Canon = new (*this, TypeAlignment) DependentDecltypeType(e, DependentTy);
+      Canon = new (*this, alignof(DependentDecltypeType))
+          DependentDecltypeType(e, DependentTy);
       DependentDecltypeTypes.InsertNode(Canon, InsertPos);
     }
-    dt = new (*this, TypeAlignment)
+    dt = new (*this, alignof(DecltypeType))
         DecltypeType(e, UnderlyingType, QualType((DecltypeType *)Canon, 0));
   } else {
-    dt = new (*this, TypeAlignment)
+    dt = new (*this, alignof(DecltypeType))
         DecltypeType(e, UnderlyingType, getCanonicalType(UnderlyingType));
   }
   Types.push_back(dt);
@@ -5756,19 +5775,16 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
 
     if (!Canon) {
       // Build a new, canonical __underlying_type(type) type.
-      Canon = new (*this, TypeAlignment)
-             DependentUnaryTransformType(*this, getCanonicalType(BaseType),
-                                         Kind);
+      Canon = new (*this, alignof(DependentUnaryTransformType))
+          DependentUnaryTransformType(*this, getCanonicalType(BaseType), Kind);
       DependentUnaryTransformTypes.InsertNode(Canon, InsertPos);
     }
-    ut = new (*this, TypeAlignment) UnaryTransformType (BaseType,
-                                                        QualType(), Kind,
-                                                        QualType(Canon, 0));
+    ut = new (*this, alignof(UnaryTransformType))
+        UnaryTransformType(BaseType, QualType(), Kind, QualType(Canon, 0));
   } else {
     QualType CanonType = getCanonicalType(UnderlyingType);
-    ut = new (*this, TypeAlignment) UnaryTransformType (BaseType,
-                                                        UnderlyingType, Kind,
-                                                        CanonType);
+    ut = new (*this, alignof(UnaryTransformType))
+        UnaryTransformType(BaseType, UnderlyingType, Kind, CanonType);
   }
   Types.push_back(ut);
   return QualType(ut, 0);
@@ -5813,7 +5829,7 @@ QualType ASTContext::getAutoTypeInternal(
 
   void *Mem = Allocate(sizeof(AutoType) +
                            sizeof(TemplateArgument) * TypeConstraintArgs.size(),
-                       TypeAlignment);
+                       alignof(AutoType));
   auto *AT = new (Mem) AutoType(
       DeducedType, Keyword,
       (IsDependent ? TypeDependence::DependentInstantiation
@@ -5874,7 +5890,7 @@ QualType ASTContext::getDeducedTemplateSpecializationType(
           DeducedTemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(DTST, 0);
 
-  auto *DTST = new (*this, TypeAlignment)
+  auto *DTST = new (*this, alignof(DeducedTemplateSpecializationType))
       DeducedTemplateSpecializationType(Template, DeducedType, IsDependent);
   llvm::FoldingSetNodeID TempID;
   DTST->Profile(TempID);
@@ -5906,7 +5922,7 @@ QualType ASTContext::getAtomicType(QualType T) const {
     AtomicType *NewIP = AtomicTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
-  auto *New = new (*this, TypeAlignment) AtomicType(T, Canonical);
+  auto *New = new (*this, alignof(AtomicType)) AtomicType(T, Canonical);
   Types.push_back(New);
   AtomicTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -5915,7 +5931,7 @@ QualType ASTContext::getAtomicType(QualType T) const {
 /// getAutoDeductType - Get type pattern for deducing against 'auto'.
 QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
-    AutoDeductTy = QualType(new (*this, TypeAlignment)
+    AutoDeductTy = QualType(new (*this, alignof(AutoType))
                                 AutoType(QualType(), AutoTypeKeyword::Auto,
                                          TypeDependence::None, QualType(),
                                          /*concept*/ nullptr, /*args*/ {}),

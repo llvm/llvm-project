@@ -5878,31 +5878,23 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
       IID == Intrinsic::amdgcn_struct_buffer_atomic_cmpswap ||
       IID == Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap ||
       IID == Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap;
-  const bool HasReturn = MI.getNumExplicitDefs() != 0;
 
-  Register Dst;
-
-  int OpOffset = 0;
-  if (HasReturn) {
-    // A few FP atomics do not support return values.
-    Dst = MI.getOperand(0).getReg();
-  } else {
-    OpOffset = -1;
-  }
-
+  Register Dst = MI.getOperand(0).getReg();
   // Since we don't have 128-bit atomics, we don't need to handle the case of
   // p8 argmunents to the atomic itself
-  Register VData = MI.getOperand(2 + OpOffset).getReg();
+  Register VData = MI.getOperand(2).getReg();
+
   Register CmpVal;
+  int OpOffset = 0;
 
   if (IsCmpSwap) {
-    CmpVal = MI.getOperand(3 + OpOffset).getReg();
+    CmpVal = MI.getOperand(3).getReg();
     ++OpOffset;
   }
 
   castBufferRsrcArgToV4I32(MI, B, 3 + OpOffset);
   Register RSrc = MI.getOperand(3 + OpOffset).getReg();
-  const unsigned NumVIndexOps = (IsCmpSwap ? 8 : 7) + HasReturn;
+  const unsigned NumVIndexOps = IsCmpSwap ? 9 : 8;
 
   // The struct intrinsic variants add one additional operand over raw.
   const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
@@ -5923,12 +5915,9 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   unsigned ImmOffset;
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
-  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID));
-
-  if (HasReturn)
-    MIB.addDef(Dst);
-
-  MIB.addUse(VData); // vdata
+  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID))
+      .addDef(Dst)
+      .addUse(VData); // vdata
 
   if (IsCmpSwap)
     MIB.addReg(CmpVal);

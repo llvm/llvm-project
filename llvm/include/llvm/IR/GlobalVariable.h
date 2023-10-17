@@ -33,7 +33,7 @@ namespace llvm {
 class Constant;
 class Module;
 
-template <typename ValueSubClass> class SymbolTableListTraits;
+template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
 class DIGlobalVariable;
 class DIGlobalVariableExpression;
 class DIFragment;
