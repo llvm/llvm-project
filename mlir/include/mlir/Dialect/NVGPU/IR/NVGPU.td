@@ -619,6 +619,18 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
   let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";  
 }
 
+def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
+  let summary = "Prefetch given `nvgpu.tensormap.descriptor` ";
+  let description = [{
+    The Op brings the cache line containing the given `$tmaDescriptor` for 
+    subsequent use by the `tma.async.load` instruction.
+  }];
+  let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor, Optional<I1>:$predicate);
+  let assemblyFormat = [{
+    $tensorMapDescriptor (`,` $predicate^)? attr-dict `:` type($tensorMapDescriptor)
+  }];
+}
+
 def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
   let summary = "TMA asynchronous load";
   let description = [{
