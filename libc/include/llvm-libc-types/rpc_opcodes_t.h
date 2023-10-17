@@ -29,6 +29,7 @@ typedef enum {
   RPC_FSEEK,
   RPC_FTELL,
   RPC_FFLUSH,
+  RPC_UNGETC,
   RPC_LAST = 0xFFFF,
 } rpc_opcode_t;
 
