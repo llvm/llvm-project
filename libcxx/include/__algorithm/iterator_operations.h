@@ -87,6 +87,53 @@ struct _IterOps<_ClassicAlgPolicy> {
     std::advance(__iter, __count);
   }
 
+  // advance with sentinel, a la std::ranges::advance
+  // it's unclear whether _Iter has a difference_type and whether that's signed, so we play it safe:
+  // use the incoming type for returning and steer clear of negative overflows
+  template <class _Iter, class _Distance>
+  _LIBCPP_HIDE_FROM_ABI constexpr static _Distance advance(_Iter& __iter, _Distance __count, const _Iter& __sentinel) {
+    return _IterOps::__advance(__iter, __count, __sentinel, typename iterator_traits<_Iter>::iterator_category());
+  }
+
+  // advance with sentinel, a la std::ranges::advance -- InputIterator specialization
+  template <class _InputIter, class _Distance>
+  _LIBCPP_HIDE_FROM_ABI constexpr static _Distance
+  __advance(_InputIter& __iter, _Distance __count, const _InputIter& __sentinel, input_iterator_tag) {
+    _Distance __dist{};
+    for (; __dist < __count && __iter != __sentinel; ++__dist)
+      ++__iter;
+    return __count - __dist;
+  }
+
+  // advance with sentinel, a la std::ranges::advance -- BidirectionalIterator specialization
+  template <class _BiDirIter, class _Distance>
+  _LIBCPP_HIDE_FROM_ABI constexpr static _Distance
+  __advance(_BiDirIter& __iter, _Distance __count, const _BiDirIter& __sentinel, bidirectional_iterator_tag) {
+    _Distance __dist{};
+    if (__count >= 0)
+      for (; __dist < __count && __iter != __sentinel; ++__dist)
+        ++__iter;
+    else
+      for (__count = -__count; __dist < __count && __iter != __sentinel; ++__dist)
+        --__iter;
+    return __count - __dist;
+  }
+
+  // advance with sentinel, a la std::ranges::advance -- RandomIterator specialization
+  template <class _RandIter, class _Distance>
+  _LIBCPP_HIDE_FROM_ABI constexpr static _Distance
+  __advance(_RandIter& __iter, _Distance __count, const _RandIter& __sentinel, random_access_iterator_tag) {
+    auto __dist = _IterOps::distance(__iter, __sentinel);
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        __count == 0 || (__dist < 0) == (__count < 0), "__sentinel must precede __iter when __count<0");
+    if (__count < 0)
+      __dist = __dist > __count ? __dist : __count;
+    else
+      __dist = __dist < __count ? __dist : __count;
+    __iter += __dist;
+    return __count - __dist;
+  }
+
   // distance
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
