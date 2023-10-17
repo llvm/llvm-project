@@ -46,7 +46,7 @@ username for an individual isn't available, the brackets will be empty.
 * Josh Stone (Red Hat; Rust) [@cuviper]
 * Kate McInnes (Apple) []
 * Kristof Beyls (ARM) [@kbeyls]
-* Matthew Riley (Google) []
+* Matthew Riley (Google) [@mmdriley]
 * Nikhil Gupta (Nvidia) []
 * Oliver Hunt (Apple) [@ojhunt]
 * Paul Robinson (Sony) [@pogo59]
