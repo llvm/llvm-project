@@ -91,13 +91,13 @@ public:
     return IntegerRelation(space);
   }
 
-  /// Return an empty system containing an invalid equation 0=1.
+  /// Return an empty system containing an invalid equation 0 = 1.
   static IntegerRelation getEmpty(const PresburgerSpace &space) {
-    IntegerRelation relult(0, 1, space.getNumVars() + 1, space);
-    SmallVector<int64_t> eqeff(space.getNumVars() + 1, 0);
-    eqeff.back() = 1;
-    relult.addEquality(eqeff);
-    return relult;
+    IntegerRelation result(0, 1, space.getNumVars() + 1, space);
+    SmallVector<int64_t> invalidEq(space.getNumVars() + 1, 0);
+    invalidEq.back() = 1;
+    result.addEquality(invalidEq);
+    return result;
   }
 
   /// Return the kind of this IntegerRelation.
@@ -557,9 +557,8 @@ public:
 
   void removeDuplicateDivs();
 
-  /// Simplify iteratively attempt to remove redundant equations by Gaussian
-  /// elimination and attempt to remove duplicate inequalities until a fixed
-  /// point is reached.
+  /// Simplify the constraint system by removing canonicalizing constraints and
+  /// removing redundant constraints.
   void simplify();
 
   /// Converts variables of kind srcKind in the range [varStart, varLimit) to
@@ -742,7 +741,7 @@ protected:
   unsigned gaussianEliminateVars(unsigned posStart, unsigned posLimit);
 
   /// Perform a Gaussian elimination operation to reduce all equations to
-  /// standard form. The return value indicates if anything was modified.
+  /// standard form. Returns whether the constraint system was modified.
   bool gaussianEliminate();
 
   /// Eliminates the variable at the specified position using Fourier-Motzkin
