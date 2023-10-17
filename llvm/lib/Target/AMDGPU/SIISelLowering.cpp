@@ -769,6 +769,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // extract of relevant bits.
   setOperationAction(ISD::GET_FPMODE, MVT::i32, Legal);
 
+  setOperationAction(ISD::MUL, MVT::i1, Promote);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -5990,11 +5992,6 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
-  const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return lowerTrapHsaQueuePtr(Op, DAG);
-
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
          lowerTrapHsaQueuePtr(Op, DAG);
 }
@@ -9577,8 +9574,8 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  // For f16 require arcp only.
-  // For f32 require afn+arcp.
+  // For f16 require afn or arcp.
+  // For f32 require afn.
   if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
     return SDValue();
 

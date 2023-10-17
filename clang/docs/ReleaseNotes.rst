@@ -96,6 +96,10 @@ C++ Specific Potentially Breaking Changes
   Clang as a compiler, but it may break assumptions in Clang-based tools
   iterating over the AST.
 
+- The warning `-Wenum-constexpr-conversion` is now also enabled by default on
+  system headers and macros. It will be turned into a hard (non-downgradable)
+  error in the next Clang release.
+
 ABI Changes in This Version
 ---------------------------
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
@@ -157,6 +161,11 @@ C Language Changes
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
   constant expressions.  This change is more consistent with the behavior of
   GCC.
+- Clang now supports the C-only attribute ``counted_by``. When applied to a
+  struct's flexible array member, it points to the struct field that holds the
+  number of elements in the flexible array member. This information can improve
+  the results of the array bound sanitizer and the
+  ``__builtin_dynamic_object_size`` builtin.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -166,6 +175,9 @@ C23 Feature Support
   ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 - Clang now supports `requires c23` for module maps.
 - Clang now supports ``N3007 Type inference for object definitions``.
+
+- Clang now supports ``<stdckdint.h>`` which defines several macros for performing
+  checked integer arithmetic.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -196,6 +208,10 @@ Modified Compiler Flags
 * ``-frewrite-includes`` now guards the original #include directives with
   ``__CLANG_REWRITTEN_INCLUDES``, and ``__CLANG_REWRITTEN_SYSTEM_INCLUDES`` as
   appropriate.
+* Introducing a new default calling convention for ``-fdefault-calling-conv``:
+  ``rtdcall``. This new default CC only works for M68k and will use the new
+  ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
+  driver/frontend flag has the same effect when targeting M68k.
 
 Removed Compiler Flags
 -------------------------
@@ -377,10 +393,13 @@ Bug Fixes in This Version
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 - Fix crash in evaluating ``constexpr`` value for invalid template function.
   Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
-
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
+- Fixed an issue with computing the common type for the LHS and RHS of a `?:`
+  operator in C. No longer issuing a confusing diagnostic along the lines of
+  "incompatible operand types ('foo' and 'foo')" with extensions such as matrix
+  types. Fixes (`#69008 <https://github.com/llvm/llvm-project/issues/69008>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -497,6 +516,10 @@ Bug Fixes to C++ Support
   rather than prefer the non-templated constructor as specified in
   [standard.group]p3.
 
+- Fixed a crash caused by incorrect handling of dependence on variable templates
+  with non-type template parameters of reference type. Fixes:
+  (`#65153 <https://github.com/llvm/llvm-project/issues/65153>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -505,6 +528,8 @@ Bug Fixes to AST Handling
   computed RecordLayout is incorrect if fields are not completely imported and
   should not be cached.
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
+- Fixed ``hasAnyBase`` not binding nodes in its submatcher.
+  (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -535,6 +560,9 @@ X86 Support
 
 - Added option ``-m[no-]evex512`` to disable ZMM and 64-bit mask instructions
   for AVX512 features.
+- Support ISA of ``USER_MSR``.
+  * Support intrinsic of ``_urdmsr``.
+  * Support intrinsic of ``_uwrmsr``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -643,6 +671,8 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+- Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
+  to ``unix.StdCLibraryFunctions``.
 
 - Fix false positive in mutation check when using pointer to member function.
   (`#66204: <https://github.com/llvm/llvm-project/issues/66204>`_).

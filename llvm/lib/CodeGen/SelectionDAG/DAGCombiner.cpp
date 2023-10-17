@@ -6635,12 +6635,17 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N) {
       SDValue Op1 = LogicN->getOperand(1);
 
       if (isa<ConstantSDNode>(Op0))
-          std::swap(Op0, Op1);
+        Op0 =
+            DAG.getNode(ISD::AND, SDLoc(Op0), Op0.getValueType(), Op0, MaskOp);
 
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(Op1), Op1.getValueType(),
-                                Op1, MaskOp);
+      if (isa<ConstantSDNode>(Op1))
+        Op1 =
+            DAG.getNode(ISD::AND, SDLoc(Op1), Op1.getValueType(), Op1, MaskOp);
 
-      DAG.UpdateNodeOperands(LogicN, Op0, And);
+      if (isa<ConstantSDNode>(Op0) && !isa<ConstantSDNode>(Op1))
+        std::swap(Op0, Op1);
+
+      DAG.UpdateNodeOperands(LogicN, Op0, Op1);
     }
 
     // Create narrow loads.
@@ -7071,12 +7076,23 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
             N1, /*AllowUndef=*/false, /*AllowTruncation=*/true)) {
       Constant = C->getAPIntValue();
     } else if (BuildVectorSDNode *Vector = dyn_cast<BuildVectorSDNode>(N1)) {
+      unsigned EltBitWidth = Vector->getValueType(0).getScalarSizeInBits();
       APInt SplatValue, SplatUndef;
       unsigned SplatBitSize;
       bool HasAnyUndefs;
-      bool IsSplat = Vector->isConstantSplat(SplatValue, SplatUndef,
-                                             SplatBitSize, HasAnyUndefs);
-      if (IsSplat) {
+      // Endianness should not matter here. Code below makes sure that we only
+      // use the result if the SplatBitSize is a multiple of the vector element
+      // size. And after that we AND all element sized parts of the splat
+      // together. So the end result should be the same regardless of in which
+      // order we do those operations.
+      const bool IsBigEndian = false;
+      bool IsSplat =
+          Vector->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
+                                  HasAnyUndefs, EltBitWidth, IsBigEndian);
+
+      // Make sure that variable 'Constant' is only set if 'SplatBitSize' is a
+      // multiple of 'BitWidth'. Otherwise, we could propagate a wrong value.
+      if (IsSplat && (SplatBitSize % EltBitWidth) == 0) {
         // Undef bits can contribute to a possible optimisation if set, so
         // set them.
         SplatValue |= SplatUndef;
@@ -7085,23 +7101,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         // the first vector value and FF for the rest, repeating. We need a mask
         // that will apply equally to all members of the vector, so AND all the
         // lanes of the constant together.
-        unsigned EltBitWidth = Vector->getValueType(0).getScalarSizeInBits();
-
-        // If the splat value has been compressed to a bitlength lower
-        // than the size of the vector lane, we need to re-expand it to
-        // the lane size.
-        if (EltBitWidth > SplatBitSize)
-          for (SplatValue = SplatValue.zextOrTrunc(EltBitWidth);
-               SplatBitSize < EltBitWidth; SplatBitSize = SplatBitSize * 2)
-            SplatValue |= SplatValue.shl(SplatBitSize);
-
-        // Make sure that variable 'Constant' is only set if 'SplatBitSize' is a
-        // multiple of 'BitWidth'. Otherwise, we could propagate a wrong value.
-        if ((SplatBitSize % EltBitWidth) == 0) {
-          Constant = APInt::getAllOnes(EltBitWidth);
-          for (unsigned i = 0, n = (SplatBitSize / EltBitWidth); i < n; ++i)
-            Constant &= SplatValue.extractBits(EltBitWidth, i * EltBitWidth);
-        }
+        Constant = APInt::getAllOnes(EltBitWidth);
+        for (unsigned i = 0, n = (SplatBitSize / EltBitWidth); i < n; ++i)
+          Constant &= SplatValue.extractBits(EltBitWidth, i * EltBitWidth);
       }
     }
 

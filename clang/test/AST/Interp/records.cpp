@@ -1066,3 +1066,26 @@ namespace ParenInit {
   constexpr B b(A(1),2);
 }
 #endif
+
+namespace DelegatingConstructors {
+  struct S {
+    int a;
+    constexpr S() : S(10) {}
+    constexpr S(int a) : a(a) {}
+  };
+  constexpr S s = {};
+  static_assert(s.a == 10, "");
+
+  struct B {
+    int a;
+    int b;
+
+    constexpr B(int a) : a(a), b(a + 2) {}
+  };
+  struct A : B {
+    constexpr A() : B(10) {};
+  };
+  constexpr A d4 = {};
+  static_assert(d4.a == 10, "");
+  static_assert(d4.b == 12, "");
+}

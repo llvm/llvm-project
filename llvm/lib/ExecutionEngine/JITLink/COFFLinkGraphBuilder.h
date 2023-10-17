@@ -14,7 +14,6 @@
 #define LIB_EXECUTIONENGINE_JITLINK_COFFLINKGRAPHBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Object/COFF.h"
 

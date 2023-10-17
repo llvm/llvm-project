@@ -280,6 +280,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendxftf2.c
   fixxfdi.c
   fixxfti.c
   fixunsxfdi.c
@@ -291,6 +292,7 @@ set(x86_80_BIT_SOURCES
   floatuntixf.c
   mulxc3.c
   powixf2.c
+  trunctfxf2.c
 )
 
 if (NOT MSVC)
@@ -551,9 +553,13 @@ set(aarch64_SOURCES
   ${GENERIC_SOURCES}
   cpu_model.c
   aarch64/fp_mode.c
-  aarch64/sme-abi.S
-  aarch64/sme-abi-init.c
 )
+
+if(COMPILER_RT_HAS_ASM_SME)
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+else()
+  message(STATUS "AArch64 SME ABI routines disabled")
+endif()
 
 # Generate outline atomics helpers from lse.S base
 set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
@@ -782,7 +788,6 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
-  append_list_if(COMPILER_RT_HAS_ASM_SME HAS_ASM_SME BUILTIN_DEFS)
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})

@@ -199,37 +199,25 @@ public:
   /// type-level information such as the encoding and sizes), generating
   /// MLIR buffers as needed, and returning `this` for method chaining.
   NewCallParams &genBuffers(SparseTensorType stt,
-                            ArrayRef<Value> dimSizesValues) {
+                            ArrayRef<Value> dimSizesValues,
+                            Value dimSizesBuffer = Value()) {
     assert(dimSizesValues.size() == static_cast<size_t>(stt.getDimRank()));
     // Sparsity annotations.
     params[kParamLvlTypes] = genLvlTypesBuffer(builder, loc, stt);
     // Construct dimSizes, lvlSizes, dim2lvl, and lvl2dim buffers.
-    params[kParamDimSizes] = allocaBuffer(builder, loc, dimSizesValues);
+    params[kParamDimSizes] = dimSizesBuffer
+                                 ? dimSizesBuffer
+                                 : allocaBuffer(builder, loc, dimSizesValues);
     params[kParamLvlSizes] =
         genMapBuffers(builder, loc, stt, dimSizesValues, params[kParamDimSizes],
                       params[kParamDim2Lvl], params[kParamLvl2Dim]);
     // Secondary and primary types encoding.
-    setTemplateTypes(stt);
-    // Finally, make note that initialization is complete.
-    assert(isInitialized() && "Initialization failed");
-    // And return `this` for method chaining.
-    return *this;
-  }
-
-  /// (Re)sets the C++ template type parameters, and returns `this`
-  /// for method chaining. This is already done as part of `genBuffers`,
-  /// but is factored out so that it can also be called independently
-  /// whenever subsequent `genNewCall` calls want to reuse the same
-  /// buffers but different type parameters.
-  //
-  // TODO: This is only ever used by sparse2sparse-viaCOO `ConvertOp`;
-  // is there a better way to handle that than this one-off setter method?
-  NewCallParams &setTemplateTypes(SparseTensorType stt) {
     const auto enc = stt.getEncoding();
     params[kParamPosTp] = constantPosTypeEncoding(builder, loc, enc);
     params[kParamCrdTp] = constantCrdTypeEncoding(builder, loc, enc);
     params[kParamValTp] =
         constantPrimaryTypeEncoding(builder, loc, stt.getElementType());
+    // Return `this` for method chaining.
     return *this;
   }
 
@@ -357,33 +345,15 @@ public:
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
-    // Construct the reader opening method calls.
+    // Construct the `reader` opening method calls.
     SmallVector<Value> dimShapesValues;
     Value dimSizesBuffer;
     Value reader = genReader(rewriter, loc, stt, adaptor.getOperands()[0],
                              dimShapesValues, dimSizesBuffer);
-    // Now construct the lvlSizes, dim2lvl, and lvl2dim buffers.
-    Value dim2lvlBuffer;
-    Value lvl2dimBuffer;
-    Value lvlSizesBuffer =
-        genMapBuffers(rewriter, loc, stt, dimShapesValues, dimSizesBuffer,
-                      dim2lvlBuffer, lvl2dimBuffer);
     // Use the `reader` to parse the file.
-    Type opaqueTp = getOpaquePointerType(rewriter);
-    Type eltTp = stt.getElementType();
-    Value valTp = constantPrimaryTypeEncoding(rewriter, loc, eltTp);
-    SmallVector<Value, 8> params{
-        reader,
-        lvlSizesBuffer,
-        genLvlTypesBuffer(rewriter, loc, stt),
-        dim2lvlBuffer,
-        lvl2dimBuffer,
-        constantPosTypeEncoding(rewriter, loc, stt.getEncoding()),
-        constantCrdTypeEncoding(rewriter, loc, stt.getEncoding()),
-        valTp};
-    Value tensor = createFuncCall(rewriter, loc, "newSparseTensorFromReader",
-                                  opaqueTp, params, EmitCInterface::On)
-                       .getResult(0);
+    Value tensor = NewCallParams(rewriter, loc)
+                       .genBuffers(stt, dimShapesValues, dimSizesBuffer)
+                       .genNewCall(Action::kFromReader, reader);
     // Free the memory for `reader`.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
                    EmitCInterface::Off);

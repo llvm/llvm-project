@@ -2119,6 +2119,8 @@ def fir_DoLoopOp : region_Op<"do_loop",
     mlir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
+    mlir::OperandRange getInits() { return getIterOperands(); }
+    mlir::ValueRange getYieldedValues();
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
     void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }
@@ -2270,6 +2272,8 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     mlir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
+    mlir::OperandRange getInits() { return getIterOperands(); }
+    mlir::ValueRange getYieldedValues();
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
     void setUpperBound(mlir::Value bound) { (*this)->setOperand(1, bound); }

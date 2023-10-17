@@ -2978,7 +2978,10 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
 
     // Don't fold the add if the result would be slower, unless optimising for
     // size.
-    int64_t Shift = AddrI.getOperand(3).getImm();
+    unsigned Shift = static_cast<unsigned>(AddrI.getOperand(3).getImm());
+    if (AArch64_AM::getShiftType(Shift) != AArch64_AM::ShiftExtendType::LSL)
+      return false;
+    Shift = AArch64_AM::getShiftValue(Shift);
     if (!OptSize) {
       if ((Shift != 2 && Shift != 3) || !Subtarget.hasAddrLSLFast())
         return false;
@@ -5581,6 +5584,14 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     break;
+  case AArch64::LD1Rv1d:
+  case AArch64::LD1Rv2s:
+  case AArch64::LD1Rv2d:
+  case AArch64::LD1Rv4h:
+  case AArch64::LD1Rv4s:
+  case AArch64::LD1Rv8b:
+  case AArch64::LD1Rv8h:
+  case AArch64::LD1Rv16b:
   case AArch64::LD1Twov2d:
   case AArch64::LD1Threev2d:
   case AArch64::LD1Fourv2d:
