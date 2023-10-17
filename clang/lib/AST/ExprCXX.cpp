@@ -398,7 +398,7 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
   void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
   return new (Mem) UnresolvedLookupExpr(
       Context, NamingClass, QualifierLoc, TemplateKWLoc, NameInfo, RequiresADL,
-      /*Overloaded*/ true, Args, Begin, End, KnownDependent);
+      /*Overloaded=*/true, Args, Begin, End, KnownDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::CreateEmpty(
