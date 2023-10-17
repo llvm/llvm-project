@@ -8395,10 +8395,13 @@ ASTNodeImporter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
     if (!ToTemplateKeywordLocOrErr)
       return ToTemplateKeywordLocOrErr.takeError();
 
+    const bool KnownDependent =
+        (E->getDependence() & ExprDependence::TypeValue) ==
+        ExprDependence::TypeValue;
     return UnresolvedLookupExpr::Create(
         Importer.getToContext(), *ToNamingClassOrErr, *ToQualifierLocOrErr,
         *ToTemplateKeywordLocOrErr, ToNameInfo, E->requiresADL(), &ToTAInfo,
-        ToDecls.begin(), ToDecls.end());
+        ToDecls.begin(), ToDecls.end(), KnownDependent);
   }
 
   return UnresolvedLookupExpr::Create(
