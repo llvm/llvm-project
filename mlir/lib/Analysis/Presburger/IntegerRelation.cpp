@@ -1096,7 +1096,7 @@ bool IntegerRelation::gaussianEliminate() {
         continue;
       break;
     }
-    // All columns have been normalized.
+    // The matrix has been normalized to row echelon form.
     if (firstVar >= vars)
       break;
 
@@ -1131,7 +1131,7 @@ bool IntegerRelation::gaussianEliminate() {
     *this = getEmpty(getSpace());
     return true;
   }
-  // Rows that are confirmed to be all zeros can be eliminated.
+  // Eliminate rows that are confined to be all zeros.
   removeEqualityRange(nowDone, eqs);
   return true;
 }
@@ -1330,11 +1330,11 @@ void IntegerRelation::simplify() {
   bool changed = true;
   // Repeat until we reach a fixed point.
   while (changed) {
+    if (isObviouslyEmpty())
+      return;
     changed = false;
     normalizeConstraintsByGCD();
     changed |= gaussianEliminate();
-    if (isObviouslyEmpty())
-      return;
     changed |= removeDuplicateConstraints();
   }
   // Current set is not empty.
@@ -2296,18 +2296,18 @@ bool IntegerRelation::removeDuplicateConstraints() {
   if (ineqs <= 1)
     return changed;
 
-  // Check only the non-constant part of the constraint is the same.
-  auto row = getInequality(0).drop_back();
+  // Check if the non-constant part of the constraint is the same.
+  ArrayRef<MPInt> row = getInequality(0).drop_back();
   hashTable.insert({row, 0});
   for (unsigned k = 1; k < ineqs; ++k) {
-    auto nRow = getInequality(k).drop_back();
-    if (!hashTable.contains(nRow)) {
-      hashTable.insert({nRow, k});
+    row = getInequality(k).drop_back();
+    if (!hashTable.contains(row)) {
+      hashTable.insert({row, k});
       continue;
     }
 
     // For identical cases, keep only the smaller part of the constant term.
-    unsigned l = hashTable[nRow];
+    unsigned l = hashTable[row];
     changed = true;
     if (atIneq(k, cols - 1) <= atIneq(l, cols - 1))
       inequalities.swapRows(k, l);
@@ -2322,13 +2322,13 @@ bool IntegerRelation::removeDuplicateConstraints() {
   for (unsigned k = 0; k < ineqs; ++k) {
     inequalities.copyRow(k, ineqs);
     inequalities.negateRow(ineqs);
-    auto nRow = getInequality(ineqs).drop_back();
-    if (!hashTable.contains(nRow))
+    row = getInequality(ineqs).drop_back();
+    if (!hashTable.contains(row))
       continue;
 
     // For cases where the neg is the same as other inequalities, check that the
     // sum of their constant terms is positive.
-    unsigned l = hashTable[nRow];
+    unsigned l = hashTable[row];
     auto sum = atIneq(l, cols - 1) + atIneq(k, cols - 1);
     if (sum > 0 || l == k)
       continue;

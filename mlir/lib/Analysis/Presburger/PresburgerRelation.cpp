@@ -639,7 +639,7 @@ bool PresburgerRelation::isObviouslyEqual(const PresburgerRelation &set) const {
 /// one unconstrained disjunct, indicating the absence of constraints or
 /// conditions.
 bool PresburgerRelation::isObviouslyUniverse() const {
-  for (auto &disjunct : getAllDisjuncts()) {
+  for (const IntegerRelation &disjunct : getAllDisjuncts()) {
     if (disjunct.getNumConstraints() == 0)
       return true;
   }
