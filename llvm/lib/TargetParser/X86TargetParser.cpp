@@ -166,10 +166,10 @@ constexpr FeatureBitset FeaturesGrandridge =
     FeaturesSierraforest | FeatureRAOINT;
 constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
     FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
-constexpr FeatureBitset FeaturesPantherlake = FeaturesArrowlakeS |
-    FeaturePREFETCHI;
-constexpr FeatureBitset FeaturesClearwaterforest = FeaturesArrowlakeS |
-    FeatureUSERMSR | FeaturePREFETCHI;
+constexpr FeatureBitset FeaturesPantherlake =
+    FeaturesArrowlakeS | FeaturePREFETCHI;
+constexpr FeatureBitset FeaturesClearwaterforest =
+    FeaturesArrowlakeS | FeatureUSERMSR | FeaturePREFETCHI;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
