@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -transform-preload-library=transform-library-paths=%p%{fs-sep}test-interpreter-library \
+// RUN:   -transform-preload-library=transform-library-paths=%p%{fs-sep}include%{fs-sep}test-interpreter-library \
 // RUN:   -transform-interpreter=entry-point=private_helper \
 // RUN:   -split-input-file -verify-diagnostics
 
