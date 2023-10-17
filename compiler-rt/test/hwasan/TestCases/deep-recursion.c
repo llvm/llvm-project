@@ -35,7 +35,7 @@ __attribute__((noinline)) void OOB() {
   // around it: if the tag is zero, we use the neighboring variable instead,
   // which must have a different (hence non-zero) tag.
   // This tag check assumes aarch64.
-  if(((unsigned long)&x) >> 56 == 0) {
+  if (((uintptr_t)&x) >> 56 == 0) {
     y[four] = 0;
   } else {
     x[four] = 0;
