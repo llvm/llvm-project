@@ -3665,8 +3665,8 @@ def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
 }
 
-class BufferAtomicGenericInstruction<bit NoRtn = 0> : AMDGPUGenericInstruction {
-  let OutOperandList = !if(NoRtn, (outs), (outs type0:$dst));
+class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
                            type2:$soffset, untyped_imm_0:$offset,
                            untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
