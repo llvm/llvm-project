@@ -2480,6 +2480,20 @@ void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
   assert(isVariadic() && "can only modify variadic instructions");
   assert(It->getParent() == this && "iterator points to operand of other inst");
 
+  if (Ops.empty())
+    return;
+
+  // Do one pass to untie operands.
+  DenseMap<unsigned, unsigned> TiedOpIndices;
+  for (const MachineOperand &MO : operands()) {
+    if (MO.isReg() && MO.isTied()) {
+      unsigned OpNo = getOperandNo(&MO);
+      unsigned TiedTo = findTiedOperandIdx(OpNo);
+      TiedOpIndices[OpNo] = TiedTo;
+      untieRegOperand(OpNo);
+    }
+  }
+
   const unsigned OpIdx = getOperandNo(It);
   const unsigned NumOperands = getNumOperands();
   const unsigned OpsToMove = NumOperands - OpIdx;
@@ -2495,4 +2509,13 @@ void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
     addOperand(MO);
   for (const MachineOperand &OpMoved : MovingOps)
     addOperand(OpMoved);
+
+  // Re-tie operands.
+  for (auto [Tie1, Tie2] : TiedOpIndices) {
+    if (Tie1 >= OpIdx)
+      Tie1 += Ops.size();
+    if (Tie2 >= OpIdx)
+      Tie2 += Ops.size();
+    tieOperands(Tie1, Tie2);
+  }
 }
