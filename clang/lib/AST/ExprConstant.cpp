@@ -13603,6 +13603,10 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       return Success(Ty->castAs<VectorType>()->getNumElements(), E);
 
     assert(Ty->isSizelessVectorType());
+    if (Info.InConstantContext)
+      Info.CCEDiag(E, diag::note_constexpr_non_const_vectorelements)
+          << E->getSourceRange();
+
     return false;
   }
   }
