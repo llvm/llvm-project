@@ -126,6 +126,10 @@ void __tsan_mutex_post_signal(void *addr, unsigned flags);
 void __tsan_mutex_pre_divert(void *addr, unsigned flags);
 void __tsan_mutex_post_divert(void *addr, unsigned flags);
 
+// Annotate that no mutexes can be held. If we are holding mutexes, then
+// TSan will print a bug report.
+void __tsan_check_no_mutexes_held();
+
 // External race detection API.
 // Can be used by non-instrumented libraries to detect when their objects are
 // being used in an unsafe manner.
