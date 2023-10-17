@@ -1712,3 +1712,20 @@ define %struct.__neon_float64x2x4_t @ld1_x4_v2f64(ptr %addr) {
   %val = call %struct.__neon_float64x2x4_t @llvm.aarch64.neon.ld1x4.v2f64.p0(ptr %addr)
   ret %struct.__neon_float64x2x4_t %val
 }
+
+define <8 x i8> @dup_ld1_from_stack(ptr %__ret) {
+; CHECK-LABEL: dup_ld1_from_stack:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    add x8, sp, #15
+; CHECK-NEXT:    ld1r.8b { v0 }, [x8]
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+entry:
+  %item = alloca i8, align 1
+  %0 = load i8, ptr %item, align 1
+  %1 = insertelement <8 x i8> poison, i8 %0, i32 0
+  %lane = shufflevector <8 x i8> %1, <8 x i8> %1, <8 x i32> zeroinitializer
+  ret <8 x i8> %lane
+}
