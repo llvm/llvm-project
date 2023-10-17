@@ -93,7 +93,7 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
         index_obj = var_v1_raw_obj.GetChildMemberWithName("_M_index")
         self.assertTrue(index_obj and index_obj.IsValid())
 
-        INVALID_INDEX = 100
+        INVALID_INDEX = "100"
         index_obj.SetValueFromCString(INVALID_INDEX)
 
         self.expect("frame variable v1", substrs=["v1 =  <Invalid>"])
