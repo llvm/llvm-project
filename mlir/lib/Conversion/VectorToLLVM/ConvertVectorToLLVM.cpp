@@ -849,48 +849,16 @@ private:
   const bool reassociateFPReductions;
 };
 
-/// Base class to convert a `vector.mask` operation while matching traits
-/// of the maskable operation nested inside. A `VectorMaskOpConversionBase`
-/// instance matches against a `vector.mask` operation. The `matchAndRewrite`
-/// method performs a second match against the maskable operation `MaskedOp`.
-/// Finally, it invokes the virtual method `matchAndRewriteMaskableOp` to be
-/// implemented by the concrete conversion classes. This method can match
-/// against specific traits of the `vector.mask` and the maskable operation. It
-/// must replace the `vector.mask` operation.
-template <class MaskedOp>
-class VectorMaskOpConversionBase
-    : public ConvertOpToLLVMPattern<vector::MaskOp> {
-public:
-  using ConvertOpToLLVMPattern<vector::MaskOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::MaskOp maskOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    // Match against the maskable operation kind.
-    auto maskedOp = llvm::dyn_cast_or_null<MaskedOp>(maskOp.getMaskableOp());
-    if (!maskedOp)
-      return failure();
-    return matchAndRewriteMaskableOp(maskOp, maskedOp, rewriter);
-  }
-
-protected:
-  virtual LogicalResult
-  matchAndRewriteMaskableOp(vector::MaskOp maskOp,
-                            vector::MaskableOpInterface maskableOp,
-                            ConversionPatternRewriter &rewriter) const = 0;
-};
-
 class MaskedReductionOpConversion
-    : public VectorMaskOpConversionBase<vector::ReductionOp> {
+    : public ConvertVectorMaskOpToLLVMPattern<vector::ReductionOp> {
 
 public:
-  using VectorMaskOpConversionBase<
-      vector::ReductionOp>::VectorMaskOpConversionBase;
+  using ConvertVectorMaskOpToLLVMPattern<
+      vector::ReductionOp>::ConvertVectorMaskOpToLLVMPattern;
 
   LogicalResult matchAndRewriteMaskableOp(
-      vector::MaskOp maskOp, MaskableOpInterface maskableOp,
+      vector::MaskOp maskOp, vector::ReductionOp reductionOp,
       ConversionPatternRewriter &rewriter) const override {
-    auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());
     auto kind = reductionOp.getKind();
     Type eltType = reductionOp.getDest().getType();
     Type llvmType = typeConverter->convertType(eltType);
