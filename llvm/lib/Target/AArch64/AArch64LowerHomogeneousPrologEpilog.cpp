@@ -223,7 +223,7 @@ static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
   TypeSize Scale(0U, false);
   unsigned Width;
   int64_t MinOffset, MaxOffset;
-  bool Success =
+  [[maybe_unused]] bool Success =
       AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
   assert(Success && "Invalid Opcode");
   Offset *= (8 / (int)Scale);
@@ -265,7 +265,7 @@ static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
   TypeSize Scale(0U, false);
   unsigned Width;
   int64_t MinOffset, MaxOffset;
-  bool Success =
+  [[maybe_unused]] bool Success =
       AArch64InstrInfo::getMemOpInfo(Opc, Scale, Width, MinOffset, MaxOffset);
   assert(Success && "Invalid Opcode");
   Offset *= (8 / (int)Scale);
