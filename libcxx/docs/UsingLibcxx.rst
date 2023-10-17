@@ -451,6 +451,7 @@ which no dialect declares as such (See the second form described above).
 * ``ranges::any_of``
 * ``ranges::binary_search``
 * ``ranges::clamp``
+* ``ranges::contains``
 * ``ranges::count_if``
 * ``ranges::count``
 * ``ranges::equal_range``
