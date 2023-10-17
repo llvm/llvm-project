@@ -55,6 +55,7 @@ enum OperandKind {
   Type,
   Function,
   Block,
+  Arg,
   UnimplementedOperand = 255,
 };
 
@@ -62,6 +63,7 @@ enum TypeKind {
   Void = 0,
   Integer,
   Ptr,
+  FunctionTy,
   UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -133,8 +135,17 @@ private:
     if (Found != Types.end()) {
       return std::distance(Types.begin(), Found);
     }
+
+    // Not found. Assign it a type index.
     size_t Idx = Types.size();
     Types.push_back(Ty);
+
+    // If the newly-registered type is an aggregate type that contains other
+    // types, then assign them type indices now too.
+    for (llvm::Type *STy : Ty->subtypes()) {
+      typeIndex(STy);
+    }
+
     return Idx;
   }
 
@@ -206,12 +217,20 @@ public:
     serialiseString(toString(V));
   }
 
+  void serialiseArgOperand(ValueLoweringMap &VLMap, Argument *A) {
+    // This assumes that the argument indices match in both IRs.
+    OutStreamer.emitInt8(OperandKind::Arg);
+    OutStreamer.emitSizeT(A->getArgNo());
+  }
+
   void serialiseOperand(Instruction *Parent, ValueLoweringMap &VLMap,
                         Value *V) {
     if (llvm::Function *F = dyn_cast<llvm::Function>(V)) {
       serialiseFunctionOperand(F);
     } else if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
       serialiseConstantOperand(Parent, C);
+    } else if (llvm::Argument *A = dyn_cast<llvm::Argument>(V)) {
+      serialiseArgOperand(VLMap, A);
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
       // If an instruction defines the operand, it's a local variable.
       serialiseLocalVariableOperand(I, VLMap);
@@ -372,9 +391,17 @@ public:
     BBIdx++;
   }
 
+  void serialiseArg(Argument *A) {
+    // type_index:
+    OutStreamer.emitSizeT(typeIndex(A->getType()));
+  }
+
   void serialiseFunc(llvm::Function &F) {
     // name:
     serialiseString(F.getName());
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(F.getFunctionType()));
+    F.getType()->dump();
     // num_blocks:
     OutStreamer.emitSizeT(F.size());
     // blocks:
@@ -385,6 +412,20 @@ public:
     }
   }
 
+  void serialiseFunctionType(FunctionType *Ty) {
+    OutStreamer.emitInt8(TypeKind::FunctionTy);
+    // num_args:
+    OutStreamer.emitSizeT(Ty->getNumParams());
+    // arg_tys:
+    for (llvm::Type *SubTy : Ty->params()) {
+      OutStreamer.emitSizeT(typeIndex(SubTy));
+    }
+    // ret_ty:
+    OutStreamer.emitSizeT(typeIndex(Ty->getReturnType()));
+    // is_vararg:
+    OutStreamer.emitInt8(Ty->isVarArg());
+  }
+
   void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
       OutStreamer.emitInt8(TypeKind::Void);
@@ -393,6 +434,8 @@ public:
     } else if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
       OutStreamer.emitInt8(TypeKind::Integer);
       OutStreamer.emitInt32(ITy->getBitWidth());
+    } else if (FunctionType *FTy = dyn_cast<FunctionType>(Ty)) {
+      serialiseFunctionType(FTy);
     } else {
       OutStreamer.emitInt8(TypeKind::UnimplementedType);
       serialiseString(toString(Ty));
