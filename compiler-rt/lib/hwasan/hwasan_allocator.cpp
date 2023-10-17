@@ -352,9 +352,9 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
       // would make us attempt to read the memory on a UaF.
       // The tag can be zero if tagging is disabled on this thread.
       do {
-        tag = t->GenerateRandomNonCollidingTag((uptr)aligned_ptr - 1,
-                                               (uptr)aligned_ptr + orig_size,
-                                               /*num_bits=*/8);
+        tag = t->GenerateRandomNonCollidingTag(
+            (uptr)aligned_ptr - 1, (uptr)aligned_ptr + TaggedSize(orig_size),
+            /*num_bits=*/8);
       } while (
           UNLIKELY((tag < kShadowAlignment || tag == pointer_tag) && tag != 0));
     } else {
