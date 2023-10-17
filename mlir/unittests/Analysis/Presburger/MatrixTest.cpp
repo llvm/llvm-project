@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "./Utils.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
+#include "./Utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -210,8 +210,7 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   {
     // Hermite form of a unimodular matrix is the identity matrix.
     IntMatrix mat = makeIntMatrix(3, 3, {{2, 3, 6}, {3, 2, 3}, {17, 11, 16}});
-    IntMatrix hermiteForm =
-        makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
+    IntMatrix hermiteForm = makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
@@ -242,10 +241,10 @@ TEST(MatrixTest, computeHermiteNormalForm) {
   }
 
   {
-    IntMatrix mat = makeIntMatrix(
-        3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
-    IntMatrix hermiteForm = makeIntMatrix(
-        3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
+    IntMatrix mat =
+        makeIntMatrix(3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
+    IntMatrix hermiteForm =
+        makeIntMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 }
