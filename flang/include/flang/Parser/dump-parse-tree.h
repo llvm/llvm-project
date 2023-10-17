@@ -568,6 +568,7 @@ public:
   NODE(parser, OpenACCCombinedConstruct)
   NODE(parser, OpenACCConstruct)
   NODE(parser, OpenACCDeclarativeConstruct)
+  NODE(parser, OpenACCEndConstruct)
   NODE(parser, OpenACCLoopConstruct)
   NODE(parser, OpenACCRoutineConstruct)
   NODE(parser, OpenACCStandaloneDeclarativeConstruct)
