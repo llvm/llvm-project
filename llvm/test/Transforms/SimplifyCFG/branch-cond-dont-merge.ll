@@ -8,10 +8,9 @@ define void @dont_merge_cbranches1(i32 %V) {
 ; CHECK-LABEL: @dont_merge_cbranches1(
 ; CHECK-NEXT:    [[DIVERGENT_COND:%.*]] = icmp ne i32 [[V:%.*]], 0
 ; CHECK-NEXT:    [[UNIFORM_COND:%.*]] = call i1 @uniform_result(i1 [[DIVERGENT_COND]])
-; CHECK-NEXT:    [[UNIFORM_COND_NOT:%.*]] = xor i1 [[UNIFORM_COND]], true
-; CHECK-NEXT:    [[DIVERGENT_COND_NOT:%.*]] = xor i1 [[DIVERGENT_COND]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[UNIFORM_COND_NOT]], i1 true, i1 [[DIVERGENT_COND_NOT]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT:%.*]], label [[BB3:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[UNIFORM_COND]], label [[BB2:%.*]], label [[EXIT:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br i1 [[DIVERGENT_COND]], label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -34,9 +33,9 @@ define void @dont_merge_cbranches2(i32 %V) {
 ; CHECK-LABEL: @dont_merge_cbranches2(
 ; CHECK-NEXT:    [[DIVERGENT_COND:%.*]] = icmp ne i32 [[V:%.*]], 0
 ; CHECK-NEXT:    [[UNIFORM_COND:%.*]] = call i1 @uniform_result(i1 [[DIVERGENT_COND]])
-; CHECK-NEXT:    [[DIVERGENT_COND_NOT:%.*]] = xor i1 [[DIVERGENT_COND]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[UNIFORM_COND]], i1 true, i1 [[DIVERGENT_COND_NOT]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[EXIT:%.*]], label [[BB3:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[UNIFORM_COND]], label [[EXIT:%.*]], label [[BB2:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br i1 [[DIVERGENT_COND]], label [[BB3:%.*]], label [[EXIT]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
