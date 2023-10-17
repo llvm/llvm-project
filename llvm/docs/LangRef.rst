@@ -309,7 +309,7 @@ added in the future:
     prototype of all callees to exactly match the prototype of the
     function definition. Furthermore the inliner doesn't consider such function
     calls for inlining.
-"``cc 10``" - GHC convention
+"``ghccc``" - GHC convention
     This calling convention has been implemented specifically for use by
     the `Glasgow Haskell Compiler (GHC) <http://www.haskell.org/ghc>`_.
     It passes everything in registers, going to extremes to achieve this
