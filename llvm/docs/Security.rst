@@ -31,28 +31,31 @@ Group Composition
 Security Group Members
 ----------------------
 
-The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below. The list is in the format `* ${full_name} (${affiliation}) [${phabricator_username}]`. If a phabricator username for an individual isn't available, the brackets will be empty.
+The members of the group represent a wide cross-section of the community, and
+meet the criteria for inclusion below. The list is in the format
+`* ${full_name} (${affiliation}) [${github_username}]`. If a github
+username for an individual isn't available, the brackets will be empty.
 
-* Ahmed Bougacha (Apple) [ab]
-* Andy Kaylor (Intel) [andykaylor]
-* Artur Pilipenko (Azul Systems Inc) [apilipenko]
-* Boovaragavan Dasarathan (Nvidia) [mrragava]
-* Dimitry Andric (individual; FreeBSD) [dim]
-* Ed Maste (individual; FreeBSD) [emaste]
-* George Burgess IV (Google) [george.burgess.iv]
-* Josh Stone (Red Hat; Rust) [cuviper]
+* Ahmed Bougacha (Apple) [@ahmedbougacha]
+* Andy Kaylor (Intel) [@andykaylor]
+* Artur Pilipenko (Azul Systems Inc) []
+* Boovaragavan Dasarathan (Nvidia) [@mrragava]
+* Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
+* Ed Maste (individual; FreeBSD) [@emaste]
+* George Burgess IV (Google) [@gburgessiv]
+* Josh Stone (Red Hat; Rust) [@cuviper]
 * Kate McInnes (Apple) []
-* Kristof Beyls (ARM) [kristof.beyls]
-* Matthew Riley (Google) [mattdr]
-* Nikhil Gupta (Nvidia) [nikhgupt]
-* Oliver Hunt (Apple) [ojhunt]
-* Paul Robinson (Sony) [probinson]
-* Peter Smith (ARM) [peter.smith]
-* Pietro Albini (Ferrous Systems; Rust) [pietroalbini]
-* Serge Guelton (Mozilla) [serge-sans-paille]
-* Sergey Maslov (Intel) [smaslov-intel]
-* Shayne Hiet-Block (Microsoft) [Shayne]
-* Tim Penge (Sony) [tpenge]
+* Kristof Beyls (ARM) [@kbeyls]
+* Matthew Riley (Google) []
+* Nikhil Gupta (Nvidia) []
+* Oliver Hunt (Apple) [@ojhunt]
+* Paul Robinson (Sony) [@pogo59]
+* Peter Smith (ARM) [@smithp35]
+* Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
+* Serge Guelton (Mozilla) [@serge-sans-paille]
+* Sergey Maslov (Intel) []
+* Shayne Hiet-Block (Microsoft) []
+* Tim Penge (Sony) []
 
 Criteria
 --------
