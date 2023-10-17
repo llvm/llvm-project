@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -941,6 +942,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (!isTypeLegal(VT))
           continue;
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+        setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                           Custom);
         setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
         setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                            Custom);
@@ -1153,6 +1156,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::f16 &&
             !Subtarget.hasVInstructionsF16()) {
           setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+          setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                             Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
@@ -13803,9 +13808,17 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
     Align = std::min(Align, Ld->getAlign());
   }
 
-  using PtrDiff = std::pair<SDValue, bool>;
-  auto GetPtrDiff = [](LoadSDNode *Ld1,
-                       LoadSDNode *Ld2) -> std::optional<PtrDiff> {
+  using PtrDiff = std::pair<std::variant<int64_t, SDValue>, bool>;
+  auto GetPtrDiff = [&DAG](LoadSDNode *Ld1,
+                           LoadSDNode *Ld2) -> std::optional<PtrDiff> {
+    // If the load ptrs can be decomposed into a common (Base + Index) with a
+    // common constant stride, then return the constant stride.
+    BaseIndexOffset BIO1 = BaseIndexOffset::match(Ld1, DAG);
+    BaseIndexOffset BIO2 = BaseIndexOffset::match(Ld2, DAG);
+    if (BIO1.equalBaseIndex(BIO2, DAG))
+      return {{BIO2.getOffset() - BIO1.getOffset(), false}};
+
+    // Otherwise try to match (add LastPtr, Stride) or (add NextPtr, Stride)
     SDValue P1 = Ld1->getBasePtr();
     SDValue P2 = Ld2->getBasePtr();
     if (P2.getOpcode() == ISD::ADD && P2.getOperand(0) == P1)
@@ -13844,7 +13857,11 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isLegalStridedLoadStore(WideVecVT, Align))
     return SDValue();
 
-  auto [Stride, MustNegateStride] = *BaseDiff;
+  auto [StrideVariant, MustNegateStride] = *BaseDiff;
+  SDValue Stride = std::holds_alternative<SDValue>(StrideVariant)
+                       ? std::get<SDValue>(StrideVariant)
+                       : DAG.getConstant(std::get<int64_t>(StrideVariant), DL,
+                                         Lds[0]->getOffset().getValueType());
   if (MustNegateStride)
     Stride = DAG.getNegative(Stride, DL, Stride.getValueType());
 
