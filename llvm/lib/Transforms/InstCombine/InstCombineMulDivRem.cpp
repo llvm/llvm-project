@@ -923,8 +923,7 @@ static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
   return Remainder.isMinValue();
 }
 
-static Instruction *foldIDivShl(BinaryOperator &I,
-                                InstCombiner::BuilderTy &Builder) {
+static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   assert((I.getOpcode() == Instruction::SDiv ||
           I.getOpcode() == Instruction::UDiv) &&
          "Expected integer divide");
@@ -933,7 +932,6 @@ static Instruction *foldIDivShl(BinaryOperator &I,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
 
-  Instruction *Ret = nullptr;
   Value *X, *Y, *Z;
 
   // With appropriate no-wrap constraints, remove a common factor in the
@@ -948,12 +946,12 @@ static Instruction *foldIDivShl(BinaryOperator &I,
 
     // (X * Y) u/ (X << Z) --> Y u>> Z
     if (!IsSigned && HasNUW)
-      Ret = BinaryOperator::CreateLShr(Y, Z);
+      return Builder.CreateLShr(Y, Z, "", I.isExact());
 
     // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
     if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
       Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
-      Ret = BinaryOperator::CreateSDiv(Y, Shl);
+      return Builder.CreateSDiv(Y, Shl, "", I.isExact());
     }
   }
 
@@ -971,13 +969,13 @@ static Instruction *foldIDivShl(BinaryOperator &I,
         ((Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap()) ||
          (Shl0->hasNoUnsignedWrap() && Shl0->hasNoSignedWrap() &&
           Shl1->hasNoSignedWrap())))
-      Ret = BinaryOperator::CreateUDiv(X, Y);
+      return Builder.CreateUDiv(X, Y, "", I.isExact());
 
     // For signed div, we need 'nsw' on both shifts + 'nuw' on the divisor.
     // (X << Z) / (Y << Z) --> X / Y
     if (IsSigned && Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap() &&
         Shl1->hasNoUnsignedWrap())
-      Ret = BinaryOperator::CreateSDiv(X, Y);
+      return Builder.CreateSDiv(X, Y, "", I.isExact());
   }
 
   // If X << Y and X << Z does not overflow, then:
@@ -998,15 +996,11 @@ static Instruction *foldIDivShl(BinaryOperator &I,
           /*HasNSW*/
           IsSigned ? (Shl0->hasNoUnsignedWrap() || Shl1->hasNoUnsignedWrap())
                    : Shl0->hasNoSignedWrap());
-      Ret = BinaryOperator::CreateLShr(Dividend, Z);
+      return Builder.CreateLShr(Dividend, Z, "", I.isExact());
     }
   }
 
-  if (!Ret)
-    return nullptr;
-
-  Ret->setIsExact(I.isExact());
-  return Ret;
+  return nullptr;
 }
 
 /// This function implements the transforms common to both integer division
@@ -1183,8 +1177,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       return NewDiv;
     }
 
-  if (Instruction *R = foldIDivShl(I, Builder))
-    return R;
+  if (Value *R = foldIDivShl(I, Builder))
+    return replaceInstUsesWith(I, R);
 
   // With the appropriate no-wrap constraint, remove a multiply by the divisor
   // after peeking through another divide:
