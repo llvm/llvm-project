@@ -413,6 +413,8 @@ public:
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
 
+  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
+
   RT_API_ATTRS void Check() const;
 
   void Dump(FILE * = stdout) const;
