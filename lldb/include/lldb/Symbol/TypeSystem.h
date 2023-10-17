@@ -28,11 +28,17 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/lldb-private.h"
 
-class DWARFDIE;
-class DWARFASTParser;
 class PDBASTParser;
 
 namespace lldb_private {
+
+namespace plugin {
+namespace dwarf {
+class DWARFDIE;
+class DWARFASTParser;
+} // namespace dwarf
+} // namespace plugin
+
 namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
@@ -99,7 +105,8 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
-  virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
+  virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
+
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
   virtual npdb::PdbAstBuilder *GetNativePDBParser() { return nullptr; }
 
@@ -616,6 +623,6 @@ private:
       std::optional<CreateCallback> create_callback = std::nullopt);
   };
 
-} // namespace lldb_private
+  } // namespace lldb_private
 
 #endif // LLDB_SYMBOL_TYPESYSTEM_H

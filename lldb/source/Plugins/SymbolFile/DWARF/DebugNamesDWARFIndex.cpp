@@ -18,6 +18,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
@@ -227,7 +228,7 @@ void DebugNamesDWARFIndex::GetNamespaces(
     ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    dwarf::Tag entry_tag = entry.tag();
+    Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
       if (!ProcessEntry(entry, callback))

@@ -100,6 +100,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -139,9 +140,8 @@ static PluginProperties &GetGlobalPluginProperties() {
 }
 
 static const llvm::DWARFDebugLine::LineTable *
-ParseLLVMLineTable(lldb_private::DWARFContext &context,
-                   llvm::DWARFDebugLine &line, dw_offset_t line_offset,
-                   dw_offset_t unit_offset) {
+ParseLLVMLineTable(DWARFContext &context, llvm::DWARFDebugLine &line,
+                   dw_offset_t line_offset, dw_offset_t unit_offset) {
   Log *log = GetLog(DWARFLog::DebugInfo);
 
   llvm::DWARFDataExtractor data = context.getOrLoadLineData().GetAsLLVMDWARF();
@@ -162,7 +162,7 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
-static bool ParseLLVMLineTablePrologue(lldb_private::DWARFContext &context,
+static bool ParseLLVMLineTablePrologue(DWARFContext &context,
                                        llvm::DWARFDebugLine::Prologue &prologue,
                                        dw_offset_t line_offset,
                                        dw_offset_t unit_offset) {
@@ -499,7 +499,7 @@ void SymbolFileDWARF::InitializeFirstCodeAddress() {
 }
 
 void SymbolFileDWARF::InitializeFirstCodeAddressRecursive(
-    const lldb_private::SectionList &section_list) {
+    const SectionList &section_list) {
   for (SectionSP section_sp : section_list) {
     if (section_sp->GetChildren().GetSize() > 0) {
       InitializeFirstCodeAddressRecursive(section_sp->GetChildren());
@@ -995,7 +995,7 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARF::ForEachExternalModule(
     CompileUnit &comp_unit,
-    llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+    llvm::DenseSet<SymbolFile *> &visited_symbol_files,
     llvm::function_ref<bool(Module &)> lambda) {
   // Only visit each symbol file once.
   if (!visited_symbol_files.insert(this).second)
@@ -1113,7 +1113,7 @@ bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileDWARF::ParseImportedModules(
-    const lldb_private::SymbolContext &sc,
+    const SymbolContext &sc,
     std::vector<SourceModule> &imported_modules) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   assert(sc.comp_unit);
@@ -1231,7 +1231,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   return true;
 }
 
-lldb_private::DebugMacrosSP
+DebugMacrosSP
 SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   auto iter = m_debug_macros_map.find(*offset);
   if (iter != m_debug_macros_map.end())
@@ -1242,7 +1242,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   if (debug_macro_data.GetByteSize() == 0)
     return DebugMacrosSP();
 
-  lldb_private::DebugMacrosSP debug_macros_sp(new lldb_private::DebugMacros());
+  DebugMacrosSP debug_macros_sp(new DebugMacros());
   m_debug_macros_map[*offset] = debug_macros_sp;
 
   const DWARFDebugMacroHeader &header =
@@ -1279,7 +1279,7 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
 }
 
 size_t SymbolFileDWARF::ParseBlocksRecursive(
-    lldb_private::CompileUnit &comp_unit, Block *parent_block,
+    CompileUnit &comp_unit, Block *parent_block,
     const DWARFDIE &orig_die, addr_t subprogram_low_pc, uint32_t depth) {
   size_t blocks_added = 0;
   DWARFDIE die = orig_die;
@@ -1485,7 +1485,7 @@ Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
 }
 
 std::optional<SymbolFile::ArrayInfo> SymbolFileDWARF::GetDynamicArrayInfoForUID(
-    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+    lldb::user_id_t type_uid, const ExecutionContext *exe_ctx) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (DWARFDIE type_die = GetDIE(type_uid))
     return DWARFASTParser::ParseChildArrayInfo(type_die, exe_ctx);
@@ -2241,7 +2241,7 @@ std::recursive_mutex &SymbolFileDWARF::GetModuleMutex() const {
 }
 
 bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
-    const lldb_private::CompilerDeclContext &decl_ctx) {
+    const CompilerDeclContext &decl_ctx) {
   if (!decl_ctx.IsValid()) {
     // Invalid namespace decl which means we aren't matching only things in
     // this symbol file, so return true to indicate it matches this symbol
@@ -2454,7 +2454,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
     // ...But if we are only checking root decl contexts, confirm that the
     // 'die' is a top-level context.
     if (only_root_namespaces)
-      return die.GetParent().Tag() == dwarf::DW_TAG_compile_unit;
+      return die.GetParent().Tag() == llvm::dwarf::DW_TAG_compile_unit;
 
     return true;
   }
@@ -2589,7 +2589,7 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
 void SymbolFileDWARF::FindTypes(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,
     uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Make sure we haven't already searched this SymbolFile before.
@@ -4014,7 +4014,7 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
 // The uninserted variables for the current block are accumulated in
 // |accumulator|.
 size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
-    const lldb_private::SymbolContext &sc, const DWARFDIE &die,
+    const SymbolContext &sc, const DWARFDIE &die,
     lldb::addr_t func_low_pc, DIEArray &accumulator) {
   size_t vars_added = 0;
   dw_tag_t tag = die.Tag();
@@ -4081,7 +4081,7 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
 }
 
 size_t SymbolFileDWARF::PopulateBlockVariableList(
-    VariableList &variable_list, const lldb_private::SymbolContext &sc,
+    VariableList &variable_list, const SymbolContext &sc,
     llvm::ArrayRef<DIERef> variable_dies, lldb::addr_t func_low_pc) {
   // Parse the variable DIEs and insert them to the list.
   for (auto &die : variable_dies) {
@@ -4140,7 +4140,7 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
 }
 
 /// Collect call graph edges present in a function DIE.
-std::vector<std::unique_ptr<lldb_private::CallEdge>>
+std::vector<std::unique_ptr<CallEdge>>
 SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   // Check if the function has a supported call site-related attribute.
   // TODO: In the future it may be worthwhile to support call_all_source_calls.
@@ -4297,8 +4297,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   return call_edges;
 }
 
-std::vector<std::unique_ptr<lldb_private::CallEdge>>
-SymbolFileDWARF::ParseCallEdgesInFunction(lldb_private::UserID func_id) {
+std::vector<std::unique_ptr<CallEdge>>
+SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
   // ParseCallEdgesInFunction must be called at the behest of an exclusively
   // locked lldb::Function instance. Storage for parsed call edges is owned by
   // the lldb::Function instance: locking at the SymbolFile level would be too
@@ -4310,7 +4310,7 @@ SymbolFileDWARF::ParseCallEdgesInFunction(lldb_private::UserID func_id) {
   return {};
 }
 
-void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
+void SymbolFileDWARF::Dump(Stream &s) {
   SymbolFileCommon::Dump(s);
   m_index->Dump(s);
 }
@@ -4532,7 +4532,7 @@ Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
 }
 
 void SymbolFileDWARF::GetCompileOptions(
-    std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) {
+    std::unordered_map<lldb::CompUnitSP, Args> &args) {
 
   const uint32_t num_compile_units = GetNumCompileUnits();
 
