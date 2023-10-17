@@ -1232,15 +1232,6 @@ td_library(
 )
 
 td_library(
-    name = "SparseTensorInterfacesTdFiles",
-    srcs = [
-        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
-    ],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
-)
-
-td_library(
     name = "TilingInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/TilingInterface.td"],
     includes = ["include"],
@@ -2702,6 +2693,15 @@ td_library(
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
+)
+
+td_library(
+    name = "SparseTensorInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
 )
 
 gentbl_cc_library(
