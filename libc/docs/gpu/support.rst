@@ -134,6 +134,7 @@ ftell          |check|    |check|
 fflush         |check|    |check|
 fgetc          |check|    |check|
 fgets          |check|    |check|
+ungetc         |check|    |check|
 getc           |check|    |check|
 getchar        |check|    |check|
 puts           |check|    |check|
