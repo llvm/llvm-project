@@ -173,6 +173,14 @@ AffineMap inferLvlToDim(AffineMap dimToLvl, MLIRContext *context);
 /// Asserts on failure (so only use when known to succeed).
 AffineMap inverseBlockSparsity(AffineMap dimToLvl, MLIRContext *context);
 
+/// Given the dimToLvl map, returns the block size in vector.
+/// For instance, a 2x3 block will return [2, 3].
+/// Only valid block sparsity will be accepted.
+SmallVector<unsigned> getBlockSize(AffineMap dimToLvl);
+
+/// Given the dimToLvl map, returns if it's block sparsity.
+bool isBlockSparsity(AffineMap dimToLvl);
+
 //
 // Reordering.
 //
