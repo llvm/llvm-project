@@ -1384,8 +1384,7 @@ define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: test_sext_v4i1_to_v4i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<19>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -1400,24 +1399,20 @@ define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    bfe.s32 %r5, %r2, 16, 8;
 ; CHECK-NEXT:    bfe.s32 %r6, %r1, 16, 8;
 ; CHECK-NEXT:    setp.hi.u32 %p2, %r6, %r5;
-; CHECK-NEXT:    bfe.s32 %r7, %r2, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r8, %r1, 0, 8;
+; CHECK-NEXT:    bfe.s32 %r7, %r2, 8, 8;
+; CHECK-NEXT:    bfe.s32 %r8, %r1, 8, 8;
 ; CHECK-NEXT:    setp.hi.u32 %p3, %r8, %r7;
-; CHECK-NEXT:    bfe.s32 %r9, %r2, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r10, %r1, 8, 8;
+; CHECK-NEXT:    bfe.s32 %r9, %r2, 0, 8;
+; CHECK-NEXT:    bfe.s32 %r10, %r1, 0, 8;
 ; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
-; CHECK-NEXT:    selp.s16 %rs1, -1, 0, %p4;
-; CHECK-NEXT:    selp.s16 %rs2, -1, 0, %p3;
-; CHECK-NEXT:    mov.b32 %r11, {%rs2, %rs1};
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r11;
-; CHECK-NEXT:    cvt.u32.u16 %r12, %rs3;
-; CHECK-NEXT:    cvt.u32.u16 %r13, %rs4;
-; CHECK-NEXT:    bfi.b32 %r14, %r13, %r12, 8, 8;
-; CHECK-NEXT:    selp.s32 %r15, -1, 0, %p2;
-; CHECK-NEXT:    bfi.b32 %r16, %r15, %r14, 16, 8;
-; CHECK-NEXT:    selp.s32 %r17, -1, 0, %p1;
-; CHECK-NEXT:    bfi.b32 %r18, %r17, %r16, 24, 8;
-; CHECK-NEXT:    st.u32 [%rd3], %r18;
+; CHECK-NEXT:    selp.s32 %r11, -1, 0, %p4;
+; CHECK-NEXT:    selp.s32 %r12, -1, 0, %p3;
+; CHECK-NEXT:    bfi.b32 %r13, %r12, %r11, 8, 8;
+; CHECK-NEXT:    selp.s32 %r14, -1, 0, %p2;
+; CHECK-NEXT:    bfi.b32 %r15, %r14, %r13, 16, 8;
+; CHECK-NEXT:    selp.s32 %r16, -1, 0, %p1;
+; CHECK-NEXT:    bfi.b32 %r17, %r16, %r15, 24, 8;
+; CHECK-NEXT:    st.u32 [%rd3], %r17;
 ; CHECK-NEXT:    ret;
 entry:
   %t1 = load <4 x i8>, ptr %a, align 4
