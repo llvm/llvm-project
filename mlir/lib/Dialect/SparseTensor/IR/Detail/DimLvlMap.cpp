@@ -359,15 +359,12 @@ AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
   for (const auto &dimSpec : dimSpecs) {
     auto expr = dimSpec.getExpr().getAffineExpr();
     if (expr) {
-      auto exprTuple = dimSpec.getExpr().unpackBinop();
-      if (std::get<1>(exprTuple) == AffineExprKind::FloorDiv ||
-          std::get<1>(exprTuple) == AffineExprKind::Mod) {
-        dimAffines.push_back(expr);
-      }
+      dimAffines.push_back(expr);
     }
   }
   auto map = AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
-  if (dimAffines.empty() || map.isIdentity()) return AffineMap();
+  if (dimAffines.empty() || map.isIdentity())
+    return AffineMap();
   return map;
 }
 
