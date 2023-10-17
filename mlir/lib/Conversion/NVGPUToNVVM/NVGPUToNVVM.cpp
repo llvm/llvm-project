@@ -412,10 +412,28 @@ struct ConvertNVGPUToNVVMPass
       return converter.convertType(IntegerType::get(type.getContext(), 32));
     });
     converter.addConversion([&](nvgpu::WarpgroupAccumulatorType type) -> Type {
-      VectorType vtype = type.getFragmented();
+      Type elemType = type.getFragmented().getElementType();
+      int64_t sizeM = type.getFragmented().getDimSize(0);
+      int64_t sizeN = type.getFragmented().getDimSize(1);
+
+      unsigned numMembers;
+      if (elemType.isF32() || elemType.isInteger(32))
+        numMembers = sizeN / 2;
+      else if (elemType.isF16())
+        numMembers = sizeN / 4;
+      else
+        llvm_unreachable("unsupported type for warpgroup accumulator");
+
+      SmallVector<Type> innerStructBody;
+      for (unsigned i = 0; i < numMembers; i++)
+        innerStructBody.push_back(elemType);
+      auto innerStructType =
+          LLVM::LLVMStructType::getLiteral(type.getContext(), innerStructBody);
+
       SmallVector<Type> structBody;
-      for (unsigned i = 0; i < vtype.getDimSize(0); i++)
-        structBody.push_back(vtype.getElementType());
+      for (int i = 0; i < sizeM; i += kWgmmaSizeM)
+        structBody.push_back(innerStructType);
+
       auto convertedType =
           LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
       return converter.convertType(convertedType);
@@ -1186,7 +1204,6 @@ struct NVGPUWarpgroupMmaOpLowering
     nvgpu::WarpgroupMmaOp op;
     ImplicitLocOpBuilder b;
     OpAdaptor adaptor;
-    const LLVMTypeConverter &typeConverter;
 
     // Entire shape of the given Op
     int64_t totalM, totalN, totalK;
@@ -1330,7 +1347,7 @@ struct NVGPUWarpgroupMmaOpLowering
 
     /// This function generates a WgmmaMmaAsyncOp using provided GMMA matrix
     /// descriptors and arranges them based on induction variables: i, j, and k.
-    Value generateWgmma(int i, int j, int k, Value matrixC, Value matrixD) {
+    Value generateWgmma(int i, int j, int k, Value matrixC) {
       LLVM_DEBUG(DBGS() << "\t wgmma."
                         << "m" << wgmmaM << "n" << wgmmaN << "k" << wgmmaK
                         << "(A[" << (iterationM * wgmmaM) << ":"
@@ -1359,34 +1376,36 @@ struct NVGPUWarpgroupMmaOpLowering
       auto overflow = NVVM::MMAIntOverflowAttr::get(
           op->getContext(), NVVM::MMAIntOverflow::wrapped);
 
-      Type resultStructType = typeConverter.convertType(matrixD.getType());
-
       return b.create<NVVM::WgmmaMmaAsyncOp>(
-          resultStructType, matrixC, descriptorA, descriptorB, shape, itypeA,
+          matrixC.getType(), matrixC, descriptorA, descriptorB, shape, itypeA,
           itypeB, scaleOut, scaleIn, scaleIn, layoutA, layoutB, overflow);
     }
 
     /// Generates multiple wgmma instructions to complete the given GEMM shape
-    SmallVector<Value> generateWgmmaGroup() {
-      SmallVector<Value> wgmmaResults;
+    Value generateWgmmaGroup() {
+      Value wgmmaResult =
+          b.create<LLVM::UndefOp>(adaptor.getMatrixC().getType());
 
       // Perform GEMM
+      SmallVector<Value> wgmmaResults;
       for (int i = 0; i < iterationM; ++i) {
-        Value matrixC = adaptor.getMatrixC()[i];
-        Value matrixD = op.getMatrixD()[i];
+        Value matrixC = b.create<LLVM::ExtractValueOp>(adaptor.getMatrixC(), i);
         for (int j = 0; j < iterationN; ++j)
           for (int k = 0; k < iterationK; ++k)
-            matrixC = generateWgmma(i, j, k, matrixC, matrixD);
+            matrixC = generateWgmma(i, j, k, matrixC);
         wgmmaResults.push_back(matrixC);
       }
-
-      return wgmmaResults;
+      for (auto [idx, matrix] : llvm::enumerate(wgmmaResults)) {
+        wgmmaResult = b.create<LLVM::InsertValueOp>(wgmmaResult.getType(),
+                                                    wgmmaResult, matrix, idx);
+      }
+      return wgmmaResult;
     }
 
   public:
     WarpgroupGemm(nvgpu::WarpgroupMmaOp op, ImplicitLocOpBuilder &b,
-                  OpAdaptor adaptor, const LLVMTypeConverter &typeConverter)
-        : op(op), b(b), adaptor(adaptor), typeConverter(typeConverter) {
+                  OpAdaptor adaptor)
+        : op(op), b(b), adaptor(adaptor) {
       // Find the entire GEMM Shape
       totalM = op.getDescriptorA().getType().getTensor().getDimSize(0);
       totalN = op.getDescriptorB().getType().getTensor().getDimSize(1);
@@ -1411,27 +1430,27 @@ struct NVGPUWarpgroupMmaOpLowering
     /// instructions and group synchronization, as well as waiting
     /// (WgmmaGroupSyncAlignedOp) for group synchronization
     /// (WgmmaWaitGroupSyncOp) after the instructions.
-    SmallVector<Value> generateWarpgroupMma() {
+    Value generateWarpgroupMma() {
       b.create<NVVM::WgmmaFenceAlignedOp>();
-      SmallVector<Value> wgmmaResults = generateWgmmaGroup();
+      Value wgmmaResult = generateWgmmaGroup();
       b.create<NVVM::WgmmaGroupSyncAlignedOp>();
       b.create<NVVM::WgmmaWaitGroupSyncOp>(op.getWaitGroup());
-      return wgmmaResults;
+      return wgmmaResult;
     }
   };
-
   LogicalResult
   matchAndRewrite(nvgpu::WarpgroupMmaOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+
     // Step 1. Build a helper class
-    WarpgroupGemm warpgroupGemm(op, b, adaptor, *this->getTypeConverter());
+    WarpgroupGemm warpgroupGemm(op, b, adaptor);
 
     // Step 2. Get the entire GEMM Shape
-    SmallVector<Value> wgmmaResults = warpgroupGemm.generateWarpgroupMma();
+    Value wgmmaResult = warpgroupGemm.generateWarpgroupMma();
 
     // Step 3. Replace fragmented result struct with the op results
-    rewriter.replaceOp(op, wgmmaResults);
+    rewriter.replaceOp(op, wgmmaResult);
     return success();
   }
 };
@@ -1535,10 +1554,13 @@ struct NVGPUWarpgroupMmaStoreOpLowering
   matchAndRewrite(nvgpu::WarpgroupMmaStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     int offset = 0;
-    ImplicitLocOpBuilder lb(op->getLoc(), rewriter);
-    for (Value matrixD : adaptor.getMatrixD()) {
-      auto structType = matrixD.getType().cast<LLVM::LLVMStructType>();
-      storeFragmentedMatrix(lb, matrixD, op.getDstMemref(), offset);
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    Value matriDValue = adaptor.getMatrixD();
+    auto stype = matriDValue.getType().cast<LLVM::LLVMStructType>();
+    for (auto [idx, matrixD] : llvm::enumerate(stype.getBody())) {
+      auto structType = matrixD.cast<LLVM::LLVMStructType>();
+      Value innerStructValue = b.create<LLVM::ExtractValueOp>(matriDValue, idx);
+      storeFragmentedMatrix(b, innerStructValue, op.getDstMemref(), offset);
       offset += structType.getBody().size();
     }
     rewriter.eraseOp(op);
@@ -1554,23 +1576,27 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
   matchAndRewrite(nvgpu::WarpgroupMmaInitAccumulatorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-    SmallVector<Value> results;
-    for (OpResult m : op.getMatrixC()) {
-      nvgpu::WarpgroupAccumulatorType mType =
-          m.getType().cast<nvgpu::WarpgroupAccumulatorType>();
-      Type stype = getTypeConverter()->convertType(mType);
-      Value undefStruct = b.create<LLVM::UndefOp>(stype);
-      Type elemType = mType.getFragmented().getElementType();
-      int64_t elemSize = mType.getFragmented().getDimSize(0);
-      Value zero =
-          b.create<LLVM::ConstantOp>(elemType, rewriter.getZeroAttr(elemType));
-      for (int64_t i = 0; i < elemSize; ++i) {
-        undefStruct = b.create<LLVM::InsertValueOp>(stype, undefStruct, zero,
-                                                    ArrayRef<int64_t>({i}));
+    LLVM::LLVMStructType structType =
+        getTypeConverter()
+            ->convertType(op.getMatrixC().getType())
+            .cast<LLVM::LLVMStructType>();
+    Type elemType = structType.getBody()
+                        .front()
+                        .cast<LLVM::LLVMStructType>()
+                        .getBody()
+                        .front();
+    Value zero = b.create<LLVM::ConstantOp>(elemType, b.getZeroAttr(elemType));
+    Value structValue = b.create<LLVM::UndefOp>(structType);
+    for (auto [idx, s] : llvm::enumerate(structType.getBody())) {
+      auto innerStructType = s.cast<LLVM::LLVMStructType>();
+      int ii = idx;
+      Value innerStructValue = b.create<LLVM::ExtractValueOp>(structValue, ii);
+      for (unsigned i = 0; i < innerStructType.getBody().size(); ++i) {
+        innerStructValue = b.create<LLVM::InsertValueOp>(
+            innerStructType, innerStructValue, zero, ArrayRef<int64_t>({i}));
       }
-      results.push_back(undefStruct);
     }
-    rewriter.replaceOp(op, results);
+    rewriter.replaceOp(op, structValue);
     return success();
   }
 };
