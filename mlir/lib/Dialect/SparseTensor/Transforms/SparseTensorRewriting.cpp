@@ -876,7 +876,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ConcatenateOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.needExtraSort())
+    if (op.needsExtraSort())
       op.emitError("ConcatenateOp not staged");
 
     const Location loc = op.getLoc();
@@ -974,7 +974,7 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.needExtraSort())
+    if (op.needsExtraSort())
       return op.emitError("ConvertOp not staged.");
 
     // TODO: Maybe we want a different operation for this too.

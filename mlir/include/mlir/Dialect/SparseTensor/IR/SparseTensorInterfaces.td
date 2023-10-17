@@ -27,7 +27,7 @@ def StageWithSortSparseOpInterface : OpInterface<"StageWithSortSparseOp"> {
     InterfaceMethod<
     /*desc=*/"Return true if the operation needs an extra sort to produce the final result.",
     /*retTy=*/"bool",
-    /*methodName=*/"needExtraSort",
+    /*methodName=*/"needsExtraSort",
     /*args=*/(ins),
     /*methodBody=*/"">,
     InterfaceMethod<

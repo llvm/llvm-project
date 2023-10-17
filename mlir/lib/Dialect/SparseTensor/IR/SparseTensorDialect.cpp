@@ -1065,7 +1065,7 @@ OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-bool ConvertOp::needExtraSort() {
+bool ConvertOp::needsExtraSort() {
   SparseTensorType srcStt = getSparseTensorType(getSource());
   SparseTensorType dstStt = getSparseTensorType(getDest());
 
@@ -1248,7 +1248,7 @@ LogicalResult UnaryOp::verify() {
   return success();
 }
 
-bool ConcatenateOp::needExtraSort() {
+bool ConcatenateOp::needsExtraSort() {
   SparseTensorType dstStt = getSparseTensorType(*this);
   if (dstStt.isAllDense() || !dstStt.isAllOrdered())
     return false;

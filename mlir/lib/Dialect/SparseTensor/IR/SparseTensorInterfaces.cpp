@@ -19,7 +19,7 @@ using namespace mlir::sparse_tensor;
 LogicalResult
 sparse_tensor::detail::stageWithSortImpl(StageWithSortSparseOp op,
                                          PatternRewriter &rewriter) {
-  if (!op.needExtraSort())
+  if (!op.needsExtraSort())
     return failure();
 
   Location loc = op.getLoc();

@@ -200,7 +200,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   let extraClassDeclaration = [{
      // Whether the convert can be done by a single step or it would require
      // an extra sort. Inherited from StageWithSortSparseOpInterface.
-     bool needExtraSort();
+     bool needsExtraSort();
   }];
 
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
@@ -362,7 +362,7 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
   let extraClassDeclaration = [{
      // Whether the concatenate can be done by a single step or it would require
      // an extra sort. Inherited from StageWithSortSparseOpInterface.
-     bool needExtraSort();
+     bool needsExtraSort();
   }];
 
   let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
