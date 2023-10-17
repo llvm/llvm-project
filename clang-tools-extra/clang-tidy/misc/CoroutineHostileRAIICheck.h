@@ -35,7 +35,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void checkVarDecl(const VarDecl *VD, SourceLocation SuspensionLoc);
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
   std::vector<StringRef> RAIITypesList;

@@ -72,7 +72,6 @@ struct ReturnObject {
     };
 };
 
-
 #define SCOPED_LOCKABLE __attribute__ ((scoped_lockable))
 
 namespace absl {
@@ -80,13 +79,25 @@ class SCOPED_LOCKABLE Mutex {};
 using Mutex2 = Mutex;
 } // namespace absl
 
-ReturnObject scopedLockableBasic() {
+ReturnObject BasicWarning() {
   absl::Mutex mtx;
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: 'mtx' holds a lock across a suspension point of coroutine and could be unlocked by a different thread [misc-coroutine-hostile-raii]
+  int no_warning;
   {
     co_yield 1;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: note: suspension point is here
   }
+}
+
+ReturnObject BasicNoWarning() {
+  co_yield 1;
+  {  absl::Mutex no_warning; }
+  int no_warning;
+  {
+    co_yield 1;
+    absl::Mutex no_warning;
+  }
+  co_yield 1;
 }
 
 ReturnObject scopedLockableTest() {
