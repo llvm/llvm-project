@@ -96,6 +96,10 @@ C++ Specific Potentially Breaking Changes
   Clang as a compiler, but it may break assumptions in Clang-based tools
   iterating over the AST.
 
+- The warning `-Wenum-constexpr-conversion` is now also enabled by default on
+  system headers and macros. It will be turned into a hard (non-downgradable)
+  error in the next Clang release.
+
 ABI Changes in This Version
 ---------------------------
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
