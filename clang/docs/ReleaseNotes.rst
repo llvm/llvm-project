@@ -662,6 +662,10 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- Move checker ``alpha.unix.Errno`` out of the ``alpha`` package
+  to ``unix.Errno``.
+
 - Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
   to ``unix.StdCLibraryFunctions``.
 
