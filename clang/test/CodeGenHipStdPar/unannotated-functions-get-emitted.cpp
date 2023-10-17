@@ -6,14 +6,14 @@
 
 #define __device__ __attribute__((device))
 
-// NO-HIPSTDPAR-DEV-NOT: define {{.*}} void @foo({{.*}})
-// HIPSTDPAR-DEV: define {{.*}} void @foo({{.*}})
+// NO-HIPSTDPAR-DEV-NOT: {{.*}}void @foo({{.*}})
+// HIPSTDPAR-DEV: {{.*}}void @foo({{.*}})
 extern "C" void foo(float *a, float b) {
   *a = b;
 }
 
-// NO-HIPSTDPAR-DEV: define {{.*}} void @bar({{.*}})
-// HIPSTDPAR-DEV: define {{.*}} void @bar({{.*}})
+// NO-HIPSTDPAR-DEV: {{.*}}void @bar({{.*}})
+// HIPSTDPAR-DEV: {{.*}}void @bar({{.*}})
 extern "C" __device__ void bar(float *a, float b) {
   *a = b;
 }
