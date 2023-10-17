@@ -5,6 +5,9 @@
 
 name: "Test documentation build"
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
