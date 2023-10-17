@@ -222,7 +222,10 @@ write_lit_config("lit_site_cfg") {
 write_lit_config("lit_unit_site_cfg") {
   input = "//llvm/test/Unit/lit.site.cfg.py.in"
   output = llvm_lit_unit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "LLVM_GTEST_RUN_UNDER=",
+  ]
 }
 
 # This target should contain all dependencies of check-llvm.
