@@ -18,6 +18,12 @@ include "RISCVCombine.td"
 
 def simm12Plus1 : ImmLeaf<XLenVT, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+def simm12Plus1i32 : ImmLeaf<i32, [{
+    return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+
+def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
+
+def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
 
 // FIXME: This doesn't check that the G_CONSTANT we're deriving the immediate
 // from is only used once
@@ -43,6 +49,14 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
+// Convert from i32 immediate to i64 target immediate to make SelectionDAG type
+// checking happy so we can use ADDIW which expects an XLen immediate.
+def as_i64imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i64);
+}]>;
+def gi_as_i64imm : GICustomOperandRenderer<"renderImm">,
+  GISDNodeXFormEquiv<as_i64imm>;
+
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
@@ -60,11 +74,23 @@ let Predicates = [IsRV64] in {
 def : Pat<(i32 (add GPR:$rs1, GPR:$rs2)), (ADDW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (sub GPR:$rs1, GPR:$rs2)), (SUBW GPR:$rs1, GPR:$rs2)>;
 
+def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
+          (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
+          (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
+
 def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
 
-def: Pat<(i64 (sext i32:$rs)), (ADDIW GPR:$rs, 0)>;
+def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
+          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
+          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
+          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+
+def : Pat<(i64 (sext i32:$rs)), (ADDIW GPR:$rs, 0)>;
 }
 
 let Predicates = [HasStdExtMOrZmmul, IsRV64] in {
