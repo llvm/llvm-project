@@ -237,7 +237,10 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   if (InTaggableRegion(reinterpret_cast<uptr>(user_ptr)) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled) &&
       flags()->tag_in_malloc && malloc_bisect(stack, orig_size)) {
-    tag_t tag = t ? t->GenerateRandomTag() : kFallbackAllocTag;
+    tag_t tag = t ? t->GenerateRandomNonCollidingTag((uptr)user_ptr - 1,
+                                                     (uptr)user_ptr + size)
+                  : kFallbackAllocTag;
+
     uptr tag_size = orig_size ? orig_size : 1;
     uptr full_granule_size = RoundDownTo(tag_size, kShadowAlignment);
     user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, full_granule_size, tag);
@@ -349,7 +352,9 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
       // would make us attempt to read the memory on a UaF.
       // The tag can be zero if tagging is disabled on this thread.
       do {
-        tag = t->GenerateRandomTag(/*num_bits=*/8);
+        tag = t->GenerateRandomNonCollidingTag((uptr)aligned_ptr - 1,
+                                               (uptr)aligned_ptr + orig_size,
+                                               /*num_bits=*/8);
       } while (
           UNLIKELY((tag < kShadowAlignment || tag == pointer_tag) && tag != 0));
     } else {

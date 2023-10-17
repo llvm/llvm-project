@@ -156,6 +156,35 @@ tag_t Thread::GenerateRandomTag(uptr num_bits) {
   return tag;
 }
 
+// Generate a (pseudo-)random non-zero tag and prevent collisions to neighboring
+// objects.
+tag_t Thread::GenerateRandomNonCollidingTag(uptr prev_ptr, uptr foll_ptr,
+                                            uptr num_bits) {
+  DCHECK_GT(num_bits, 0);
+  if (tagging_disabled_)
+    return 0;
+  tag_t tag;
+  tag_t previous_tag = *(tag_t *)MemToShadow(prev_ptr);
+  tag_t following_tag = *(tag_t *)MemToShadow(foll_ptr);
+  const uptr tag_mask = (1ULL << num_bits) - 1;
+  do {
+    if (flags()->random_tags) {
+      if (!random_buffer_) {
+        EnsureRandomStateInited();
+        random_buffer_ = random_state_ = xorshift(random_state_);
+      }
+      CHECK(random_buffer_);
+      tag = random_buffer_ & tag_mask;
+      random_buffer_ >>= num_bits;
+    } else {
+      EnsureRandomStateInited();
+      random_state_ += 1;
+      tag = random_state_ & tag_mask;
+    }
+  } while (!tag || tag == previous_tag || tag == following_tag);
+  return tag;
+}
+
 void EnsureMainThreadIDIsCorrect() {
   auto *t = __hwasan::GetCurrentThread();
   if (t && (t->IsMainThread()))
