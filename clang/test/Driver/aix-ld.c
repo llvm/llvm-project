@@ -133,6 +133,7 @@
 // CHECK-LD32-NOPTHREAD-NOT: "--as-needed"
 // CHECK-LD32-NOPTHREAD:     "-lunwind"
 // CHECK-LD32-NOPTHREAD-NOT: "--no-as-needed"
+// CHECK-LD32-NOPTHREAD-NOT: "-lpthreads"
 // CHECK-LD32-NOPTHREAD-NOT: "-lm"
 // CHECK-LD32-NOPTHREAD:     "-lc"
 
