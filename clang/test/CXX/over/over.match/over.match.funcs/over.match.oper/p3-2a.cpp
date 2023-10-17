@@ -324,6 +324,41 @@ bool x = X() == X(); // expected-warning {{ambiguous}}
 }
 } // namespace P2468R2
 
+namespace GH53954{
+namespace test1 {
+struct P {
+    template <class T>
+    friend bool operator==(const P&, const T&); // expected-note {{candidate}} \
+                                                  // expected-note {{reversed parameter order}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-error {{ '==' is ambiguous}}
+}
+
+namespace test2 {
+struct P {
+    template <class T>
+    friend bool operator==(const T&, const P&); // expected-note {{candidate}} \
+                                                // expected-note {{reversed parameter order}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-error {{ '==' is ambiguous}}
+}
+
+namespace test3 {
+struct P {
+  template<class S>
+  bool operator==(const S &) const; // expected-note {{candidate}} \
+                                    // expected-note {{reversed parameter order}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a == b; } // expected-error {{ '==' is ambiguous}}
+}
+}
+
 #else // NO_ERRORS
 
 namespace problem_cases {
