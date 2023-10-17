@@ -1046,6 +1046,23 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   return true;
 }
 
+CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
+  if (name.empty())
+    return CompilerType();
+  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
+  auto *symbol_file = type_system->GetSymbolFile();
+  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
+  if (!decl_context.IsValid())
+    return CompilerType();
+  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+  TypeMap search_result;
+  symbol_file->FindTypes(ConstString(name), decl_context, /*max_matches*/ 1,
+                         searched_symbol_files, search_result);
+  if (search_result.Empty())
+    return CompilerType();
+  return search_result.GetTypeAtIndex(0)->GetFullCompilerType();
+}
+
 bool TypeMemberFunctionImpl::IsValid() {
   return m_type.IsValid() && m_kind != lldb::eMemberFunctionKindUnknown;
 }
