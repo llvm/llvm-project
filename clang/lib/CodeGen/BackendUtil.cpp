@@ -113,7 +113,7 @@ class EmitAssemblyHelper {
   const CodeGenOptions &CodeGenOpts;
   const clang::TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
-  Module *TheModule;
+  llvm::Module *TheModule;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
   Timer CodeGenerationTime;
@@ -179,7 +179,7 @@ public:
                      const HeaderSearchOptions &HeaderSearchOpts,
                      const CodeGenOptions &CGOpts,
                      const clang::TargetOptions &TOpts,
-                     const LangOptions &LOpts, Module *M,
+                     const LangOptions &LOpts, llvm::Module *M,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
       : Diags(_Diags), HSOpts(HeaderSearchOpts), CodeGenOpts(CGOpts),
         TargetOpts(TOpts), LangOpts(LOpts), TheModule(M), VFS(std::move(VFS)),
@@ -693,7 +693,7 @@ static void addSanitizers(const Triple &TargetTriple,
           // the logic of the original code, but operates on "shadow" values. It
           // can benefit from re-running some general purpose optimization
           // passes.
-          MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
+          MPM.addPass(RequireAnalysisPass<GlobalsAA, llvm::Module>());
           FunctionPassManager FPM;
           FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
           FPM.addPass(InstCombinePass());
@@ -752,7 +752,7 @@ static void addSanitizers(const Triple &TargetTriple,
           SanitizersCallback(NewMPM, Level);
           if (!NewMPM.isEmpty()) {
             // Sanitizers can abandon<GlobalsAA>.
-            NewMPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
+            NewMPM.addPass(RequireAnalysisPass<GlobalsAA, llvm::Module>());
             MPM.addPass(std::move(NewMPM));
           }
         });
@@ -1051,7 +1051,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (Action == Backend_EmitBC || Action == Backend_EmitLL) {
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
       if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
-        TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
+        TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                  CodeGenOpts.EnableSplitLTOUnit);
       if (Action == Backend_EmitBC) {
         if (!CodeGenOpts.ThinLinkBitcodeFile.empty()) {
@@ -1060,7 +1060,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
             return;
         }
         if (CodeGenOpts.UnifiedLTO)
-          TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
+          TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
         MPM.addPass(ThinLTOBitcodeWriterPass(
             *OS, ThinLinkOS ? &ThinLinkOS->os() : nullptr));
       } else {
@@ -1074,12 +1074,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       bool EmitLTOSummary = shouldEmitRegularLTOSummary();
       if (EmitLTOSummary) {
         if (!TheModule->getModuleFlag("ThinLTO") && !CodeGenOpts.UnifiedLTO)
-          TheModule->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
+          TheModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
         if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
-          TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
+          TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                    uint32_t(1));
         if (CodeGenOpts.UnifiedLTO)
-          TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
+          TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
       }
       if (Action == Backend_EmitBC)
         MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
@@ -1093,13 +1093,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // Set module flags, like EnableSplitLTOUnit and UnifiedLTO, since FatLTO
     // uses a different action than Backend_EmitBC or Backend_EmitLL.
     if (!TheModule->getModuleFlag("ThinLTO"))
-      TheModule->addModuleFlag(Module::Error, "ThinLTO",
+      TheModule->addModuleFlag(llvm::Module::Error, "ThinLTO",
                                uint32_t(CodeGenOpts.PrepareForThinLTO));
     if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
-      TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
+      TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                uint32_t(CodeGenOpts.EnableSplitLTOUnit));
     if (CodeGenOpts.UnifiedLTO && !TheModule->getModuleFlag("UnifiedLTO"))
-      TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
+      TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 
   // Print a textual, '-passes=' compatible, representation of pipeline if
@@ -1195,11 +1195,12 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 }
 
 static void runThinLTOBackend(
-    DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex, Module *M,
-    const HeaderSearchOptions &HeaderOpts, const CodeGenOptions &CGOpts,
-    const clang::TargetOptions &TOpts, const LangOptions &LOpts,
-    std::unique_ptr<raw_pwrite_stream> OS, std::string SampleProfile,
-    std::string ProfileRemapping, BackendAction Action) {
+    DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
+    llvm::Module *M, const HeaderSearchOptions &HeaderOpts,
+    const CodeGenOptions &CGOpts, const clang::TargetOptions &TOpts,
+    const LangOptions &LOpts, std::unique_ptr<raw_pwrite_stream> OS,
+    std::string SampleProfile, std::string ProfileRemapping,
+    BackendAction Action) {
   DenseMap<StringRef, DenseMap<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -1268,18 +1269,18 @@ static void runThinLTOBackend(
   Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
   switch (Action) {
   case Backend_EmitNothing:
-    Conf.PreCodeGenModuleHook = [](size_t Task, const Module &Mod) {
+    Conf.PreCodeGenModuleHook = [](size_t Task, const llvm::Module &Mod) {
       return false;
     };
     break;
   case Backend_EmitLL:
-    Conf.PreCodeGenModuleHook = [&](size_t Task, const Module &Mod) {
+    Conf.PreCodeGenModuleHook = [&](size_t Task, const llvm::Module &Mod) {
       M->print(*OS, nullptr, CGOpts.EmitLLVMUseLists);
       return false;
     };
     break;
   case Backend_EmitBC:
-    Conf.PreCodeGenModuleHook = [&](size_t Task, const Module &Mod) {
+    Conf.PreCodeGenModuleHook = [&](size_t Task, const llvm::Module &Mod) {
       WriteBitcodeToFile(*M, *OS, CGOpts.EmitLLVMUseLists);
       return false;
     };
@@ -1303,7 +1304,7 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               const CodeGenOptions &CGOpts,
                               const clang::TargetOptions &TOpts,
                               const LangOptions &LOpts, StringRef TDesc,
-                              Module *M, BackendAction Action,
+                              llvm::Module *M, BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                               std::unique_ptr<raw_pwrite_stream> OS) {
 
