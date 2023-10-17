@@ -7081,7 +7081,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       APFloat  V1 = N1CFP->getValueAPF();
       const APFloat &V2 = N2CFP->getValueAPF();
       const APFloat &V3 = N3CFP->getValueAPF();
-      if(Opcode == ISD::FMAD) {
+      if (Opcode == ISD::FMAD) {
         V1.multiply(V2, APFloat::rmNearestTiesToEven);
         V1.add(V3, APFloat::rmNearestTiesToEven);
       } else

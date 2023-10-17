@@ -2001,7 +2001,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FSUB:               return visitFSUB(N);
   case ISD::FMUL:               return visitFMUL(N);
   case ISD::FMA:                return visitFMA<EmptyMatchContext>(N);
-  case ISD::FMAD:               return visitFMAD(N);
+  case ISD::FMAD:
+    return visitFMAD(N);
   case ISD::FDIV:               return visitFDIV(N);
   case ISD::FREM:               return visitFREM(N);
   case ISD::FSQRT:              return visitFSQRT(N);
@@ -16762,8 +16763,7 @@ SDValue DAGCombiner::visitFMAD(SDNode *N) {
   SDLoc DL(N);
 
   // Constant fold FMAD.
-  if (isa<ConstantFPSDNode>(N0) &&
-      isa<ConstantFPSDNode>(N1) &&
+  if (isa<ConstantFPSDNode>(N0) && isa<ConstantFPSDNode>(N1) &&
       isa<ConstantFPSDNode>(N2)) {
     return DAG.getNode(ISD::FMAD, DL, VT, N0, N1, N2);
   }
