@@ -63,17 +63,10 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
-<<<<<<< HEAD
   llvm::VersionTuple
-  GetProducerVersion(lldb_private::CompileUnit &comp_unit) override;
-  lldb::LanguageType
-  ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
-  lldb_private::XcodeSDK
-  ParseXcodeSDK(lldb_private::CompileUnit &comp_unit) override;
-=======
+  GetProducerVersion(CompileUnit &comp_unit) override;
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
   XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) override;
->>>>>>> refs/am/changes/1673a1ba5decd907d49e64ef705980a145b891d1_next
   llvm::SmallSet<lldb::LanguageType, 4>
   ParseAllLanguages(CompileUnit &comp_unit) override;
   size_t ParseFunctions(CompileUnit &comp_unit) override;
@@ -141,7 +134,6 @@ public:
   std::vector<std::unique_ptr<CallEdge>>
   ParseCallEdgesInFunction(UserID func_id) override;
 
-<<<<<<< HEAD
   std::vector<lldb::DataBufferSP>
   GetASTData(lldb::LanguageType language) override;
 
@@ -166,12 +158,8 @@ protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };
 
   friend class DebugMapModule;
-<<<<<<< HEAD
-  friend class DWARFASTParserClang;
   friend class DWARFASTParserSwift;
-=======
   friend class ::DWARFASTParserClang;
->>>>>>> refs/am/changes/1673a1ba5decd907d49e64ef705980a145b891d1_next
   friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;
   struct OSOInfo {
